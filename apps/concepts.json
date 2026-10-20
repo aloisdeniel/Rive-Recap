@@ -1,0 +1,862 @@
+[
+  {
+    "slug": "sprig",
+    "name": "Sprig",
+    "domain": "Houseplant care",
+    "action": "Track plant care, new growth, and a growing indoor collection.",
+    "audience": "Apartment gardeners and curious plant parents",
+    "tone": "Tender, optimistic, quietly playful",
+    "palette": "Forest #173E32, cream #F6F1DC, leaf #A8CC72, apricot #F3AD7D",
+    "fonts": "Fraunces for display; DM Sans for supporting text",
+    "style": "Folded-paper botanical dioramas, oversized sculptural leaves, fine paper grain, roomy editorial typography",
+    "motion": "Stems draw along curved paths, leaves unfurl through keyed deformation, droplets merge into buds, layered foliage creates depth. A single vine carries the narrative between screens.",
+    "hero": "A paper seed opens into a miniature indoor jungle",
+    "transition": "A growing vine becomes the next screen's frame; a leaf folds across the camera as a masked wipe",
+    "interaction": "Holding the hero gently bends a leaf toward the pointer; releasing lets it settle with soft overshoot",
+    "personas": [
+      "Canopy Keeper",
+      "Propagation Pro",
+      "Patient Grower",
+      "Windowsill Wanderer"
+    ],
+    "metric": [
+      [
+        "careMoments",
+        248,
+        "care moments",
+        "Little rituals. Big growth.",
+        "Each check-in made room for something green.",
+        "Droplets follow a vine and become leaves."
+      ],
+      [
+        "plantsNurtured",
+        18,
+        "plants nurtured",
+        "Your own little jungle.",
+        "A collection with a character all its own.",
+        "Pots fan into a staggered paper landscape."
+      ],
+      [
+        "newLeaves",
+        73,
+        "new leaves",
+        "Look what unfolded.",
+        "Small beginnings became a fuller canopy.",
+        "One enormous folded leaf opens around the number."
+      ],
+      [
+        "cuttingsRooted",
+        12,
+        "cuttings rooted",
+        "Good things branch out.",
+        "New roots, new possibilities.",
+        "Roots trace through a translucent illustrated propagation jar."
+      ],
+      [
+        "careStreak",
+        21,
+        "day care streak",
+        "A rhythm that took root.",
+        "Your longest run of gentle check-ins.",
+        "A vine advances through 21 abstract calendar knots."
+      ],
+      [
+        "plantsShared",
+        6,
+        "plants shared",
+        "You passed the green on.",
+        "A little life for someone else's windowsill.",
+        "A cutting moves from one paper hand to another."
+      ],
+      [
+        "activeMonths",
+        11,
+        "active months",
+        "A year of growing together.",
+        "Every season brought something different.",
+        "Four paper seasons rotate around a persistent plant."
+      ]
+    ],
+    "shots": [
+      "248|care moments|Little rituals. Big growth.",
+      "73|new leaves|Look what unfolded.",
+      "Canopy Keeper|Your growing style|You made room for a jungle."
+    ],
+    "avoid": "Do not shame missed care or imply that every plant survived. Do not expose home photos or locations.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional houseplant care app called Sprig, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Folded-paper botanical dioramas, oversized sculptural leaves, fine paper grain, roomy editorial typography.\nPalette: Forest #173E32, cream #F6F1DC, leaf #A8CC72, apricot #F3AD7D.\nTypography: Fraunces for display; DM Sans for supporting text. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A paper seed opens into a miniature indoor jungle. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Sprig' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '248', label 'care moments', headline 'Little rituals. Big growth.'. Visual inspired by: Droplets follow a vine and become leaves..\nCENTER screen: exact hero text '73', label 'new leaves', headline 'Look what unfolded.'. Visual inspired by: One enormous folded leaf opens around the number..\nRIGHT screen: persona reveal with exact title 'Canopy Keeper', small label 'Your growing style', line 'You made room for a jungle.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "crux",
+    "name": "Crux",
+    "domain": "Indoor climbing",
+    "action": "Log bouldering sessions, attempts, sends, and technique practice.",
+    "audience": "Recreational climbers who value progression and play",
+    "tone": "Bold, physical, encouraging",
+    "palette": "Chalk #F1EEE7, coal #20221F, acid #DCFF3F, cobalt #385DF4",
+    "fonts": "Barlow Condensed for display; IBM Plex Mono for labels",
+    "style": "Brutalist climbing-wall graphics, huge condensed numbers, cutout climbing holds, chalk speckles, asymmetric route diagrams",
+    "motion": "Route lines pull taut, holds pivot under load, a rope overshoots then settles, and camera framing follows a stylized ascent. Graphic chalk puffs mark impact.",
+    "hero": "A zigzag route through oversized climbing holds",
+    "transition": "A taut route line yanks the composition upward into the next wall panel; chalk briefly occludes the cut",
+    "interaction": "A draggable illustrated hold compresses on contact and rebounds; drag does not change recorded performance",
+    "personas": [
+      "Route Reader",
+      "Power Mover",
+      "Balance Seeker",
+      "Persistent Solver"
+    ],
+    "metric": [
+      [
+        "sessions",
+        86,
+        "sessions",
+        "You kept showing up.",
+        "One wall. A thousand ways to move.",
+        "Holds snap into a vertical route as the counter climbs."
+      ],
+      [
+        "sends",
+        214,
+        "sends",
+        "Problems, solved.",
+        "Every finish started with a first move.",
+        "A route trace connects holds and stamps a finish marker."
+      ],
+      [
+        "attempts",
+        1320,
+        "attempts",
+        "Every try counted.",
+        "The work between the wins mattered too.",
+        "A kinetic stack of attempt marks resolves into the number."
+      ],
+      [
+        "techniqueSessions",
+        24,
+        "technique sessions",
+        "You found another way.",
+        "Footwork and balance got their own spotlight.",
+        "Three articulated hold silhouettes rotate into alignment."
+      ],
+      [
+        "longestSessionMinutes",
+        105,
+        "minutes",
+        "Time on the wall.",
+        "Your longest logged session this year.",
+        "A rope uncoils around a large dial."
+      ],
+      [
+        "activeWeeks",
+        39,
+        "active weeks",
+        "Built over time.",
+        "Your rhythm, at your pace.",
+        "Abstract wall panels step upward through the year."
+      ],
+      [
+        "climbingPartners",
+        9,
+        "climbing partners",
+        "Better with a belay buddy.",
+        "People who shared the puzzle.",
+        "Nine stylized route knots join into a supporting web."
+      ]
+    ],
+    "shots": [
+      "86|sessions|You kept showing up.",
+      "1,320|attempts|Every try counted.",
+      "Route Reader|Your climbing style|You see the way through."
+    ],
+    "avoid": "No weight, injury inference, unsafe technique advice, or invented global rank. Do not equate harder grades with personal worth.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional indoor climbing app called Crux, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Brutalist climbing-wall graphics, huge condensed numbers, cutout climbing holds, chalk speckles, asymmetric route diagrams.\nPalette: Chalk #F1EEE7, coal #20221F, acid #DCFF3F, cobalt #385DF4.\nTypography: Barlow Condensed for display; IBM Plex Mono for labels. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A zigzag route through oversized climbing holds. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Crux' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '86', label 'sessions', headline 'You kept showing up.'. Visual inspired by: Holds snap into a vertical route as the counter climbs..\nCENTER screen: exact hero text '1,320', label 'attempts', headline 'Every try counted.'. Visual inspired by: A kinetic stack of attempt marks resolves into the number..\nRIGHT screen: persona reveal with exact title 'Route Reader', small label 'Your climbing style', line 'You see the way through.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "simmer",
+    "name": "Simmer",
+    "domain": "Home cooking",
+    "action": "Save recipes, cook meals, and explore new ingredients and cuisines.",
+    "audience": "Curious home cooks",
+    "tone": "Warm, messy, celebratory",
+    "palette": "Tomato #E44932, butter #FFEDB0, aubergine #48293D, basil #4D7655",
+    "fonts": "Bricolage Grotesque for display; Source Sans 3 for body",
+    "style": "Risograph cookbook collage, bold flat ingredient cutouts, offset ink layers, handwritten annotation accents and scalloped recipe tickets",
+    "motion": "Ingredients tumble in choreographed arcs, steam ribbons morph into lettering, a pot lid anticipates a pop, and a checked tablecloth ripples between scenes.",
+    "hero": "A joyous flat-illustrated pot with dancing vegetables",
+    "transition": "A steam ribbon curls into the next layout, followed by a tablecloth pull that rearranges ingredients",
+    "interaction": "Tap the pot to trigger a brief lid wobble and ingredient flourish",
+    "personas": [
+      "Flavor Explorer",
+      "Comfort Cook",
+      "Batch Wizard",
+      "Weekend Baker"
+    ],
+    "metric": [
+      [
+        "mealsCooked",
+        156,
+        "meals cooked",
+        "You made something good.",
+        "A year seasoned your way.",
+        "Ingredient cutouts drop into a pot in three timed waves."
+      ],
+      [
+        "recipesTried",
+        48,
+        "recipes tried",
+        "Fresh pages. Full plates.",
+        "Curiosity was always on the menu.",
+        "Recipe cards flip like a handmade cookbook."
+      ],
+      [
+        "cuisinesExplored",
+        14,
+        "cuisines explored",
+        "Your kitchen went places.",
+        "New flavors, one recipe at a time.",
+        "Four imaginary ingredient arrangements spiral around a plate."
+      ],
+      [
+        "newIngredients",
+        32,
+        "new ingredients",
+        "A pinch of possibility.",
+        "You welcomed new flavors to the shelf.",
+        "Spice jars hop onto an uneven illustrated shelf."
+      ],
+      [
+        "repeatRecipeCount",
+        17,
+        "favorite recipe cooks",
+        "Worth making again.",
+        "Your most-cooked recipe: lemon orzo.",
+        "An orzo bowl spins into a scalloped recipe medallion."
+      ],
+      [
+        "sharedMeals",
+        23,
+        "shared meals",
+        "There was room at your table.",
+        "Good food found good company.",
+        "Plates expand outward into a welcoming table setting."
+      ],
+      [
+        "cookingDays",
+        112,
+        "cooking days",
+        "A delicious kind of rhythm.",
+        "From quick lunches to slow Sundays.",
+        "Steam loops stitch together a loose calendar."
+      ]
+    ],
+    "shots": [
+      "156|meals cooked|You made something good.",
+      "14|cuisines explored|Your kitchen went places.",
+      "Flavor Explorer|Your kitchen personality|Always room for a new flavor."
+    ],
+    "avoid": "Avoid calorie or diet moralizing, health claims, and treating cuisines as stereotypes. Recipe names are fictional sample data.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional home cooking app called Simmer, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Risograph cookbook collage, bold flat ingredient cutouts, offset ink layers, handwritten annotation accents and scalloped recipe tickets.\nPalette: Tomato #E44932, butter #FFEDB0, aubergine #48293D, basil #4D7655.\nTypography: Bricolage Grotesque for display; Source Sans 3 for body. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A joyous flat-illustrated pot with dancing vegetables. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Simmer' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '156', label 'meals cooked', headline 'You made something good.'. Visual inspired by: Ingredient cutouts drop into a pot in three timed waves..\nCENTER screen: exact hero text '14', label 'cuisines explored', headline 'Your kitchen went places.'. Visual inspired by: Four imaginary ingredient arrangements spiral around a plate..\nRIGHT screen: persona reveal with exact title 'Flavor Explorer', small label 'Your kitchen personality', line 'Always room for a new flavor.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "marginalia",
+    "name": "Marginalia",
+    "domain": "Reading journal",
+    "action": "Track books, reading time, saved passages, and book-club conversations.",
+    "audience": "Readers who enjoy reflection more than competition",
+    "tone": "Literary, intimate, quietly magical",
+    "palette": "Parchment #F1E8D5, ink #252E3D, oxblood #782D3D, gold #BD914C",
+    "fonts": "Cormorant Garamond for display; Libre Franklin for labels",
+    "style": "Literary book-jacket design with etched illustration, paper theater sets, oversized serif numerals, ribbons and restrained gold rules",
+    "motion": "Pages fan with staggered hinge rotations, lines of type flow into paths, bookmarks glide across masks, and layered paper architecture opens like a pop-up book.",
+    "hero": "A book unfolds into a miniature paper city of stories",
+    "transition": "A page turn reveals the next scene; an unbroken bookmark ribbon guides the eye through the cut",
+    "interaction": "Pointer movement gives the paper theater subtle layered parallax without moving the text",
+    "personas": [
+      "World Wanderer",
+      "Deep Diver",
+      "Night Reader",
+      "Curious Collector"
+    ],
+    "metric": [
+      [
+        "booksFinished",
+        32,
+        "books finished",
+        "So many lives, well read.",
+        "Every ending opened another door.",
+        "Book spines become doorways in a paper city."
+      ],
+      [
+        "pagesRead",
+        9840,
+        "pages read",
+        "You went a long way.",
+        "One page at a time.",
+        "A ribbon of page edges resolves into a monumental numeral."
+      ],
+      [
+        "readingHours",
+        186,
+        "reading hours",
+        "Time between the lines.",
+        "Quiet moments, richly spent.",
+        "An etched moon swings behind an opening book."
+      ],
+      [
+        "genresExplored",
+        9,
+        "genres explored",
+        "Your shelves grew wider.",
+        "New worlds beyond your usual corner.",
+        "Nine genre arches unfold in an abstract paper theater."
+      ],
+      [
+        "passagesSaved",
+        147,
+        "passages saved",
+        "Some words stayed.",
+        "Little lines you wanted to keep.",
+        "Anonymous typographic fragments collect under a bookmark."
+      ],
+      [
+        "longestStreakDays",
+        28,
+        "day reading streak",
+        "A chapter in your day.",
+        "Your longest reading rhythm.",
+        "Page tabs tick across a softly lit stack."
+      ],
+      [
+        "bookClubChats",
+        12,
+        "book-club chats",
+        "The story kept going.",
+        "You made space for another perspective.",
+        "Two bookmark ribbons weave around an open book."
+      ]
+    ],
+    "shots": [
+      "32|books finished|So many lives, well read.",
+      "186|reading hours|Time between the lines.",
+      "World Wanderer|Your reader persona|At home in another world."
+    ],
+    "avoid": "No copyrighted passages or real book covers; private annotations never appear on public shares by default.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional reading journal app called Marginalia, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Literary book-jacket design with etched illustration, paper theater sets, oversized serif numerals, ribbons and restrained gold rules.\nPalette: Parchment #F1E8D5, ink #252E3D, oxblood #782D3D, gold #BD914C.\nTypography: Cormorant Garamond for display; Libre Franklin for labels. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A book unfolds into a miniature paper city of stories. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Marginalia' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '32', label 'books finished', headline 'So many lives, well read.'. Visual inspired by: Book spines become doorways in a paper city..\nCENTER screen: exact hero text '186', label 'reading hours', headline 'Time between the lines.'. Visual inspired by: An etched moon swings behind an opening book..\nRIGHT screen: persona reveal with exact title 'World Wanderer', small label 'Your reader persona', line 'At home in another world.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "nocturne",
+    "name": "Nocturne",
+    "domain": "Stargazing journal",
+    "action": "Log observation nights, celestial objects, and astronomy sketches.",
+    "audience": "Amateur observers and sky-curious beginners",
+    "tone": "Precise, spacious, full of wonder",
+    "palette": "Midnight #081526, ice #BCE4E8, electric blue #608BFF, amber #F7BE62",
+    "fonts": "Space Grotesk for display; IBM Plex Mono for coordinates",
+    "style": "Observatory instrument graphics, hairline reticles, expansive negative space, luminous celestial disks, carefully sparse stars",
+    "motion": "An aperture iris opens, reticles align with damped precision, star trails draw through masks, and an orbital arc becomes a data ring. Light moves slowly against crisp instrument ticks.",
+    "hero": "A luminous illustrated celestial disk framed by an observatory reticle",
+    "transition": "The observatory aperture closes to a small pupil then opens on a different scale of sky",
+    "interaction": "Dragging a bounded reticle reveals decorative stars; it is an abstract illustration rather than a live sky map",
+    "personas": [
+      "Deep Sky Dreamer",
+      "Lunar Archivist",
+      "Planet Tracker",
+      "Meteor Watcher"
+    ],
+    "metric": [
+      [
+        "observationNights",
+        47,
+        "nights outside",
+        "You looked up.",
+        "And found a little more wonder.",
+        "An iris opens on a sparse field of stars."
+      ],
+      [
+        "objectsLogged",
+        128,
+        "objects logged",
+        "A sky full of discoveries.",
+        "Your observation journal kept expanding.",
+        "Luminous markers illuminate around an abstract instrument ring."
+      ],
+      [
+        "observationHours",
+        93,
+        "hours observing",
+        "Time under the stars.",
+        "A different kind of screen time.",
+        "A long-exposure arc traces around an empty midnight center."
+      ],
+      [
+        "constellationsLogged",
+        31,
+        "constellations logged",
+        "Patterns you came to know.",
+        "A personal atlas, night by night.",
+        "Abstract points connect through staggered thin lines."
+      ],
+      [
+        "meteorSightings",
+        64,
+        "meteors spotted",
+        "Gone in a bright moment.",
+        "You were there to notice.",
+        "A small bounded pool of meteor trails crosses the frame."
+      ],
+      [
+        "moonSessions",
+        18,
+        "lunar sessions",
+        "An old friend, new details.",
+        "You returned to the moon.",
+        "A graphic moon disk reveals successive masked illumination."
+      ],
+      [
+        "sketchesMade",
+        22,
+        "sky sketches",
+        "You kept a piece of the night.",
+        "Observations became your own marks.",
+        "Fine strokes trace an invented nebula study."
+      ]
+    ],
+    "shots": [
+      "47|nights outside|You looked up.",
+      "93|hours observing|Time under the stars.",
+      "Deep Sky Dreamer|Your observer persona|Wonder beyond the familiar."
+    ],
+    "avoid": "Never expose precise observing locations or claim live astronomical accuracy; all sky layouts are clearly decorative.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional stargazing journal app called Nocturne, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Observatory instrument graphics, hairline reticles, expansive negative space, luminous celestial disks, carefully sparse stars.\nPalette: Midnight #081526, ice #BCE4E8, electric blue #608BFF, amber #F7BE62.\nTypography: Space Grotesk for display; IBM Plex Mono for coordinates. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A luminous illustrated celestial disk framed by an observatory reticle. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Nocturne' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '47', label 'nights outside', headline 'You looked up.'. Visual inspired by: An iris opens on a sparse field of stars..\nCENTER screen: exact hero text '93', label 'hours observing', headline 'Time under the stars.'. Visual inspired by: A long-exposure arc traces around an empty midnight center..\nRIGHT screen: persona reveal with exact title 'Deep Sky Dreamer', small label 'Your observer persona', line 'Wonder beyond the familiar.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "kiln",
+    "name": "Kiln",
+    "domain": "Ceramics studio journal",
+    "action": "Record handmade pieces, studio sessions, glaze experiments, and firings.",
+    "audience": "Hobby potters and independent makers",
+    "tone": "Tactile, patient, artful",
+    "palette": "Clay #BC7057, porcelain #F2ECE2, ultramarine #3547A2, charcoal #38322F",
+    "fonts": "DM Serif Display for display; Manrope for body",
+    "style": "Sculptural ceramic silhouettes, matte mineral surfaces, gallery typography, asymmetrical plinths and cobalt glaze shapes; simulated depth remains vector-buildable",
+    "motion": "A pot profile deforms continuously from lump to vessel, a turntable suggests rotation through moving highlight masks, glaze flows down a clipped silhouette, and firing shifts colors gradually.",
+    "hero": "A sculptural vessel with a flowing cobalt glaze accent",
+    "transition": "A continuous vessel silhouette compresses into a clay slab that expands into the next gallery plinth",
+    "interaction": "Dragging rotates a faux turntable highlight around the vessel; release settles with weighted easing",
+    "personas": [
+      "Form Finder",
+      "Glaze Alchemist",
+      "Wheel Regular",
+      "Handbuilt Storyteller"
+    ],
+    "metric": [
+      [
+        "piecesMade",
+        42,
+        "pieces made",
+        "You gave ideas a shape.",
+        "A year worked by hand.",
+        "A clay mound stretches into a tall asymmetric vessel."
+      ],
+      [
+        "studioHours",
+        118,
+        "studio hours",
+        "Time well shaped.",
+        "Your practice found its own pace.",
+        "A turntable ring draws under a monumental numeral."
+      ],
+      [
+        "glazeTests",
+        27,
+        "glaze tests",
+        "Curiosity, fired.",
+        "Small experiments. Unexpected color.",
+        "Cobalt glaze drips over a grid of abstract test tiles."
+      ],
+      [
+        "firings",
+        11,
+        "firings",
+        "Into the heat.",
+        "Each firing wrote a different ending.",
+        "Kiln-colored bands glow then cool into a ceramic palette."
+      ],
+      [
+        "clayReclaimedKg",
+        8.4,
+        "kg clay reclaimed",
+        "Back to possibility.",
+        "Material ready for another beginning.",
+        "Broken abstract slabs merge into a fresh clay mound."
+      ],
+      [
+        "formsExplored",
+        6,
+        "forms explored",
+        "One material. Many voices.",
+        "Bowls, cups, vases, and your own ideas.",
+        "Six distinct vessel profiles morph in a measured sequence."
+      ],
+      [
+        "piecesGifted",
+        13,
+        "pieces gifted",
+        "Made by you. Held by someone.",
+        "Your work found a place in everyday life.",
+        "A cup silhouette nests inside a soft paper wrap."
+      ]
+    ],
+    "shots": [
+      "42|pieces made|You gave ideas a shape.",
+      "27|glaze tests|Curiosity, fired.",
+      "Glaze Alchemist|Your maker persona|Always testing a little magic."
+    ],
+    "avoid": "No invented product safety advice, firing recipes, or claims that decorative ceramics are food-safe.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional ceramics studio journal app called Kiln, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Sculptural ceramic silhouettes, matte mineral surfaces, gallery typography, asymmetrical plinths and cobalt glaze shapes; simulated depth remains vector-buildable.\nPalette: Clay #BC7057, porcelain #F2ECE2, ultramarine #3547A2, charcoal #38322F.\nTypography: DM Serif Display for display; Manrope for body. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A sculptural vessel with a flowing cobalt glaze accent. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Kiln' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '42', label 'pieces made', headline 'You gave ideas a shape.'. Visual inspired by: A clay mound stretches into a tall asymmetric vessel..\nCENTER screen: exact hero text '27', label 'glaze tests', headline 'Curiosity, fired.'. Visual inspired by: Cobalt glaze drips over a grid of abstract test tiles..\nRIGHT screen: persona reveal with exact title 'Glaze Alchemist', small label 'Your maker persona', line 'Always testing a little magic.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "switchyard",
+    "name": "Switchyard",
+    "domain": "Public transit diary",
+    "action": "Track rides, explore routes, and save favorite stations.",
+    "audience": "City explorers and everyday public-transit riders",
+    "tone": "Civic, graphic, energetic",
+    "palette": "Signal red #F44533, transit blue #1B4ED0, yellow #FFD64B, warm white #F5F2E9, black #171B20",
+    "fonts": "Archivo Black for display; Inter for labels",
+    "style": "Swiss transit posters, bold schematic route lines, modular ticket typography, geometric vehicles, purposeful grid-breaking compositions",
+    "motion": "Route lines draw and reroute, ticket strips feed through a slot, dot-matrix digits roll, and interchange circles expand into full scenes. Movement feels scheduled and rhythmic.",
+    "hero": "An abstract multicolor network map built around an oversized journey number",
+    "transition": "A moving route dot enters an interchange ring that expands to become the next screen",
+    "interaction": "Tap a route chip to highlight its decorative route and animate a tiny vehicle along it",
+    "personas": [
+      "City Connector",
+      "Scenic Rider",
+      "Route Collector",
+      "Weekend Roamer"
+    ],
+    "metric": [
+      [
+        "journeys",
+        624,
+        "journeys",
+        "You kept the city moving.",
+        "A year of getting out there.",
+        "A route dot draws an angular network around the count."
+      ],
+      [
+        "distanceKm",
+        3840,
+        "km travelled",
+        "Across your own little universe.",
+        "Everyday journeys added up.",
+        "A ticket strip extends through a measuring frame."
+      ],
+      [
+        "routesExplored",
+        28,
+        "routes explored",
+        "You took another line.",
+        "Familiar streets. New connections.",
+        "Colored lines interchange around a bold central numeral."
+      ],
+      [
+        "stationsVisited",
+        96,
+        "stations visited",
+        "More dots on your map.",
+        "New corners, one stop at a time.",
+        "Station circles populate a strictly schematic map."
+      ],
+      [
+        "ferryTrips",
+        18,
+        "ferry trips",
+        "A different way across.",
+        "Some journeys came with a view.",
+        "Graphic wave bands carry a tiny geometric ferry."
+      ],
+      [
+        "weekendOutings",
+        41,
+        "weekend outings",
+        "The weekend had a route.",
+        "You followed a little curiosity.",
+        "A ticket splits into two bold weekend panels."
+      ],
+      [
+        "activeMonths",
+        12,
+        "months on the move",
+        "A rhythm all your own.",
+        "The city changed. You kept exploring.",
+        "Twelve station labels roll like a mechanical departure board."
+      ]
+    ],
+    "shots": [
+      "624|journeys|You kept the city moving.",
+      "28|routes explored|You took another line.",
+      "City Connector|Your rider persona|You make the connections."
+    ],
+    "avoid": "No home/work inference, precise journey history, or unsupported carbon-savings claims; use fictional route names only.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional public transit diary app called Switchyard, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Swiss transit posters, bold schematic route lines, modular ticket typography, geometric vehicles, purposeful grid-breaking compositions.\nPalette: Signal red #F44533, transit blue #1B4ED0, yellow #FFD64B, warm white #F5F2E9, black #171B20.\nTypography: Archivo Black for display; Inter for labels. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: An abstract multicolor network map built around an oversized journey number. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Switchyard' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '624', label 'journeys', headline 'You kept the city moving.'. Visual inspired by: A route dot draws an angular network around the count..\nCENTER screen: exact hero text '28', label 'routes explored', headline 'You took another line.'. Visual inspired by: Colored lines interchange around a bold central numeral..\nRIGHT screen: persona reveal with exact title 'City Connector', small label 'Your rider persona', line 'You make the connections.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "stash",
+    "name": "Stash",
+    "domain": "Goal-based personal savings",
+    "action": "Make voluntary deposits into personal savings jars and celebrate completed goals.",
+    "audience": "Adults building their own saving habits",
+    "tone": "Playful, encouraging, never judgmental",
+    "palette": "Grape #5C36BB, mint #BFF4D4, peach #FFB490, ink #241B3C, cream #FFF4DD",
+    "fonts": "Rubik for display; Nunito Sans for body",
+    "style": "Retro toy-bank and arcade graphics, chunky outlined shapes, beveled vector coins, oversized rounded type, tiny starbursts and mechanical tally windows",
+    "motion": "Coins bounce through a carefully keyed pachinko track, springs compress, mechanical counters roll, a jar fills through a clipping mask, and a goal token clicks into a collection tray.",
+    "hero": "A playful toy savings machine with a mint jar and chunky coin path",
+    "transition": "A coin exits one track and lands on a spring that pushes the next scene into view",
+    "interaction": "Tap a decorative coin to nudge it through a short fixed track; never initiate a real transfer",
+    "personas": [
+      "Steady Builder",
+      "Goal Collector",
+      "Roundup Ranger",
+      "Patient Planner"
+    ],
+    "metric": [
+      [
+        "totalSaved",
+        1248,
+        "EUR saved",
+        "Little by little, you built this.",
+        "Your deposits, on your terms.",
+        "A bounded group of coins drops into a transparent vector jar."
+      ],
+      [
+        "deposits",
+        96,
+        "deposits",
+        "Small moves added up.",
+        "Every contribution had a place.",
+        "A mechanical tally rolls while a coin takes a zigzag path."
+      ],
+      [
+        "goalsCompleted",
+        3,
+        "goals completed",
+        "You made room for a yes.",
+        "Plans turned into possibilities.",
+        "Three tokens snap into a satisfying reward tray."
+      ],
+      [
+        "roundupsSaved",
+        148.5,
+        "EUR from roundups",
+        "Change made a difference.",
+        "Optional roundups found their own rhythm.",
+        "Small tokens merge into one larger graphic coin."
+      ],
+      [
+        "activeMonths",
+        10,
+        "active months",
+        "A habit at your pace.",
+        "Some months looked different. That's okay.",
+        "Ten soft mechanical windows light up in a loose sequence."
+      ],
+      [
+        "largestGoalAmount",
+        420,
+        "EUR goal funded",
+        "A plan became real.",
+        "Your completed goal: weekend away.",
+        "A ticket-shaped goal card rises from the toy machine."
+      ],
+      [
+        "goalJars",
+        5,
+        "goal jars",
+        "A little space for what matters.",
+        "Your plans each got a place.",
+        "Five jars fan into a cheerful shelf arrangement."
+      ]
+    ],
+    "shots": [
+      "€1,248|saved this year|Little by little, you built this.",
+      "3|goals completed|You made room for a yes.",
+      "Steady Builder|Your saving style|Small steps, your own pace."
+    ],
+    "avoid": "No returns, investment recommendations, wealth rankings, guilt, or fabricated growth. Amounts are private by default in the share view.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional goal-based personal savings app called Stash, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Retro toy-bank and arcade graphics, chunky outlined shapes, beveled vector coins, oversized rounded type, tiny starbursts and mechanical tally windows.\nPalette: Grape #5C36BB, mint #BFF4D4, peach #FFB490, ink #241B3C, cream #FFF4DD.\nTypography: Rubik for display; Nunito Sans for body. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A playful toy savings machine with a mint jar and chunky coin path. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Stash' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '€1,248', label 'saved this year', headline 'Little by little, you built this.'. Visual inspired by: A bounded group of coins drops into a transparent vector jar..\nCENTER screen: exact hero text '3', label 'goals completed', headline 'You made room for a yes.'. Visual inspired by: Three tokens snap into a satisfying reward tray..\nRIGHT screen: persona reveal with exact title 'Steady Builder', small label 'Your saving style', line 'Small steps, your own pace.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "parlance",
+    "name": "Parlance",
+    "domain": "Language conversation practice",
+    "action": "Practice conversations, save useful phrases, and explore everyday topics.",
+    "audience": "Adults learning to express themselves in another language",
+    "tone": "Expressive, witty, supportive",
+    "palette": "Persimmon #F36A43, lilac #C7B7F2, deep plum #3D2456, lemon #F6E97C, paper #FFF8EC",
+    "fonts": "Bricolage Grotesque for display; Noto Sans for multilingual strings",
+    "style": "Kinetic typography posters, gigantic punctuation sculptures, speech-bubble cutouts, playful typographic mouths and bold off-center compositions",
+    "motion": "Letters stretch along speech envelopes, punctuation becomes expressive faces, speech bubbles trade places through shape morphs, and syllable blocks cascade with staggered timing.",
+    "hero": "Two oversized speech forms shaped like expressive punctuation",
+    "transition": "A speech bubble elongates to fill the frame and opens as a quotation mark on the next scene",
+    "interaction": "Tap an illustrated speech mouth for a silent elastic expression; optional audio is explicitly opt-in",
+    "personas": [
+      "Conversation Starter",
+      "Phrase Collector",
+      "Careful Listener",
+      "Brave Improviser"
+    ],
+    "metric": [
+      [
+        "conversations",
+        204,
+        "conversations",
+        "You found more ways to say it.",
+        "One conversation opened the next.",
+        "Two speech forms exchange small punctuation tokens."
+      ],
+      [
+        "practiceMinutes",
+        1860,
+        "minutes practising",
+        "Time finding your voice.",
+        "A little room to try, again and again.",
+        "An elastic typographic mouth expands around rolling numerals."
+      ],
+      [
+        "phrasesSaved",
+        340,
+        "phrases saved",
+        "Words you wanted to keep.",
+        "Useful little bridges to your next conversation.",
+        "Word-shaped blocks cascade into a giant pair of quotation marks."
+      ],
+      [
+        "topicsExplored",
+        26,
+        "topics explored",
+        "More to talk about.",
+        "From daily rituals to unexpected stories.",
+        "Speech bubbles rotate through abstract topic symbols."
+      ],
+      [
+        "languagesPractised",
+        3,
+        "languages practised",
+        "Different words. Still you.",
+        "More ways to meet the world.",
+        "Three distinct typographic ribbons weave without national flags."
+      ],
+      [
+        "longestStreakDays",
+        19,
+        "day practice streak",
+        "You kept the conversation going.",
+        "Your longest rhythm of showing up.",
+        "Punctuation marks bounce along a winding sentence line."
+      ],
+      [
+        "voiceNotes",
+        87,
+        "voice notes",
+        "Your voice took up space.",
+        "Practice sounded a little more like you.",
+        "A decorative waveform expands into a confident speech shape."
+      ]
+    ],
+    "shots": [
+      "204|conversations|You found more ways to say it.",
+      "340|phrases saved|Words you wanted to keep.",
+      "Conversation Starter|Your language persona|A hello can open a world."
+    ],
+    "avoid": "Never infer fluency from usage, rank accents, use nationality stereotypes, or expose recordings or private conversation transcripts.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional language conversation practice app called Parlance, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Kinetic typography posters, gigantic punctuation sculptures, speech-bubble cutouts, playful typographic mouths and bold off-center compositions.\nPalette: Persimmon #F36A43, lilac #C7B7F2, deep plum #3D2456, lemon #F6E97C, paper #FFF8EC.\nTypography: Bricolage Grotesque for display; Noto Sans for multilingual strings. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: Two oversized speech forms shaped like expressive punctuation. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Parlance' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '204', label 'conversations', headline 'You found more ways to say it.'. Visual inspired by: Two speech forms exchange small punctuation tokens..\nCENTER screen: exact hero text '340', label 'phrases saved', headline 'Words you wanted to keep.'. Visual inspired by: Word-shaped blocks cascade into a giant pair of quotation marks..\nRIGHT screen: persona reveal with exact title 'Conversation Starter', small label 'Your language persona', line 'A hello can open a world.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  },
+  {
+    "slug": "patchwork",
+    "name": "Patchwork",
+    "domain": "Local volunteering",
+    "action": "Join community projects, log volunteer time, and revisit shared milestones.",
+    "audience": "Neighbors contributing time to local projects",
+    "tone": "Human, collective, grateful",
+    "palette": "Indigo #304B75, terracotta #CC7051, rose #E9ACB2, oat #F5EBDD, teal #4D8F83",
+    "fonts": "Bree Serif for display; Atkinson Hyperlegible for body",
+    "style": "Quilted textile collage, visible stitch lines, imperfect fabric shapes, warm folk-art geometry, generous calm typography",
+    "motion": "A thread draws through scenes, stitched patches unfold on hinged seams, fabric settles with gentle secondary motion, and individual pieces assemble into a collective quilt.",
+    "hero": "A patchwork quilt assembling from illustrated community symbols",
+    "transition": "A running stitch guides a fabric fold that reveals the next patch; the camera pulls back to show the larger quilt",
+    "interaction": "Tap a quilt patch to lift a corner and reveal a tiny thanks underneath",
+    "personas": [
+      "Neighborhood Weaver",
+      "Quiet Helper",
+      "Hands-on Builder",
+      "Community Welcomer"
+    ],
+    "metric": [
+      [
+        "volunteerHours",
+        84,
+        "hours contributed",
+        "You showed up for your community.",
+        "Your time joined something bigger.",
+        "Fabric patches assemble around an embroidered-style numeral."
+      ],
+      [
+        "projectsJoined",
+        12,
+        "projects joined",
+        "Many ways to lend a hand.",
+        "Different projects. A shared sense of care.",
+        "Twelve distinct patches stitch into a flexible quilt grid."
+      ],
+      [
+        "communityDays",
+        18,
+        "community days",
+        "A place in your calendar.",
+        "Small commitments became shared moments.",
+        "An illustrated calendar folds into fabric strips."
+      ],
+      [
+        "gardenSessions",
+        9,
+        "garden sessions",
+        "You helped something grow.",
+        "Hands in the soil, alongside your neighbors.",
+        "A stitched sprout grows through layered cloth soil."
+      ],
+      [
+        "repairItems",
+        31,
+        "items repaired",
+        "More life in everyday things.",
+        "Things repaired together, ready to be used again.",
+        "A visible stitched seam reconnects two abstract fabric shapes."
+      ],
+      [
+        "welcomeSessions",
+        7,
+        "welcome sessions",
+        "You made space for someone.",
+        "A warmer welcome, one gathering at a time.",
+        "Two cloth arches open into a welcoming doorway."
+      ],
+      [
+        "activeMonths",
+        10,
+        "active months",
+        "Care has a rhythm.",
+        "You found your own way to contribute.",
+        "A single thread loops through ten seasonal patches."
+      ]
+    ],
+    "shots": [
+      "84|hours contributed|You showed up for your community.",
+      "18|community days|A place in your calendar.",
+      "Neighborhood Weaver|Your community style|You help the pieces belong."
+    ],
+    "avoid": "No beneficiary names, identifiable photos, savior narratives, competitive altruism rankings, or unverified impact estimates.",
+    "imagePrompt": "Use case: ui-mockup.\nAsset type: a single landscape reference illustration containing exactly THREE tall mobile application screenshots side by side.\nCreate an exquisite, polished fictional local volunteering app called Patchwork, showing three DIFFERENT screens from its 2026 Wrapped recap. These are actual flat app UI screens, not physical phones. Each screen is portrait 9:19.5 with rounded corners, all equal size and wholly visible. Large landscape canvas, three screens fill the image height with comfortable outer margin, narrow equal gutters, neutral coordinating backdrop. No fourth screen, device hardware, perspective, hands, captions outside screens, or watermark.\nArt direction: Quilted textile collage, visible stitch lines, imperfect fabric shapes, warm folk-art geometry, generous calm typography.\nPalette: Indigo #304B75, terracotta #CC7051, rose #E9ACB2, oat #F5EBDD, teal #4D8F83.\nTypography: Bree Serif for display; Atkinson Hyperlegible for body. Clear readable type, dramatic hierarchy, masterful layout, generous negative space.\nIllustration motif: A patchwork quilt assembling from illustrated community symbols. Each screen must have its own distinctive composition and large vector-like illustration demonstrating a different moment of sophisticated motion design, not a repetitive dashboard card grid. Illustration texture is subtle.\nEvery screen has the small brand wordmark 'Patchwork' at top, a tiny '2026' label and a thin ten-segment story progress indicator, and a small bottom 'Continue' action. Treat text as accessible live UI, not text printed on illustrations.\nLEFT screen: exact hero text '84', label 'hours contributed', headline 'You showed up for your community.'. Visual inspired by: Fabric patches assemble around an embroidered-style numeral..\nCENTER screen: exact hero text '18', label 'community days', headline 'A place in your calendar.'. Visual inspired by: An illustrated calendar folds into fabric strips..\nRIGHT screen: persona reveal with exact title 'Neighborhood Weaver', small label 'Your community style', line 'You help the pieces belong.'. A special expressive emblem based on the central motif and clearly different from left and center.\nKeep wording exact and uncluttered. Premium original product design, cohesive brand, distinctive layouts that could be recreated and animated with layered Rive vector artwork."
+  }
+]
