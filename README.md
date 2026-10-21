@@ -97,9 +97,11 @@ Full documentation: [Rive web runtime](https://rive.app/docs/runtimes/web/web-js
 
 ```bash
 rive apps/simmer/rive                 # live preview window, rebuilds on edit
-scripts/render-video.py simmer        # apps/simmer/video.webp
-scripts/merge-videos.py               # apps/showcase.webp: five apps side by side, two sequences
+scripts/render-video.py simmer        # apps/simmer/video.webm
+scripts/merge-videos.py               # apps/showcase.webm: five apps side by side, two sequences
 scripts/render-all.sh                 # re-render every app's video, then the showcase
 ```
 
-The video scripts drive each recap headlessly with `rive --screenshot` (one run per frame, in parallel, pressing Right every 3.5 s) and encode with `ffmpeg` and `img2webp` (`brew install ffmpeg webp`). Run `scripts/render-video.py --help` for frame rate, timing and fixture options.
+The video scripts drive each recap headlessly with `rive --screenshot` (one run per frame, in parallel, pressing Right every 3.5 s) and encode directly to VP9 WebM with `ffmpeg` (`brew install ffmpeg`, with the `libvpx-vp9` encoder). The merger reads `apps/<app>/video.webm` and writes `apps/showcase.webm`; no MP4 intermediate or `img2webp` is needed. The `--quality` option remains 0–100 (higher is better), mapped to VP9 CRF 63–0. Looping is controlled by the video player. Run `scripts/render-video.py --help` for frame rate, timing and fixture options.
+
+The checked-in WebP previews above are from the earlier pipeline and remain available. Re-running the scripts produces WebM files alongside them; link WebM outputs as videos rather than Markdown images.

@@ -7,12 +7,11 @@ The Rive CLI has no video export, so every frame is its own headless
 `rive <project> --screenshot` run that replays the same input script up to that
 frame's time: wait `dwell` seconds on a scene, press Right, repeat until the
 summary, then hold for `tail` seconds. Frames render in parallel and are
-encoded with ffmpeg (mp4, used by merge-videos.py) and img2webp (animated webp,
-since Homebrew's ffmpeg has no libwebp encoder).
+encoded directly to VP9 WebM with ffmpeg. merge-videos.py reads these same
+files; no intermediate video or animated-image encoder is needed.
 
 Outputs:
-    apps/<app>/video.webp              animated webp, loops forever
-    apps/<app>/rive/build/video.mp4    near-lossless intermediate for merging
+    apps/<app>/video.webm              VP9 video (looping is controlled by the player)
 """
 import argparse
 import os
@@ -34,13 +33,15 @@ def parse_args():
     p.add_argument("--tail", type=float, default=3.0, help="seconds to hold the final summary (default 3)")
     p.add_argument("--scenes", type=int, default=10, help="number of scenes to walk through (default 10)")
     p.add_argument("--viewport", default="390x844", help="capture size (default 390x844)")
-    p.add_argument("--quality", type=int, default=75, help="webp quality 0-100 (default 75)")
+    p.add_argument("--quality", type=int, default=75, help="VP9 quality 0-100, higher is better; maps to CRF 63-0 (default 75)")
     p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) - 2), help="parallel renders")
     p.add_argument("--data", action="append", default=[], help="extra view model values, path=value (repeatable)")
     p.add_argument("--keep-frames", action="store_true", help="keep the PNG frames in rive/build/video-frames")
     a = p.parse_args()
-    if TICKS % a.fps:
+    if a.fps <= 0 or TICKS % a.fps:
         p.error(f"--fps must divide {TICKS}")
+    if not 0 <= a.quality <= 100:
+        p.error("--quality must be between 0 and 100")
     return a
 
 
@@ -72,9 +73,8 @@ def main():
     project = os.path.join(ROOT, "apps", a.app, "rive")
     if not os.path.isfile(os.path.join(project, "rive.yaml")):
         sys.exit(f"no Rive project at {project}")
-    for tool in ("ffmpeg", "img2webp"):
-        if not shutil.which(tool):
-            sys.exit(f"{tool} not found on PATH (brew install ffmpeg webp)")
+    if not shutil.which("ffmpeg"):
+        sys.exit("ffmpeg not found on PATH (install ffmpeg with the libvpx-vp9 encoder)")
 
     dwell, step = round(a.dwell * TICKS), TICKS // a.fps
     key_ticks = [dwell * j for j in range(1, a.scenes)]
@@ -101,20 +101,18 @@ def main():
             if done % 100 == 0 or done == len(ticks):
                 print(f"  {done}/{len(ticks)}", flush=True)
 
-    mp4 = os.path.join(project, "build", "video.mp4")
+    webm = os.path.join(ROOT, "apps", a.app, "video.webm")
+    crf = round(63 * (1 - a.quality / 100))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(a.fps),
-                    "-i", os.path.join(frames, "f%05d.png"), "-c:v", "libx264", "-crf", "12",
-                    "-preset", "medium", "-pix_fmt", "yuv420p", mp4], check=True)
-
-    webp = os.path.join(ROOT, "apps", a.app, "video.webp")
-    pngs = sorted(os.path.join(frames, f) for f in os.listdir(frames) if f.endswith(".png"))
-    subprocess.run(["img2webp", "-loop", "0", "-lossy", "-q", str(a.quality), "-m", "4",
-                    "-d", str(round(1000 / a.fps)), *pngs, "-o", webp],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    "-i", os.path.join(frames, "f%05d.png"),
+                    "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+                    "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(crf),
+                    "-deadline", "good", "-cpu-used", "2", "-row-mt", "1",
+                    "-pix_fmt", "yuv420p", "-an", "-f", "webm", webm], check=True)
 
     if not a.keep_frames:
         shutil.rmtree(frames, ignore_errors=True)
-    print(f"{a.app}: wrote {os.path.relpath(webp, ROOT)} ({os.path.getsize(webp) / 1e6:.1f} MB)")
+    print(f"{a.app}: wrote {os.path.relpath(webm, ROOT)} ({os.path.getsize(webm) / 1e6:.1f} MB)")
 
 
 if __name__ == "__main__":

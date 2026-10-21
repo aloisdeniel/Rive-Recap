@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Re-render every app's video (apps/<app>/video.webp), then the merged
-# showcase (apps/showcase.webp).
+# Re-render every app's video (apps/<app>/video.webm), then the merged
+# showcase (apps/showcase.webm).
 #
 #   scripts/render-all.sh [app ...]       # default: every app with a rive/ project
 #

@@ -5,18 +5,17 @@
 
 Apps play side by side, `per-row` at a time (5 by default, so ten apps make two
 sequences), and the sequences play one after another. The defaults keep the
-file small enough to show inline in a README; raise --scale and --fps for a
-full-quality cut. Reads the intermediates written by render-video.py
-(apps/<app>/rive/build/video.mp4), so render the apps first.
+file small enough for a web preview; raise --scale and --fps for a
+full-quality cut. Reads the WebM videos written by render-video.py
+(apps/<app>/video.webm), so render the apps first.
 
-Output: apps/showcase.webp
+Output: apps/showcase.webm (VP9; looping is controlled by the player)
 """
 import argparse
 import os
 import shutil
 import subprocess
 import sys
-import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # The gallery order from apps/README.md.
@@ -32,21 +31,29 @@ def parse_args():
     p.add_argument("--gap", type=int, default=16, help="pixels around each tile (default 16)")
     p.add_argument("--background", default="0x141414", help="gutter colour (default 0x141414)")
     p.add_argument("--fps", type=int, default=15, help="output frame rate (default 15)")
-    p.add_argument("--quality", type=int, default=70, help="webp quality 0-100 (default 70)")
-    p.add_argument("--output", default=os.path.join(ROOT, "apps", "showcase.webp"))
-    return p.parse_args()
+    p.add_argument("--quality", type=int, default=70, help="VP9 quality 0-100, higher is better; maps to CRF 63-0 (default 70)")
+    p.add_argument("--output", default=os.path.join(ROOT, "apps", "showcase.webm"))
+    a = p.parse_args()
+    if not 0 <= a.quality <= 100:
+        p.error("--quality must be between 0 and 100")
+    if not a.output.lower().endswith(".webm"):
+        p.error("--output must end in .webm")
+    if a.per_row < 1 or a.fps < 1 or a.scale <= 0 or a.gap < 0:
+        p.error("--per-row, --fps and --scale must be positive; --gap must be nonnegative")
+    return a
 
 
 def main():
     a = parse_args()
     apps = [s.strip() for s in a.apps.split(",") if s.strip()]
-    videos = [os.path.join(ROOT, "apps", app, "rive", "build", "video.mp4") for app in apps]
+    if not apps:
+        sys.exit("--apps must contain at least one app")
+    videos = [os.path.join(ROOT, "apps", app, "video.webm") for app in apps]
     missing = [app for app, v in zip(apps, videos) if not os.path.exists(v)]
     if missing:
         sys.exit("render these first with scripts/render-video.py: " + ", ".join(missing))
-    for tool in ("ffmpeg", "img2webp"):
-        if not shutil.which(tool):
-            sys.exit(f"{tool} not found on PATH (brew install ffmpeg webp)")
+    if not shutil.which("ffmpeg"):
+        sys.exit("ffmpeg not found on PATH (install ffmpeg with the libvpx-vp9 encoder)")
 
     g = a.gap
     tile = f"scale=trunc(iw*{a.scale}/2)*2:-2,pad=iw+{2 * g}:ih+{2 * g}:{g}:{g}:color={a.background}"
@@ -61,19 +68,17 @@ def main():
     seqs = "".join(f"[s{r}]" for r in range(len(rows)))
     graph.append(f"{seqs}concat=n={len(rows)}:v=1:a=0,fps={a.fps}[out]" if len(rows) > 1 else f"{seqs}fps={a.fps}[out]")
 
-    with tempfile.TemporaryDirectory() as frames:
-        cmd = ["ffmpeg", "-y", "-loglevel", "error"]
-        for v in videos:
-            cmd += ["-i", v]
-        cmd += ["-filter_complex", ";".join(graph), "-map", "[out]", os.path.join(frames, "f%05d.png")]
-        print(f"merging {len(apps)} apps into {len(rows)} sequence(s) of {a.per_row}")
-        subprocess.run(cmd, check=True)
-
-        pngs = sorted(os.path.join(frames, f) for f in os.listdir(frames))
-        print(f"encoding {len(pngs)} frames to webp")
-        subprocess.run(["img2webp", "-loop", "0", "-lossy", "-q", str(a.quality), "-m", "4",
-                        "-d", str(round(1000 / a.fps)), *pngs, "-o", a.output],
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    os.makedirs(os.path.dirname(os.path.abspath(a.output)), exist_ok=True)
+    cmd = ["ffmpeg", "-y", "-loglevel", "error"]
+    for v in videos:
+        cmd += ["-i", v]
+    crf = round(63 * (1 - a.quality / 100))
+    cmd += ["-filter_complex", ";".join(graph), "-map", "[out]",
+            "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", str(crf),
+            "-deadline", "good", "-cpu-used", "2", "-row-mt", "1",
+            "-pix_fmt", "yuv420p", "-an", "-f", "webm", a.output]
+    print(f"merging {len(apps)} apps into {len(rows)} sequence(s) of {a.per_row}")
+    subprocess.run(cmd, check=True)
     print(f"wrote {os.path.relpath(a.output, ROOT)} ({os.path.getsize(a.output) / 1e6:.1f} MB)")
 
 
