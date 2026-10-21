@@ -22,6 +22,26 @@ NUM_PROP = {2: "journeys", 3: "distanceKm", 4: "routesExplored", 5: "stationsVis
 
 
 # ---------------------------------------------------------------- helpers
+def gpu_piece(sc, name, script, x, y, **inputs):
+    """A ScriptedDrawable (GPU canvas) whose inputs are keyable ScriptInputNumbers.
+    Its `live` input is gated per scene by gen.scene_layer (0 while hidden)."""
+    d = E("ScriptedDrawable", scriptAssetId=script.id, name=name, x=float(x), y=float(y))
+    ins = {}
+    inputs.setdefault("live", 1.0)
+    for k, v in inputs.items():
+        el = E("ScriptInputNumber", propertyValue=float(v), name=k)
+        d.add(el)
+        ins[k] = el
+    if not hasattr(sc, "live_inputs"):
+        sc.live_inputs = []
+    sc.live_inputs.append(ins["live"])
+    return d, ins
+
+
+def key_in(a, ins, name, *frames):
+    a.key(ins[name], "propertyValue", *frames)
+
+
 def station(x, y, d=18.0, name="Station", fillc=WHITE, line=BLACK, lw=4.0):
     return circle(float(x), float(y), d, fillc, name=name, line=line, lw=lw)
 
@@ -68,13 +88,30 @@ def stations_on(a, pts, stations, f0, f1):
         pop(a, st, int(f0 + (f1 - f0) * best), 14)
 
 
-def metric_copy(sc, n, num_box, num_size, num_color, unit_box, head_box, head_size, sup_box,
+HEAD_SIZE, HEAD_LH = 50.0, 46.0       # Archivo Condensed Black poster headlines
+HEAD_BOTTOM = 650.0                    # headlines are bottom-aligned on this line ...
+SUP_Y = 664.0                          # ... so the support always sits 14 px below the last line
+
+
+def headline(x, w, prop, color=BLACK, lines=3, size=HEAD_SIZE, lh=HEAD_LH, bottom=HEAD_BOTTOM, name="Headline",
+             ink=None):
+    h = lh * lines + 8
+    return text(x, bottom - h, w, [(SAMPLE.get(prop, ""), prop)], size, color, display="cond", h=h,
+                overflow="fitFontSize", lh=lh, ls=-0.3, valign="bottom", name=name, ink=ink)
+
+
+def support(x, w, prop, color=BLACK, y=SUP_Y, name="Support", ink=None):
+    return text(x, y, w, [(SAMPLE.get(prop, ""), prop)], 18, color, h=48, overflow="ellipsis", lh=24,
+                name=name, ink=ink)
+
+
+def metric_copy(sc, n, num_box, num_size, num_color, unit_box, head_box, head_size=None, sup_box=None,
                 ink=BLACK, sup_color=None, num_align="center", unit_align="center", head_lines=3,
                 unit_color=None):
     x, y, w, h = num_box
     hero = text(x, y, w, [("0", NUM_PROP[n], COUNT_CONV[n])],
                 num_size, num_color, display=True, align=num_align, h=h, overflow="fitFontSize",
-                valign="middle", wrap="noWrap", name="Hero number", lh=num_size * 1.0)
+                valign="middle", wrap="noWrap", name="Hero number", lh=num_size * 1.0, ls=-num_size * 0.02)
     sem = E("SemanticData", bind(NUM_PROP[n], 983, CONV_FMT), bind(f"screen{n}Unit", 984),
             role="text", isHidden=n != 2, name="Semantics (full exact value)")
     hero.children.insert(0, sem)
@@ -84,13 +121,11 @@ def metric_copy(sc, n, num_box, num_size, num_color, unit_box, head_box, head_si
     unit = text(ux, uy, uw, [(SAMPLE[f"screen{n}Unit"], f"screen{n}Unit")], 22, unit_color or ink, weight=600,
                 align=unit_align, h=56, overflow="ellipsis", name="Unit", lh=27)
     unit_rng = reveal_modifier(unit, units="words", dy=14.0)
-    hx, hy, hw = head_box
-    head = text(hx, hy, hw, [(SAMPLE[f"screen{n}Headline"], f"screen{n}Headline")], head_size, ink, display=True,
-                h=head_size * 1.06 * head_lines + 4, overflow="fitFontSize", lh=head_size * 1.06, name="Headline")
-    head_rng = reveal_modifier(head, units="words", dy=30.0)
-    sx, sy, sw = sup_box
-    sup = text(sx, sy, sw, [(SAMPLE[f"screen{n}Support"], f"screen{n}Support")], 17, sup_color or ink,
-               h=46, overflow="ellipsis", lh=22, name="Support")
+    hx, hw = head_box[0], head_box[1]
+    head = headline(hx, hw, f"screen{n}Headline", ink, lines=head_lines)
+    head_rng = reveal_modifier(head, units="words", dy=34.0)
+    sx, sw = (sup_box or (hx, hw))[:2]
+    sup = support(sx, sw, f"screen{n}Support", sup_color or ink)
     sup_rng = reveal_modifier(sup, units="words", dy=12.0)
     copy = node("Copy", head, sup)
     heroes = node("Hero", hero, unit)
@@ -105,7 +140,7 @@ def standard_copy_motion(sc, ef, eb, hero_at=16):
     ef.key(b["hero"], "scaleX", (0, 0.86, "hold"), (hero_at, 0.86, EO), (hero_at + 40, 1.0, "hold"))
     ef.key(b["hero"], "scaleY", (0, 0.86, "hold"), (hero_at, 0.86, EO), (hero_at + 40, 1.0, "hold"))
     key_reveal(ef, b["unit_rng"], 48, 72)
-    key_reveal(ef, b["head_rng"], 72, 100)
+    key_reveal(ef, b["head_rng"], 70, 100)
     key_reveal(ef, b["sup_rng"], 86, 108)
     content_enter_back(sc, eb)
     key_reveal(eb, b["head_rng"], 6, 34)
@@ -114,9 +149,9 @@ def standard_copy_motion(sc, ef, eb, hero_at=16):
 
 def finish(sc, ef_dur=110):
     """Common exit timelines."""
-    xf = sc.anim("ExitFwd", 44)
+    xf = sc.anim("ExitFwd", 50)
     content_exit_fwd(sc, xf)
-    xb = sc.anim("ExitBack", 40)
+    xb = sc.anim("ExitBack", 44)
     motif_exit_back(sc, xb)
     return xf, xb
 
@@ -125,64 +160,57 @@ def finish(sc, ef_dur=110):
 # 1. Invitation
 # ======================================================================
 def scene1():
-    sc = Scene(1, (195, 292), WHITE)
+    sc = Scene(1, (195, 353), WHITE)
     ef = sc.anim("EnterFwd", 120)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 300, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
-    red = [(-20, 202), (70, 202), (122, 150), (300, 150), (346, 104), (410, 104)]
-    yel = [(-20, 410), (96, 410), (136, 450), (262, 450), (302, 410), (410, 410)]
-    blu = [(-20, 150), (22, 192), (22, 420), (-20, 462)]
-    blk = [(410, 236), (368, 236), (368, 430), (410, 472)]
-    lines = []
-    for pts, col, nm in ((red, RED, "Red line"), (yel, YEL, "Yellow line"), (blu, BLUE, "Blue line"),
-                         (blk, BLACK, "Black line")):
-        shp, tr = route(pts, col, 14, name=nm, radius=30)
-        lines.append((shp, tr, pts))
-    sts = [station(300, 150), station(22, 300), station(368, 330), station(136, 450), station(262, 450)]
-    rings = [interchange(122, 150, name="Interchange A"), interchange(22, 410, name="Interchange B"),
-             interchange(368, 410, name="Interchange C")]
-    year = text(30, 228, 330, [("2026", "year", CONV_YEAR)], 118, BLACK, display=True, h=128, align="center",
-                overflow="fitFontSize", valign="middle", wrap="noWrap", name="Oversized year", lh=118)
+    # the network is a real 3D world disc (scripts/poster3d.luau, kind 1), the
+    # interchange roundel made solid: it starts as a flat plan seen from above and
+    # the camera dives into an isometric view while the route ribbons swell into
+    # being, the blocks rise and the station pucks pop up
+    map3d, m_in = gpu_piece(sc, "Transit world 3D", SCRIPT_P3, 0, 222, kind=1, w=390, h=262, res=2,
+                            build=1.0, pitch=1.0, yaw=-0.42, dist=6.7, fov=0.5, camX=0.0, camY=0.0,
+                            tz=0.0, sway=0.0, dim=0.0, outline=0.018)
+    network = node("Network (3D world)", map3d)
+    year = text(24, 138, 342, [("2026", "year", CONV_YEAR)], 128, BLACK, display=True, h=128, align="center",
+                overflow="fitFontSize", valign="middle", wrap="noWrap", name="Oversized year", lh=128, ls=-3.5)
     year_roll = reveal_modifier(year, units="characters", dy=-60.0)
-    chip = text(24, 92, 342, [(SAMPLE["periodLabel"], "periodLabel")], 13, WHITE, weight=600, h=20,
-                overflow="ellipsis", wrap="noWrap", name="Period ticket")
-    chip.children[0].add(E("TextStyleBackground", E("Fill", solid(BLACK), name="Ticket ink"), cornerRadius=3.0,
-                           name="Ticket"))
-    chip_holder = node("Period chip", chip, x=0.0)
-    # big wordmark lockup revealed through the motif
-    lock_text = text(70, 474, 300, ["Switchyard"], 44, BLACK, display=True, name="Wordmark lockup text",
-                     wrap="noWrap")
-    lock_rng = reveal_modifier(lock_text, units="characters", dy=0.0)
-    lock_ring = circle(44.0, 502.0, 40.0, WHITE, name="Lockup ring", line=BLACK, lw=8.0)
-    lock_stub, lock_trim = route([(-20, 502), (40, 502)], RED, 14, name="Lockup route", radius=0)
-    lockup = node("Wordmark lockup", lock_text, lock_ring, lock_stub)
-    greet = text(24, 560, 342, [(SAMPLE.get("greetingLabel", "Hi,"), "greetingLabel"), " ",
-                                (SAMPLE["userName"], "userName")], 20, BLACK, weight=600, h=26,
+    greet = text(24, 92, 342, [(SAMPLE.get("greetingLabel", "Hi,"), "greetingLabel"), " ",
+                               (SAMPLE["userName"], "userName")], 20, BLACK, weight=700, h=26,
                  overflow="ellipsis", wrap="noWrap", name="Greeting")
     greet_rng = reveal_modifier(greet, units="words", dy=12.0)
-    head = text(24, 592, 342, [(SAMPLE["introHeadline"], "introHeadline")], 32, BLACK, display=True,
-                h=72, overflow="fitFontSize", lh=34, name="Intro headline")
-    head_rng = reveal_modifier(head, units="words", dy=28.0)
-    sup = text(24, 672, 342, [(SAMPLE["introSupport"], "introSupport")], 17, BLACK, h=46, overflow="ellipsis",
-               lh=22, name="Intro support")
+    # period: a route stub leading into the label (no highlight box)
+    chip = text(42, 118, 324, [(SAMPLE["periodLabel"], "periodLabel")], 13, INK60, weight=600, h=18,
+                overflow="ellipsis", wrap="noWrap", name="Period label", ls=0.2)
+    chip_holder = node("Period chip", chip, rect(24, 123, 12, 6, RED, r=3, name="Route stub"), x=0.0)
+    # wordmark lockup revealed through the motif
+    lock_text = text(66, 492, 300, ["Switchyard"], 34, BLACK, display=True, name="Wordmark lockup text",
+                     wrap="noWrap", ls=-0.6)
+    lock_rng = reveal_modifier(lock_text, units="characters", dy=0.0)
+    lock_ring = circle(42.0, 514.0, 30.0, WHITE, name="Lockup ring", line=BLACK, lw=6.0)
+    lock_stub, lock_trim = route([(-20, 514), (36, 514)], RED, 10, name="Lockup route", radius=0)
+    lockup = node("Wordmark lockup", lock_text, lock_ring, lock_stub)
+    head = headline(24, 342, "introHeadline", lines=2, name="Intro headline")
+    head_rng = reveal_modifier(head, units="words", dy=34.0)
+    sup = support(24, 342, "introSupport", name="Intro support")
     sup_rng = reveal_modifier(sup, units="words", dy=12.0)
-    idle_dot = circle(-20.0, 202.0, 14.0, WHITE, name="Idle rider", line=RED, lw=4.0, opacity=0.0)
     sc.greeting = greet
-    sc.add(node("Copy", greet, head, sup), lockup, chip_holder, year, idle_dot,
-           node("Stations", *rings, *sts), node("Network", *[l[0] for l in lines]))
+    sc.network = network
+    sc.add(node("Copy", head, sup), greet, lockup, chip_holder, year, network)
 
     motif_enter(sc, ef)
-    for i, (shp, tr, pts) in enumerate(lines):
-        draw(ef, tr, 10 + i * 7, 54 + i * 7)
-    for i, r in enumerate(rings):
-        pop(ef, r, 30 + i * 8)
-    for i, s in enumerate(sts):
-        pop(ef, s, 38 + i * 4)
+    # camera dive: plan view -> isometric, with a little overshoot in the yaw
+    key_in(ef, m_in, "build", (0, 0.0, "hold"), (8, 0.0, (0.35, 0.0, 0.6, 1.0)), (104, 1.0, "hold"))
+    key_in(ef, m_in, "pitch", (0, 0.0, "hold"), (16, 0.0, (0.55, 0.0, 0.2, 1.0)), (108, 1.0, "hold"))
+    key_in(ef, m_in, "yaw", (0, 0.5, "hold"), (12, 0.5, (0.5, 0.0, 0.25, 1.0)), (96, -0.5, (0.4, 0.0, 0.5, 1.0)),
+           (118, -0.42, "hold"))
+    key_in(ef, m_in, "dist", (0, 11.0, "hold"), (6, 11.0, (0.45, 0.0, 0.15, 1.0)), (104, 6.7, "hold"))
+    
     key_reveal(ef, year_roll, 16, 46, EO)
     ef.key(year, "scaleX", (0, 0.7, "hold"), (14, 0.7, EO), (50, 1.0, "hold"))
     ef.key(year, "scaleY", (0, 0.7, "hold"), (14, 0.7, EO), (50, 1.0, "hold"))
-    slide(ef, chip_holder, "x", -380, 20, 52, EIO)
+    slide(ef, chip_holder, "x", -380, 30, 62, EIO)
     draw(ef, lock_trim, 48, 60, EO)
     pop(ef, lock_ring, 58, 18)
     key_reveal(ef, lock_rng, 62, 90, EO)
@@ -193,8 +221,8 @@ def scene1():
     content_enter_back(sc, eb)
     key_reveal(eb, head_rng, 6, 34)
 
-    key_along(idle, idle_dot, red, 0, 300)
-    idle.key(idle_dot, "opacity", (0, 0.0, "lin"), (30, 1.0, "lin"), (270, 1.0, "lin"), (300, 0.0, "lin"))
+    # the board sways gently on its pivot (Joystick-scrubbed, so pause freezes it)
+    key_in(idle, m_in, "sway", (0, 0.0, SOFT), (120, 0.07, SOFT), (360, -0.07, SOFT), (480, 0.0, "lin"))
     finish(sc)
     return sc
 
@@ -202,52 +230,85 @@ def scene1():
 # ======================================================================
 # 2. Journeys  (concept: left screen)
 # ======================================================================
+def arch_viaduct(x0, x1, deck_y, spring_y, pier_w, span, color=BLACK, name="Viaduct"):
+    """A schematic arched viaduct: deck, piers and arch spandrels as one silhouette."""
+    kids = [rect(x0, deck_y, x1 - x0, 12, color, name="Deck")]
+    x = x0
+    k = 0
+    while x < x1:
+        kids.append(rect(x, deck_y + 12, pier_w, (spring_y - deck_y) + 30, color, name=f"Pier {k}"))
+        xa, xb = x + pier_w, min(x + pier_w + span, x1 + 40)
+        r = (xb - xa) / 2.0
+        cx = (xa + xb) / 2.0
+        pts = [(xa, deck_y + 12), (xb, deck_y + 12), (xb, spring_y)]
+        for j in range(1, 12):
+            t = j / 12.0 * math.pi
+            pts.append((cx + r * math.cos(t), spring_y - r * 0.82 * math.sin(t)))
+        pts.append((xa, spring_y))
+        kids.append(path_shape(pts, color, name=f"Spandrel {k}"))
+        x = xb
+        k += 1
+    return node(name, *kids)
+
+
+def skyline_old_town(color=BLACK):
+    g = 232
+    return node("Old town",
+                path_shape([(14, g), (14, 186), (35, 164), (56, 186), (56, g)], color, name="Gable A"),
+                path_shape([(52, g), (52, 196), (70, 178), (88, 196), (88, g)], color, name="Gable B"),
+                rect(87, 120, 29, 112, color, name="Clock tower"),
+                path_shape([(88, 122), (103, 84), (118, 122)], color, name="Spire"),
+                rect(101, 76, 4, 10, color, name="Finial"),
+                circle(103.0, 140.0, 15.0, WHITE, name="Clock face"),
+                rect(102, 134, 2.5, 7, color, name="Hand H"), rect(102, 139, 6, 2.5, color, name="Hand M"),
+                rect(116, 190, 34, 42, color, name="Hall"), rect(138, 176, 8, 16, color, name="Chimney"),
+                circle(160.0, 214.0, 34.0, color, name="Tree A"), circle(141.0, 222.0, 24.0, color, name="Tree B"),
+                rect(0, 230, 184, 6, color, name="Ground"))
+
+
+def train_cars(n_cars, color, x=0.0, y=0.0, name="Train", car_w=74.0, h=24.0):
+    kids = []
+    for c in range(n_cars):
+        ox = c * (car_w + 4)
+        for k in range(4):
+            kids.append(rect(ox + 9 + k * 15, 6, 10, 8, WHITE, r=2, name=f"Window {c}.{k}"))
+        kids.append(rect(ox, h - 6, car_w, 3, RED if color != RED else YEL, name=f"Stripe {c}"))
+        if c == 0:
+            kids.append(path_shape([(ox, 0), (ox + car_w, 0), (ox + car_w, h), (ox - 8, h), (ox - 8, 10)],
+                                   color, name=f"Cab {c}", line=BLACK, lw=2.5))
+        else:
+            kids.append(rect(ox, 0, car_w, h, color, r=5, name=f"Car {c}", line=BLACK, lw=2.5))
+    return node(name, *kids, x=x, y=y)
+
+
 def scene2():
     sc = Scene(2, (318, 176), WHITE)
     ef = sc.anim("EnterFwd", 110)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 360, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
-    sun = circle(112.0, 176.0, 116.0, YEL, name="Sun")
-    sky = node("Skyline",
-               rect(24, 178, 28, 54, BLACK, name="Block A"), rect(50, 156, 26, 76, BLACK, name="Block B"),
-               rect(76, 196, 40, 36, BLACK, name="Block C"), rect(116, 168, 22, 64, BLACK, name="Block D"),
-               rect(91, 118, 22, 80, BLACK, name="Clock tower"),
-               path_shape([(91, 118), (102, 96), (113, 118)], BLACK, name="Spire"),
-               circle(102.0, 136.0, 10.0, WHITE, name="Clock face"),
-               rect(0, 230, 170, 8, BLACK, name="Ground"))
-    via = node("Viaduct",
-               rect(176, 214, 240, 12, BLACK, name="Deck"),
-               *[rect(196 + i * 52, 226, 14, 40, BLACK, name=f"Pier {i}") for i in range(4)])
-    train = node("Blue train",
-                 *[rect(12 + i * 26, 6, 16, 9, WHITE, r=2, name=f"Window {i}") for i in range(5)],
-                 rect(0, 0, 150, 26, BLUE, r=7, name="Body", line=BLACK, lw=2.5),
-                 x=196.0, y=186.0)
+    sun = circle(132.0, 172.0, 112.0, YEL, name="Sun")
+    sky = skyline_old_town()
+    via = arch_viaduct(170, 410, 212, 262, 10, 42)
+    train = train_cars(3, BLUE, x=192.0, y=186.0, name="Blue train")
+    train_idle = node("Blue train (idle drift)", train)
     red = [(-20, 252), (30, 252), (30, 452), (70, 492), (318, 492), (360, 450), (360, 300), (410, 250)]
     blu = [(150, 82), (150, 116), (196, 162), (410, 162)]
-    yel = [(410, 540), (360, 540), (330, 570), (330, 760)]
     red_s, red_t = route(red, RED, 14, name="Red route (drawn by the dot)", radius=30)
     blu_s, blu_t = route(blu, BLUE, 12, name="Blue route", radius=24)
-    yel_s, yel_t = route(yel, YEL, 14, name="Yellow route", radius=26)
     sts = [station(30, 330), station(130, 492), station(250, 492), station(360, 380)]
     ring = interchange(30, 452, name="Interchange")
     rider = circle(-20.0, 252.0, 20.0, RED, name="Route dot (drawing)", line=BLACK, lw=4.0, opacity=0.0)
-    tram = node("Tram",
-                rect(14, 10, 68, 8, BLACK, r=2, name="Destination blind"),
-                circle(18.0, 96.0, 12.0, YEL, name="Headlight L", line=BLACK, lw=2.0),
-                circle(78.0, 96.0, 12.0, YEL, name="Headlight R", line=BLACK, lw=2.0),
-                rect(10, 24, 76, 46, BLACK, r=10, name="Windscreen frame"),
-                rect(16, 30, 64, 34, SKY, r=7, name="Windscreen"),
-                rect(0, 0, 96, 124, BLUE, r=18, name="Front", line=BLACK, lw=3.5),
-                *[rect(104 + k * 22, -8 - k * 6, 14, 26, WHITE, r=3, name=f"Side window {k}") for k in range(2)],
-                path_shape([(96, 6), (150, -18), (150, 120), (96, 118)], DEEP, name="Side", line=BLACK, lw=3.0),
-                x=262.0, y=566.0)
-    rails = node("Rails", path_shape([(150, 740), (276, 690), (300, 690), (226, 740)], YEL, name="Rail yellow"),
-                 path_shape([(250, 740), (334, 690), (358, 690), (316, 740)], RED, name="Rail red"))
-    heroes, copy = metric_copy(sc, 2, (24, 262, 342, 150), 150, RED, (24, 414, 342), (24, 520, 232), 32,
-                               (24, 666, 232))
-    sc.add(copy, heroes, rider, tram, node("Stations", ring, *sts), node("Network", red_s, blu_s, yel_s),
-           rails, train, via, sky, sun)
+    idle_rider = circle(-20.0, 252.0, 16.0, WHITE, name="Idle rider", line=RED, lw=4.5, opacity=0.0)
+    # a real 3D tram (scripts/poster3d.luau, kind 0) brakes into the stop at the
+    # bottom right; its ground stripes run away to the vanishing point
+    tram, t_in = gpu_piece(sc, "Tram 3D", SCRIPT_P3, 0, 404, kind=0, w=390, h=336, res=2, build=1.0,
+                           pitch=0.2, yaw=-0.58, dist=6.2, fov=0.52, camX=0.5, camY=-0.4, tz=0.0, sway=0.0,
+                           dim=0.0, outline=0.022)
+    sc.tram_slot = tram
+    heroes, copy = metric_copy(sc, 2, (24, 262, 342, 150), 150, RED, (24, 414, 342), (24, 228))
+    sc.add(copy, heroes, rider, idle_rider, node("Stations", ring, *sts), tram,
+           node("Network", red_s, blu_s), train_idle, via, sky, sun)
 
     motif_enter(sc, ef)
     draw(ef, red_t, 12, 72, (0.45, 0, 0.55, 1))
@@ -255,16 +316,22 @@ def scene2():
     key_along(ef, rider, red, 12, 72)
     stations_on(ef, red, sts + [ring], 12, 72)
     draw(ef, blu_t, 20, 50)
-    draw(ef, yel_t, 40, 70)
     slide(ef, train, "x", 420, 26, 70, EO)
-    slide(ef, tram, "x", 470, 36, 84, EO)
+    # the tram runs in from the distance and brakes (a long ease-out with a tiny settle)
+    key_in(ef, t_in, "tz", (0, -16.0, "hold"), (24, -16.0, (0.15, 0.55, 0.25, 1.0)), (92, 0.06, SOFT),
+           (106, 0.0, "hold"))
     slide(ef, sky, "y", 70, 14, 46, EO)
+    slide(ef, via, "y", 40, 18, 50, EO)
     pop(ef, sun, 10, 30)
     standard_copy_motion(sc, ef, eb)
 
-    key_along(idle, rider, red, 0, 360)
-    idle.key(rider, "opacity", (0, 0.0, "lin"), (30, 1.0, "lin"), (330, 1.0, "lin"), (360, 0.0, "lin"))
-    idle.key(train, "x", (0, 196.0, SOFT), (180, 208.0, SOFT), (360, 196.0, "lin"))
+    key_along(idle, idle_rider, red, 40, 400)
+    idle.key(idle_rider, "x", (0, -20.0, "hold"))
+    idle.key(idle_rider, "y", (0, 252.0, "hold"))
+    idle.key(idle_rider, "opacity", (0, 0.0, "hold"), (40, 0.0, "lin"), (60, 1.0, "lin"), (380, 1.0, "lin"),
+             (400, 0.0, "hold"))
+    idle.key(train_idle, "x", (0, 0.0, SOFT), (240, 14.0, SOFT), (480, 0.0, "lin"))
+    key_in(idle, t_in, "sway", (0, 0.0, SOFT), (240, 0.035, SOFT), (480, 0.0, "lin"))
     finish(sc)
     return sc
 
@@ -275,22 +342,27 @@ def scene2():
 def scene3():
     sc = Scene(3, (52, 390), YEL)
     ef = sc.anim("EnterFwd", 110)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 720, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
-    orbits, orbit_trims, spinners = [], [], []
-    for i, (d, col, pd, pc) in enumerate(((250.0, BLACK, 14.0, RED), (330.0, BLACK, 18.0, BLUE),
-                                            (410.0, BLACK, 12.0, WHITE))):
-        shp = E("Shape", E("Ellipse", width=d, height=d * 0.62, name="Path"),
-                stroke(col, 2.0, "Orbit", "round", "round",
+    # "your own little universe": three orbits drawn as transit lines, each with a
+    # station-planet that circles once (or twice) per idle loop
+    orbits, orbit_trims, spinners, spin_idle = [], [], [], []
+    for i, (d, col, lw_, pd, pc) in enumerate(((236.0, BLACK, 5.0, 18.0, RED), (318.0, RED, 7.0, 22.0, WHITE),
+                                                (404.0, BLUE, 5.0, 16.0, YEL))):
+        shp = E("Shape", E("Ellipse", width=d, height=d * 0.6, name="Path"),
+                stroke(col, lw_, "Orbit", "round", "round",
                        (tr := E("TrimPath", start=0.0, end=1.0, modeValue="sequential", name="Draw"))),
-                x=195.0, y=250.0, name=f"Orbit {i}")
+                x=195.0, y=252.0, name=f"Orbit {i}")
         orbits.append(shp)
         orbit_trims.append(tr)
-        planet = circle(d / 2, 0.0, pd, pc, name="Planet", line=BLACK, lw=3.0)
-        spin = node(f"Orbit {i} spinner", planet, x=195.0, y=250.0, scaleY=0.62, rotation=0.6 + i * 2.0)
+        a0 = 0.6 + i * 2.0
+        planet = circle(d / 2 * math.cos(a0), d * 0.3 * math.sin(a0), pd, pc, name="Station planet",
+                        line=BLACK, lw=4.0)
+        spin = node(f"Orbit {i} spinner", planet, x=195.0, y=252.0)
         spinners.append(spin)
-    plate = rect(10, 196, 370, 112, YEL, name="Number plate")
+        spin_idle.append((planet, d, a0))
+    plate = rect(10, 200, 370, 104, YEL, name="Number plate")
     frame = node("Measuring frame",
                  rect(24, 352, 342, 76, None, r=4, name="Frame", line=BLACK, lw=6.0),
                  *[rect(28 + i * 16.8, 334 if i % 5 == 0 else 340, 3, 14 if i % 5 == 0 else 8, BLACK,
@@ -298,7 +370,7 @@ def scene3():
     slot = rect(-6, 360, 34, 60, BLACK, r=4, name="Slot")
     window = E("Shape", E("Rectangle", width=336.0, height=70.0, originX=0.0, originY=0.0, name="Path"),
                x=27.0, y=355.0, name="Frame window (clip source)")
-    unit = text(44, 378, 300, [(SAMPLE["screen3Unit"], "screen3Unit")], 20, BLACK, weight=600, h=26,
+    unit = text(44, 378, 300, [(SAMPLE["screen3Unit"], "screen3Unit")], 20, BLACK, weight=700, h=26,
                 overflow="ellipsis", wrap="noWrap", name="Unit on ticket")
     unit_rng = reveal_modifier(unit, units="characters", dy=0.0)
     strip = node("Ticket strip",
@@ -311,26 +383,28 @@ def scene3():
                *[rect(10 + i * 21, 7, 14, 11, WHITE, r=2, name=f"Window {i}") for i in range(4)],
                rect(0, 0, 96, 34, RED, r=8, name="Body", line=BLACK, lw=3.0),
                circle(22.0, 34.0, 14.0, BLACK, name="Wheel A"), circle(74.0, 34.0, 14.0, BLACK, name="Wheel B"),
-               x=270.0, y=678.0)
-    road, road_t = route([(-10, 726), (400, 726)], BLACK, 3, name="Road", trim=True, dash=[10, 8], cap="butt")
-    x, y = 24, 200
-    hero = text(24, 200, 342, [("0", "distanceKm", COUNT_CONV[3])], 104, BLACK, display=True, align="center",
-                h=104, overflow="fitFontSize", valign="middle", wrap="noWrap", name="Hero number", lh=104)
+               x=270.0, y=676.0)
+    bus_idle = node("Bus (idle)", bus)
+    road, road_t = route([(-10, 724), (400, 724)], BLACK, 3, name="Road", trim=True, dash=[10, 8], cap="butt")
+    hero = text(24, 202, 342, [("0", "distanceKm", COUNT_CONV[3])], 104, BLACK, display=True, align="center",
+                h=104, overflow="fitFontSize", valign="middle", wrap="noWrap", name="Hero number", lh=104, ls=-2.0)
+    sem = E("SemanticData", bind("distanceKm", 983, CONV_FMT), bind("screen3Unit", 984),
+            role="text", isHidden=True, name="Semantics (full exact value)")
+    hero.children.insert(0, sem)
+    sc.sems.append(sem)
     hero_roll = reveal_modifier(hero, units="characters", dy=-46.0)
-    head = text(24, 470, 342, [(SAMPLE["screen3Headline"], "screen3Headline")], 34, BLACK, display=True,
-                h=34 * 1.06 * 3 + 4, overflow="fitFontSize", lh=34 * 1.06, name="Headline")
-    head_rng = reveal_modifier(head, units="words", dy=30.0)
-    sup = text(24, 598, 342, [(SAMPLE["screen3Support"], "screen3Support")], 17, BLACK, h=46, overflow="ellipsis",
-               lh=22, name="Support")
+    head = headline(24, 342, "screen3Headline", lines=3, bottom=618)
+    head_rng = reveal_modifier(head, units="words", dy=34.0)
+    sup = support(24, 300, "screen3Support", y=630)
     sup_rng = reveal_modifier(sup, units="words", dy=12.0)
-    sc.add(node("Copy", head, sup), hero, plate, strip, window, slot, frame, bus, road,
+    sc.add(node("Copy", head, sup), hero, plate, strip, window, slot, frame, bus_idle, road,
            node("Orbits", *spinners, *orbits))
 
     motif_enter(sc, ef)
     for i, tr in enumerate(orbit_trims):
         draw(ef, tr, 10 + i * 6, 50 + i * 6)
-    for i, s in enumerate(spinners):
-        fade_in(ef, s, 40 + i * 5, 52 + i * 5)
+    for i, s_ in enumerate(spinners):
+        fade_in(ef, s_, 40 + i * 5, 52 + i * 5)
     key_reveal(ef, hero_roll, 16, 42, EO)
     ef.key(plate, "scaleY", (0, 0.0, "hold"), (12, 0.0, EO), (30, 1.0, "hold"))
     slide(ef, strip, "x", -360, 30, 84, (0.3, 0.0, 0.2, 1.0))
@@ -345,9 +419,16 @@ def scene3():
     content_enter_back(sc, eb)
     key_reveal(eb, head_rng, 6, 34)
 
-    for i, s in enumerate(spinners):
-        r0 = rest_value(s, "rotation")
-        idle.key(s, "rotation", (0, r0, "lin"), (720, r0 + (2 * math.pi if i != 1 else -2 * math.pi), "lin"))
+    for i, (pl, d, a0) in enumerate(spin_idle):
+        turns = (1.0, -1.0, 2.0)[i]
+        steps = 48
+        for k in range(steps + 1):
+            ang = a0 + turns * 2 * math.pi * k / steps
+            f = round(IDLE_FRAMES * k / steps)
+            idle.key(pl, "x", (f, d / 2 * math.cos(ang), "lin"))
+            idle.key(pl, "y", (f, d * 0.3 * math.sin(ang), "lin"))
+    idle.key(bus_idle, "y", (0, 0.0, SOFT), (8, -1.5, SOFT), (16, 0.0, "lin"), (240, 0.0, SOFT), (248, -1.5, SOFT),
+             (256, 0.0, "lin"))
     finish(sc)
     return sc
 
@@ -361,8 +442,8 @@ CHIP_ROUTES = {}
 def scene4():
     sc = Scene(4, (195, 164), WHITE)
     ef = sc.anim("EnterFwd", 110)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 240, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
     red = [(-20, 96), (110, 96), (195, 164), (276, 246), (346, 246), (346, 424), (410, 488)]
     blu = [(195, 82), (195, 164), (118, 241), (44, 241), (44, 424), (-20, 488)]
@@ -373,6 +454,8 @@ def scene4():
         wrap = node(f"{key} route (chip highlight)", shp)
         lines[key] = (wrap, shp, tr, pts)
     hub = circle(195.0, 164.0, 58.0, WHITE, name="Central interchange", line=BLACK, lw=10.0)
+    hub_breath = node("Central interchange (idle breath)", hub, x=195.0, y=164.0)
+    hub.attrs["x"], hub.attrs["y"] = 0.0, 0.0
     sts = [station(110, 96), station(346, 330), station(44, 330), station(300, 132)]
     vehicle = node("Route vehicle", rect(-14, -8, 28, 16, BLACK, r=5, name="Body"),
                    rect(-9, -4, 18, 6, WHITE, r=2, name="Windows"), x=-40.0, y=-40.0, opacity=0.0)
@@ -385,13 +468,17 @@ def scene4():
                     x=float(cx + 38), y=488.0)
         chips.append(chip)
     chip_row = node("Route chips (signature interaction; hit-tested by the sequencer)", *chips)
-    heroes, copy = metric_copy(sc, 4, (24, 252, 342, 168), 168, BLUE, (24, 418, 342), (24, 530, 342), 34,
-                               (24, 656, 342))
-    # buildings behind the lines
-    dome = node("Dome", circle(330.0, 560.0, 70.0, "FFD9D4C6", name="Dome"),
-                rect(292, 560, 76, 120, "FFD9D4C6", name="Drum"), opacity=0.0)
-    sc.add(copy, chip_row, heroes, vehicle, hub, node("Stations", *sts),
-           node("Network", *[l[0] for l in lines.values()]))
+    heroes, copy = metric_copy(sc, 4, (24, 252, 342, 168), 168, BLUE, (24, 418, 342), (24, 342), head_lines=2)
+    # grey architecture behind the lines (depth, as in the concept)
+    stone = "FFDDD8CB"
+    city = node("Grey city",
+                circle(326.0, 118.0, 64.0, stone, name="Dome"), rect(294, 118, 64, 92, stone, name="Drum"),
+                rect(322, 70, 8, 22, stone, name="Lantern"),
+                rect(18, 96, 40, 130, stone, name="Tower A"), rect(58, 140, 30, 86, stone, name="Block B"),
+                rect(236, 196, 46, 50, stone, name="Block C"), rect(140, 214, 40, 36, stone, name="Block D"),
+                path_shape([(18, 96), (38, 70), (58, 96)], stone, name="Tower roof"))
+    sc.add(copy, chip_row, heroes, vehicle, hub_breath, node("Stations", *sts),
+           node("Network", *[l[0] for l in lines.values()]), city)
     CHIP_ROUTES.update(lines=lines, vehicle=vehicle, chips=chips)
 
     motif_enter(sc, ef)
@@ -407,8 +494,13 @@ def scene4():
     standard_copy_motion(sc, ef, eb, hero_at=24)
     ef.key(sc.copy_bits["hero"], "rotation", (0, -0.12, "hold"), (24, -0.12, EO), (64, 0.0, "hold"))
 
-    idle.key(hub, "scaleX", (0, 1.0, SOFT), (40, 1.12, SOFT), (80, 1.0, "lin"), (240, 1.0, "lin"))
-    idle.key(hub, "scaleY", (0, 1.0, SOFT), (40, 1.12, SOFT), (80, 1.0, "lin"), (240, 1.0, "lin"))
+    slide(ef, city, "y", 60, 10, 50, EO)
+    fade_in(ef, city, 10, 30)
+    for f0 in (0, 240):
+        for prop in ("scaleX", "scaleY"):
+            idle.key(hub_breath, prop, (f0, 1.0, SOFT), (f0 + 40, 1.12, SOFT), (f0 + 80, 1.0, "lin"))
+    for prop in ("scaleX", "scaleY"):
+        idle.key(hub_breath, prop, (IDLE_FRAMES, 1.0, "lin"))
     finish(sc)
     return sc
 
@@ -419,8 +511,8 @@ def scene4():
 def scene5():
     sc = Scene(5, (330, 560), BLUE)
     ef = sc.anim("EnterFwd", 110)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 180, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
     l1 = [(-20, 352), (160, 352), (220, 412), (410, 412)]
     l2 = [(300, 82), (300, 300), (240, 360), (240, 520)]
@@ -434,8 +526,8 @@ def scene5():
     ix = [interchange(240, 412, 34.0, "Interchange A"), interchange(346, 412, 34.0, "Interchange B"),
           interchange(120, 410, 34.0, "Interchange C")]
     pulse = circle(240.0, 412.0, 34.0, None, name="Pulse", line=WHITE, lw=3.0, opacity=0.0)
-    heroes, copy = metric_copy(sc, 5, (24, 108, 250, 168), 168, WHITE, (24, 270, 250), (24, 540, 342), 34,
-                               (24, 664, 342), ink=WHITE, sup_color=YEL, num_align="left", unit_align="left")
+    heroes, copy = metric_copy(sc, 5, (24, 108, 250, 168), 168, WHITE, (24, 270, 250), (24, 342), ink=WHITE,
+                               sup_color=YEL, num_align="left", unit_align="left", head_lines=2)
     sc.add(copy, heroes, node("Stations", *ix, *sts), pulse, node("Map", *[l[0] for l in lines]))
 
     motif_enter(sc, ef)
@@ -448,9 +540,13 @@ def scene5():
         pop(ef, s, 60 + k * 4, 16)
     standard_copy_motion(sc, ef, eb)
 
-    idle.key(pulse, "opacity", (0, 0.9, "lin"), (60, 0.0, "lin"), (180, 0.0, "lin"))
-    idle.key(pulse, "scaleX", (0, 1.0, EO), (60, 2.6, "lin"), (180, 2.6, "lin"))
-    idle.key(pulse, "scaleY", (0, 1.0, EO), (60, 2.6, "lin"), (180, 2.6, "lin"))
+    idle.key(pulse, "opacity", (0, 0.0, "hold"))
+    idle.key(pulse, "scaleX", (0, 1.0, "hold"))
+    idle.key(pulse, "scaleY", (0, 1.0, "hold"))
+    for f0 in (30, 190, 350):
+        idle.key(pulse, "opacity", (f0, 0.9, "lin"), (f0 + 60, 0.0, "hold"))
+        idle.key(pulse, "scaleX", (f0, 1.0, EO), (f0 + 60, 2.6, "hold"), (f0 + 61, 1.0, "hold"))
+        idle.key(pulse, "scaleY", (f0, 1.0, EO), (f0 + 60, 2.6, "hold"), (f0 + 61, 1.0, "hold"))
     finish(sc)
     return sc
 
@@ -458,49 +554,75 @@ def scene5():
 # ======================================================================
 # 6. Ferry trips - graphic wave bands carry a geometric ferry
 # ======================================================================
-def scene6():
-    sc = Scene(6, (292, 196), WHITE)
-    ef = sc.anim("EnterFwd", 110)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 240, "loop")
+def ferry_art():
+    """A Swiss-lake paddle-steamer reduced to poster geometry."""
+    return node("Ferry body",
+                rect(-6, -78, 3, 30, BLACK, name="Mast"),
+                path_shape([(-3, -78), (16, -72), (-3, -66)], YEL, name="Pennant", line=BLACK, lw=2.0),
+                rect(14, -66, 16, 30, BLACK, name="Funnel"), rect(14, -66, 16, 7, RED, name="Funnel band"),
+                rect(-36, -40, 64, 8, BLACK, name="Upper deck rail"),
+                *[rect(-30 + k * 13, -30, 8, 9, BLUE, r=2, name=f"Window {k}") for k in range(5)],
+                rect(-40, -36, 76, 30, WHITE, r=4, name="Saloon", line=BLACK, lw=3.0),
+                rect(-56, -10, 112, 4, BLACK, name="Main deck"),
+                circle(0.0, -2.0, 30.0, RED, name="Paddle box", line=BLACK, lw=3.0),
+                path_shape([(-70, -8), (66, -8), (50, 16), (-58, 16)], RED, name="Hull", line=BLACK, lw=3.0),
+                rect(-60, 4, 116, 5, WHITE, name="Waterline"))
 
-    sun = circle(292.0, 196.0, 150.0, YEL, name="Sun")
-    skyline = node("Far shore", *[rect(x, 410 - h, w, h, "FFD9D4C6", name=f"Shore {i}")
-                                  for i, (x, w, h) in enumerate(((176, 30, 34), (206, 22, 56), (228, 40, 24),
-                                                                  (268, 18, 70), (286, 44, 40), (330, 30, 28),
-                                                                  (360, 40, 50)))])
+
+def scene6():
+    sc = Scene(6, (300, 176), WHITE)
+    ef = sc.anim("EnterFwd", 110)
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
+
+    sun = circle(306.0, 168.0, 104.0, YEL, name="Sun")
+    rays = node("Sun rays", *[node(f"Ray {k}", rect(-2.5, -78, 5, 14, YEL, r=2.5, name="Ray"),
+                                  rotation=k * math.pi / 6) for k in range(12)], x=306.0, y=168.0)
+    rays_idle = node("Sun rays (idle turn)", rays)
+    stone = "FFDDD8CB"
+    skyline = node("Far shore",
+                   *[rect(x, 410 - h, w, h, stone, name=f"Shore {i}")
+                     for i, (x, w, h) in enumerate(((150, 30, 34), (180, 22, 56), (202, 40, 24), (242, 18, 70),
+                                                    (260, 44, 40), (304, 30, 28), (334, 56, 50)))],
+                   path_shape([(242, 340), (251, 318), (260, 340)], stone, name="Spire"),
+                   rect(0, 404, 390, 8, stone, name="Quay"))
     bands = []
-    for i, (top, col, period, travel) in enumerate(((410, SKY, 36, 36), (468, BLUE, 44, 88),
-                                                    (548, DEEP, 52, 52), (636, "FF0F2F80", 60, 120))):
-        kids = [circle(float(-120 + k * period), float(top + 16), float(period), col, name=f"Crest {k}")
-                for k in range((600 // period) + 4)]
-        kids.append(rect(-120, top + 16, 640, 844 - top, col, name="Band"))
+    for i, (top, col, period, travel) in enumerate(((410, SKY, 40, 80), (468, BLUE, 48, 96),
+                                                    (548, DEEP, 60, 120), (636, "FF0F2F80", 80, 160))):
+        kids = [circle(float(-160 + k * period), float(top + 16), float(period), col, name=f"Crest {k}")
+                for k in range((1080 // period) + 2)]
+        kids.append(rect(-160, top + 16, 1080, 844 - top, col, name="Band"))
         b = node(f"Wave band {i}", *kids, x=0.0)
-        bands.append((b, period, travel))
-    ferry = node("Ferry",
-                 rect(-14, -48, 12, 20, BLACK, name="Funnel"), rect(-14, -40, 12, 5, RED, name="Funnel band"),
-                 *[rect(-24 + k * 14, -24, 9, 8, BLACK, r=2, name=f"Porthole {k}") for k in range(4)],
-                 rect(-30, -30, 56, 22, WHITE, r=3, name="Cabin", line=BLACK, lw=3.0),
-                 path_shape([(-52, -8), (52, -8), (38, 14), (-40, 14)], RED, name="Hull", line=BLACK, lw=3.0),
-                 x=150.0, y=416.0)
-    heroes, copy = metric_copy(sc, 6, (24, 120, 220, 168), 168, BLACK, (24, 284, 220), (24, 530, 342), 34,
-                               (24, 660, 342), ink=WHITE, sup_color=YEL, num_align="left", unit_align="left",
-                               unit_color=BLACK)
-    sc.add(copy, heroes, *[b for b, _, _ in bands[1:]], ferry, bands[0][0], skyline, sun)
+        drift = node(f"Wave band {i} (idle drift)", b)
+        bands.append((b, drift, period, travel))
+    ferry = ferry_art()
+    ferry_bob = node("Ferry (idle bob)", ferry)
+    ferry_n = node("Ferry", ferry_bob, x=150.0, y=420.0)
+    wake, wake_t = route([(20, 432), (96, 432)], WHITE, 4, name="Wake", dash=[10, 7], cap="butt")
+    heroes, copy = metric_copy(sc, 6, (24, 112, 236, 168), 168, BLACK, (24, 276, 236), (24, 342), ink=WHITE,
+                               sup_color=YEL, num_align="left", unit_align="left", unit_color=BLACK, head_lines=2)
+    sc.add(copy, heroes, *[d for _, d, _, _ in bands[1:]], wake, ferry_n, bands[0][1], skyline, rays_idle, sun)
 
     motif_enter(sc, ef)
     pop(ef, sun, 10, 36)
-    for i, (b, period, travel) in enumerate(bands):
+    for k, ray in enumerate(rays.children):
+        pop(ef, ray, 24 + k * 2, 14)
+    for i, (b, drift, period, travel) in enumerate(bands):
         ef.key(b, "y", (0, 260.0, "hold"), (10 + i * 6, 260.0, EO), (50 + i * 6, 0.0, "hold"))
-    slide(ef, ferry, "x", -120, 30, 92, (0.25, 0.1, 0.25, 1))
-    ef.key(ferry, "rotation", (0, 0.0, "hold"), (30, -0.12, SOFT), (60, 0.08, SOFT), (92, 0.0, "hold"))
+    slide(ef, ferry_n, "x", -140, 30, 92, (0.25, 0.1, 0.25, 1))
+    ef.key(ferry_n, "rotation", (0, 0.0, "hold"), (30, -0.1, SOFT), (60, 0.07, SOFT), (92, 0.0, "hold"))
+    draw(ef, wake_t, 60, 96, EO)
     slide(ef, skyline, "y", 60, 20, 60, EO)
     standard_copy_motion(sc, ef, eb)
 
-    for b, period, travel in bands:
-        idle.key(b, "x", (0, 0.0, "lin"), (240, -float(travel), "lin"))
-    idle.key(ferry, "rotation", (0, 0.0, SOFT), (60, 0.05, SOFT), (180, -0.05, SOFT), (240, 0.0, "lin"))
-    idle.key(ferry, "y", (0, 416.0, SOFT), (120, 421.0, SOFT), (240, 416.0, "lin"))
+    for b, drift, period, travel in bands:
+        idle.key(drift, "x", (0, 0.0, "lin"), (IDLE_FRAMES, -float(travel) * 2, "lin"))
+    for f0 in (0, 160, 320):
+        idle.key(ferry_bob, "rotation", (f0, 0.0, SOFT), (f0 + 40, 0.04, SOFT), (f0 + 120, -0.04, SOFT))
+        idle.key(ferry_bob, "y", (f0, 0.0, SOFT), (f0 + 80, 4.0, SOFT))
+    idle.key(ferry_bob, "rotation", (IDLE_FRAMES, 0.0, "lin"))
+    idle.key(ferry_bob, "y", (IDLE_FRAMES, 0.0, "lin"))
+    idle.key(rays_idle, "rotation", (0, 0.0, "lin"), (IDLE_FRAMES, math.pi / 6, "lin"))
     finish(sc)
     return sc
 
@@ -511,8 +633,8 @@ def scene6():
 def scene7():
     sc = Scene(7, (195, 216), WHITE)
     ef = sc.anim("EnterFwd", 120)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 480, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
     def panel(cx, col, name):
         rp = E("Rectangle", width=166.0, height=210.0, originX=0.5, originY=0.5, cornerRadiusTL=12.0, name="Path")
@@ -535,8 +657,7 @@ def scene7():
                              dash=[8, 7], cap="butt")
     perf, perf_t = route([(195, 118), (195, 314)], BLACK, 3, name="Perforation", dash=[6, 6], cap="butt")
     stub_dot = circle(195.0, 216.0, 20.0, YEL, name="Ticket punch", line=BLACK, lw=3.0)
-    heroes, copy = metric_copy(sc, 7, (24, 334, 342, 168), 168, BLACK, (24, 500, 342), (24, 560, 342), 34,
-                               (24, 650, 342), head_lines=2)
+    heroes, copy = metric_copy(sc, 7, (24, 322, 342, 156), 156, BLACK, (24, 476, 342), (24, 342), head_lines=2)
     sc.add(copy, heroes, stub_dot, perf, sun, sat_route, park, sun_route, L, R)
 
     motif_enter(sc, ef)
@@ -574,40 +695,29 @@ def scene7():
 def scene8():
     sc = Scene(8, (60, 420), BLACK)
     ef = sc.anim("EnterFwd", 120)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 480, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
-    tiles, labels = [], []
-    for i in range(12):
-        r, c = divmod(i, 4)
-        cx, cy = 63.0 + c * 88, 350.0 + r * 66
-        lab = text(0, 2, None, [f"{i + 1:02d}"], 30, YEL, display=True, ox=0.5, oy=0.5, name="Code")
-        lab_n = node("Flap", lab)
-        t = node(f"Board tile {i + 1:02d}",
-                 lab_n, rect(-39, -0.5, 78, 1, "FF11141A", name="Split"),
-                 rect(-39, -29, 78, 58, GREY, r=6, name="Tile"), x=cx, y=cy)
-        lit = node(f"Lit {i + 1:02d}", t)
-        lit.add(bind("activeMonths", 18, ramp_conv(i, i + 1, 0.22, 1.0, f"Month {i + 1} lit")))
-        tiles.append((t, lab_n, lit))
-    heroes, copy = metric_copy(sc, 8, (24, 100, 220, 168), 168, YEL, (24, 264, 342), (24, 548, 342), 34,
-                               (24, 668, 342), ink=WHITE, sup_color="FFB9B4A8", num_align="left", unit_align="left",
-                               head_lines=3)
-    board = node("Departure board", *[t[2] for t in tiles],
-                 rect(14, 312, 362, 216, "FF0E1116", r=10, name="Board housing"))
+    # a real split-flap departure board (scripts/flapboard.luau): twelve 3D flap
+    # modules roll through random numbers and land on their month, staggered, in a
+    # 5x7 dot-matrix face; months beyond activeMonths stay dark
+    flaps, f_in = gpu_piece(sc, "Split-flap board 3D", SCRIPT_FLAP, 0, 296, w=390, h=240, res=2, roll=1.0,
+                            idle=0.0, active=12.0, flips=7.0, pitch=0.14)
+    f_in["active"].add(bind("activeMonths", 243))
+    heroes, copy = metric_copy(sc, 8, (24, 100, 220, 168), 168, YEL, (24, 264, 342), (24, 342), ink=WHITE,
+                               sup_color="FFB9B4A8", num_align="left", unit_align="left", head_lines=2)
+    housing = node("Board housing",
+                   rect(14, 312, 362, 216, "FF0E1116", r=10, name="Housing"),
+                   rect(14, 312, 362, 216, None, r=10, name="Housing edge", line="FF2A3038", lw=2.0))
+    board = node("Departure board", flaps, housing)
     sc.add(copy, heroes, board)
 
     motif_enter(sc, ef)
     slide(ef, board, "y", 260, 14, 50, EO)
-    for i, (t, lab, lit) in enumerate(tiles):
-        f0 = 30 + i * 4
-        ef.key(lab, "scaleY", (0, 0.0, "hold"), (f0, 0.0, "lin"), (f0 + 4, 1.0, "lin"), (f0 + 8, 0.0, "lin"),
-               (f0 + 12, 1.0, "lin"), (f0 + 16, 0.0, "lin"), (f0 + 22, 1.0, "hold"))
+    key_in(ef, f_in, "roll", (0, 0.0, "hold"), (34, 0.0, "lin"), (108, 1.0, "hold"))
     standard_copy_motion(sc, ef, eb)
 
-    for i, (t, lab, lit) in enumerate(tiles[:4]):
-        f0 = 60 + i * 100
-        idle.key(lab, "scaleY", (0, 1.0, "hold"), (f0, 1.0, "lin"), (f0 + 5, 0.0, "lin"), (f0 + 10, 1.0, "hold"),
-                 (480, 1.0, "hold"))
+    key_in(idle, f_in, "idle", (0, 0.0, "lin"), (IDLE_FRAMES, 1.0, "lin"))
     finish(sc)
     return sc
 
@@ -620,35 +730,80 @@ PERSONA_GROUPS = []
 
 def scene9():
     sc = Scene(9, (195, 296), BLUE, bg_bind="personaColor")
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 480, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
     C = (195.0, 296.0)
 
-    # p0 City Connector: interchange knot
+    # p0 City Connector: an interchange ring holding the whole city - skyline, sun,
+    # an arched bridge, water and a red train - with the lines running through it
     k_lines = []
-    for nm, pts, col in (("Knot red", [(60, 430), (330, 160)], RED), ("Knot black", [(60, 160), (330, 430)], BLACK),
-                         ("Knot white", [(195, 110), (195, 482)], WHITE), ("Knot yellow", [(20, 296), (370, 296)], YEL)):
+    for nm, pts, col in (("Knot red", [(20, 470), (370, 120)], RED), ("Knot white", [(30, 120), (360, 470)], WHITE),
+                         ("Knot yellow", [(-10, 330), (400, 262)], YEL), ("Knot black", [(150, 82), (240, 520)], BLACK)):
         k_lines.append(route(pts, col, 16, name=nm, radius=0))
-    k_outer = circle(C[0], C[1], 250.0, None, name="Knot orbit", line=YEL, lw=16.0)
-    k_dots = node("Knot stations", *[station(125 * math.cos(a) , 125 * math.sin(a), 24.0, name=f"Knot stop {k}")
-                                     for k, a in enumerate([j * math.pi / 4 + math.pi / 8 for j in range(8)])],
-                  x=C[0], y=C[1])
-    k_core = circle(C[0], C[1], 78.0, WHITE, name="Knot core", line=BLACK, lw=12.0)
-    p0 = node("Emblem: interchange knot", k_core, k_dots, k_outer, *[l[0] for l in k_lines])
+    R_V = 112.0
+    v_clip = circle(0.0, 0.0, R_V * 2, None, name="Vignette glass (clip source)")
+    v_train = train_cars(2, RED, x=-150.0, y=-6.0, name="Vignette train", car_w=58.0, h=20.0)
+    v_train_idle = node("Vignette train (idle run)", v_train)
+    v_water = node("Water", *[route([(-120 + k * 37, 64 + (k % 3) * 14), (-100 + k * 37, 64 + (k % 3) * 14)], WHITE, 3,
+                                    name=f"Glint {k}", radius=0, trim=False, cap="round")[0] for k in range(7)],
+                   rect(-120, 40, 240, 80, BLUE, name="Lake"))
+    v_bridge = node("Bridge", arch_viaduct(-130, 130, 14, 46, 9, 34, name="Arches"))
+    v_city = node("Skyline",
+                  rect(-92, -58, 26, 80, BLUE, name="Glass tower A", line=BLACK, lw=2.5),
+                  rect(-62, -78, 22, 100, BLACK, name="Tower B"),
+                  rect(4, -54, 14, 70, BLACK, name="Spire L"), path_shape([(4, -54), (11, -92), (18, -54)], BLACK, name="Spire L top"),
+                  rect(26, -48, 14, 64, BLACK, name="Spire R"), path_shape([(26, -48), (33, -84), (40, -48)], BLACK, name="Spire R top"),
+                  rect(0, -20, 46, 36, BLACK, name="Nave"),
+                  rect(58, -40, 30, 56, BLUE, name="Glass tower C", line=BLACK, lw=2.5),
+                  rect(-36, -26, 34, 42, BLACK, name="Block"),
+                  circle(-104.0, 30.0, 36.0, BLACK, name="Tree A"), circle(100.0, 26.0, 30.0, BLACK, name="Tree B"))
+    v_sun = circle(-6.0, -46.0, 74.0, YEL, name="Sun")
+    k_core = node("Vignette (city in the interchange)",
+                  v_train_idle, v_water, v_bridge, v_city, v_sun,
+                  rect(-R_V, -R_V, 2 * R_V, 2 * R_V, WHITE, name="Sky"),
+                  E("ClippingShape", sourceId=v_clip.id, name="Glass clip"), v_clip, x=C[0], y=C[1])
+    k_outer = node("Interchange ring",
+                   *[E("Shape", E("Ellipse", width=2 * R_V + 18, height=2 * R_V + 18, name="Path"),
+                       stroke(col, 16.0, "Arc", "butt", "round",
+                              E("TrimPath", start=a0_, end=a1_, modeValue="sequential", name="Arc span")),
+                       name=f"Ring arc {k}") for k, (col, a0_, a1_) in
+                     enumerate(((RED, 0.0, 0.34), (YEL, 0.34, 0.67), (BLACK, 0.67, 1.0)))],
+                   x=C[0], y=C[1], rotation=-0.6)
+    k_dots = node("Knot stations", *[station((R_V + 9) * math.cos(a), (R_V + 9) * math.sin(a), 24.0 if k % 2 else 18.0,
+                                             name=f"Knot stop {k}")
+                                     for k, a in enumerate([j * math.pi / 3 + math.pi / 6 for j in range(6)])])
+    k_dots_idle = node("Knot stations (idle turn)", k_dots, x=C[0], y=C[1])
+    p0 = node("Emblem: interchange knot", k_dots_idle, k_outer, k_core, *[l[0] for l in k_lines])
 
     # p1 Scenic Rider: window with passing shapes
     win_clip = E("Shape", E("Rectangle", width=244.0, height=170.0, originX=0.5, originY=0.5, cornerRadiusTL=30.0,
                             name="Path"), x=C[0], y=C[1], name="Window glass (clip source)")
-    scenery_items = []
-    for rep in range(2):
-        ox = rep * 300
-        scenery_items += [circle(float(ox + 60), 400.0, 190.0, BLUE, name="Hill A", line=BLACK, lw=3.0),
-                          circle(float(ox + 210), 410.0, 230.0, "FF1F7A4A", name="Hill B", line=BLACK, lw=3.0),
-                          path_shape([(ox + 120, 330), (ox + 136, 290), (ox + 152, 330)], BLACK, name="Tree"),
-                          rect(ox + 250, 300, 20, 50, BLACK, name="Tower"),
-                          circle(float(ox + 240), 250.0, 44.0, RED, name="Sun")]
-    scenery = node("Passing scenery", *scenery_items, x=0.0)
-    glass = node("Window view", scenery, rect(73, 211, 244, 170, WHITE, name="Sky"),
+    # three parallax layers seen through the glass: far peaks, blue hills, near
+    # catenary poles - each repeats exactly within its idle travel (seamless loop)
+    stone = "FFDDD8CB"
+    peaks = []
+    for k in range(-1, 4):
+        ox = 73 + k * 240
+        peaks += [path_shape([(ox, 330), (ox + 60, 262), (ox + 96, 300), (ox + 150, 244), (ox + 240, 330)], stone,
+                             name=f"Peaks {k}"),
+                  path_shape([(ox + 134, 262), (ox + 150, 244), (ox + 168, 264), (ox + 156, 270), (ox + 146, 262)],
+                             WHITE, name=f"Snow {k}")]
+    far = node("Far peaks", *peaks)
+    hills = node("Hills", *[circle(float(40 + k * 200), 392.0, 220.0, DEEP, name=f"Hill {k}", line=BLACK, lw=3.0)
+                            for k in range(6)],
+                 *[circle(float(140 + k * 200), 404.0, 170.0, BLUE, name=f"Knoll {k}", line=BLACK, lw=3.0)
+                   for k in range(6)])
+    near = node("Near poles", *[node(f"Pole {k}", rect(-3, -110, 6, 120, BLACK, name="Mast"),
+                                     rect(-16, -104, 32, 4, BLACK, name="Arm"), x=float(80 + k * 120), y=390.0)
+                                for k in range(16)])
+    lake = rect(60, 324, 280, 14, SKY, name="Lake")
+    far_i, hills_i, near_i = node("Far peaks (idle)", far), node("Hills (idle)", hills), node("Near poles (idle)", near)
+    sun1 = circle(250.0, 248.0, 40.0, RED, name="Sun")
+    wire = rect(60, 222, 280, 2, BLACK, name="Catenary")
+    glint = path_shape([(140, 212), (176, 212), (110, 380), (74, 380)], "33FFFFFF", name="Glass glint")
+    scenery = node("Passing scenery", near_i, hills_i, lake, far_i, x=0.0)
+    scenery_idle = node("Window extras", glint, wire, sun1)
+    glass = node("Window view", scenery_idle, scenery, rect(73, 211, 244, 170, WHITE, name="Sky"),
                  E("ClippingShape", sourceId=win_clip.id, name="Glass clip"))
     frame_rp = E("Rectangle", width=270.0, height=196.0, originX=0.5, originY=0.5, cornerRadiusTL=40.0, name="Path")
     frame = E("Shape", frame_rp, stroke(BLACK, 18.0), x=C[0], y=C[1], name="Window frame")
@@ -661,16 +816,24 @@ def scene9():
         tk = node(f"Ticket {k}",
                   route([(-70, 22), (-20, 22), (10, -8), (70, -8)], col, 7, name="Ticket route", radius=8,
                         trim=False)[0],
+                  circle(-70.0, 22.0, 12.0, WHITE, name="From", line=BLACK, lw=3.0),
+                  circle(70.0, -8.0, 12.0, WHITE, name="To", line=BLACK, lw=3.0),
+                  *[rect(-84 + j * 9, 30, 3 if j % 3 else 5, 10, BLACK, name=f"Code bar {j}") for j in range(7)],
+                  rect(28, 30, 46, 4, "FFB9B4A8", r=2, name="Print line A"),
+                  rect(28, 37, 30, 4, "FFB9B4A8", r=2, name="Print line B"),
+                  circle(86.0, 0.0, 10.0, WHITE, name="Punch hole", line=BLACK, lw=2.0),
                   rect(-100, -46, 200, 18, col, r=4, name="Stripe"),
                   rect(-100, -46, 200, 92, "FFFFFFFF", r=8, name="Ticket", line=BLACK, lw=4.0),
                   x=C[0], y=C[1] + 90, rotation=rot)
-        pivot = node(f"Ticket {k} pivot", tk, y=0.0)
-        tickets.append((tk, pivot, rot))
+        tk_idle = node(f"Ticket {k} (idle sway)", tk)
+        pivot = node(f"Ticket {k} pivot", tk_idle, y=0.0)
+        tickets.append((tk, pivot, rot, tk_idle))
     p2 = node("Emblem: stacked route tickets", *[t[1] for t in reversed(tickets)])
-    for tk, pv, rot in tickets:
+    for tk, pv, rot, ti in tickets:
         # fan around a pivot below the stack: offset each ticket upward along its rotated axis
-        tk.attrs["x"] = C[0] + 130 * math.sin(rot)
-        tk.attrs["y"] = C[1] + 110 - 130 * math.cos(rot) + 30
+        ti.attrs["x"] = C[0] + 130 * math.sin(rot)
+        ti.attrs["y"] = C[1] + 110 - 130 * math.cos(rot) + 30
+        tk.attrs["x"], tk.attrs["y"] = 0.0, 0.0
 
     # p3 Weekend Roamer: compass-like station ring
     c_ring_shape, c_ring_t = (lambda s: (s, s.children[1].children[1]))(
@@ -687,8 +850,9 @@ def scene9():
                   path_shape([(0, -112), (16, 0), (-16, 0)], RED, name="North", line=BLACK, lw=3.0),
                   path_shape([(0, 112), (16, 0), (-16, 0)], WHITE, name="South", line=BLACK, lw=3.0),
                   circle(0.0, 0.0, 20.0, YEL, name="Hub", line=BLACK, lw=3.0),
-                  x=C[0], y=C[1], rotation=0.785)
-    p3 = node("Emblem: compass station ring", needle, c_ticks, c_inner, c_ring_shape)
+                  rotation=0.785)
+    needle_idle = node("Needle (idle drift)", needle, x=C[0], y=C[1])
+    p3 = node("Emblem: compass station ring", needle_idle, c_ticks, c_inner, c_ring_shape)
 
     groups = []
     for p, grp in enumerate((p0, p1, p2, p3)):
@@ -697,12 +861,13 @@ def scene9():
         groups.append(w)
     PERSONA_GROUPS.extend(groups)
 
-    label = text(24, 498, 342, [(SAMPLE["personaLabel"], "personaLabel")], 15, WHITE, weight=600, h=20,
+    label = text(24, 532, 342, [(SAMPLE["personaLabel"], "personaLabel")], 16, WHITE, weight=600, h=22,
                  overflow="ellipsis", wrap="noWrap", ink="_personaInk", name="Persona label")
-    title = text(24, 522, 342, [(SAMPLE["personaName"], "personaName")], 44, WHITE, display=True, h=98,
-                 overflow="fitFontSize", lh=46, ink="_personaInk", name="Persona title")
-    desc = text(24, 628, 342, [(SAMPLE["personaDescription"], "personaDescription")], 19, WHITE, h=52,
-                overflow="ellipsis", lh=25, ink="_personaInk", name="Persona description")
+    title = text(22, 556, 346, [(SAMPLE["personaName"], "personaName")], 64, WHITE, display="cond", h=66,
+                 overflow="fitFontSize", wrap="noWrap", lh=62, ls=-0.5, valign="bottom", ink="_personaInk",
+                 name="Persona title")
+    desc = text(24, 630, 342, [(SAMPLE["personaDescription"], "personaDescription")], 20, WHITE, h=54,
+                overflow="ellipsis", lh=26, ink="_personaInk", name="Persona description")
     l_rng = reveal_modifier(label, units="characters", dy=0.0)
     t_rng = reveal_modifier(title, units="characters", dy=-40.0, rot=-0.3)
     d_rng = reveal_modifier(desc, units="words", dy=14.0)
@@ -730,9 +895,15 @@ def scene9():
     ef_common(a0, 70)
     for i, (shp, tr) in enumerate(k_lines):
         draw(a0, tr, 64 + i * 5, 96 + i * 5, EO)
-    pop(a0, k_core, 66, 22)
-    a0.key(k_outer, "scaleX", (0, 0.0, "hold"), (72, 0.0, ("el", 1.0, 0.35)), (110, 1.0, "hold"))
-    a0.key(k_outer, "scaleY", (0, 0.0, "hold"), (72, 0.0, ("el", 1.0, 0.35)), (110, 1.0, "hold"))
+    # the glass opens elastically and the city slides up into it
+    a0.key(k_core, "scaleX", (0, 0.0, "hold"), (64, 0.0, ("el", 1.0, 0.4)), (104, 1.0, "hold"))
+    a0.key(k_core, "scaleY", (0, 0.0, "hold"), (64, 0.0, ("el", 1.0, 0.4)), (104, 1.0, "hold"))
+    slide(a0, v_city, "y", 70, 74, 106, EO)
+    slide(a0, v_sun, "y", 50, 70, 112, EO)
+    slide(a0, v_bridge, "y", 40, 80, 108, EO)
+    a0.key(k_outer, "scaleX", (0, 0.0, "hold"), (70, 0.0, ("el", 1.0, 0.35)), (110, 1.0, "hold"))
+    a0.key(k_outer, "scaleY", (0, 0.0, "hold"), (70, 0.0, ("el", 1.0, 0.35)), (110, 1.0, "hold"))
+    a0.key(k_outer, "rotation", (0, -2.4, "hold"), (70, -2.4, EO), (116, -0.6, "hold"))
     a0.key(k_dots, "rotation", (0, -1.2, "hold"), (78, -1.2, EO), (118, 0.0, "hold"))
     fade_in(a0, k_dots, 78, 90)
 
@@ -746,7 +917,7 @@ def scene9():
 
     a2 = sc.anim("EnterFwd2", 160)
     ef_common(a2, 70)
-    for k, (tk, pv, rot) in enumerate(tickets):
+    for k, (tk, pv, rot, ti) in enumerate(tickets):
         f0 = 62 + k * 8
         a2.key(pv, "y", (0, 520.0, "hold"), (f0, 520.0, EO), (f0 + 28, 0.0, "hold"))
         a2.key(tk, "rotation", (0, rot + 1.4, "hold"), (f0, rot + 1.4, EO), (f0 + 34, rot, "hold"))
@@ -764,11 +935,14 @@ def scene9():
     content_enter_back(sc, eb)
     key_reveal(eb, t_rng, 6, 34, EO)
 
-    idle.key(k_dots, "rotation", (0, 0.0, "lin"), (480, math.pi / 4, "lin"))
-    idle.key(scenery, "x", (0, 0.0, "lin"), (480, -300.0, "lin"))
-    for k, (tk, pv, rot) in enumerate(tickets):
-        idle.key(tk, "rotation", (0, rot, SOFT), (120 + k * 20, rot + 0.03, SOFT), (480, rot, "lin"))
-    idle.key(needle, "rotation", (0, 0.785, SOFT), (160, 0.86, SOFT), (320, 0.72, SOFT), (480, 0.785, "lin"))
+    idle.key(k_dots_idle, "rotation", (0, 0.0, "lin"), (IDLE_FRAMES, math.pi / 3, "lin"))
+    idle.key(v_train_idle, "x", (0, -40.0, "lin"), (IDLE_FRAMES, 300.0, "lin"))
+    idle.key(far_i, "x", (0, 0.0, "lin"), (IDLE_FRAMES, -240.0, "lin"))
+    idle.key(hills_i, "x", (0, 0.0, "lin"), (IDLE_FRAMES, -400.0, "lin"))
+    idle.key(near_i, "x", (0, 0.0, "lin"), (IDLE_FRAMES, -1440.0, "lin"))
+    for k, (tk, pv, rot, ti) in enumerate(tickets):
+        idle.key(ti, "rotation", (0, 0.0, SOFT), (120 + k * 20, 0.03, SOFT), (IDLE_FRAMES, 0.0, "lin"))
+    idle.key(needle_idle, "rotation", (0, 0.0, SOFT), (160, 0.075, SOFT), (320, -0.065, SOFT), (IDLE_FRAMES, 0.0, "lin"))
     finish(sc)
     return sc
 
@@ -779,11 +953,11 @@ def scene9():
 def scene10():
     sc = Scene(10, (195, 430), RED)
     ef = sc.anim("EnterFwd", 130)
-    eb = sc.anim("EnterBack", 48)
-    idle = sc.anim("Idle", 60, "loop")
+    eb = sc.anim("EnterBack", 50)
+    idle = sc.anim("Idle", IDLE_FRAMES, "loop")
 
-    head = text(24, 94, 342, [(SAMPLE["summaryHeadline"], "summaryHeadline")], 28, WHITE, display=True, h=62,
-                overflow="fitFontSize", lh=30, name="Summary headline")
+    head = text(24, 92, 342, [(SAMPLE["summaryHeadline"], "summaryHeadline")], 40, WHITE, display="cond", h=50,
+                overflow="fitFontSize", wrap="noWrap", lh=46, ls=-0.3, valign="middle", name="Summary headline")
     h_rng = reveal_modifier(head, units="words", dy=20.0)
     sup = text(24, 696, 342, [(SAMPLE["summarySupport"], "summarySupport")], 16, WHITE, weight=500, h=40,
                overflow="ellipsis", lh=20, name="Summary support")
@@ -830,10 +1004,10 @@ def scene10():
                 rect(cx0, cy0, 342, 516, WHITE, r=18, name="Card", line=BLACK, lw=3.0))
     full = node("Summary (has stats)", head, sup, card)
     # ---- empty / new user variant
-    e_head = text(24, 236, 342, [(SAMPLE["emptyHeadline"], "emptyHeadline")], 36, WHITE, display=True, h=120,
-                  overflow="fitFontSize", lh=38, name="Empty headline")
-    e_sup = text(24, 366, 342, [(SAMPLE["emptySupport"], "emptySupport")], 18, WHITE, h=48, overflow="ellipsis",
-                 lh=24, name="Empty support")
+    e_head = text(24, 196, 342, [(SAMPLE["emptyHeadline"], "emptyHeadline")], 60, WHITE, display="cond", h=170,
+                  overflow="fitFontSize", lh=56, ls=-0.4, valign="bottom", name="Empty headline")
+    e_sup = text(24, 380, 342, [(SAMPLE["emptySupport"], "emptySupport")], 20, WHITE, h=52, overflow="ellipsis",
+                 lh=26, name="Empty support")
     e_line, e_t = route([(60, 520), (330, 520)], WHITE, 12, name="First route", radius=0)
     empty = node("Summary (new user)", e_head, e_sup, station(130, 520, 22.0), station(260, 520, 22.0),
                  interchange(195, 520, 40.0, "First interchange"), e_line, opacity=0.0)
@@ -856,7 +1030,6 @@ def scene10():
     key_reveal(ef, s_rng, 100, 124)
     draw(ef, e_t, 20, 50)
     content_enter_back(sc, eb)
-    idle.hold(card, "y", 0.0)
     finish(sc)
     return sc
 

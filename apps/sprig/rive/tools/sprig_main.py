@@ -162,10 +162,32 @@ def build_chrome():
     play_icon = shape("Play icon", *path_el("M-5 -9 L9 0 L-5 9 Z"), fill(col(CREAM), color_id=themed(CREAM, FOREST)),
                       bind(P("isPaused"), 18, c_b2n()), x=1)
     pause_n, pause_hit = circle_btn("Pause", 342, 3, [pause_icon, play_icon], "pauseLabel")
+    # replay: an open clockwise arc (gap at the upper right) with the arrowhead on the arc's END,
+    # aligned to its tangent -- built from geometry so head and arc cannot disagree
+    R_, a0, a1 = 8.5, math.radians(-10), math.radians(-10 + 300)
+    segs = 4
+    d = f"M{R_ * math.cos(a0):.3f} {R_ * math.sin(a0):.3f}"
+    k_ = 4 / 3 * math.tan((a1 - a0) / segs / 4)
+    for i in range(segs):
+        s0 = a0 + (a1 - a0) * i / segs
+        s1 = a0 + (a1 - a0) * (i + 1) / segs
+        p0 = (R_ * math.cos(s0), R_ * math.sin(s0))
+        p1 = (R_ * math.cos(s1), R_ * math.sin(s1))
+        c1 = (p0[0] - k_ * R_ * math.sin(s0), p0[1] + k_ * R_ * math.cos(s0))
+        c2 = (p1[0] + k_ * R_ * math.sin(s1), p1[1] - k_ * R_ * math.cos(s1))
+        d += f" C{c1[0]:.3f} {c1[1]:.3f} {c2[0]:.3f} {c2[1]:.3f} {p1[0]:.3f} {p1[1]:.3f}"
+    ex, ey = R_ * math.cos(a1), R_ * math.sin(a1)
+    tx, ty = -math.sin(a1), math.cos(a1)          # direction of travel at the end (clockwise on screen)
+    nx, ny = -ty, tx
+    tip = (ex + tx * 5.2, ey + ty * 5.2)
+    bl = (ex - tx * 1.2 + nx * 4.6, ey - ty * 1.2 + ny * 4.6)
+    br = (ex - tx * 1.2 - nx * 4.6, ey - ty * 1.2 - ny * 4.6)
     replay_icon = node("Replay icon",
-                       shape("Arc", *path_el("M7 -6 C 3 -11 -6 -11 -9 -4 C -12 4 -5 11 2 10 C 6 9 8 7 9 4", closed=False),
-                             stroke(col(CREAM), 2.4, color_id=themed(CREAM, FOREST))),
-                       shape("Head", *path_el("M3 -10 L9 -6 L3 -1 Z"), fill(col(CREAM), color_id=themed(CREAM, FOREST))))
+                       shape("Arc", *path_el(d, closed=False),
+                             stroke(col(CREAM), 2.4, cap="butt", color_id=themed(CREAM, FOREST))),
+                       shape("Head", *path_el(f"M{tip[0]:.3f} {tip[1]:.3f} L{bl[0]:.3f} {bl[1]:.3f} "
+                                              f"L{br[0]:.3f} {br[1]:.3f} Z"),
+                             fill(col(CREAM), color_id=themed(CREAM, FOREST))))
     replay_n, replay_hit = circle_btn("Replay", 342 + 2000, 5, [replay_icon], "replayLabel")
 
     def pill(name, x, idx, label_prop, icon):
@@ -213,27 +235,6 @@ def build_vine():
         kids.append(n)
     return node("Story vine", *stack(*kids), id=ID())
 
-
-def make_grain():
-    path = os.path.join(PROJ, "assets", "images", "paper-grain.png")
-    if os.path.exists(path):
-        return path
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    try:
-        from PIL import Image
-        import random
-        rnd = random.Random(7)
-        im = Image.new("LA", (W, H))
-        px = im.load()
-        for y in range(H):
-            for x in range(W):
-                v = rnd.randint(0, 255)
-                a = int(abs(rnd.gauss(0, 1)) * 9)
-                px[x, y] = (v, min(a, 30))
-        im.save(path, optimize=True)
-    except ImportError:
-        print("Pillow missing: grain not generated", file=sys.stderr)
-    return path
 
 # ===================================================================== state machine
 
@@ -306,39 +307,7 @@ def build_machine(scenes, card_anims):
     seq.any.append(trans(S[1], [cond_trig("_replay")]))
     layers.append(seq)
 
-    # ---- clock: dwell timer. Starts after the entrance settles, frozen while paused/held, variable duration
-    clock = Layer("Dwell clock")
-    probe = BTN["probe"]
-    wait = Anim("Clock settle", 108)
-    wait.key(probe, "x", [(0, 0.0, "hold")])
-    steps = []
-    for i in range(STEPS + 1):
-        a = Anim(f"Clock {i}/{STEPS}", 1)
-        a.key(probe, "x", [(0, i / STEPS, "hold")])
-        steps.append(a)
-    anims += [wait] + steps
-    step_conv = CV.add("stepms", formula("Dwell step ms (clamped 3-60 s)", [
-        tF("max"), tV(3), tSep(), tF("min"), tV(60), tSep(), tIn(), tC(), tC(), tOp("*"), tV(1000.0 / STEPS)]))
-    W_id = ID()
-    clock.state(wait.id, sid=W_id, reset=True, x=200, y=0)
-    sids = [ID() for _ in range(STEPS + 1)]
-    run = lambda: paused_conds() + [cond_bool("autoAdvanceEnabled", True), cond_num("currentScreen", 10, "notEqual")]
-    durb = lambda: bind(P("autoAdvanceSeconds"), 158, step_conv)
-    clock.entry.append(trans(W_id, []))
-    for i in range(STEPS + 1):
-        sid_, s_el = clock.state(steps[i].id, sid=sids[i], x=400 + (i % 10) * 160, y=(i // 10) * 160)
-        if i < STEPS:
-            reached = [cond_num("screenProgress", max(0.0, i / STEPS - 0.002), "greaterThanOrEqual")] if i else []
-            s_el.add(trans(sids[i + 1], run() + reached, dur_bind=durb(), early=True))
-        else:
-            done_id = ID()
-            s_el.add(trans(done_id, run() + [cond_num("screenProgress", 0.998, "greaterThanOrEqual")]))
-            clock.state(steps[i].id, sid=done_id, fire=EV["_autoNext"], x=400, y=-200)
-    clock.states[0].add(trans(sids[1], run(), exit_pct=100, dur_bind=durb(), early=True))
-    # sids[0] unused as a target; first move goes W -> step 1 directly
-    for trig in ("_navNext", "_navPrev", "_replay"):
-        clock.any.append(trans(W_id, [cond_trig(trig)]))
-    layers.append(clock)
+    # ---- dwell clock: scripts/dwellclock.luau owns screenProgress and the auto-advance (exact pause)
 
     # ---- gesture: tap (left third back / right two-thirds next), hold pauses, release after hold is not a tap
     g = Layer("Gesture")
@@ -553,7 +522,6 @@ def build_listeners():
     out.append(on_event(EV["_tapPrev"], ACT["prev"](), "Tap -> previous"))
     out.append(on_event(EV["_holdOn"], [set_bool("_holdPaused", True)], "Hold -> pause"))
     out.append(on_event(EV["_holdOff"], [set_bool("_holdPaused", False)], "Release -> resume"))
-    out.append(on_event(EV["_autoNext"], ACT["next"](), "Dwell elapsed -> next"))
     for k in range(1, 11):
         out.append(on_event(EV[f"screen{k}"], [set_num("currentScreen", k)], f"Scene {k} is current"))
     for nm, act in (("prev", "prev"), ("cont", "next"), ("pause", "pause"), ("share", "share"), ("replay", "replay")):
@@ -635,20 +603,34 @@ def main():
         eid, el = event("screenChanged", k)
         EV[f"screen{k}"] = eid
         events.append(el)
-    for n in ("recapFinished", "shareTapped", "_autoNext", "_tapNext", "_tapPrev", "_holdOn", "_holdOff"):
+    for n in ("recapFinished", "shareTapped", "_tapNext", "_tapPrev", "_holdOn", "_holdOff"):
         eid, el = event(n)
         EV[n] = eid
         events.append(el)
 
     chrome = build_chrome()
     vine = build_vine()
-    grain_path = make_grain()
-    grain_asset = ID()
-    grain = E("Image", assetId=grain_asset, x=195.0, y=422.0, originX=0.5, originY=0.5, opacity=0.55,
-              blendModeValue="overlay", name="Paper grain", id=ID())
-    probe = ID()
-    BTN["probe"] = probe
-    probe_el = node("Progress probe", bind(P("screenProgress"), 13, two_way=True), id=probe)
+    clock, _ = scripted("Dwell clock", "dwellclock", nums={"settle": 1.8})
+    # paper stock + light through the canopy; dapple strength follows the scene (eased), frozen when still
+    dap = {1: 0.55, 2: 0.5, 3: 0.45, 4: 0.6, 5: 0.5, 6: 0.45, 7: 0.6, 8: 0.45, 9: 0.55, 10: 0.4}
+    toks = []
+    for k, c in dap.items():
+        if toks:
+            toks.append(tOp("+"))
+        toks += [tV(c), tOp("*"), tO(), tV(1), tOp("-"), tF("min"), tV(1), tSep(), tO(), tIn(), tOp("-"), tV(k), tC(),
+                 tOp("*"), tO(), tIn(), tOp("-"), tV(k), tC(), tC(), tC()]
+    dmap = CV.add("dapple", formula("Scene to canopy light", toks))
+    dint = CV.add(("interp", "dapple"), lambda cid: E("DataConverterInterpolator",
+                                                       E("CubicEaseInterpolator", x1=0.45, y1=0.0, x2=0.55, y2=1.0),
+                                                       interpolationType="cubic", duration=0.9,
+                                                       name="Ease canopy light", id=cid))
+    canopy, _ = scripted("Canopy light", "canopylight",
+                         nums={"w": W, "h": H, "paperRes": 1.5, "lightRes": 0.34, "paper": 0.62,
+                               "dapple": (0.5, bind(P("currentScreen"), 243, CV.group("dapple", [dmap, dint], "Canopy light"))),
+                               "seed": 3, "dirX": -0.6, "dirY": -0.8, "scale": 1.0, "sway": 1.0},
+                         bools={"still": (False, bind(P("reducedMotion"), 245)),
+                                "paused": (False, bind(P("isPaused"), 245)),
+                                "held": (False, bind(P("_holdPaused"), 245))})
     surface = ID()
     BTN["surface"] = surface
     surface_el = shape("Keyboard surface", rect(W, H), E("FocusData", name="Focus"), x=195, y=422, id=surface)
@@ -673,14 +655,14 @@ def main():
     style = E("LayoutComponentStyle", name="Artboard style", id=ID())
     roots = [r10, r9, r8, r7, r6, r5, r4, r3, r2, r1]
     art = E("Artboard", style, sm,
-            surface_el, chrome, vine, grain, *roots, *taps, probe_el, joy, *events,
+            surface_el, chrome, TG["leaf"], TG["frame"], vine, canopy, *roots, *taps, clock, joy, *events,
             *[a.el() for a in anims], bendx.el(), bendy.el(),
             defaultStateMachineId=SM, viewModelId=VMID, viewModelInstanceId=inst_ids["Sample"], clip=True,
             width=float(W), height=float(H), styleId=style.id, name="SprigRecap", id=AB, x=0.0, y=0.0)
-    doc = E("Rive", art, card_el, card_asset,
+    script_assets = [E("ScriptAsset", file=f"scripts/{n}.luau", name=n, id=sid) for n, sid in SCRIPTS.items()]
+    doc = E("Rive", art, card_el, card_asset, *script_assets,
             E("FontAsset", file="assets/fonts/Fraunces-Variable.ttf", name="Fraunces", id=FONT_FR),
             E("FontAsset", file="assets/fonts/DMSans-Variable.ttf", name="DM Sans", id=FONT_DM),
-            E("ImageAsset", file=os.path.relpath(grain_path, PROJ), name="paper-grain", id=grain_asset),
             *CV.items, vm, version="1", kind="fragment")
     out = os.path.join(PROJ, "scene.rml")
     with open(out, "w") as f:

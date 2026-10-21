@@ -5,7 +5,8 @@ from rml import (E, nid, node, shape, poly, ellipse, rect, fill, stroke, solid, 
                  cond_num, cond_bool, cond_trigger, write_num, write_bool, transition,
                  CHALK, COAL, ACID, COBALT, CONCRETE, CONCRETE_D, CHALK_D, COAL_L, RNG)
 from art import (N, BASE, text, hero, headline, mono, Hold, Puff, speckles, bolt_grid, route_line,
-                 arrow, alpha, WORDMARK_AB, FONT_MONO, FONT_MONO_M, FONT_XB, FONT_BLACK, hold_art)
+                 arrow, alpha, WORDMARK_AB, FONT_MONO, FONT_MONO_M, FONT_XB, FONT_BLACK, hold_art,
+                 Hold3, hold3d_drawable, chalk_drawable)
 import conv
 import model
 from model import path
@@ -18,9 +19,9 @@ IN_DUR = 112          # 1.87 s entrance (settles by ~1.8 s)
 CONTINUITY = {2: (300, 380, 1.05), 6: (215, 430, 0.85), 8: (198, 520, 1.15)}
 
 CARRIER_POSE = {
-    1: (334, 470, 0.9, 0.25), 2: (332, 190, 0.8, -0.15), 3: (322, 668, 1.2, 0.1),
-    4: (330, 470, 0.62, 0.3), 5: (195, 626, 1.0, 0.0), 6: (82, 688, 0.9, -0.2),
-    7: (356, 500, 0.5, 0.0), 8: (200, 718, 0.95, 0.0), 9: (195, 560, 0.0, 0.0),
+    1: (334, 470, 0.9, 0.25), 2: (332, 190, 0.8, -0.15), 3: (322, 612, 1.2, 0.1),
+    4: (306, 404, 0.6, 0.3), 5: (195, 626, 1.0, 0.0), 6: (96, 664, 0.85, -0.2),
+    7: (348, 446, 0.5, 0.0), 8: (200, 650, 0.95, 0.0), 9: (195, 560, 0.0, 0.0),
     10: (352, 606, 0.55, 0.35),
 }
 
@@ -35,7 +36,13 @@ rope_path = E("PointsPath", isClosed=False, isClockwise=True, name="Rope Path", 
 rope_twist = E("Stroke", thickness=3, cap="butt", join="round", name="Twist", kids=[
     solid(COBALT), E("DashPath", name="Twist", kids=[E("Dash", length=7, name="On"), E("Dash", length=7, name="Off")])])
 ROPE = N("Rope", [shape("Rope Line", [rope_path], [stroke(COAL, 7, cap="round"), rope_twist])], opacity=0.0)
-CARRIER_ART = N("Carrier Idle", hold_art("jug", ACID, 110, seed=11, ring=True, outline=COAL))
+# The carrier is a real 3D hold (hold3d.luau): it tumbles in yaw while it is yanked.
+CARRIER_3D, CARRIER_IN = hold3d_drawable("Carrier 3D", "jug", ACID, 96, bolt=0.0, speck=0.45, sway=0.07)
+CARRIER_YAW = CARRIER_IN["yaw"].id
+ENTRY_YAW = [0.0]   # carrier yaw an entrance starts from (set per entrance by build_stage)
+CARRIER_PITCH = CARRIER_IN["pitch"].id
+CARRIER_ART = N("Carrier Idle", [shape("Route Dot", [ellipse(15)], [fill(CHALK), stroke(COAL, 3.5)], x=4, y=0),
+                                 CARRIER_3D])
 CARRIER = N("Carrier", [ROPE, CARRIER_ART], x=CARRIER_POSE[1][0], y=CARRIER_POSE[1][1])
 
 
@@ -56,7 +63,9 @@ def chalk_cloud():
 
 
 CHALK = CHALK  # noqa
-CLOUD = chalk_cloud()
+# The chalk occluder is a GPU shader (chalk.wgsl) keyed through script inputs.
+CHALK_FX, CHALK_IN = chalk_drawable()
+CLOUD = CHALK_FX
 
 
 # ------------------------------------------------------------------ scene scaffold
@@ -124,18 +133,22 @@ def scene1():
     s.back.add(bolt_grid("Bolts", [(250 + (i % 4) * 36, 330 + (i // 4) * 44) for i in range(40) if (250 + (i % 4) * 36) > 240 - (i // 4) * 8]))
     s.back.add(shape("Panel", [poly([(214, 300), (390, 240), (390, 844), (140, 844)])], [fill(CONCRETE)]))
     # zigzag route through oversized holds
-    h1 = Hold("Sloper", "sloper", COBALT, 220, 95, 790, rot=-0.1, seed=1)
-    h2 = Hold("Pyramid", "pyramid", COAL, 150, 296, 688, rot=0.15, seed=2)
+    h1 = Hold3("Sloper", "sloper", COBALT, 236, 92, 784, rot=-0.1, scene=1, sway=0.05)
+    h2 = Hold3("Pyramid", "pyramid", COAL, 156, 296, 684, rot=0.15, scene=1, sway=0.06, speck=0.12)
     pts = [(95, 790), (296, 688), (115, 605), (334, 470)]
     rl, trim = route_line("Route", pts, COAL, 3.5)
     dots = [shape(f"Dot {i}", [ellipse(14)], [fill(CHALK), stroke(COAL, 3.5)], x=x, y=y) for i, (x, y) in enumerate(pts[:3])]
     dotn = [N(f"Route Dot {i}", [d], x=0, y=0) for i, d in enumerate(dots)]
     s.mid.add(dotn, rl, h2.outer, h1.outer)
     # signature interaction: draggable acid hold (squash node keyed by GrabHold layer)
-    grab_art = hold_art("jug", ACID, 120, seed=7, outline=COAL)
-    body = [e for e in grab_art if e.a.get("name") == "Body"][0]
-    s.grab_target = body.id
-    s.grab_squash = N("Grab Squash", grab_art)
+    # the 3D hold draws itself; a transparent cut-out of its silhouette is the hit region
+    grab_d, grab_in = hold3d_drawable("Grab Hold 3D", "jug", ACID, 104, scene=1, sway=0.05)
+    s.grab_yaw, s.grab_pitch = grab_in["yaw"].id, grab_in["pitch"].id
+    hit = shape("Body", [poly([(x * 120, y * 120) for x, y in
+                               [(-0.6, 0.14), (-0.4, -0.38), (0.4, -0.38), (0.62, 0.14), (0.24, 0.38), (-0.24, 0.38)]])],
+                [fill("00000000")])
+    s.grab_target = hit.id
+    s.grab_squash = N("Grab Squash", [hit, grab_d])
     s.grab_hold = N("Grab Hold", [s.grab_squash])
     s.grab_slot = N("Grab Slot", [s.grab_hold], x=115, y=605)
     s.front.add(s.grab_slot)
@@ -159,13 +172,17 @@ def scene1():
 
     def choreo(a, v):
         pop(a, h1.id, 6, 16, "back")
+        a.tw(h1.yaw, 243, 6, 30, 1.6, 0.0, "back")
+        a.tw(h1.pitch, 243, 6, 30, 0.7, 0.0, "back")
         s.p[0].fire(a, 12)
         a.tw(trim, "end", 10, 64, 0.0, 1.0, "inout")
         pop(a, h2.id, 22, 16, "snap")
+        a.tw(h2.yaw, 243, 22, 44, -2.2, 0.0, "back")
         s.p[1].fire(a, 28)
         for i, d in enumerate(dotn):
             pop(a, d.id, 12 + i * 14, 10, "snap")
         pop(a, s.grab_slot.id, 34, 16, "snap")
+        a.tw(s.grab_yaw, 243, 34, 58, 2.6, 0.0, "back")
         s.p[2].fire(a, 50)
         a.tw(s.wm_clip_rect.id, "scaleX", 40, 74, 0.0, 1.0, "inout")
         a.tw(s.wm.id, "y", 40, 74, 150, 130, "out")
@@ -182,10 +199,10 @@ def scene2():
     s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=102))
     s.back.add(bolt_grid("Bolts", [(330 + (i % 2) * 34, 400 + (i // 2) * 46) for i in range(18)]))
     s.back.add(shape("Concrete", [poly([(390, 300), (390, 844), (200, 844)])], [fill(CONCRETE)]))
-    hs = [Hold("Sloper", "sloper", COBALT, 250, 248, 800, -0.05, 21),
-          Hold("Acid Tri", "tri", ACID, 125, 222, 636, -0.2, 22, outline=COAL),
-          Hold("Coal Pyramid", "pyramid", COAL, 160, 306, 500, 0.1, 23),
-          Hold("Cobalt Tri", "tri", COBALT, 96, 304, 352, 0.25, 24)]
+    hs = [Hold3("Sloper", "sloper", COBALT, 262, 250, 796, -0.05, scene=2, sway=0.04),
+          Hold3("Acid Tri", "tri", ACID, 128, 222, 636, -0.2, scene=2, sway=0.06),
+          Hold3("Coal Pyramid", "pyramid", COAL, 164, 306, 500, 0.1, scene=2, sway=0.05, speck=0.12),
+          Hold3("Cobalt Tri", "tri", COBALT, 100, 304, 352, 0.25, scene=2, sway=0.07)]
     pts = [(248, 790), (222, 640), (306, 505), (304, 356), (332, 190)]
     rl, trim = route_line("Route", pts, COAL, 3.0)
     dots = [N(f"Dot {i}", [shape("Dot", [ellipse(14)], [fill(CHALK), stroke(COAL, 3.5)])], x=x, y=y)
@@ -205,6 +222,9 @@ def scene2():
     def choreo(a, v):
         for i, h in enumerate(hs):
             snap_in(a, h, frames[i], dx=240, dy=-40, drot=0.9 if i % 2 else -0.7)
+            # each hold spins on its bolt as it snaps onto the wall
+            a.tw(h.yaw, 243, frames[i], frames[i] + 20, 2.8 if i % 2 else -2.4, 0.0, "back")
+            a.tw(h.pitch, 243, frames[i], frames[i] + 20, -0.6, 0.0, "out")
             s.p[i].fire(a, frames[i] + 10)
             pop(a, dots[i].id, frames[i] + 8, 10, "snap")
         a.tw(trim, "end", 12, 76, 0.0, 1.0, "soft")
@@ -223,10 +243,10 @@ def scene3():
     s = Scene(3, COAL)
     s.back.add(speckles("Speckle", 70, 0, 60, 390, 844, color=alpha(CHALK, 0.25), seed=103))
     s.back.add(bolt_grid("Bolts", [(30 + (i % 8) * 47, 90 + (i // 8) * 52) for i in range(8 * 15)], color=COAL_L))
-    pts = [(34, 822), (118, 744), (82, 664), (196, 700), (232, 606), (322, 668)]
+    pts = [(30, 772), (116, 690), (74, 606), (194, 640), (232, 548), (322, 612)]
     rl, trim = route_line("Trace", pts, ACID, 10, dash=None)
     kinds = [("crimp", CHALK), ("pinch", COBALT), ("tri", CHALK), ("jug", COBALT), ("pinch", CHALK)]
-    hs = [Hold(f"Hold {i}", k, c, 64 + (i % 2) * 10, x, y, 0.2 * (i - 2), 40 + i, outline=COAL)
+    hs = [Hold3(f"Hold {i}", k, c, 78 + (i % 2) * 12, x, y, 0.2 * (i - 2), scene=3, sway=0.08, speck=0.4)
           for i, ((k, c), (x, y)) in enumerate(zip(kinds, pts[:5]))]
     # finish stamp (checkered badge)
     cells = []
@@ -237,10 +257,10 @@ def scene3():
     stamp = N("Finish Stamp", [
         shape("Checks", cells, [fill(COAL)]),
         shape("Badge", [rect(62, 62, r=6)], [fill(CHALK), stroke(ACID, 5)]),
-    ], x=318, y=588, rotation=0.22)
+    ], x=318, y=528, rotation=0.22)
     s.stamp = stamp
     s.mid.add(stamp, [h.outer for h in hs], rl)
-    s.p = [Puff("Stamp Puff", 318, 600, 70, 50, CHALK)]
+    s.p = [Puff("Stamp Puff", 318, 540, 70, 50, CHALK)]
     s.front.add(s.p[0].outer)
     num = N("Hero", [hero("Sends", "sendsDisplay", 0, 0, 342, 224, 250, CHALK, align="center")], x=24, y=110)
     unit = N("Unit", [mono("Unit", "screen3Unit", 0, 0, 342, 26, 18, ACID, align="center", medium=True)], x=24, y=336)
@@ -254,6 +274,7 @@ def scene3():
     def choreo(a, v):
         for i, h in enumerate(hs):
             pop(a, h.id, 8 + i * 9, 12, "snap")
+            a.tw(h.yaw, 243, 8 + i * 9, 30 + i * 9, -2.4 if i % 2 else 2.0, 0.0, "back")
         a.tw(trim, "end", 14, 70, 0.0, 1.0, "inout")
         a.k(stamp.id, "opacity", 0, 0.0)
         a.k(stamp.id, "opacity", 70, 1.0)
@@ -278,20 +299,15 @@ def scene4():
     # tick scale
     ticks = [rect(10 if i % 3 else 18, 2, x=352 - (0 if i % 3 else 4), y=780 - i * 30) for i in range(13)]
     s.back.add(shape("Scale", ticks + [rect(2, 372, x=358, y=600)], [fill(alpha(COAL, 0.6))]))
-    # kinetic stack of ghost holds along a rising, swinging arc
-    ghosts = []
-    n = 12
-    for i in range(n):
-        t = i / (n - 1)
-        x = 150 + 165 * t + 60 * math.sin(t * math.pi * 1.7)
-        y = 790 - 300 * t
-        sz = 200 - 130 * t
-        solid_ = i == 0 or i == n - 1
-        col = COBALT if (solid_ or i % 3 == 0) else CONCRETE
-        art = hold_art("sloper", col, sz, seed=60 + i, outline=CHALK if solid_ else CHALK, speck=solid_)
-        g = N(f"Ghost {i}", [N(f"Ghost {i} Idle", art)], x=round(x, 1), y=round(y, 1),
-              rotation=round(-0.5 + t * 1.2, 3), opacity=1.0 if solid_ else round(0.22 + 0.25 * (i % 3 == 0), 2))
-        ghosts.append(g)
+    # kinetic stack: one real 3D sloper drawn as a solid anchor, a tumbling trail of
+    # translucent ghosts and a solid head that climbs with the count (hold3d trail mode)
+    stack_d, stack_in = hold3d_drawable("Attempt Stack 3D", "sloper", COBALT, 170, scene=4, sway=0.05, speck=0.45,
+                                        extent=3.35, trail={"copies": 12, "progress": 0.0, "trailX": 1.94,
+                                                            "trailY": 3.53, "trailWave": 0.7, "trailSpin": 2.6,
+                                                            "trailShrink": 0.6, "ghost": 0.42, "extentW": 3.25})
+    stack = N("Attempt Stack", [stack_d], x=150, y=780, rotation=0.0)
+    s.stack_progress = stack_in["progress"].id
+    s.stack_yaw = stack_in["yaw"].id
     sw_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Swoosh Reveal")
     swoosh = shape("Swoosh", [ellipse(300, 96)], [E("Stroke", thickness=4, cap="round", name="Stroke", kids=[solid(ACID), sw_trim])],
                    x=235, y=650, rotation=-0.42)
@@ -303,21 +319,25 @@ def scene4():
         m = shape(f"Mark {i}", [poly([(-6, -6), (6, 6)], closed=False), poly([(6, -6), (-6, 6)], closed=False)],
                   [stroke(COAL, 2.6, cap="round")])
         marks.append(N(f"Attempt {i}", [m], x=round(x, 1), y=round(y, 1), rotation=round(rng.random(), 2)))
-    s.mid.add(marks, swoosh, list(reversed(ghosts)))
+    s.mid.add(marks, swoosh, stack)
     num = N("Hero", [hero("Attempts", "attemptsDisplay", 0, 0, 346, 206, 230, COAL)], x=20, y=112)
     unit = N("Unit", [mono("Unit", "screen4Unit", 0, 0, 260, 26, 18, COAL, medium=True)], x=24, y=328)
     hd = N("Headline", [headline("Headline", "screen4Headline", 0, 0, 200, 122, 58, COAL)], x=22, y=366)
     sp = N("Support", [mono("Support", "screen4Support", 0, 0, 186, 80, 14, COAL)], x=24, y=500)
     s.text.add(num, unit, hd, sp)
-    s.idle = [(g.kids[0].id, "rotation", 0.04 * (1 if i % 2 else -1)) for i, g in enumerate(ghosts[::3])]
+    s.idle = []
     s.hero_steps = [(12, 0.0, "inq"), (64, 0.86, "out"), (78, 1.0, "hold")]
 
     def choreo(a, v):
-        for i, g in enumerate(ghosts):
-            f = 10 + i * 5
-            a.k(g.id, "opacity", 0, 0.0)
-            a.tw(g.id, "opacity", f, f + 8, 0.0, BASE[g.id]["opacity"], "out")
-            a.tw(g.id, "y", f, f + 14, BASE[g.id]["y"] + 60, BASE[g.id]["y"], "back")
+        # the trail grows in step with the counter, then the whole stack twists home
+        a.k(s.stack_progress, 243, 0, 0.0)
+        a.k(s.stack_progress, 243, 10, 0.0, "inq")
+        a.k(s.stack_progress, 243, 64, 0.86, "out")
+        a.k(s.stack_progress, 243, 78, 1.0)
+        a.tw(s.stack_yaw, 243, 8, 90, -1.4, 0.0, "soft")
+        a.k(stack.id, "opacity", 0, 0.0)
+        a.tw(stack.id, "opacity", 6, 14, 0.0, 1.0, "out")
+        a.tw(stack.id, "y", 6, 26, 860, 780, "back")
         a.tw(sw_trim, "end", 30, 80, 0.0, 1.0, "inout")
         for i, m in enumerate(marks):
             f = 12 + i * 3
@@ -358,8 +378,8 @@ def scene5():
     guide = shape("Guide", [poly([(40, 586), (350, 586)], closed=False)],
                   [E("Stroke", thickness=2, cap="butt", name="Stroke", kids=[solid(ACID), guide_trim,
                    E("DashPath", name="Dash", kids=[E("Dash", length=8, name="On"), E("Dash", length=6, name="Off")])])])
-    hl = Hold("Crimp", "crimp", CHALK, 130, 88, 638, 0.0, 51, outline=COAL)
-    hr = Hold("Pinch", "pinch", COAL, 112, 302, 634, 0.0, 52)
+    hl = Hold3("Crimp", "crimp", CHALK, 140, 84, 636, 0.0, scene=5, sway=0.05)
+    hr = Hold3("Pinch", "pinch", COAL, 116, 304, 632, 0.0, scene=5, sway=0.05, speck=0.12)
     bubble = N("Bubble", [shape("Bubble", [ellipse(18)], [fill(ACID)])], x=195, y=712)
     vial = shape("Vial", [rect(110, 26, r=13)], [stroke(CHALK, 3)], x=195, y=712)
     s.mid.add(bubble, vial, guide, level, hr.outer, hl.outer)
@@ -372,11 +392,14 @@ def scene5():
     s.idle = [(hl.idle.id, "rotation", 0.02), (hr.idle.id, "rotation", -0.02)]
 
     def choreo(a, v):
-        for h, f, r0, dy in [(hl, 14, 1.5, -220), (hr, 30, 2.3, -260)]:
+        # three articulated holds tumble in 3D and rotate into one shared alignment
+        for h, f, r0, dy, yw, pt in [(hl, 14, 1.5, -220, 2.9, 1.1), (hr, 30, 2.3, -260, -3.1, -0.9)]:
             a.k(h.id, "opacity", 0, 0.0)
             a.k(h.id, "opacity", f, 1.0)
             a.tw(h.id, "y", f, f + 16, h.y + dy, h.y, "back")
             a.tw(h.id, "rotation", f, f + 30, r0, 0.0, "back")
+            a.tw(h.yaw, 243, f, f + 44, yw, 0.0, "back")
+            a.tw(h.pitch, 243, f, f + 40, pt, 0.0, "back")
         a.tw(lvl_trim, "end", 6, 36, 0.0, 1.0, "inout")
         a.tw(guide_trim, "end", 66, 90, 0.0, 1.0, "out")
         a.tw(bubble.id, "x", 10, 94, 150, 195, "back")
@@ -395,6 +418,8 @@ def scene5():
         a.tw(CARRIER.id, "scaleX", 0, 24, ss, 1.0, "out")
         a.tw(CARRIER.id, "scaleY", 0, 24, ss, 1.0, "out")
         a.tw(CARRIER.id, "rotation", 0, 52, -1.9, 0.0, "back")
+        a.tw(CARRIER_YAW, 243, 0, 60, ENTRY_YAW[0] - 1.0, 0.0, "back")
+        a.tw(CARRIER_PITCH, 243, 0, 56, 1.0, 0.0, "back")
     s.carrier_hook = carrier_hook
     s.choreo = choreo
     return s
@@ -425,9 +450,14 @@ def scene6():
                           rotation=-1.5708))
     dial = N("Dial", [arcs[0], arcs[1], ticks, ring], x=cx, y=cy)
     coil_rings = [shape(f"Coil {i}", [ellipse(124, 46)], [stroke(COBALT, 10)], x=0, y=-i * 13) for i in range(4)]
-    coil = N("Coil", coil_rings[::-1], x=300, y=700)
-    tail = shape("Rope Tail", [poly([(300, 724), (352, 600), (360, 470)], closed=False)], [stroke(COBALT, 14, cap="round")])
-    s.mid.add(dial, coil)
+    coil = N("Coil", coil_rings[::-1], x=304, y=690)
+    # floor: the rope bag sits on a concrete ledge, its slack running to the carrier hold
+    s.back.add(shape("Floor", [poly([(0, 652), (390, 618), (390, 844), (0, 844)])], [fill(CONCRETE)]))
+    s.back.add(bolt_grid("Floor Bolts", [(36 + (i % 8) * 46, 690 + (i // 8) * 40) for i in range(16)]))
+    slack_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Slack Reveal")
+    slack = shape("Slack", [poly([(262, 700), (214, 724), (160, 712), (112, 682)], closed=False)],
+                  [E("Stroke", thickness=12, cap="round", join="round", name="Rope", kids=[solid(COBALT), slack_trim])])
+    s.mid.add(dial, coil, slack)
     num = N("Hero", [hero("Minutes", "longestSessionMinutesDisplay", 0, 0, 220, 150, 160, COAL, align="center")], x=85, y=208)
     unit = N("Unit", [mono("Unit", "screen6Unit", 0, 0, 220, 26, 16, COAL, align="center", medium=True)], x=85, y=362)
     hd = N("Headline", [headline("Headline", "screen6Headline", 0, 0, 342, 60, 54, COAL)], x=22, y=490)
@@ -442,6 +472,7 @@ def scene6():
         a.k(ticks.id, "opacity", 0, 0.0)
         a.tw(ticks.id, "opacity", 18, 30, 0.0, 1.0, "out")
         a.tw(dial.id, "rotation", 4, 50, -0.5, 0.0, "back")
+        a.tw(slack_trim, "end", 6, 40, 0.0, 1.0, "out")
         a.tw(coil.id, "scaleX", 12, 74, 1.0, 0.55, "inout")
         a.tw(coil.id, "scaleY", 12, 74, 1.0, 0.55, "inout")
         a.tw(coil.id, "rotation", 12, 74, 0.0, 0.4, "inout")
@@ -458,19 +489,29 @@ def scene6():
 def scene7():
     s = Scene(7, ACID)
     s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, color=alpha(COAL, 0.22), seed=107))
+    # extruded wall panels: a coal face, a lit chalk cap and a shaded side, one per 4 weeks
+    base_y = 722
     panels = []
     outlines = []
     for k in range(1, 14):
-        x = 26 + (k - 1) * 26.6
-        h = 70 + 20 * (k - 1)
+        x = 28 + (k - 1) * 25.6
+        h = 58 + 17 * (k - 1)
         c = conv.scaled_progress(4, 4 * (k - 1), f"Weeks Panel {k}")
-        fill_shape = E("Shape", x=round(x, 1), y=830, name=f"Panel {k} Fill")
-        fill_shape.add(rect(22, h, ox=0, oy=1), fill(COAL))
-        fill_shape.add(bind(path("activeWeeks"), 17, c))
-        panels.append(fill_shape)
-        outlines.append(rect(22, h, x=round(x, 1), y=830, ox=0, oy=1))
-    outl = N("Panel Outlines", [shape("Outlines", outlines, [stroke(COAL, 2)], y=-830)], x=0, y=830)
-    ascent = N("Ascent", panels + [outl], x=0, y=0)
+        side = shape("Side", [poly([(20, 0), (27, -7), (27, -h - 7), (20, -h)])], [fill(COAL_L)])
+        cap = shape("Cap", [poly([(0, -h), (7, -h - 7), (27, -h - 7), (20, -h)])], [fill(CHALK)])
+        face = shape("Face", [rect(20, h, ox=0, oy=1)], [fill(COAL)])
+        pnode = E("Node", x=round(x, 1), y=base_y, name=f"Panel {k} Fill")
+        pnode.add(cap, face, side)
+        pnode.add(bind(path("activeWeeks"), 17, c))
+        panels.append(pnode)
+        outlines.append(poly([(x, base_y), (x, base_y - h), (x + 7, base_y - h - 7), (x + 27, base_y - h - 7),
+                              (x + 27, base_y - 7), (x + 20, base_y), (x, base_y)], closed=False))
+        outlines.append(poly([(x, base_y - h), (x + 20, base_y - h), (x + 27, base_y - h - 7)], closed=False))
+        outlines.append(poly([(x + 20, base_y - h), (x + 20, base_y)], closed=False))
+    outl = N("Panel Outlines", [shape("Outlines", outlines, [stroke(alpha(COAL, 0.7), 1.5, join="miter")], y=-base_y)],
+             x=0, y=base_y)
+    ground = shape("Ground", [rect(390, 4, x=195, y=base_y + 2)], [fill(COAL)])
+    ascent = N("Ascent", panels + [outl, ground], x=0, y=0)
     s.ascent = ascent
     s.mid.add(ascent)
     num = N("Hero", [hero("Weeks", "activeWeeksDisplay", 0, 0, 300, 220, 240, COAL)], x=20, y=110)
@@ -498,9 +539,9 @@ def scene7():
 def scene8():
     s = Scene(8, CHALK)
     s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=108))
-    hub = (200, 718)
-    K = [(52, 660), (128, 642), (232, 628), (318, 612), (352, 520), (362, 700), (300, 794),
-         (205, 816), (104, 792), (38, 748), (340, 412), (268, 720)]
+    hub = (200, 650)
+    K = [(48, 612), (116, 566), (238, 562), (322, 584), (354, 650), (334, 716), (262, 734),
+         (176, 738), (96, 722), (40, 676), (350, 512), (128, 648)]
     spokes, rings, knots = [], [], []
     for i, (x, y) in enumerate(K):
         k = i + 1
@@ -606,8 +647,11 @@ def scene9():
     g1 = N("Persona Power Mover", [p1_puff.outer, bolt, rays, p1_panel])
     groups[1] = g1
     # ---- 2: Balance Seeker - balanced stone pair
-    top = N("Top Stone", [hold_art("stone", ACID, 150, seed=97, outline=COAL)], x=195, y=598)
-    base = N("Base Stone", [hold_art("stone", CHALK, 230, seed=98, outline=COAL)], x=195, y=690)
+    top_d, top_in = hold3d_drawable("Top Stone 3D", "stone", ACID, 142, scene=9, bolt=0.12, speck=0.4, sway=0.05)
+    base_d, base_in = hold3d_drawable("Base Stone 3D", "stone", CHALK, 214, scene=9, bolt=0.1, speck=0.3, sway=0.0)
+    top = N("Top Stone", [top_d], x=195, y=596)
+    base = N("Base Stone", [base_d], x=195, y=692)
+    top_yaw, base_yaw = top_in["yaw"].id, base_in["yaw"].id
     pivot = shape("Pivot", [poly([(0, -20), (24, 22), (-24, 22)], radius=4)], [fill(COAL)], x=195, y=770)
     horizon = shape("Horizon", [poly([(40, 792), (350, 792)], closed=False)], [stroke(CHALK, 3)])
     p2_panel = N("Disc", [accent(ellipse(380), 0, 0)], x=195, y=650)
@@ -694,6 +738,8 @@ def scene9():
             a.tw(top.id, "y", 40, 54, 380, 598, "in")
             for f, r in [(40, 0.0), (54, 0.42), (66, -0.26), (78, 0.14), (90, -0.06), (100, 0.0)]:
                 a.k(top.id, "rotation", f, r, "inout")
+                a.k(top_yaw, 243, f, r * -2.2, "inout")
+            a.tw(base_yaw, 243, 30, 60, 1.2, 0.0, "back")
             a.tw(base.id, "rotation", 54, 70, 0.06, 0.0, "back")
         else:
             a.tw(loop_trim, "start", 70, 104, 0.0, 0.0, "linear")
@@ -709,6 +755,7 @@ def scene9():
         a.tw(CARRIER.id, "scaleX", 26, 34, 1.2, 0.0, "in")
         a.tw(CARRIER.id, "scaleY", 26, 34, 1.2, 0.0, "in")
         a.tw(CARRIER.id, "rotation", 0, 34, sr, 1.2, "in")
+        a.tw(CARRIER_YAW, 243, 0, 34, ENTRY_YAW[0], ENTRY_YAW[0] + 6.2832, "in")
     s.carrier_hook = carrier_hook
     s.choreo = choreo
     s.hero_steps = [(0, 1.0, "hold")]
@@ -768,13 +815,13 @@ def scene10():
     card_panel = shape("Card Panel", [rect(cw, ch, x=cw / 2, y=ch / 2, r=20)], [fill(COAL)])
     card_shadow = shape("Card Shadow", [rect(cw, ch, x=cw / 2 + 8, y=ch / 2 + 10, r=20)], [fill(alpha(COAL, 0.25))])
     card.add(header, N("Header Mark", [header_wm]), persona_row, cells, name_cell, motif, card_route, strip, card_panel, card_shadow)
-    corner = Hold("Corner Hold", "sloper", COBALT, 150, 40, 640, 0.3, 120)
+    corner = Hold3("Corner Hold", "sloper", COBALT, 156, 40, 644, 0.3, scene=10, sway=0.04)
     full = N("Summary Full", [hd, sup, card, corner.outer])
     # ----- empty / new-user welcome
     e_hd = N("Empty Headline", [headline("Empty Headline", "emptyHeadline", 0, 0, 342, 140, 62, COAL)], x=24, y=120)
     e_sp = N("Empty Support", [mono("Empty Support", "emptySupport", 0, 0, 300, 44, 15, COAL)], x=24, y=274)
-    e_h1 = Hold("Start Hold", "jug", COBALT, 120, 120, 520, -0.1, 130)
-    e_h2 = Hold("Next Hold", "tri", COAL, 90, 250, 430, 0.2, 131)
+    e_h1 = Hold3("Start Hold", "jug", COBALT, 124, 120, 520, -0.1, scene=10, sway=0.05)
+    e_h2 = Hold3("Next Hold", "tri", COAL, 94, 250, 430, 0.2, scene=10, sway=0.06, speck=0.12)
     e_route, e_trim = route_line("First Route", [(120, 520), (250, 430), (330, 330)], COAL, 3.5)
     empty = N("Summary Empty", [e_hd, e_sp, e_route, e_h2.outer, e_h1.outer])
     s.variant_nodes = {0: full.id, 1: empty.id}
@@ -803,11 +850,14 @@ def scene10():
                 pop(a, c.id, f, 12, "punch", s0=1.5, s1=1.0)
             a.tw(card_trim, "end", 60, 92, 0.0, 1.0, "inout")
             pop(a, corner.id, 70, 16, "snap")
+            a.tw(corner.yaw, 243, 70, 96, 2.4, 0.0, "back")
         else:
             fade_in(a, e_hd.id, 8, 18, 30)
             fade_in(a, e_sp.id, 24, 16, 14)
             pop(a, e_h1.id, 34, 16, "snap")
+            a.tw(e_h1.yaw, 243, 34, 60, -2.4, 0.0, "back")
             pop(a, e_h2.id, 44, 16, "snap")
+            a.tw(e_h2.yaw, 243, 44, 70, 2.2, 0.0, "back")
             a.tw(e_trim, "end", 40, 80, 0.0, 1.0, "inout")
     s.choreo = choreo
     s.hero_steps = [(0, 1.0, "hold")]

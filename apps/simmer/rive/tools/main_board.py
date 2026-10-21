@@ -3,7 +3,7 @@ import math
 import random
 from rml import (E, node, shape, fill, stroke, ellipse, rect, star, smooth, straight, Anim, layer, astate, trans,
                  cond_num, cond_bool, cond_trig, bind, ms2f, col)
-from data import P, VM_ID, SCRIPT_DIRECTOR, SCRIPT_AUDIT, CONV_INT, formula, T_in, T_v, T_p, T_op, T_fn, T_sep, T_close
+from data import P, VM_ID, SCRIPT_DIRECTOR, SCRIPT_AUDIT, SCRIPT_RISO, SCRIPT_STEAM, SCRIPT_CLOTH, CONV_INT, formula, T_in, T_v, T_p, T_op, T_fn, T_sep, T_close
 from text import style, text
 import art
 import pot as potmod
@@ -21,7 +21,7 @@ POSES = {
     6: (104, 452, 0.5, -0.62),
     7: (195, 574, 0.6, 0.0),
     8: (195, 716, 0.48, 0.0),
-    9: (195, 610, 0.9, 0.0),
+    9: (195, 570, 0.9, 0.0),
     10: (294, 278, 0.3, 0.0),
 }
 
@@ -69,12 +69,12 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     header = node('Header', [wordmark, steam_mark, year, progress])
 
     # ================================================================ controls
-    def button(name, cx, w, label_prop, req_prop, kind='solid', icon=None, show_label=True, c='aub', tc='cream'):
+    def button(name, cx, w, label_prop, req_prop, kind='solid', icon=None, show_label=True, c='aub', tc='cream', icon_left=False):
         h = 52
         kids = []
         if show_label:
             lst = style('body', 18, 700, tc, name='Label')
-            kids.append(text('Label', [(lst, 'Label', label_prop, None)], x=-w / 2 + 12 + (0 if not icon else 0), y=-12, width=w - 24 - (22 if icon else 0),
+            kids.append(text('Label', [(lst, 'Label', label_prop, None)], x=-w / 2 + 12 + (22 if icon_left else 0), y=-12, width=w - 24 - (22 if icon else 0),
                              height=26, sizing='fixed', align='center', overflow='ellipsis', wrap='noWrap'))
         if icon is not None:
             kids.append(icon)
@@ -106,8 +106,8 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     cont_g, cont_b, _ = button('Continue', 259, 214, 'continueLabel', 'navNextRequest', icon=arrow)
     share_icon = node('share', [shape('a', straight([(0, 7), (0, -8)], False), stroke('cream', 2.6)),
                                 shape('h', straight([(-5, -3), (0, -8), (5, -3)], False), stroke('cream', 2.6))], x=38)
-    share_g, share_b, share_l = button('Share', 205, 114, 'shareLabel', 'shareRequest', icon=share_icon, c='tomato')
-    replay_g, replay_b, _ = button('Replay', 318, 96, 'replayLabel', 'replayRequest', kind='outline', tc='aub')
+    share_g, share_b, share_l = button('Share', 200, 112, 'shareLabel', 'shareRequest', icon=share_icon, c='tomato')
+    replay_g, replay_b, _ = button('Replay', 316, 108, 'replayLabel', 'replayRequest', kind='outline', tc='aub', icon=replay_icon(), icon_left=True)
     ev_share = E('Event', name='shareTapped')
     share_l.add(E('ListenerFireEvent', eventId=ev_share.id))
     share_l.add(E('ScriptedListenerAction', [E('ScriptInputString', propertyValue='shareTapped', name='label')], scriptAssetId=SCRIPT_AUDIT))
@@ -120,7 +120,7 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     # focus ring (keyboard focus is owned by the director; focusedControl picks the ring pose)
     ring_r = rect(60, 60, 30)
     ring = shape('Focus ring', ring_r, stroke('tomato', 3), x=50, y=CTRL_Y, op=0)
-    rings = {0: (50, 60, 0), 1: (50, 62, 1), 2: (112, 62, 1), 3: (259, 224, 1), 4: (205, 124, 1), 5: (318, 106, 1)}
+    rings = {0: (50, 60, 0), 1: (50, 62, 1), 2: (112, 62, 1), 3: (259, 224, 1), 4: (200, 122, 1), 5: (316, 118, 1)}
     s_focus = []
     for idx, (fx, fw, fo) in rings.items():
         a = Anim(f'Focus {idx}', 1)
@@ -206,7 +206,7 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
             a = Anim('Motif pose 9 (anticipation)', ms2f(1500))
             a.ms(motif, 'x', [(0, px, 'hold'), (500, px, 'lin'), (560, px - 6, 'lin'), (620, px + 6, 'lin'), (680, px - 4, 'lin'), (740, px, 'hold')])
             # anticipation: arrive, rattle, then dissolve into the emblem as it bursts out
-            a.ms(motif, 'y', [(0, py, 'hold'), (740, py, 'backin'), (1050, 556.0)])
+            a.ms(motif, 'y', [(0, py, 'hold'), (740, py, 'backin'), (1050, 516.0)])
             a.ms(motif, 'scaleX', [(0, sc, 'hold'), (740, sc, 'backin'), (1050, 0.2)])
             a.ms(motif, 'scaleY', [(0, sc, 'hold'), (740, sc, 'backin'), (1050, 0.2)])
             a.ms(motif, 'rotation', [(0, rot, 'hold')])
@@ -229,7 +229,7 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     # reduced motion: the timed poses (9, 10) get static end poses
     rm_targets = {k: pose_states[k - 1] for k in POSES}
     rm_states = []
-    for k, (px, py, sc, rot) in ((9, (195.0, 556.0, 0.2, 0.0)), (10, POSES[10])):
+    for k, (px, py, sc, rot) in ((9, (195.0, 516.0, 0.2, 0.0)), (10, POSES[10])):
         a = Anim(f'Motif pose {k} (reduced motion)', 1)
         for p, v in (('x', px), ('y', py), ('scaleX', sc), ('scaleY', sc), ('rotation', rot), ('opacity', 0.0)):
             a.ms(motif, p, [(0, float(v), 'hold')])
@@ -248,65 +248,47 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     layers.append(layer('Motif pose', pose_states[0], every))
 
     # ================================================================ signature handoff (steam ribbon + tablecloth pull)
-    ribbon_pts = [(-260, 300), (-150, 240), (-60, 120), (40, 60), (90, -40), (30, -110), (-40, -60), (10, 10), (120, -40), (190, -180), (300, -300)]
-    rib, rib_trims, (rib_path, rib_ink) = art.steam_curl('Steam ribbon', ribbon_pts, w=30, c='cream')
-    # thin tomato thread inside the ribbon: the hand-drawn ink line
-    thread_trim = E('TrimPath', start=0.0, end=1.0, modeValue='sequential', name='Trim')
-    thread = shape('Ribbon thread', smooth(ribbon_pts, False), [E('Stroke', [E('SolidColor', colorValue=col('tomato'), name='Color'), thread_trim], thickness=3.0, cap='round', join='round', name='Stroke')])
-    rib.children.insert(0, thread)
+    # the steam ribbon is a GPU shader now (scripts/steam.luau + .wgsl): keyed progress + direction
+    steam_p = E('ScriptInputNumber', propertyValue=0.0, name='progress')
+    steam_d = E('ScriptInputNumber', propertyValue=1.0, name='dir')
+    steam = E('ScriptedDrawable', [steam_p, steam_d], scriptAssetId=SCRIPT_STEAM, name='Steam', x=0.0, y=0.0)
 
-    cloth_w, cloth_h = 470, 190
-    wave = [(-cloth_w / 2, -cloth_h / 2 + 10), (-cloth_w / 4, -cloth_h / 2 - 8), (0, -cloth_h / 2 + 8), (cloth_w / 4, -cloth_h / 2 - 10),
-            (cloth_w / 2, -cloth_h / 2 + 6), (cloth_w / 2, cloth_h / 2), (-cloth_w / 2, cloth_h / 2)]
-    clip_path = smooth(wave, True, corners=(0, 4, 5, 6))
-    clip_shape = shape('Cloth mask', clip_path, fill('01FFFFFF'))
-    cloth_check = art.gingham('Cloth check', cloth_w, cloth_h, cell=24, c='basil', bg='cream')
-    cloth_check.add(E('ClippingShape', sourceId=clip_shape.id, name='Clip'))
-    hem = shape('Cloth hem', smooth(wave[:5], False), stroke('basilDk', 4))
-    riders = [art.tomato('rider tomato', 0.6, x=-120, y=-cloth_h / 2 - 12), art.garlic('rider garlic', 0.6, x=30, y=-cloth_h / 2 - 14),
-              art.leaf('rider basil', 0.7, x=120, y=-cloth_h / 2 - 16, rot=0.9), art.lemon_slice('rider lemon', 0.6, x=-40, y=-cloth_h / 2 - 12)]
-    cloth = node('Tablecloth', riders + [hem, cloth_check, clip_shape, shape('cloth ink', clip_path_copy(wave), fill('ink25'), x=6, y=8)], x=-700, y=300)
-    handoff = node('Handoff', [rib, cloth], x=W / 2, y=H / 2)
-    handoff.attrs['opacity'] = 0.0
+    # the tablecloth is a simulated 3D cloth (scripts/cloth.luau + .wgsl) in a fill-sized layout so it
+    # renders at the presenting pixel density; the ingredients riding on it are small vector artboards
+    import scenes_impl
+    rider_specs = [('Rider tomato', lambda: art.tomato('tomato', 1.0, x=50, y=54)),
+                   ('Rider garlic', lambda: art.garlic('garlic', 1.0, x=50, y=54)),
+                   ('Rider basil', lambda: art.leaf('basil', 1.2, x=50, y=50, rot=0.9)),
+                   ('Rider lemon', lambda: art.lemon_slice('lemon', 1.0, x=50, y=50))]
+    rider_ids = []
+    for i, (rname, fn) in enumerate(rider_specs):
+        rb = E('Artboard', isComponent=True, width=100.0, height=100.0, name=rname, x=float(500 + i * 140), y=1900.0, clip=False)
+        rst_ = E('LayoutComponentStyle', name='Artboard Style')
+        rb.attrs['styleId'] = rst_.id
+        rb.add(rst_, fn())
+        scenes_impl.EXTRA.append((rb, None))
+        rider_ids.append(rb.id)
+    cloth_p = E('ScriptInputNumber', propertyValue=0.0, name='progress')
+    cloth_d = E('ScriptInputNumber', propertyValue=1.0, name='dir')
+    cloth_root = E('LayoutComponent', width=float(W), height=float(H), name='Tablecloth root')
+    cloth_st = overlay_style('Tablecloth style')
+    cloth_root.attrs['styleId'] = cloth_st.id
+    cloth_root.add(cloth_st, E('ScriptedLayout', [cloth_p, cloth_d] + [E('ScriptInputArtboard', artboardId=rid, name=f'rider{i + 1}') for i, rid in enumerate(rider_ids)],
+                                scriptAssetId=SCRIPT_CLOTH, name='Tablecloth'))
 
     def handoff_anim(name, sx):
         a = Anim(name, ms2f(820))
-        a.ms(handoff, 'opacity', [(0, 1.0, 'hold'), (820, 0.0, 'hold')])
-        a.ms(handoff, 'scaleX', [(0, float(sx), 'hold')])
-        for tr in rib_trims + [thread_trim]:
-            a.ms(tr, 'end', [(0, 0.0, 'soft'), (420, 1.0, 'hold')])
-            a.ms(tr, 'start', [(0, 0.0, 'hold'), (200, 0.0, 'in'), (700, 1.0, 'hold')])
-        # the ribbon curls tighter as it travels (vertex morph)
-        for path in (rib_path, rib_ink):
-            vs = path.children
-            for vi in (5, 6, 7):
-                v = vs[vi]
-                vx, vy = float(v.attrs['x']), float(v.attrs['y'])
-                a.ms(v, 'x', [(0, vx * 1.4, 'soft'), (500, vx * 0.8, 'inout'), (820, vx)])
-                a.ms(v, 'y', [(0, vy * 0.6, 'soft'), (500, vy * 1.15, 'inout'), (820, vy)])
-        a.ms(cloth, 'x', [(0, -470.0, 'hold'), (220, -470.0, 'inout'), (820, 470.0)])
-        a.ms(cloth, 'y', [(0, 300.0, 'hold'), (240, 300.0, 'inout'), (520, 286.0, 'inout'), (820, 300.0)])
-        a.ms(cloth, 'rotation', [(0, 0.0, 'hold'), (240, 0.04, 'inout'), (520, -0.03, 'inout'), (820, 0.0)])
-        # the hem ripples
-        for path in (clip_path, hem.children[0]):
-            vs = path.children
-            for vi in (1, 2, 3):
-                if vi >= len(vs):
-                    continue
-                v = vs[vi]
-                vy = float(v.attrs['y'])
-                a.ms(v, 'y', [(0, vy, 'hold'), (240, vy, 'inout'), (420, vy + (-16 if vi % 2 else 14), 'inout'), (620, vy + (12 if vi % 2 else -10), 'inout'), (820, vy)])
-        # riders get flung and rearranged as the cloth is pulled
-        for i, r in enumerate(riders):
-            ry = float(r.attrs['y'])
-            a.ms(r, 'y', [(0, ry, 'hold'), (300 + i * 40, ry, 'out'), (480 + i * 40, ry - 90 - i * 18, 'in'), (700 + i * 40, ry)])
-            a.ms(r, 'rotation', [(0, float(r.attrs.get('rotation', 0.0)), 'hold'), (300 + i * 40, 0.0, 'lin'), (700 + i * 40, (1 if i % 2 else -1) * 2.4)])
+        for inp in (steam_p, cloth_p):
+            a.ms(inp, 'propertyValue', [(0, 0.0, 'lin'), (820, 1.0, 'hold')])
+        for inp in (steam_d, cloth_d):
+            a.ms(inp, 'propertyValue', [(0, float(sx), 'hold')])
         return a
 
     a_fwd = handoff_anim('Handoff forward', 1)
     a_back = handoff_anim('Handoff back (mirrored)', -1)
     a_hidle = Anim('Handoff idle', 1)
-    a_hidle.ms(handoff, 'opacity', [(0, 0.0, 'hold')])
+    a_hidle.ms(steam_p, 'propertyValue', [(0, 0.0, 'hold')])
+    a_hidle.ms(cloth_p, 'propertyValue', [(0, 0.0, 'hold')])
     s_hi = astate(a_hidle, 0, 0)
     s_hf = astate(a_fwd, 240, -120)
     s_hb = astate(a_back, 240, 120)
@@ -338,10 +320,16 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
 
     # ================================================================ director (input + sequencing)
     root = E('LayoutComponent', width=float(W), height=float(H), name='Director root')
-    rst = E('LayoutComponentStyle', layoutWidthScaleType='fill', layoutHeightScaleType='fill', name='Director root style')
+    rst = overlay_style('Director root style')
     root.attrs['styleId'] = rst.id
     director = E('ScriptedLayout', [E('FocusData', name='Keyboard focus')], scriptAssetId=SCRIPT_DIRECTOR, name='Director')
     root.add(rst, director)
+
+    # risograph stock over everything (scripts/riso.luau): paper tooth (multiply) + ink voids (screen)
+    riso_root = E('LayoutComponent', width=float(W), height=float(H), name='Riso stock root')
+    riso_st = overlay_style('Riso stock style')
+    riso_root.attrs['styleId'] = riso_st.id
+    riso_root.add(riso_st, E('ScriptedLayout', scriptAssetId=SCRIPT_RISO, name='Riso stock'))
 
     # ================================================================ events
     ev_screen = E('Event', name='screenChanged')
@@ -369,9 +357,38 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     sm.add(*listeners)
     sm.add(*layers)
     ab.attrs['defaultStateMachineId'] = sm.id
-    ab.add(st, ring, controls, header, handoff, motif, scenes, backdrop, root, ev_screen, ev_fin, ev_share, sm)
+    ab.add(st, riso_root, ring, controls, header, motif, cloth_root, steam, scenes, backdrop, root, ev_screen, ev_fin, ev_share, sm)
     ab.add(*[a.build() for a in anims])
     return ab
+
+
+def overlay_style(name):
+    """A full-stage layout box pinned to all four edges. Absolute, so several of them can
+    overlay each other: the artboard is a flex row and would otherwise lay them side by side."""
+    a = dict(positionTypeValue='absolute', widthUnitsValue='auto', heightUnitsValue='auto', name=name)
+    for k in ('Top', 'Bottom', 'Left', 'Right'):
+        a[f'position{k}'] = 0.0
+        a[f'position{k}UnitsValue'] = 'points'
+    return E('LayoutComponentStyle', **a)
+
+
+def replay_icon():
+    """A counter-clockwise circular arrow, built from geometry: the arc is open on the right,
+    and the arrowhead sits on the arc's end, pointing along the arc's tangent there."""
+    r = 6.5
+    t0, t1 = math.radians(-10), math.radians(-10 - 265)   # decreasing angle = counter-clockwise on screen
+    pts = [(r * math.cos(t0 + (t1 - t0) * k / 16), r * math.sin(t0 + (t1 - t0) * k / 16)) for k in range(17)]
+    ex, ey = pts[-1]
+    # direction of travel at the end: d/dt of (cos, sin) with t decreasing
+    dx, dy = math.sin(t1), -math.cos(t1)
+    px, py = -dy, dx
+    tip = (ex + dx * 2.2, ey + dy * 2.2)
+    w1 = (tip[0] - dx * 5.2 + px * 4.0, tip[1] - dy * 5.2 + py * 4.0)
+    w2 = (tip[0] - dx * 5.2 - px * 4.0, tip[1] - dy * 5.2 - py * 4.0)
+    return node('replay', [
+        shape('head', straight([w1, tip, w2], False), stroke('aub', 2.4)),
+        shape('arc', smooth(pts, False), stroke('aub', 2.4)),
+    ], x=-36)
 
 
 def T_open_():

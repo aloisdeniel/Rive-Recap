@@ -17,6 +17,7 @@ type Clock = {
     holding: Property<boolean>?,
     reduced: Property<boolean>?,
     nextTrigger: PropertyTrigger?,
+    labels: { [string]: Property<string>? },
     lastScreen: number,
     settle: number,
     elapsed: number,
@@ -56,6 +57,9 @@ function init(self: Clock, context: Context): boolean
     self.holding = vm:getBoolean('isHolding')
     self.reduced = vm:getBoolean('reducedMotion')
     self.nextTrigger = vm:getTrigger('navNext')
+    for _, n in { 'continueLabel', 'shareLabel', 'pauseLabel', 'playLabel', 'replayLabel', 'primaryA11yLabel', 'secondaryA11yLabel' } do
+        self.labels[n] = vm:getString(n)
+    end
     return true
 end
 
@@ -66,12 +70,37 @@ local function setProgress(self: Clock, v: number)
     end
 end
 
+local function label(self: Clock, name: string): string
+    local p = self.labels[name]
+    if p == nil then
+        return ''
+    end
+    return p.value
+end
+
+-- The centre and right control slots change meaning on the summary; keep their
+-- accessible labels in step with what they do (localised strings only).
+local function syncLabels(self: Clock, screen: number)
+    local prim = self.labels['primaryA11yLabel']
+    local sec = self.labels['secondaryA11yLabel']
+    local summary = screen >= 10
+    local want1 = if summary then label(self, 'shareLabel') else label(self, 'continueLabel')
+    local want2 = if summary then label(self, 'replayLabel') elseif bool(self.paused) then label(self, 'playLabel') else label(self, 'pauseLabel')
+    if prim ~= nil and prim.value ~= want1 then
+        prim.value = want1
+    end
+    if sec ~= nil and sec.value ~= want2 then
+        sec.value = want2
+    end
+end
+
 function advance(self: Clock, seconds: number): boolean
     local cur = self.current
     if cur == nil then
         return true
     end
     local screen = cur.value
+    syncLabels(self, screen)
     if screen ~= self.lastScreen then
         self.lastScreen = screen
         self.settle = 0
@@ -117,7 +146,7 @@ function draw(self: Clock, renderer: Renderer) end
 return function(context: Context): Layout<Clock>
     return {
         current = nil, progress = nil, seconds = nil, enabled = nil, paused = nil, holding = nil, reduced = nil,
-        nextTrigger = nil, lastScreen = -1, settle = 0, elapsed = 0, fired = false,
+        nextTrigger = nil, labels = {}, lastScreen = -1, settle = 0, elapsed = 0, fired = false,
         init = init, advance = advance, draw = draw,
     }
 end

@@ -23,10 +23,9 @@ local function convert(self: Fmt, input: DataValue): DataValue
     local out: DataValueString = DataValue.string()
     if input:isNumber() then
         local v = (input :: DataValueNumber).value
-        -- a value with a fractional part of exactly .x after the count-up has
-        -- settled shows cents; during the count it shows whole units
-        local settled = math.abs(v - math.floor(v)) < 1e-9 or math.abs(v * 100 - math.floor(v * 100 + 0.5)) < 0.05
-        out.value = numfmt.money(v, str(self, "locale", "en-GB"), str(self, "currencyCode", "EUR"), settled)
+        -- hero count-ups arrive as whole units until they settle (see the countUp
+        -- formulas), so a value with cents is always a settled, exact value
+        out.value = numfmt.money(v, str(self, "locale", "en-GB"), str(self, "currencyCode", "EUR"), true)
     end
     return out
 end

@@ -24,7 +24,7 @@ def render(frames_dir, idx, steps, data):
     subprocess.run(cmd, capture_output=True)
 
 
-def make(name, fps, seconds, data, prefix=(), workers=8):
+def make(name, fps, seconds, data, prefix=(), workers=4):
     frames_dir = os.path.join(OUT, name + "-frames")
     shutil.rmtree(frames_dir, ignore_errors=True)
     os.makedirs(frames_dir)

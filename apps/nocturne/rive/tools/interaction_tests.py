@@ -161,7 +161,7 @@ def persona_mapping_atomic():
 
 @case
 def finder_drag_does_not_navigate():
-    v = run("--advance=60", "--pointer=drag@241,262>160,330:16", "--advance=30")
+    v = run("--advance=60", "--pointer=drag@135,242>230,330:16", "--advance=30")
     return v["currentScreen"] == 1 and not v["isHolding"], f"screen={v['currentScreen']} holding={v['isHolding']}"
 
 
@@ -175,6 +175,27 @@ def controls_do_not_trigger_tap_regions():
 def runtime_update_changes_value():
     v = run("--data=observationNights=512", "--advance=10", *taps(NEXT, 1), "--advance=160")
     return v["observationNights"] == 512, "observationNights=512 (see captures/runtime-update.png for the pixels)"
+
+
+@case
+def tab_order_only_visible_controls():
+    seen = []
+    for n in range(1, 5):
+        v = run("--advance=10", *(["--key=tab", "--advance=4"] * n))
+        seen.append(int(v["focusedControl"]))
+    s = run("--advance=10", "--key=right", "--advance=4", *(["--key=right", "--advance=4"] * 9), "--key=tab", "--advance=4",
+            "--key=tab", "--advance=4", "--key=tab", "--advance=4")
+    ok = all(f in (1, 2, 3) for f in seen) and set(seen) == {1, 2, 3} and s["focusedControl"] in (1, 2, 3)
+    return ok, f"focus after 1..4 Tabs = {seen}; on the summary after 3 Tabs = {int(s['focusedControl'])} (no hidden stops)"
+
+
+@case
+def summary_slots_are_share_and_replay():
+    v = run("--advance=10", *taps(NEXT, 9), "--advance=30", NEXT, "--advance=10", AWAY, "--advance=2")
+    ok = v["currentScreen"] == 10 and v["primaryA11yLabel"] == "Share" and v["secondaryA11yLabel"] == "Replay"
+    a = run("--advance=10", "--advance=30")
+    ok = ok and a["primaryA11yLabel"] == "Continue" and a["secondaryA11yLabel"] == "Pause"
+    return ok, f"centre press on summary keeps screen={v['currentScreen']}; labels {v['primaryA11yLabel']}/{v['secondaryA11yLabel']} (intro {a['primaryA11yLabel']}/{a['secondaryA11yLabel']})"
 
 
 def main():

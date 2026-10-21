@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from rml import E, bind, ellipse, fill, poly, rect, shape, solid, stroke, paint_color, child, argb, mix, node
-from gen_kiln import (ART_H, ART_W, CHAR, H, PORC, SCENES, W, XFADE, Layer, settle)
+from gen_kiln import (ART_H, ART_W, CHAR, CLAY, H, PORC, SCENES, W, XFADE, Layer, settle)
 
 # --------------------------------------------------------------------------
 # conditions / transitions
@@ -176,21 +176,43 @@ def icon_play(color):
     return shape("Play Icon", 1.5, 0, poly([(-5, -7), (7, 0), (-5, 7)], radius=1.5), fill(color))
 
 
+def focus_ring(g, name, ink0, d=54.0):
+    """keyboard focus ring: an outer ring in the scene's ink, shown by the Focus Ring layer"""
+    sc = solid(ink0)
+    ink(g, sc)
+    ring = shape(f"{name} Focus Ring", 0, 0, ellipse(d, d), E("Stroke", {"thickness": 2.0, "name": "Ring"}, sc))
+    settle(ring, "opacity", 0.0)
+    settle(ring, "scaleX", 1.0)
+    settle(ring, "scaleY", 1.0)
+    g.focus_rings.append(ring)
+    # a plain Node is not a layout participant, so the ring stays centred on the 44pt button
+    return E("Node", {"x": 22.0, "y": 22.0, "name": f"{name} Focus"}, ring)
+
+
+def focus_data(g, b):
+    fd = E("FocusData", {"name": "Focus"})
+    settle(fd, "canFocus", True, set_attr=False)
+    g.focus_datas[b.attrs["name"]] = fd
+    return fd
+
+
 def circle_button(g, name, label_prop, icon_children, ink0, filled=False):
     st = g.style(layoutWidthScaleType="fixed", layoutHeightScaleType="fixed", cornerRadiusTL=22.0,
                  layoutAlignmentType="center", name=f"{name} Style")
     b = g.box(name, st, w=44, h=44)
-    b.add(E("FocusData", {"name": "Focus"}))
+    b.add(focus_data(g, b))
     b.add(E("SemanticData", {"role": "button", "name": "Semantics"}, bind(g.p(label_prop), 983)))
     sc = solid(ink0, alpha=0.5)
     ink(g, sc, 0.5)
     b.add(E("Stroke", {"thickness": 1.3, "name": "Ring"}, sc))
     holder = E("Node", {"x": 22.0, "y": 22.0, "name": "Icon"}, *icon_children)
     b.add(holder)
+    b.add(focus_ring(g, name, ink0))
     return b
 
 
 def build_footer(g):
+    g.focus_rings, g.focus_pills, g.focus_datas = [], [], {}
     ink0 = SCENES[1]["ink"]
     bg0 = SCENES[1]["bg"]
     fs = g.abs_style(bottom=18, left=0, right=0, layoutHeightScaleType="fixed", name="Footer Style")
@@ -230,7 +252,7 @@ def build_footer(g):
                  layoutAlignmentType="centerRight", gapHorizontal=12.0, gapHorizontalUnitsValue="points",
                  paddingLeft=14.0, paddingLeftUnitsValue="points", name="Continue Style")
     cont = g.box("Continue Button", cs, w=150, h=48)
-    cont.add(E("FocusData", {"name": "Focus"}))
+    cont.add(focus_data(g, cont))
     cont.add(E("SemanticData", {"role": "button", "name": "Semantics"}, bind(g.p("continueLabel"), 983)))
     lab_style = g.sans_style(16, ink0, 600)
     ink(g, child(child(lab_style, "Fill"), "SolidColor"))
@@ -245,7 +267,8 @@ def build_footer(g):
     cp, cst = chevron(bg0)
     cst.children[0] = chv_c
     circle = g.box("Continue Circle", circ_st, E("Fill", {"name": "Fill"}, cc),
-                   E("Node", {"x": 23.0, "y": 22.0, "name": "Icon"}, shape("Chevron", 0, 0, cp, cst)), w=44, h=44)
+                   E("Node", {"x": 23.0, "y": 22.0, "name": "Icon"}, shape("Chevron", 0, 0, cp, cst)),
+                   focus_ring(g, "Continue", ink0), w=44, h=44)
     cont.add(circle)
     # transparent hit pad so the whole pill is a 48pt target
     cont.add(E("Fill", {"name": "Hit"}, solid(ink0, alpha=0.0)))
@@ -264,12 +287,17 @@ def build_footer(g):
                      paddingLeft=16.0, paddingLeftUnitsValue="points", paddingRight=16.0,
                      paddingRightUnitsValue="points", cornerRadiusTL=24.0, name=f"{name} Style")
         b = g.box(name, st, w=140, h=48)
-        b.add(E("FocusData", {"name": "Focus"}))
+        b.add(focus_data(g, b))
         b.add(E("SemanticData", {"role": "button", "name": "Semantics"}, bind(g.p(label_prop), 983)))
         tcol = PORC if filled else CHAR
         b.add(icon)
         ls = g.sans_style(15, tcol, 700)
         b.add(g.text(f"{name} Label", ls, literal, prop=label_prop, width="hug", reveal=False, nowrap=True))
+        # keyboard focus: a clay outline on the pill itself, faded in by the Focus Ring layer
+        fc = solid(CLAY, alpha=0.0)
+        settle(fc, "colorValue", argb(CLAY, 0.0), set_attr=False)
+        g.focus_pills.append(fc)
+        b.add(E("Stroke", {"thickness": 3.0, "name": "Focus"}, fc))
         if filled:
             b.add(E("Fill", {"name": "Fill"}, solid(CHAR)))
         else:
@@ -359,12 +387,34 @@ def build_machine(g):
     a_sum.k(g.nav_controls, "opacity", (0, 0.0, "hold")).k(g.nav_controls, "x", (0, 4000.0, "hold"))
     a_sum.k(g.summary_actions, "opacity", (0, 0.0, "hold"), (10, 0.0, "out"), (30, 1.0, "out"))
     a_sum.k(g.summary_actions, "x", (0, 0.0, "hold"))
+    # only the visible controls take focus: hidden ones leave the tab order
+    story = ("Previous Button", "Pause Button", "Continue Button")
+    for nm, fd in g.focus_datas.items():
+        a_nav.k(fd, "canFocus", (0, nm in story, "hold"))
+        a_sum.k(fd, "canFocus", (0, nm not in story, "hold"))
+    # a second, settled state per mode re-targets focus once its controls are focusable again
+    # (a FocusActionTarget in the same frame that keys canFocus finds nothing to focus)
+    a_nav2 = L.anim("Controls Story Ready", 1)
+    a_sum2 = L.anim("Controls Summary Ready", 1)
+    a_nav2.k(g.nav_controls, "opacity", (0, 1.0, "hold")).k(g.nav_controls, "x", (0, 0.0, "hold"))
+    a_nav2.k(g.summary_actions, "opacity", (0, 0.0, "hold")).k(g.summary_actions, "x", (0, 4000.0, "hold"))
+    a_sum2.k(g.nav_controls, "opacity", (0, 0.0, "hold")).k(g.nav_controls, "x", (0, 4000.0, "hold"))
+    a_sum2.k(g.summary_actions, "opacity", (0, 1.0, "hold")).k(g.summary_actions, "x", (0, 0.0, "hold"))
+    for nm, fd in g.focus_datas.items():
+        a_nav2.k(fd, "canFocus", (0, nm in story, "hold"))
+        a_sum2.k(fd, "canFocus", (0, nm not in story, "hold"))
     s_nav = state(a_nav, 200, 0, E("FocusActionTarget", {"targetId": g.btn_continue.id}))
+    s_nav2 = state(a_nav2, 420, 0, E("FocusActionTarget", {"targetId": g.btn_continue.id}))
     s_sum = state(a_sum, 200, 140)
-    s_nav.add(trans(s_sum, 0, [c_num(g, "currentScreen", 10)]))
-    s_sum.add(trans(s_nav, 0, [c_num(g, "currentScreen", 10, "notEqual")]))
+    s_sum2 = state(a_sum2, 420, 140, E("FocusActionTarget", {"targetId": g.btn_share.id}))
+    for st in (s_nav, s_nav2):
+        st.add(trans(s_sum, 0, [c_num(g, "currentScreen", 10)]))
+    for st in (s_sum, s_sum2):
+        st.add(trans(s_nav, 0, [c_num(g, "currentScreen", 10, "notEqual")]))
+    s_nav.add(trans(s_nav2, 0, [], exit_pct=100))
+    s_sum.add(trans(s_sum2, 0, [], exit_pct=100))
     L.el.add(E("AnyState", {"x": 0.0, "y": -140.0}), E("ExitState", {"x": 400.0, "y": -140.0}),
-             E("EntryState", {"x": 0.0, "y": 0.0}, trans(s_nav)), s_nav, s_sum)
+             E("EntryState", {"x": 0.0, "y": 0.0}, trans(s_nav)), s_nav, s_nav2, s_sum, s_sum2)
     g.layers.append(L)
 
     # ---- pause / play glyph
@@ -409,6 +459,57 @@ def build_machine(g):
              E("EntryState", {"x": 0.0, "y": 0.0}, trans(s_w)), s_w, s_f)
     g.layers.append(L)
 
+    # ---- keyboard focus ring. Driven by two state-machine inputs (not view model data: focus is
+    # presentation only and the UserRecap contract stays unchanged). Rings appear only after Tab,
+    # like :focus-visible, so pointer users and the arrow-key walkthrough never see them.
+    in_idx = E("StateMachineNumber", {"name": "focusedControl"})
+    in_kb = E("StateMachineBool", {"name": "keyboardFocus"})
+    in_idx.id, in_kb.id  # noqa: B018
+    g.sm_inputs = [in_idx, in_kb]
+    L = Layer("Focus Ring")
+    rings = g.focus_rings          # previous, pause, continue
+    pills = g.focus_pills          # share, replay
+    targets = [("ring", r) for r in rings] + [("pill", p) for p in pills]
+    a_none = L.anim("Focus None", 10)
+    for kind, t in targets:
+        if kind == "ring":
+            a_none.k(t, "opacity", (0, 0.0, "hold"))
+        else:
+            a_none.k(t, "colorValue", (0, argb(CLAY, 0.0), "hold"))
+    s_none = state(a_none, 200, 0)
+    focus_states = []
+    for k, (kind, t) in enumerate(targets, start=1):
+        a = L.anim(f"Focus {k}", 16)
+        for j, (kind2, t2) in enumerate(targets, start=1):
+            if kind2 == "ring":
+                if j == k:
+                    a.k(t2, "opacity", (0, 0.0, "hold"), (1, 0.0, "out"), (10, 1.0, "hold"))
+                    a.k(t2, "scaleX", (0, 1.3, "hold"), (1, 1.3, "back"), (14, 1.0, "hold"))
+                    a.k(t2, "scaleY", (0, 1.3, "hold"), (1, 1.3, "back"), (14, 1.0, "hold"))
+                else:
+                    a.k(t2, "opacity", (0, 0.0, "hold"))
+            else:
+                if j == k:
+                    a.k(t2, "colorValue", (0, argb(CLAY, 0.0), "hold"), (1, argb(CLAY, 0.0), "out"),
+                        (10, argb(CLAY, 1.0), "hold"))
+                else:
+                    a.k(t2, "colorValue", (0, argb(CLAY, 0.0), "hold"))
+        focus_states.append(state(a, 420, -200 + k * 90))
+    any_f = E("AnyState", {"x": 0.0, "y": -160.0})
+    any_f.add(E("StateTransition", {"stateToId": s_none.id, "duration": 0},
+                E("TransitionBoolCondition", {"inputId": in_kb.id, "opValue": "notEqual"})))
+    any_f.add(E("StateTransition", {"stateToId": s_none.id, "duration": 0},
+                E("TransitionNumberCondition", {"inputId": in_idx.id, "opValue": "equal", "value": 0.0})))
+    for k, st in enumerate(focus_states, start=1):
+        any_f.add(E("StateTransition", {"stateToId": st.id, "duration": 0},
+                    E("TransitionBoolCondition", {"inputId": in_kb.id, "opValue": "equal"}),
+                    E("TransitionNumberCondition", {"inputId": in_idx.id, "opValue": "equal", "value": float(k)})))
+    L.el.add(any_f, E("ExitState", {"x": 700.0, "y": -160.0}),
+             E("EntryState", {"x": 0.0, "y": 0.0}, trans(s_none)), s_none, *focus_states)
+    g.layers.append(L)
+
+    for inp in g.sm_inputs:
+        sm.add(inp)
     for L in g.layers:
         sm.add(L.el)
 
@@ -443,6 +544,24 @@ def build_machine(g):
     li.add(E("ListenerFireEvent", {"eventId": g.events["shareTapped"].id}))
     li.add(vm_increment(g, "_shareTappedCount"))
     sm.add(li)
+    # focus tracking for the ring: each control reports itself as it takes focus
+    controls = [g.btn_prev, g.btn_pause, g.btn_continue, g.btn_share, g.btn_replay]
+    for k, b in enumerate(controls, start=1):
+        li = E("StateMachineListener", {"targetId": b.id, "name": f"Focus {k}"},
+               E("ListenerInputType", {"listenerTypeValue": "focus"}),
+               E("ListenerNumberChange", {"inputId": in_idx.id, "value": float(k)}))
+        sm.add(li)
+    # Tab / Shift+Tab move focus between the visible controls and switch the rings on;
+    # any pointer press switches them off again
+    for name, mods, kind in (("Tab Next", 0, "next"), ("Tab Previous", 1, "previous")):
+        sm.add(E("StateMachineListener", {"targetId": g.stage.id, "name": name},
+                 E("ListenerInputTypeKeyboard", {"listenerTypeValue": "keyboard"},
+                   E("KeyboardInput", {"keyType": "tab", "keyPhase": 3, "modifiers": mods})),
+                 E("FocusActionTraversal", {"traversalKind": kind}),
+                 E("ListenerBoolChange", {"inputId": in_kb.id, "value": 1})))
+    sm.add(E("StateMachineListener", {"targetId": g.stage.id, "name": "Pointer Hides Focus"},
+             E("ListenerInputType", {"listenerTypeValue": "down"}),
+             E("ListenerBoolChange", {"inputId": in_kb.id, "value": 0})))
     # stage-wide keys (bubble up from whichever control holds focus)
     for name, key, value in (("Key Next", "right", 1), ("Key Previous", "left", 2), ("Key Pause", "space", 3)):
         li = E("StateMachineListener", {"targetId": g.stage.id, "name": name},

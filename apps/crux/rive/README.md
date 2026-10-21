@@ -4,9 +4,9 @@ A ten-scene, data-bound climbing recap for the fictional app Crux, built with Ri
 
 | What | Where |
 |---|---|
-| Editable source (RML + Luau) | `scene/*.rml`, `director.luau` |
+| Editable source (RML + Luau + WGSL) | `scene/*.rml`, `director.luau`, `hold3d.luau` + `hold3d.wgsl` (3D holds), `chalk.luau` + `chalk.wgsl` (chalk shader) |
 | Generator for the RML (scenes, ~60 entrance/exit timelines, ~450 transitions) | `tools/gen.py` (+ `rml.py`, `art.py`, `stage.py`, `build_stage.py`, `main_ab.py`, `model.py`, `conv.py`) |
-| Runtime file | `build/crux-recap.riv` (781 KB, unsigned local build) |
+| Runtime file | `build/crux-recap.riv` (882 KB, unsigned local build) |
 | Editor file `.rev` | **Not produced.** `rive . --once --rev=build/crux-recap.rev` fails with "Not logged in". Run `rive login` and then that command. |
 | Fixtures | `fixtures/fixture.json` (sample data), `new-user.json`, `extreme.json`. The same three are also authored as `UserRecap` instances named `Fixture` (the default), `NewUser` and `Extreme`. |
 | Captures | `captures/*.png` (58 stills), `captures/motion/*.mp4`, `captures/data/verify-report.json` |
@@ -144,7 +144,7 @@ The accent panel is bound to `personaColor`.
 
 - `rive . --verify`: 0 errors, 0 warnings.
 - `rive inspect . --summary`: 0 problems. Object counts are 622 (main), 24,057 (stage) and 50 (wordmark).
-- `python3 tools/verify.py`: 32/32 checks pass. The results are in `captures/data/verify-report.json`. Covered:
+- `python3 tools/verify.py`: 32/32 checks pass (re-run after the improvement pass). The results are in `captures/data/verify-report.json`. Covered:
   - Tap zones, rapid taps (settle on the last requested scene, one signal per change), and hold/release.
   - Pause freezing and resuming progress.
   - Skipping hidden scenes in both directions, the all-hidden safe path, and starting on a hidden scene.
@@ -187,8 +187,8 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
   - **Web hosts:** a locally built `.riv` carries unsigned scripts, which web runtimes reject. Ship with `rive . --publish` (requires login).
 - **Count-up.** A keyed custom property writes `heroProgress` back into the model, and the script formats the result.
 - **Keyed deformation.** Squash and stretch use scale on nested nodes. The rope slack uses a keyed bezier vertex. There are no meshes or bones.
-- **Chalk.** Chalk is vector puffs and grain. There is no raster texture or particle system; the pools are bounded.
-- **Holds.** The "3D" cutout holds are flat facet, shadow and outline layers. There is no renderer-based 3D.
+- **Chalk.** The transition occluder is a WGSL shader (see below). Impact puffs are still bounded vector puffs.
+- **Holds.** Since the improvement pass, the large holds are real GPU 3D (see below). Small route holds (scene 9 Route Reader, scene 8 knots, scene 1 wordmark hold) are still flat vector.
 - **No sound.** Sound is off by default and no audio ships.
 
 ## Remaining limitations (honest)
@@ -196,10 +196,80 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
 - **No `.rev`.** It needs `rive login`; nothing was renamed to fake one. The project has also not been opened in the Rive Editor, so editor-only labels and layout are unverified.
 - **`shareDismissed` not exercised.** `--data` cannot fire a trigger mid-run, so restoring the pause state after sharing is code-reviewed only.
 - **Event delivery not observed.** The CLI does not print events. `screenChanged`, `recapFinished` and `shareTapped` are verified through their driving signals (`screenSignal`/`finishSignal` fire exactly as expected) and through their presence in the `.riv`.
-- **No full-story video.** The 56 s full-story video was not rendered because of time. `python3 tools/motion.py full` produces it in about 10 minutes.
+- **Full-story video.** `apps/crux/video.webm` is the walkthrough, rendered by `scripts/render-video.py crux` from the repo root. `python3 tools/motion.py full` produces an auto-advance version.
 - **Small screens.** At 320×568 the cover-scaled stage crops about 15 px at the top and 136 px at the bottom (in stage pixels). Scene 6's support line and the bottom edge of the summary card sit close to the controls there.
 - **Persona text is English unless the host takes over.** With `personaAdapterEnabled` true, the persona name and line are English; a localizing host must take them over. There is no right-to-left layout pass.
 - **No mid-entrance switch to reduced motion.** If `reducedMotion` changes partway through an entrance, it applies from the next navigation.
 - **Brief deviations kept as designed:**
   - `shareIncludeSensitiveValues` has no visual effect. The card shows only aggregate counts and the persona, none of which are classed as sensitive.
   - `UserRecap` is a single shared instance rather than Rive's `global` view model type (see Architecture).
+
+## Improvement pass
+
+### Critique of the previous version
+- The holds, the hero motif, were flat polygons with a single facet, so they read as stickers next to the concept's chunky, speckled volumes.
+- The signature yank cut to a flat beige blob: four to six frames of near-solid chalk colour with no texture or light. It read as a fade to white.
+- Every hold entered the same way (a 2D pop or slide). The yank was a pure vertical slide; only the rope moved with any physicality.
+- Scene 4's "kinetic stack" was twelve flat ghost polygons. Scene 7's weeks were a plain bar chart running under the controls.
+- Several layouts had problems:
+  - Scene 3 crammed its route into the bottom 200 px and left an empty band.
+  - In scene 6, the coil and carrier floated with nothing under them.
+  - Scene 8 had knots clipped at the right edge and hidden behind the Continue button.
+
+### What changed
+- **Real 3D holds (`hold3d.luau` + `hold3d.wgsl`).** A `ScriptedDrawable` builds a faceted, lumpy icosphere mesh per hold kind: jug, pyramid, sloper, pinch, crimp, stone and volume. It renders the mesh into a `GPUCanvas` with a depth buffer, in three draws:
+  - a graphic wall shadow;
+  - a coal cut-out outline, drawn as an inverted hull;
+  - the lit body, with half-Lambert light posterised per facet, contact occlusion, a bolt socket and chalk speckles concentrated on the upward faces.
+
+  The image is drawn in the host node's local space, so every keyed position, scale, squash and 2D rotation still applies. Each node's authored roll is undone inside the script, so the light stays top-left on screen. 22 holds use it: the persistent carrier and the large holds in scenes 1, 2, 3, 5, 9 (Balance Seeker) and 10.
+- **3D motion.** Timelines key the script inputs `yaw`, `pitch` and `progress` (each is a `ScriptInputNumber`, which is animatable):
+  - Holds spin on their bolts as they snap into the route (scenes 1–3 and 10).
+  - Scene 5's three holds tumble and rotate into one shared alignment.
+  - The carrier twists against the load in the anticipation dip, then makes a full turn as it is yanked, and lands with a settle wobble.
+  - The scene 1 grab hold pitches under load when pressed and rocks back on release.
+  - The scene 9 Balance Seeker stone teeters in yaw as well as in roll.
+  - A slow idle sway, the `sway` input, runs only while the scene is live, not paused and not in reduced motion.
+- **Scene 4 kinetic stack.** This uses the script's trail mode. One mesh is drawn as a solid anchor, up to ten translucent tumbling ghosts and a solid head, which climbs with the counter through a keyed `progress` input.
+- **Chalk shader (`chalk.luau` + `chalk.wgsl`).** A full-stage procedural cloud replaces the flat vector occluder. It is built from domain-warped fBm billows, lit from their own gradient, with a printed shadow band, mineral grain and a stippled powdery fringe.
+  - It blooms from the yank point, drifts in the pull direction (down for the reverse lower-off) and thins from its edges as the next scene lands.
+  - Origin, seed, drift, direction, amount and clear are keyed per exit.
+  - The first scene opens through the tail of the same cloud.
+- **Camera swing.** The yank and the lower-off now tilt the four parallax layers by different amounts, and entrances swing back with a back-ease, so the cut is no longer a pure slide.
+- **Recompositions.**
+  - Scene 3's route was lifted and its holds enlarged.
+  - Scene 6 has a concrete ledge with floor bolts and a slack rope that runs from the coil to the carrier.
+  - Scene 7's panels are extruded into an isometric staircase (coal face, chalk cap, shaded side) that stands on a ground line above the controls.
+  - Scene 8's web was redrawn inside the safe area.
+  - Coal holds have fewer speckles, so they stop reading as glitter.
+
+### How the GPU work stays bounded
+- **`live` gating.** Every 3D hold has a `live` input that each scene entrance keys: 1 for that scene's holds, 0 for every other scene's. Off-screen holds issue no passes and no draws. Only the carrier is always live.
+- **Re-render only on change.** A canvas is re-rendered only when its pose key (yaw, pitch, roll, sway clock, progress, colour) changes. A settled hold that is paused or in reduced motion costs one image draw.
+- **Canvas sizes.** Canvases are 2 px per point, capped at 1100 px. Holds with the same canvas size share one depth texture. There is no MSAA: the 2x render is filtered down.
+- **The chalk pass.** It runs only while `amount` is above 0: about 1.2 s per transition, as one full-screen triangle at 1 px per point.
+- **Fallbacks.** If a runtime returns no shader, `hold3d` draws a vector silhouette and `chalk` draws vector puffs from the same keyed inputs.
+
+### Reduced motion and the contract
+- **Reduced motion.**
+  - The `still` input is bound to `reducedMotion` and the `paused` input to `isPaused`, so both freeze the sway.
+  - The reduced entrances hold every keyed yaw, pitch and progress at its final value, with the carrier at yaw 0.
+  - The chalk amount is held at 0, so there is no cloud and no spin.
+- **The contract is unchanged.** It is the same `UserRecap` model, property names, events, ten scenes, personas, fixtures, navigation (including the Right arrow key) and 390×844 artboard. No view model property was added: the shaders are driven only by keyed or bound script inputs. `tools/verify.py` passes 32/32 with no check changed.
+
+### New compromises and limits
+- **The flat back of a hold.** Holds have flat backs, as real ones do. In the middle of the carrier's full-turn spin, one or two frames show that back as a flat olive disc.
+- **Sharpness on Retina.** Canvases are sized at 2 px per point, not at the device scale, because a `Node` script is not told the surface scale. Holds are sharp at 1x and 2x, but slightly soft at 3x.
+- **Web needs a signed build.** `.wgsl` and `.luau` assets are unsigned in a local build. Web runtimes need `rive . --publish`, which requires login. WebGPU validation was not exercised; the native preview was.
+- **Memory.** 22 GPU canvases are allocated up front: about 0.5–4.7 MB each, plus shared depth textures. On-device GPU time was not measured.
+
+### Performance
+`rive . --bench=600`, Apple M5 Pro, headless at 1x. Render times are CPU-side submission, not GPU time.
+
+| | Before | After |
+|---|---|---|
+| `.riv` size | 788 KB | 882 KB |
+| Advance, mean / p95 | 0.023 / 0.057 ms | 0.023 / 0.058 ms |
+| Render submission, mean / p95, scene 1 | 0.074 / 0.089 ms | 0.138 / 0.287 ms |
+| Render submission, mean / p95, scene 4 (3D stack) | — | 0.121 / 0.267 ms |
+| Wasm memory growth | +0 | +0 |

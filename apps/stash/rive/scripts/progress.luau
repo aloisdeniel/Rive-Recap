@@ -52,16 +52,21 @@ local function draw(self: Progress, renderer: Renderer)
     local idx = math.floor(ip.value + 0.5)
     local prog = math.clamp(pp.value, 0, 1)
     local w = self.size.x
-    local h = 6
+    local h = 8
     local y = (self.size.y - h) / 2
-    local gap = 4
+    local gap = 5
     local segW = (w - gap * (n - 1)) / n
     if segW <= 0 then return end
     local base = Color.rgb(0xFF, 0xF4, 0xDD)
     local cc = self.color
     if cc ~= nil then base = cc.value end
-    local track = Paint.with({ color = Color.lerp(Color.rgba(0, 0, 0, 0), base, 0.28), style = "fill" })
-    local done = Paint.with({ color = base, style = "fill" })
+    -- the chrome is cream on dark scenes and ink on light ones; finished segments
+    -- take the accent that reads on each: mint on dark, grape on light
+    local cf = Color.toFloat(base)
+    local light = math.clamp((cf[1] * 0.3 + cf[2] * 0.59 + cf[3] * 0.11 - 0.2) / 0.6, 0, 1)
+    local accent = Color.lerp(Color.rgb(0x5C, 0x36, 0xBB), Color.rgb(0xBF, 0xF4, 0xD4), light)
+    local track = Paint.with({ color = Color.lerp(Color.rgba(0, 0, 0, 0), base, 0.22), style = "fill" })
+    local done = Paint.with({ color = accent, style = "fill" })
     for i = 1, n do
         local x = (i - 1) * (segW + gap)
         renderer:drawPath(pill(x, y, segW, h), track)

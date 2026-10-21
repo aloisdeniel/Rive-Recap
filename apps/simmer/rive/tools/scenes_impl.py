@@ -3,7 +3,7 @@ import math
 import random
 from rml import (E, node, shape, fill, stroke, ellipse, rect, star, poly, smooth, straight, Anim, layer, astate, trans,
                  cond_num, cond_bool, bind, ms2f, col)
-from data import P, count_converter, CONV_FORMAT, CONV_INT
+from data import P, count_converter, CONV_FORMAT, CONV_INT, SCRIPT_LETTERS
 from text import style, text, reveal_modifier, key_reveal
 from scene_base import Scene, hero_number, copy_styles, W, H, IDLE_MS
 import art
@@ -77,28 +77,30 @@ def scene1(x_stage):
     pst = style('body', 15, 600, 'aub', name='Period')
     period = text('Period', [(pst, 'January 1–December 31, 2026', 'periodLabel', None)], x=-120, y=-10, width=240, height=20,
                   sizing='fixed', align='center', overflow='ellipsis', wrap='noWrap')
-    ticket = node('Period ticket', [period, art.scallop_ticket('ticket', 262, 30, c='butter', edge='tomato')], x=190, y=318, rot=0.035)
-    sc.key(ticket, 'y', [(0, 360.0, 'hold'), (1300, 360.0, 'back'), (1750, 318.0)])
+    ticket = node('Period ticket', [period, art.scallop_ticket('ticket', 262, 30, c='butter', edge='tomato')], x=190, y=316, rot=0.035)
+    sc.key(ticket, 'y', [(0, 356.0, 'hold'), (1300, 356.0, 'back'), (1750, 316.0)])
     sc.key(ticket, 'opacity', [(0, 0.0, 'hold'), (1300, 0.0, 'soft'), (1550, 1.0)])
 
     # wordmark rising out of the steam
     wm_st = style('display', 84, 800, 'tomato', ls=-3, opsz=96, name='Big wordmark')
     wm_ink = style('display', 84, 800, 'aub', ls=-3, opsz=96, name='Big wordmark ink')
-    wm = text('Wordmark', [(wm_st, 'Simmer', None, None)], x=195, y=402, ox=0.5, oy=0.5)
-    wm2 = text('Wordmark ink', [(wm_ink, 'Simmer', None, None)], x=198, y=405, ox=0.5, oy=0.5, op=0.35)
-    r1 = reveal_modifier(wm, y=60, units=0, soft=0.25)
-    r2 = reveal_modifier(wm2, y=60, units=0, soft=0.25)
-    for r in (r1, r2):
-        key_reveal(sc.enter, r, 650, 1350, soft=0.25)
-        sc.settle(r, 'modifyFrom', 1.25)
-        sc.settle(r, 'falloffFrom', 1.5)
-    steam, trims, _ = art.steam_curl('Wordmark steam', [(195, 560), (170, 520), (215, 486), (180, 452), (196, 420)], w=26, c='cream')
-    for tr in trims:
-        sc.enter.ms(tr, 'end', [(0, 0.0, 'hold'), (420, 0.0, 'soft'), (900, 1.0)])
-        sc.enter.ms(tr, 'start', [(0, 0.0, 'hold'), (800, 0.0, 'in'), (1500, 1.0)])
-        sc.settle(tr, 'end', 1.0)
-        sc.settle(tr, 'start', 1.0)
-    underline = shape('Wordmark swash', smooth([(-120, 0), (-40, 8), (40, -2), (120, 6)], False), stroke('basil', 5), x=195, y=452)
+    wm = text('Wordmark', [(wm_st, 'Simmer', None, None)], x=195, y=396, ox=0.5, oy=0.5)
+    wm2 = text('Wordmark ink', [(wm_ink, 'Simmer', None, None)], x=198, y=399, ox=0.5, oy=0.5, op=0.35)
+    # the wordmark is condensed out of the pot's steam on the GPU (scripts/letters.luau + .wgsl);
+    # the inked vector wordmark fades in underneath and is uncovered as the steam letters evaporate
+    mask_ab = E('Artboard', isComponent=True, width=390.0, height=360.0, name='Wordmark mask', x=500.0, y=2100.0, clip=False)
+    mask_st = E('LayoutComponentStyle', name='Artboard Style')
+    mask_ab.attrs['styleId'] = mask_st.id
+    mask_ab.add(mask_st, text('Mask wordmark', [(style('display', 84, 800, 'white', ls=-3, opsz=96, name='Mask wordmark'), 'Simmer', None, None)],
+                              x=195, y=96, ox=0.5, oy=0.5))
+    EXTRA.append((mask_ab, None))
+    letters_p = E('ScriptInputNumber', propertyValue=0.0, name='progress')
+    letters = E('ScriptedDrawable', [letters_p, E('ScriptInputArtboard', artboardId=mask_ab.id, name='mask')],
+                scriptAssetId=SCRIPT_LETTERS, name='Steam lettering', x=0.0, y=300.0)
+    sc.key(letters_p, 'propertyValue', [(0, 0.0, 'hold'), (300, 0.0, 'lin'), (1900, 1.0)])
+    for w_, top in ((wm, 1.0), (wm2, 0.35)):
+        sc.key(w_, 'opacity', [(0, 0.0, 'hold'), (1150, 0.0, 'soft'), (1450, top)])
+    underline = shape('Wordmark swash', smooth([(-120, 0), (-40, 8), (40, -2), (120, 6)], False), stroke('basil', 5), x=195, y=444)
     sc.key(underline, 'scaleX', [(0, 0.0, 'hold'), (1250, 0.0, 'out'), (1700, 1.0)])
 
     # dancing vegetables thrown out of the pot when the lid pops (~420 ms)
@@ -130,7 +132,7 @@ def scene1(x_stage):
         sc.idle.ms(v, 'rotation', seq_r)
     dancers = node('Dancing vegetables', veg)
 
-    sc.inner.add(greet, tb, ticket, wm, wm2, underline, steam, dancers)
+    sc.inner.add(greet, tb, ticket, letters, wm, wm2, underline, dancers)
     return sc
 
 
@@ -168,18 +170,30 @@ def scene2(x_stage):
         pop_in(sc, h, 1350 + i * 90, dur=300, from_scale=0.2, ease='out')
         sc.wiggle(h, 'y', float(h.attrs['y']), -9, IDLE_MS / 2)
         sc.wiggle(h, 'rotation', float(h.attrs['rotation']), 0.12 if i % 2 else -0.12, IDLE_MS)
+    # payoff 2: the rest of the ingredients burst up out of the pot and hang in the steam (concept)
+    burst = [art.carrot('burst carrot', 0.9, x=340, y=468, rot=0.5), art.mushroom('burst mushroom', 0.72, x=300, y=560, rot=0.25),
+             art.onion('burst onion', 0.62, x=356, y=530, rot=-0.3), art.leaf('burst basil', 0.85, x=60, y=430, rot=-0.7),
+             art.tomato_half('burst tomato', 0.72, x=168, y=426, rot=-0.3), art.garlic('burst garlic', 0.55, x=104, y=566, rot=0.2),
+             art.pea('burst pea', 1.3, x=246, y=430), art.pea('burst pea 2', 1.1, x=176, y=556, c='lemon'), art.pea('burst pea 3', 1.2, x=250, y=588)]
+    for i, b_ in enumerate(burst):
+        t_ = 1420 + i * 60
+        arc_in(sc, b_, t_, (195 + (i % 3 - 1) * 30, 620), dur=560, lift=50 + (i % 3) * 25, spin=1.6 * (1 if i % 2 else -1))
+        pop_in(sc, b_, t_, dur=320, from_scale=0.2, ease='out')
+        sc.wiggle(b_, 'y', float(b_.attrs['y']), -6 - (i % 3) * 2, IDLE_MS / (1 + i % 2))
+        if b_.attrs.get('rotation'):
+            sc.wiggle(b_, 'rotation', float(b_.attrs['rotation']), 0.1 if i % 2 else -0.1, IDLE_MS)
     splash = node('Splash', [shape(f'drop {i}', ellipse(9, 9), fill('butterDk'), x=math.cos(a) * 30, y=math.sin(a) * 12)
                              for i, a in enumerate([3.4, 4.0, 4.7, 5.3, 5.9])], x=195, y=596)
     sc.key(splash, 'scaleX', [(0, 0.0, 'hold'), (1280, 0.0, 'out'), (1500, 2.6, 'in'), (1800, 3.2)])
     sc.key(splash, 'scaleY', [(0, 0.0, 'hold'), (1280, 0.0, 'out'), (1500, 2.2, 'in'), (1800, 1.6)])
     sc.key(splash, 'opacity', [(0, 1.0, 'hold'), (1500, 1.0, 'in'), (1800, 0.0)])
     # set dressing: gingham napkin + table garlic & tomato
-    napkin = art.gingham('Napkin', 150, 110, cell=16, c='basil', bg='cream', x=40, y=742, rot=-0.32)
+    napkin = art.gingham('Napkin', 128, 92, cell=16, c='basil', bg='cream', x=26, y=702, rot=-0.32)
     tom = art.tomato('Table tomato', 0.7, x=346, y=734, rot=0.2)
     gar = art.garlic('Table garlic', 0.75, x=300, y=724, rot=-0.2)
     for i, o in enumerate((napkin, gar, tom)):
         sc.key(o, 'y', [(0, float(o.attrs['y']) + 80, 'hold'), (60 + i * 70, float(o.attrs['y']) + 80, 'back'), (480 + i * 70, float(o.attrs['y']))])
-    sc.inner.add(hero, tb, node('Hover', hover), node('Waves', pieces), splash, gar, tom, napkin)
+    sc.inner.add(hero, tb, node('Hover', hover), node('Burst', burst), node('Waves', pieces), splash, gar, tom, napkin)
     return sc
 
 
@@ -262,7 +276,7 @@ def cluster(name, items):
 def scene4(x_stage):
     sc = Scene(4, NAMES[4], x_stage)
     hero, tb = metric_copy(sc, 4, 'left')
-    cx, cy = 195, 556
+    cx, cy = 195, 572
     sauce_trim = E('TrimPath', start=0.0, end=1.0, modeValue='sequential', name='Trim')
     spiral_pts = [(math.cos(a) * r, math.sin(a) * r) for a, r in [(t * 0.6, 8 + t * 3.2) for t in range(0, 18)]]
     sauce = shape('Sauce spiral', smooth(spiral_pts, False), [E('Stroke', [E('SolidColor', colorValue=col('tomato'), name='Color'), sauce_trim],
@@ -270,7 +284,7 @@ def scene4(x_stage):
     sc.enter.ms(sauce_trim, 'end', [(0, 0.0, 'hold'), (300, 0.0, 'soft'), (1200, 1.0)])
     sc.settle(sauce_trim, 'end', 1.0)
     herbs = [shape(f'herb {i}', ellipse(7, 4), fill('basil'), x=cx + math.cos(i * 1.7) * 44, y=cy + math.sin(i * 1.7) * 40, rot=i) for i in range(7)]
-    plate = art.plate('Plate', 176, x=cx, y=cy)
+    plate = art.plate('Plate', 196, x=cx, y=cy)
     sc.key(plate, 'scaleX', [(0, 0.2, 'hold'), (0, 0.2, 'back'), (520, 1.0)])
     sc.key(plate, 'scaleY', [(0, 0.2, 'hold'), (0, 0.2, 'back'), (520, 1.0)])
     sc.key(plate, 'rotation', [(0, -0.6, 'hold'), (0, -0.6, 'out'), (700, 0.0)])
@@ -285,7 +299,24 @@ def scene4(x_stage):
                                   art.pea('d chickpea', 1.4, x=-24, y=-22, c='mush'), art.pea('d chickpea2', 1.3, x=-12, y=-32, c='mush'), art.pea('d chickpea3', 1.4, x=36, y=26, c='mush')]),
     ]
     angles = [-2.35, -0.75, 2.35, 0.75]    # NW, NE, SW, SE
-    radius = 128
+    radius = 140
+    for cl in clusters:
+        cl.attrs['scaleX'] = 1.18
+        cl.attrs['scaleY'] = 1.18
+    # butter swooshes: each arrangement leaves a curved trail as it spirals in (concept)
+    swooshes = []
+    for i, a in enumerate(angles):
+        trim = E('TrimPath', start=0.0, end=1.0, modeValue='sequential', name='Trim')
+        pts_ = [(math.cos(a - 1.05 + k * 0.15) * (rr), math.sin(a - 1.05 + k * 0.15) * (rr))
+                for k, rr in enumerate([150, 146, 141, 136, 131, 126, 121])]
+        sw = shape(f'Swoosh {i}', smooth(pts_, False), [E('Stroke', [E('SolidColor', colorValue=col('butterDk'), name='Color'), trim],
+                                                         thickness=7.0, cap='round', join='round', name='Stroke')], x=cx, y=cy, op=0.85)
+        t = 250 + i * 110
+        sc.enter.ms(trim, 'end', [(0, 0.0, 'hold'), (t + 300, 0.0, 'soft'), (t + 1000, 1.0)])
+        sc.enter.ms(trim, 'start', [(0, 0.0, 'hold'), (t + 700, 0.0, 'soft'), (t + 1500, 0.55)])
+        sc.settle(trim, 'end', 1.0)
+        sc.settle(trim, 'start', 0.55)
+        swooshes.append(sw)
     arms = []
     for i, (cl, a) in enumerate(zip(clusters, angles)):
         cl.attrs['x'] = float(radius)
@@ -300,14 +331,14 @@ def scene4(x_stage):
         sc.idle.ms(arm, 'rotation', [(0, a, 'inout'), (IDLE_MS / 2, a + 0.05, 'inout'), (IDLE_MS, a)])
         sc.idle.ms(cl, 'rotation', [(0, -a, 'inout'), (IDLE_MS / 2, -a - 0.05, 'inout'), (IDLE_MS, -a)])
         arms.append(arm)
-    notes_txt = [('so fresh!', 22, 376, -0.1), ('a little zesty', 250, 378, 0.06), ('smoky?', 20, 714, -0.05), ('new favourite', 250, 714, 0.05)]
+    notes_txt = [('so fresh!', 6, 552, -0.1), ('a little zesty', 296, 560, 0.06), ('smoky?', 18, 712, -0.05), ('new favourite', 270, 712, 0.05)]
     notes = []
     for i, (t_, x, y, r) in enumerate(notes_txt):
-        n = text(f'Note {i}', [(hand('n', 23, 'aub', 600), t_, None, None)], x=x, y=y, rot=r)
+        n = text(f'Note {i}', [(hand('n', 21, 'aub', 600), t_, None, None)], x=x, y=y, rot=r)
         sc.key(n, 'opacity', [(0, 0.0, 'hold'), (1500 + i * 90, 0.0, 'soft'), (1750 + i * 90, 1.0)])
         sc.key(n, 'y', [(0, y + 10.0, 'hold'), (1500 + i * 90, y + 10.0, 'back'), (1800 + i * 90, float(y))])
         notes.append(n)
-    sc.inner.add(hero, tb, *notes, *arms, *herbs, sauce, plate)
+    sc.inner.add(hero, tb, *notes, *arms, *herbs, sauce, plate, *swooshes)
     return sc
 
 
@@ -519,11 +550,17 @@ def scene8(x_stage):
                 pts += [(mx - (4 if x > px else -4), y - 10), (mx + (2 if x > px else -2), y - 18), (mx + (6 if x > px else -6), y - 9)]
         pts.append((x, y))
     stitch_trim = E('TrimPath', start=0.0, end=1.0, modeValue='sequential', name='Trim')
-    stitch = shape('Steam stitch', smooth(pts, False, tension=0.9), [E('Stroke', [E('SolidColor', colorValue=col('FFB8A08A'), name='Color'), stitch_trim],
-                                                                     thickness=4.0, cap='round', join='round', name='Stroke')], op=0.9)
+    stitch_trim2 = E('TrimPath', start=0.0, end=1.0, modeValue='sequential', name='Trim')
+    stitch = node('Steam stitch', [
+        shape('thread', smooth(pts, False, tension=0.9), [E('Stroke', [E('SolidColor', colorValue=col('tomato'), name='Color'), stitch_trim],
+                                                          thickness=2.2, cap='round', join='round', name='Stroke')]),
+        shape('steam', smooth(pts, False, tension=0.9), [E('Stroke', [E('SolidColor', colorValue=col('FFFFFBEF'), name='Color'), stitch_trim2],
+                                                         thickness=9.0, cap='round', join='round', name='Stroke')]),
+    ])
     t0, t1 = 380, 1700
-    sc.enter.ms(stitch_trim, 'end', [(0, 0.0, 'hold'), (t0, 0.0, 'lin'), (t1, 1.0)])
-    sc.settle(stitch_trim, 'end', 1.0)
+    for tr_ in (stitch_trim, stitch_trim2):
+        sc.enter.ms(tr_, 'end', [(0, 0.0, 'hold'), (t0, 0.0, 'lin'), (t1, 1.0)])
+        sc.settle(tr_, 'end', 1.0)
     colors = ['tomato', 'basil', 'lemon', 'carrot', 'onion']
     marks = []
     for i, rc in enumerate(order):
@@ -621,12 +658,12 @@ def scene9(x_stage):
     ds = style('body', 20, 400, 'aub', lh=26, name='Persona description')
     tb = sc.text_block(24, 100, 342, [(lab, 'Your personal style', 'personaLabel'), (nm, 'Flavor Explorer', 'personaName'), (ds, 'Always room for a new flavor.', 'personaDescription')])
     sc.reveal_text(tb, 1000, 1800, y=30)
-    cx, cy = 195, 556
+    cx, cy = 195, 516
     halo_col = E('SolidColor', [bind(P('personaColor'), 37)], colorValue=col('butter'), name='Color')
     halo = node('Halo', [
-        shape('halo ring', ellipse(330, 330), stroke('aub', 2, extra=E('DashPath', [E('Dash', length=3.0, name='On'), E('Dash', length=9.0, name='Off')], name='Dots'))),
-        shape('halo burst', star(286, 286, 16, 0.8, 10), [E('Fill', [halo_col], name='Persona color'), stroke('aub', 3)]),
-        shape('halo ink', star(286, 286, 16, 0.8, 10), fill('ink25'), x=6, y=7),
+        shape('halo ring', ellipse(356, 356), stroke('aub', 2, extra=E('DashPath', [E('Dash', length=3.0, name='On'), E('Dash', length=9.0, name='Off')], name='Dots'))),
+        shape('halo burst', star(318, 318, 16, 0.8, 10), [E('Fill', [halo_col], name='Persona color'), stroke('aub', 3)]),
+        shape('halo ink', star(318, 318, 16, 0.8, 10), fill('ink25'), x=6, y=7),
     ], x=cx, y=cy)
     sc.key(halo, 'scaleX', [(0, 0.0, 'hold'), (700, 0.0, 'back'), (1150, 1.0)])
     sc.key(halo, 'scaleY', [(0, 0.0, 'hold'), (700, 0.0, 'back'), (1150, 1.0)])
@@ -637,7 +674,24 @@ def scene9(x_stage):
     g1, bowl_trims, _ = emblem_bowl()
     g2, tins, sparks, hat = emblem_tins()
     g3, rays, mitt, loaf = emblem_mitt()
-    groups = [node(f'Persona {i}', [g], x=cx, y=cy, op=0.0) for i, g in enumerate((g0, g1, g2, g3))]
+    groups = [node(f'Persona {i}', [g], x=cx, y=cy, op=0.0, sx=1.2, sy=1.2) for i, g in enumerate((g0, g1, g2, g3))]
+    # the ingredients the emblem throws out: a slow orbit round the reveal (shared by every persona)
+    orbit_items = [art.lemon_slice('o lemon', 1.05), art.chili('o chili', 1.0, rot=0.6), art.leaf('o basil', 1.05, rot=-0.5),
+                   art.onion('o onion', 0.8), art.tomato_half('o tomato', 0.95, rot=0.3), art.garlic('o garlic', 0.75),
+                   art.carrot('o carrot', 0.8, rot=0.9), art.leaf('o basil 2', 0.9, rot=1.9, c='basilLt')]
+    orbit_nodes = []
+    for i, it in enumerate(orbit_items):
+        a_ = -math.pi / 2 + math.pi / 8 + i * math.tau / 8
+        ox_, oy_ = math.cos(a_) * 172, math.sin(a_) * 190
+        holder = node(f'Orbit {i}', [it], x=ox_, y=oy_)
+        t_ = 1050 + i * 45
+        sc.key(holder, 'x', [(0, 0.0, 'hold'), (t_, 0.0, 'out'), (t_ + 520, ox_)])
+        sc.key(holder, 'y', [(0, 0.0, 'hold'), (t_, 0.0, 'out'), (t_ + 520, oy_)])
+        pop_in(sc, holder, t_, dur=420, from_scale=0.1, ease='back', rot_from=-2.5 if i % 2 else 2.5, rot_to=0.0)
+        sc.wiggle(holder, 'rotation', 0.0, 0.18 if i % 2 else -0.18, IDLE_MS / 2)
+        orbit_nodes.append(holder)
+    orbit = node('Orbit', orbit_nodes, x=cx, y=cy)
+    sc.idle.ms(orbit, 'rotation', [(0, 0.0, 'inout'), (IDLE_MS / 2, 0.06, 'inout'), (IDLE_MS, 0.0)])
 
     REV = 700
     reveals, idles, statics = [], [], []
@@ -755,11 +809,11 @@ def scene9(x_stage):
     sc.extra_anims += [hidden] + reveals + idles + statics
 
     # the emblem lands with a little dust ring
-    dust = shape('Landing ring', ellipse(200, 40), stroke('aub', 2.5), x=cx, y=cy + 128, op=0.0)
+    dust = shape('Landing ring', ellipse(240, 44), stroke('aub', 2.5), x=cx, y=cy + 152, op=0.0)
     sc.key(dust, 'opacity', [(0, 0.0, 'hold'), (1150, 0.0, 'lin'), (1200, 0.8, 'soft'), (1600, 0.0)])
     sc.key(dust, 'scaleX', [(0, 0.4, 'hold'), (1150, 0.4, 'out'), (1600, 1.4)])
     sc.settle(dust, 'opacity', 0.0)
-    sc.inner.add(tb, *groups, dust, halo)
+    sc.inner.add(tb, orbit, *groups, dust, halo)
     return sc
 
 
@@ -816,7 +870,7 @@ def build_share_card(x_stage):
                        width=222, height=24, sizing='fixed', overflow='ellipsis', wrap='noWrap')
     stamp = node('Stamp', [text('stamp text', [(style('display', 14, 800, 'basil', opsz=14, name='Stamp'), 'COOKED\nWITH\nLOVE', None, None)],
                                  x=-34, y=-26, width=68, sizing='autoHeight', align='center'),
-                            shape('stamp ring', ellipse(84, 84), stroke('basil', 3))], x=284, y=452, rot=-0.25, sx=0.82, sy=0.82)
+                            shape('stamp ring', ellipse(84, 84), stroke('basil', 3))], x=290, y=464, rot=-0.25, sx=0.8, sy=0.8)
     card = node('Card', [wm, yr, pot, persona, big_v, big_u, *tiles, name_line, recipe_line, stamp, bg])
     ab.add(st, card)
 

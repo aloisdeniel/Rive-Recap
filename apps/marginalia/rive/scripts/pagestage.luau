@@ -1,0 +1,643 @@
+--!strict
+-- Marginalia page stage: the signature page turn, as a real 3D paper curl.
+--
+-- This ScriptedLayout fills the stage between the header and the controls. It
+-- hosts the ten Page artboards and the Carry artboard (bookmark ribbon, moon)
+-- as separate instances bound to the one UserRecap instance, contain-fits them
+-- into the stage, and keeps a small model of a book:
+--
+--   base    the flat page at the bottom of the stack (normally currentScreen)
+--   turns   leaves in flight, each easing its progress p toward 1 (turned
+--           away past the spine) or 0 (landed flat)
+--
+-- Forward: the page on top curls up from its lower-right corner, rolls over a
+-- moving cylinder and leaves past the spine, revealing the next page playing
+-- underneath. Back: the earlier page swings back over and lands. Reversing
+-- mid-turn simply retargets the leaf, so rapid taps never pop.
+--
+-- Each leaf is the page's *live* artboard rendered into a canvas every frame
+-- (its idle loop keeps playing on the paper), then curled, lit and shadowed on
+-- the GPU (shaders/pageturn.wgsl). The pages' own state machines keep a leaving
+-- page fully drawn for 1.2 s, longer than any turn.
+--
+-- The Carry artboard is drawn above the leaves, so the bookmark ribbon stays
+-- unbroken across every cut and the moon is carried from scene 4 into 5.
+--
+-- Reduced motion: no turns; the page that left cross-fades out (the pages'
+-- own 200 ms fades). Paused (_motionPaused): nothing advances, leaves freeze.
+-- No shader support: the leaf folds flat toward the spine instead.
+
+type Turn = { page: number, p: number, target: number, slot: number, delay: number }
+
+type Slot = {
+    canvas: Canvas,
+    gc: GPUCanvas?,
+    colorView: GPUTextureView?,
+    ubo: GPUBuffer?,
+    group: GPUBindGroup?,
+    used: boolean,
+}
+
+type PageStage = {
+    page1: Input<Artboard<Data.UserRecap>>,
+    page2: Input<Artboard<Data.UserRecap>>,
+    page3: Input<Artboard<Data.UserRecap>>,
+    page4: Input<Artboard<Data.UserRecap>>,
+    page5: Input<Artboard<Data.UserRecap>>,
+    page6: Input<Artboard<Data.UserRecap>>,
+    page7: Input<Artboard<Data.UserRecap>>,
+    page8: Input<Artboard<Data.UserRecap>>,
+    page9: Input<Artboard<Data.UserRecap>>,
+    page10: Input<Artboard<Data.UserRecap>>,
+    carry: Input<Artboard<Data.UserRecap>>,
+    cover: Input<Artboard<Data.UserRecap>>,
+    pages: { Artboard<Data.UserRecap> },
+    coverInst: Artboard<Data.UserRecap>?,
+    wantCover: boolean,
+    ca: Artboard<Data.UserRecap>?,
+    ctx: Context?,
+    cur: Property<number>?,
+    navDir: Property<number>?,
+    reduced: Property<boolean>?,
+    paused: Property<boolean>?,
+    size: Vector,
+    scale: number,
+    -- page placement (layout points): offset and uniform scale of the 390x664 page
+    px: number,
+    py: number,
+    ps: number,
+    k: number, -- canvas pixels per page unit
+    -- the book: one flat base page, and leaves in flight above it
+    lastScreen: number,
+    base: number,
+    turns: { Turn },
+    fadeFrom: number,
+    fadeT: number,
+    slots: { Slot },
+    -- GPU
+    gpu: boolean,
+    msaaView: GPUTextureView?,
+    depthView: GPUTextureView?,
+    samples: number,
+    layout: GPUBindGroupLayout?,
+    pLeaf: GPUPipeline?,
+    pShadow: GPUPipeline?,
+    vbuf: GPUBuffer?,
+    ibuf: GPUBuffer?,
+    icount: number,
+    gpuSampler: GPUSampler?,
+    staging: buffer,
+    sampler: ImageSampler,
+    shade: Paint,
+    shadePath: Path,
+}
+
+local PW, PH = 390, 664 -- page (Scenes artboard) size
+local MX, MY = 64, 88 -- GPU canvas margin around the page, page units
+local T_TURN = 0.84 -- seconds; the brief's 450-850 ms handoff
+local T_COVER = 1.1 -- the board cover is heavier
+local COVER_DELAY = 0.45 -- the closed book is held for a beat first
+local GX, GY = 60, 102 -- leaf mesh resolution (~6.5 px cells)
+local PI = math.pi
+
+-- ------------------------------------------------------------ easing
+local function clamp01(x: number): number
+    return math.clamp(x, 0, 1)
+end
+
+local function easeInOut(q: number): number
+    q = clamp01(q)
+    if q < 0.5 then
+        return 4 * q * q * q
+    end
+    local r = -2 * q + 2
+    return 1 - r * r * r * 0.5
+end
+
+local function easeOut(q: number): number
+    local r = 1 - clamp01(q)
+    return 1 - r * r * r
+end
+
+local function lerp(a: number, b: number, t: number): number
+    return a + (b - a) * t
+end
+
+local function easeSine(q: number): number
+    return 0.5 - 0.5 * math.cos(PI * clamp01(q))
+end
+
+-- Pose of the turn at progress p (0 = flat, 1 = gone past the spine), in
+-- page pixels. Anticipation: the lower-right corner lifts (0-0.10) and eases
+-- back a touch (0.10-0.16) before the sweep; the roll radius swells to a soft,
+-- page-like bend mid-turn and tightens as the leaf leaves. Back navigation
+-- plays the same pose in reverse, so the corner settles last (follow-through).
+-- Returns axis point, unit normal toward the free edge, roll radius.
+local function pose(p: number, W: number, H: number, stiff: boolean): (number, number, number, number, number)
+    if stiff then
+        -- the board cover: barely any curl, swings almost square to the spine
+        local phi = lerp(0.16, 0.0, easeSine(p))
+        local nx, ny = math.cos(phi), math.sin(phi)
+        local R = W * (0.10 + 0.42 * math.sin(PI * clamp01(p)) ^ 0.8)
+        local span = W * nx + H * ny
+        local cEnd = span + R * 1.15 / nx + W * 0.03
+        local c = lerp(0, cEnd, easeSine(p) * 0.92 + easeOut(p) * 0.08)
+        return W - nx * c, H - ny * c, nx, ny, R
+    end
+    local phi = lerp(0.52, 0.06, easeSine(p))
+    local nx, ny = math.cos(phi), math.sin(phi)
+    local q = clamp01((p - 0.06) / 0.94)
+    local R = W * (0.045 + 0.14 * math.sin(PI * q) ^ 1.2 + 0.05 * q)
+    local span = W * nx + H * ny
+    -- done once the roll itself has cleared the spine (the flipped part lies
+    -- beyond it, off the page)
+    local cEnd = span + R * 1.15 / nx + W * 0.03
+    local c
+    if p < 0.10 then
+        c = W * 0.075 * easeOut(p / 0.10)
+    elseif p < 0.16 then
+        c = W * (0.075 - 0.012 * math.sin(PI * 0.5 * (p - 0.10) / 0.06))
+    else
+        c = lerp(W * 0.063, cEnd, easeSine((p - 0.16) / 0.84))
+    end
+    -- the leading (lower-right) corner sits c beyond the axis
+    return W - nx * c, H - ny * c, nx, ny, R
+end
+
+-- ------------------------------------------------------------ GPU setup
+local function buildMesh(self: PageStage)
+    local nv = (GX + 1) * (GY + 1)
+    local vb = buffer.create(nv * 8)
+    local o = 0
+    for j = 0, GY do
+        for i = 0, GX do
+            buffer.writef32(vb, o, i / GX)
+            buffer.writef32(vb, o + 4, j / GY)
+            o += 8
+        end
+    end
+    self.vbuf = GPUBuffer.new({ size = nv * 8, usage = 'vertex', data = vb, immutable = true, label = 'leaf grid' })
+    local n = GX * GY * 6
+    local ib = buffer.create(n * 2)
+    o = 0
+    for j = 0, GY - 1 do
+        for i = 0, GX - 1 do
+            local a = j * (GX + 1) + i
+            local b = a + 1
+            local c = a + GX + 1
+            local d = c + 1
+            for _, v in { a, c, b, b, c, d } do
+                buffer.writeu16(ib, o, v)
+                o += 2
+            end
+        end
+    end
+    self.ibuf = GPUBuffer.new({ size = n * 2, usage = 'index', data = ib, immutable = true, label = 'leaf tris' })
+    self.icount = n
+end
+
+local function initGpu(self: PageStage, context: Context)
+    local sh = context:shader('shaders/pageturn')
+    if sh == nil then
+        return -- no shaders on this runtime: the 2D fold fallback is used
+    end
+    local f = context:features()
+    self.samples = if f.maxSamples >= 4 then 4 else 1
+    local layout = GPUBindGroupLayout.new({ shader = sh, groupIndex = 0, label = 'page' })
+    self.layout = layout
+    local fmt: ColorFormat = 'rgba8unorm'
+    local over: BlendState = {
+        srcColor = 'one', dstColor = 'one-minus-src-alpha', srcAlpha = 'one', dstAlpha = 'one-minus-src-alpha',
+    }
+    self.pShadow = GPUPipeline.new({
+        vertex = { module = sh, entryPoint = 'vs_shadow' },
+        fragment = { module = sh, entryPoint = 'fs_shadow' },
+        vertexLayout = {},
+        bindGroupLayouts = { layout },
+        colorTargets = { { format = fmt, blend = over } },
+        depthStencil = { format = 'depth32float', compare = 'always', write = false },
+        sampleCount = self.samples,
+    })
+    self.pLeaf = GPUPipeline.new({
+        vertex = { module = sh, entryPoint = 'vs_leaf' },
+        fragment = { module = sh, entryPoint = 'fs_leaf' },
+        vertexLayout = { { stride = 8, attributes = { { format = 'float32x2', slot = 0, offset = 0 } } } },
+        bindGroupLayouts = { layout },
+        colorTargets = { { format = fmt, blend = over } },
+        depthStencil = { format = 'depth32float', compare = 'less', write = true },
+        sampleCount = self.samples,
+    })
+    self.gpuSampler = GPUSampler.new({ min = 'linear', mag = 'linear', mipmap = 'nearest' })
+    buildMesh(self)
+    self.gpu = true
+end
+
+-- (Re)allocate every surface for the current stage size and pixel density.
+-- Two leaf slots: two pages can be in flight at once (rapid navigation).
+local SLOTS = 2
+
+local function allocate(self: PageStage)
+    local ctx = self.ctx
+    if ctx == nil or self.size.x <= 0 or self.size.y <= 0 then
+        return
+    end
+    self.ps = math.min(self.size.x / PW, self.size.y / PH)
+    self.px = (self.size.x - PW * self.ps) * 0.5
+    self.py = (self.size.y - PH * self.ps) * 0.5
+    self.k = self.ps * self.scale
+    local w = math.max(1, math.ceil(PW * self.k))
+    local h = math.max(1, math.ceil(PH * self.k))
+    local gw = math.ceil((PW + 2 * MX) * self.k)
+    local gh = math.ceil((PH + 2 * MY) * self.k)
+    -- leaves in flight snap to where they were going
+    self.turns = {}
+    self.slots = {}
+    for i = 1, SLOTS do
+        local cv = ctx:canvas({ width = w, height = h })
+        local slot: Slot = { canvas = cv, gc = nil, colorView = nil, ubo = nil, group = nil, used = false }
+        local layout, smp = self.layout, self.gpuSampler
+        if self.gpu and layout ~= nil and smp ~= nil then
+            local gc = ctx:gpuCanvas({ width = gw, height = gh })
+            local ubo = GPUBuffer.new({ size = 96, usage = 'uniform', label = 'leaf uniforms' })
+            slot.gc = gc
+            slot.colorView = gc:colorView()
+            slot.ubo = ubo
+            slot.group = GPUBindGroup.new({
+                layout = layout,
+                ubos = { { slot = 0, buffer = ubo } },
+                textures = { { slot = 1, view = cv.image:view() } },
+                samplers = { { slot = 2, sampler = smp } },
+            })
+        end
+        self.slots[i] = slot
+    end
+    if self.gpu then
+        if self.samples > 1 then
+            self.msaaView = GPUTexture.new({ width = gw, height = gh, format = 'rgba8unorm', renderTarget = true,
+                sampleCount = self.samples, label = 'leaf msaa' }):view()
+        end
+        self.depthView = GPUTexture.new({ width = gw, height = gh, format = 'depth32float', renderTarget = true,
+            sampleCount = self.samples, label = 'leaf depth' }):view()
+    end
+end
+
+-- ------------------------------------------------------------ lifecycle
+local function findTurn(self: PageStage, page: number): Turn?
+    for _, t in self.turns do
+        if t.page == page then
+            return t
+        end
+    end
+    return nil
+end
+
+local function finish(self: PageStage, t: Turn)
+    if t.target <= 0 and t.page >= 1 and t.page < self.base then
+        self.base = t.page -- landed: it now covers the old base
+    end
+    local slot = self.slots[t.slot]
+    if slot ~= nil then
+        slot.used = false
+    end
+    local i = table.find(self.turns, t)
+    if i ~= nil then
+        table.remove(self.turns, i)
+    end
+end
+
+local function startTurn(self: PageStage, page: number, p: number, target: number)
+    local free = 0
+    for i, slot in self.slots do
+        if not slot.used then
+            free = i
+            break
+        end
+    end
+    if free == 0 then
+        -- a third leaf in flight: the oldest one completes at once
+        local oldest = self.turns[1]
+        free = oldest.slot
+        oldest.p = oldest.target
+        finish(self, oldest)
+    end
+    self.slots[free].used = true
+    table.insert(self.turns, { page = page, p = p, target = target, slot = free, delay = 0 })
+end
+
+-- currentScreen moved from a to b.
+local function navigate(self: PageStage, a: number, b: number, dir: number, reduced: boolean)
+    if reduced or #self.slots == 0 then
+        for _, t in table.clone(self.turns) do
+            t.p = t.target
+            finish(self, t)
+        end
+        self.fadeFrom = self.base
+        self.fadeT = 0
+        self.base = b
+        return
+    end
+    if dir > 0 then
+        -- the page on top turns away (or, if it was still landing, goes back)
+        local t = findTurn(self, a)
+        if t ~= nil then
+            t.target = 1
+        elseif a == self.base then
+            startTurn(self, a, 0, 1)
+        end
+        for _, o in self.turns do
+            if o.page < b then
+                o.target = 1
+            end
+        end
+        if findTurn(self, b) == nil then
+            self.base = b
+        end
+    else
+        -- the earlier page swings back over and lands
+        local t = findTurn(self, b)
+        if t ~= nil then
+            t.target = 0
+        else
+            startTurn(self, b, 1, 0)
+        end
+    end
+end
+
+function init(self: PageStage, context: Context): boolean
+    local vm = context:viewModel()
+    if vm == nil or #self.pages > 0 then
+        return true
+    end
+    self.ctx = context
+    for _, input in { self.page1, self.page2, self.page3, self.page4, self.page5, self.page6, self.page7,
+        self.page8, self.page9, self.page10 } do
+        table.insert(self.pages, input:instance(vm))
+    end
+    self.ca = self.carry:instance(vm)
+    self.coverInst = self.cover:instance(vm)
+    self.cur = vm:getNumber('currentScreen')
+    self.navDir = vm:getNumber('_navDir')
+    self.reduced = vm:getBoolean('reducedMotion')
+    self.paused = vm:getBoolean('_motionPaused')
+    local cur = self.cur
+    self.lastScreen = if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else 1
+    self.base = self.lastScreen
+    initGpu(self, context)
+    allocate(self)
+    -- the recap opens on the closed book: the cover swings open onto page 1
+    local rm = self.reduced
+    self.wantCover = self.lastScreen == 1 and (rm == nil or not rm.value)
+    return true
+end
+
+function resize(self: PageStage, size: Vector, scale: number)
+    local sc = if scale > 0 then scale else 1
+    if size.x == self.size.x and size.y == self.size.y and sc == self.scale and #self.slots > 0 then
+        return
+    end
+    self.size = size
+    self.scale = sc
+    allocate(self)
+end
+
+function advance(self: PageStage, seconds: number): boolean
+    local ca = self.ca
+    if ca == nil or #self.pages == 0 then
+        return true
+    end
+    local paused = self.paused ~= nil and (self.paused :: Property<boolean>).value
+    local reduced = self.reduced ~= nil and (self.reduced :: Property<boolean>).value
+    if self.wantCover and #self.slots > 0 then
+        self.wantCover = false
+        if not reduced then
+            startTurn(self, 0, 0, 1)
+            self.turns[#self.turns].delay = COVER_DELAY
+        end
+    end
+    local cur = self.cur
+    local cs = if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else self.lastScreen
+    if cs ~= self.lastScreen then
+        local nd = self.navDir
+        local dir = if nd ~= nil and nd.value < 0 then -1 else 1
+        navigate(self, self.lastScreen, cs, dir, reduced)
+        self.lastScreen = cs
+    end
+    if reduced and #self.turns > 0 then
+        navigate(self, cs, cs, 1, true)
+    end
+    if paused then
+        return true
+    end
+    self.fadeT += seconds
+    local step = seconds / T_TURN
+    for _, t in table.clone(self.turns) do
+        local st = if t.page == 0 then seconds / T_COVER else step
+        if t.delay > 0 then
+            t.delay = math.max(0, t.delay - seconds)
+            st = 0
+        end
+        if t.p < t.target then
+            t.p = math.min(t.target, t.p + st)
+        else
+            t.p = math.max(t.target, t.p - st)
+        end
+        if t.p == t.target then
+            finish(self, t)
+        end
+    end
+    for _, pg in self.pages do
+        pg:advance(seconds)
+    end
+    local cover = self.coverInst
+    if cover ~= nil and findTurn(self, 0) ~= nil then
+        cover:advance(seconds) -- static artwork; only needs laying out while it is on screen
+    end
+    ca:advance(seconds)
+    return true
+end
+
+local function drawImagePx(self: PageStage, r: Renderer, img: Image, ox: number, oy: number)
+    r:save()
+    r:transform(Mat2D.withTranslation(ox, oy) * Mat2D.withScale(1 / self.k, 1 / self.k))
+    r:drawImage(img, self.sampler, 'srcOver', 1)
+    r:restore()
+end
+
+local function renderInto(self: PageStage, cv: Canvas, sc: Artboard<Data.UserRecap>)
+    local r = cv:beginFrame()
+    r:save()
+    r:transform(Mat2D.withScale(self.k, self.k))
+    sc:draw(r)
+    r:restore()
+    cv:endFrame()
+end
+
+local function writeUniforms(self: PageStage, ubo: GPUBuffer, p: number, cover: boolean)
+    local k = self.k
+    local W, H = PW * k, PH * k
+    local ax, ay, nx, ny, R = pose(p, W, H, cover)
+    local b = self.staging
+    local vals = {
+        W, H, MX * k, MY * k, -- page
+        (PW + 2 * MX) * k, (PH + 2 * MY) * k, H * 2.2, if cover then 1 else 0, -- view: canvas, camera, endpaper
+        ax, ay, nx, ny, -- axis
+        R, 1, 0.11, p, -- curl: radius, shadow strength, show-through, progress
+        -0.38, -0.52, 0.76, 0.62, -- light dir (upper-left, toward the reader), ambient
+        0.968, 0.944, 0.89, 0.035, -- back-of-leaf paper, grain
+    }
+    for i, v in vals do
+        buffer.writef32(b, (i - 1) * 4, v)
+    end
+    ubo:write(b)
+end
+
+local function renderLeaf(self: PageStage, slot: Slot, p: number, cover: boolean)
+    local gc, pLeaf, pShadow, ubo, g = slot.gc, self.pLeaf, self.pShadow, slot.ubo, slot.group
+    local vbuf, ibuf, depth = self.vbuf, self.ibuf, self.depthView
+    if gc == nil or pLeaf == nil or pShadow == nil or ubo == nil or g == nil or vbuf == nil or ibuf == nil
+        or depth == nil then
+        return
+    end
+    writeUniforms(self, ubo, p, cover)
+    local pass: GPURenderPass
+    local msaa = self.msaaView
+    if msaa ~= nil then
+        pass = gc:beginRenderPass({
+            color = { { view = msaa, resolveTarget = slot.colorView, loadOp = 'clear', storeOp = 'discard',
+                clearColor = { 0, 0, 0, 0 } } },
+            depthStencil = { view = depth, depthLoadOp = 'clear', depthStoreOp = 'discard', depthClearValue = 1 },
+            label = 'page turn',
+        })
+    else
+        pass = gc:beginRenderPass({
+            color = { { loadOp = 'clear', storeOp = 'store', clearColor = { 0, 0, 0, 0 } } },
+            depthStencil = { view = depth, depthLoadOp = 'clear', depthStoreOp = 'discard', depthClearValue = 1 },
+            label = 'page turn',
+        })
+    end
+    pass:setBindGroup(0, g)
+    pass:setPipeline(pShadow)
+    pass:draw(6)
+    pass:setPipeline(pLeaf)
+    pass:setVertexBuffer(0, vbuf)
+    pass:setIndexBuffer(ibuf, 'uint16')
+    pass:drawIndexed(self.icount)
+    pass:finish()
+end
+
+-- 2D fallback (no shader support): the frozen page folds toward the spine.
+local function drawFold(self: PageStage, r: Renderer, img: Image, p: number)
+    local e = easeInOut(p)
+    local sx = math.max(0.001, 1 - e)
+    r:save()
+    r:transform(Mat2D.withScale(sx, 1))
+    drawImagePx(self, r, img, 0, 0)
+    r:restore()
+    local path = self.shadePath
+    path:reset()
+    path:moveTo(Vector.xy(0, 0))
+    path:lineTo(Vector.xy(PW * sx, 0))
+    path:lineTo(Vector.xy(PW * sx, PH))
+    path:lineTo(Vector.xy(0, PH))
+    path:close()
+    self.shade.color = Color.rgba(0x25, 0x2E, 0x3D, math.floor(110 * math.sin(PI * p)))
+    r:drawPath(path, self.shade)
+end
+
+function draw(self: PageStage, renderer: Renderer)
+    local ca = self.ca
+    if ca == nil or #self.pages == 0 or #self.slots == 0 then
+        return
+    end
+    renderer:save()
+    renderer:transform(Mat2D.withTranslation(self.px, self.py) * Mat2D.withScale(self.ps, self.ps))
+    local base = self.pages[self.base]
+    if base ~= nil then
+        base:draw(renderer)
+    end
+    -- reduced motion: the page that left cross-fades out above the new one
+    if self.fadeFrom ~= self.base and self.fadeT < 0.4 then
+        local old = self.pages[self.fadeFrom]
+        if old ~= nil then
+            old:draw(renderer)
+        end
+    end
+    -- leaves, deepest first (a lower page number lies on top)
+    local order = table.clone(self.turns)
+    table.sort(order, function(x: Turn, y: Turn): boolean
+        return x.page > y.page
+    end)
+    for _, t in order do
+        local slot = self.slots[t.slot]
+        local pg = if t.page == 0 then self.coverInst else self.pages[t.page]
+        if slot ~= nil and pg ~= nil then
+            renderInto(self, slot.canvas, pg)
+            local gc = slot.gc
+            if self.gpu and gc ~= nil then
+                renderLeaf(self, slot, t.p, t.page == 0)
+                drawImagePx(self, renderer, gc.image, -MX, -MY)
+            else
+                drawFold(self, renderer, slot.canvas.image, t.p)
+            end
+        end
+    end
+    ca:draw(renderer)
+    renderer:restore()
+end
+
+return function(context: Context): Layout<PageStage>
+    return {
+        page1 = late(),
+        page2 = late(),
+        page3 = late(),
+        page4 = late(),
+        page5 = late(),
+        page6 = late(),
+        page7 = late(),
+        page8 = late(),
+        page9 = late(),
+        page10 = late(),
+        carry = late(),
+        cover = late(),
+        pages = {},
+        coverInst = nil,
+        wantCover = false,
+        ca = nil,
+        ctx = nil,
+        cur = nil,
+        navDir = nil,
+        reduced = nil,
+        paused = nil,
+        size = Vector.xy(0, 0),
+        scale = 1,
+        px = 0,
+        py = 0,
+        ps = 1,
+        k = 1,
+        lastScreen = 1,
+        base = 1,
+        turns = {},
+        fadeFrom = 1,
+        fadeT = 1,
+        slots = {},
+        gpu = false,
+        msaaView = nil,
+        depthView = nil,
+        samples = 1,
+        layout = nil,
+        pLeaf = nil,
+        pShadow = nil,
+        vbuf = nil,
+        ibuf = nil,
+        icount = 0,
+        gpuSampler = nil,
+        staging = buffer.create(96),
+        sampler = ImageSampler('clamp', 'clamp', 'bilinear'),
+        shade = Paint.with({ color = Color.rgba(0x25, 0x2E, 0x3D, 0), style = 'fill' }),
+        shadePath = Path.new(),
+        init = init,
+        resize = resize,
+        advance = advance,
+        draw = draw,
+    }
+end

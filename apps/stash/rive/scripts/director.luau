@@ -23,25 +23,29 @@ local HEADER_H = 64
 local FOOTER_H = 104
 local HOLD_SECONDS = 0.35
 local MIN_DWELL = 3
-local SETTLE = 2.2
+local SETTLE = 2.5
 local SETTLE_RM = 0.4
--- the decorative coin toy, in design coordinates (excluded from tap zones)
-local TOY = { x0 = 4, y0 = 646, x1 = 98, y1 = 744 }
+-- the tap toy rides on the motif machine (motifpose.luau, generated with the
+-- poses): its hit region follows the machine and is never smaller than this
+local TOY_MIN = 46
+local poses = require('motifpose')
 
 -- count-up windows (seconds after entry, forward navigation), timed to each
--- scene's illustration: coins landing, tokens snapping, jars arriving
+-- scene's illustration: coins landing, tokens snapping, jars arriving. The
+-- forward handoff (coin -> spring -> panel) lands the panel ~0.57 s in.
 local COUNT: { [number]: { start: number, dur: number, linear: boolean } } = {
     [1] = { start = 0.5, dur = 1.0, linear = false },
-    [2] = { start = 0.6, dur = 1.0, linear = false },
-    [3] = { start = 0.5, dur = 1.0, linear = false },
-    [4] = { start = 1.0, dur = 0.65, linear = true },
-    [5] = { start = 0.55, dur = 1.1, linear = false },
-    [6] = { start = 0.45, dur = 1.0, linear = false },
-    [7] = { start = 0.8, dur = 0.8, linear = false },
-    [8] = { start = 0.9, dur = 0.7, linear = false },
-    [9] = { start = 0.4, dur = 1.0, linear = false },
-    [10] = { start = 0.4, dur = 1.0, linear = false },
+    [2] = { start = 1.05, dur = 0.95, linear = true }, -- in step with the coins landing in the jar
+    [3] = { start = 0.65, dur = 1.0, linear = false },
+    [4] = { start = 1.15, dur = 0.65, linear = true },
+    [5] = { start = 0.7, dur = 1.1, linear = false },
+    [6] = { start = 0.6, dur = 1.0, linear = false },
+    [7] = { start = 0.95, dur = 0.8, linear = false },
+    [8] = { start = 1.0, dur = 0.75, linear = false },
+    [9] = { start = 0.55, dur = 1.0, linear = false },
+    [10] = { start = 0.55, dur = 1.0, linear = false },
 }
+local BACK_LEAD = 0.47 -- back entrances start their keys 28 frames earlier
 
 local LIGHT_SCENES = { [3] = true, [4] = true, [5] = true, [7] = true, [8] = true }
 
@@ -74,6 +78,7 @@ type Director = {
     chromeT: number,
     pendingNav: number,
     started: boolean,
+    toyPress: boolean,
 }
 
 local function num(self: Director, name: string, fallback: number): number
@@ -242,13 +247,20 @@ local function applyPersona(self: Director)
     end
 end
 
+-- the toy coin's centre in design units, from the current scene's motif pose
 local function inToy(self: Director, p: Vector): boolean
+    local pose = poses.poses[num(self, "currentScreen", 1)]
+    if pose == nil or not pose.on then return false end
     local s = num(self, "_stageScale", 1)
     local sx = num(self, "_stageX", 0)
     local sy = num(self, "_stageY", 0)
     local x = (p.x - sx) / s
     local y = (p.y - sy) / s
-    return x >= TOY.x0 and x <= TOY.x1 and y >= TOY.y0 and y <= TOY.y1
+    local c, sn = math.cos(pose.r), math.sin(pose.r)
+    local tx = pose.x + pose.s * (c * poses.toy.x - sn * poses.toy.y)
+    local ty = pose.y + pose.s * (sn * poses.toy.x + c * poses.toy.y)
+    local half = math.max(TOY_MIN / s, pose.s * poses.toy.size * 1.3) * 0.5
+    return math.abs(x - tx) <= half and math.abs(y - ty) <= half
 end
 
 local function inStory(self: Director, p: Vector): boolean
@@ -291,7 +303,7 @@ local function init(self: Director, context: Context): boolean
         local p = vm:getColor(n)
         if p ~= nil then self.colors[n] = p end
     end
-    for _, n in ipairs({ "_handoffFwd", "_handoffBack" }) do
+    for _, n in ipairs({ "_handoffFwd", "_handoffBack", "_coinNudge" }) do
         local p = vm:getTrigger(n)
         if p ~= nil then self.trigs[n] = p end
     end
@@ -418,7 +430,7 @@ local function advance(self: Director, seconds: number): boolean
     -- count-up playhead for the current scene (local animation state)
     local dir = num(self, "_navDir", 1)
     local w = COUNT[cur] or COUNT[1]
-    local start = w.start - (if dir >= 0 then 0 else 0.33)
+    local start = w.start - (if dir >= 0 then 0 else BACK_LEAD)
     local raw = clamp01((self.t - start) / w.dur)
     local c = if rm then 1 elseif w.linear then raw else easeOutCubic(raw)
     setNum(self, "_count" .. tostring(cur), c)
@@ -443,6 +455,10 @@ local function advance(self: Director, seconds: number): boolean
 end
 
 local function pointerDown(self: Director, event: PointerEvent)
+    if inToy(self, event.position) then
+        self.toyPress = true
+        return
+    end
     if not inStory(self, event.position) then return end
     self.pressing = true
     self.pressT = 0
@@ -451,6 +467,12 @@ local function pointerDown(self: Director, event: PointerEvent)
 end
 
 local function pointerUp(self: Director, event: PointerEvent)
+    if self.toyPress then
+        -- the signature interaction: a distinct hit region that never navigates
+        self.toyPress = false
+        if inToy(self, event.position) then fire(self, "_coinNudge") end
+        return
+    end
     if not self.pressing then return end
     self.pressing = false
     if self.holding then
@@ -466,6 +488,7 @@ local function pointerUp(self: Director, event: PointerEvent)
 end
 
 local function pointerExit(self: Director, event: PointerEvent)
+    self.toyPress = false
     self.pressing = false
     self.holding = false
 end
@@ -477,7 +500,7 @@ return function(context: Context): Layout<Director>
         size = Vector.xy(0, 0),
         t = 0, dwell = 0, pressT = 0, pressX = 0, pressY = 0,
         pressing = false, holding = false, lastPersona = -999, chromeT = 0,
-        pendingNav = 0, started = false,
+        pendingNav = 0, started = false, toyPress = false,
         init = init, resize = resize, advance = advance,
         pointerDown = pointerDown, pointerUp = pointerUp, pointerExit = pointerExit,
     }

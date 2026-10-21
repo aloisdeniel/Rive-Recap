@@ -1,27 +1,35 @@
 # Sprig 2026 recap — Rive implementation
 
-Ten-scene, Wrapped-style houseplant recap for the fictional app **Sprig**, built as plain RML with the Rive CLI 1.6.0.
-**No scripts**: the file contains no Luau, so the `.riv` needs no signing and plays in every runtime.
+Ten-scene, Wrapped-style houseplant recap for the fictional app **Sprig**, built as RML with the Rive CLI 1.6.0.
+**Since the improvement pass the file carries Luau scripts and WGSL shaders** (`scripts/`): a GPU folded-paper leaf, a
+paper/canopy-light shader and the dwell clock. Native runtimes and the CLI previewer play the unsigned build; **web hosts
+need a signed build** (`rive . --publish`, requires `rive login`, not produced here). See [Improvement pass](#improvement-pass).
 
 | Path | What |
 |---|---|
-| `scene.rml` | Editable source (generated, ~41k lines). Artboards `SprigRecap` (390×844, default) and `ShareCard` (330×476 component) |
+| `scene.rml` | Editable source (generated, ~83k lines). Artboards `SprigRecap` (390×844, default) and `ShareCard` (330×476 component) |
 | `tools/sprig_main.py`, `tools/sprig_scenes*.py`, `tools/build_sprig.py`, `tools/rml.py` | Generator. Edit these and rerun them rather than hand-editing 10 scenes × 8 timelines |
-| `build/sprig-recap.riv` | Runtime export (1.48 MB). `build/` is git-ignored, so rebuild with the commands below |
-| `assets/fonts/`, `assets/images/paper-grain.png` | Bundled fonts and the single raster grain overlay |
-| `captures/` | Headless PNG captures (see the list below) |
-| `tools/capture.sh`, `tools/capture_all.sh`, `tools/goto.sh` | Reproducible capture scripts |
+| `scripts/paperleaf.luau` + `.wgsl` | Lit 3D folded-paper leaf / seed half-shell (transition sweep, scene 1–2 seed, scene 4 giant leaves, scene 9 cradle) |
+| `scripts/canopylight.luau` + `.wgsl` | Paper stock + light falling through a canopy, over every scene |
+| `scripts/dwellclock.luau` | Owns `screenProgress` and the auto-advance (exact pause) |
+| `build/sprig-recap.riv` | Runtime export (1.30 MB, unsigned). `build/` is git-ignored except this file |
+| `assets/fonts/` | Bundled fonts (no raster assets remain) |
+| `captures/` | Headless PNG captures (see the list below); the full walkthrough is `../video.webm` |
+| `tools/capture.sh`, `tools/capture_all.sh`, `tools/goto.sh` | Reproducible capture scripts (`goto.sh` frames count from the last click) |
+| `tools/check.py` | Headless behaviour checks (14), see [Improvement pass](#checks) |
 
 ## Build, preview and export
 
 ```bash
 cd apps/sprig/rive
-python3 tools/sprig_main.py          # regenerate scene.rml (Pillow is needed only to regenerate the grain PNG)
+python3 tools/sprig_main.py          # regenerate scene.rml
 rive . --verify && rive inspect . --summary   # both clean: 0 errors, problems []
 rive .                               # live previewer (window); click/tap or use ←/→/Space
 rive . --once && cp build/rive.riv build/sprig-recap.riv
 rive . --once --rev=build/sprig-recap.rev     # needs `rive login` (NOT produced, see Limitations)
-tools/capture_all.sh                 # regenerate captures/
+tools/capture_all.sh                 # regenerate captures/ (removes stale PNGs first)
+python3 tools/check.py               # 14 headless behaviour checks
+(cd ../../.. && scripts/render-video.py sprig --jobs 3)   # walkthrough -> apps/sprig/video.webm
 ```
 
 Fixtures: the view model carries three exported instances, `Sample` (the default, matching `sample-data.json`), `NewUser` and `Extreme`.
@@ -34,9 +42,9 @@ Headless, override any value with `--data=<property>=<value>`. `capture_all.sh` 
   single instance (the nested artboard inherits the data context and keeps no copies). It is deliberately an artboard-bound
   view model rather than Rive's `viewModelType="global"`. The global flavour cannot be driven by `--data`, so runtime
   updates could not be proven headless, and runtimes auto-bind the artboard's instance. It is still the only user-data model in the file.
-- **State machine `Recap`** (one machine, 19 layers):
+- **State machine `Recap`** (one machine, 18 layers):
   - `Sequence`: canonical scene states S1–S10. Transitions on `_navNext`/`_navPrev` skip any scene whose `showScreenN` is false, in both directions. Each state fires `screenChanged`, and a listener on that event writes `currentScreen`.
-  - `Dwell clock`: settle wait (1.8 s), then 28 timed steps whose blend duration is bound to `autoAdvanceSeconds`. A probe node's x is keyed 0→1 and two-way bound to `screenProgress`. The final step fires `_autoNext`.
+  - (Dwell clock: since the improvement pass this is `scripts/dwellclock.luau`, a draw-less `ScriptedDrawable`. It waits 1.8 s after each `currentScreen` change, then advances `screenProgress` over `autoAdvanceSeconds` (clamped 3–60 s, non-finite → 7), freezes on the exact frame `isPaused`/`_holdPaused` turns true, and at 1.0 writes `_navDir=1` and fires `_navNext` once.)
   - `Gesture`: distinguishes tap from hold.
   - `Finish latch`: fires `recapFinished` once.
   - `Chrome theme`: ink colour for light versus dark scenes.
@@ -48,7 +56,7 @@ Headless, override any value with `--data=<property>=<value>`. `capture_all.sh` 
 
 ## Binding and event contract
 
-All names are on `UserRecap`. "Host" means the app adapter writes the value; "SM" means the state machine writes it, and the host reads it.
+All names are on `UserRecap`. "Host" means the app adapter writes the value; "SM" means the file writes it (state machine, or for `screenProgress` the dwell-clock script), and the host reads it. Names, types and events are unchanged by the improvement pass.
 
 | Property | Rive type | Owner | Notes |
 |---|---|---|---|
@@ -60,7 +68,7 @@ All names are on `UserRecap`. "Host" means the app adapter writes the value; "SM
 | autoAdvanceSeconds | Number | host | Clamped in-file to 3–60 s |
 | autoAdvanceEnabled, isPaused, reducedMotion, soundEnabled | Boolean | host (isPaused also SM) | The Pause button and Space toggle `isPaused`. `soundEnabled` is unused: the file is silent |
 | currentScreen | Number | SM | Canonical 1–10 ID, written on every scene entry |
-| screenProgress | Number | SM | 0–1 for the current dwell; holds while paused |
+| screenProgress | Number | SM (script) | 0–1 for the current dwell; freezes on the exact frame of a pause; 0 on the summary |
 | shareIncludeName, shareIncludeSensitiveValues | Boolean | host | Default false. The name line and the period line on the card are hidden unless set |
 | showScreen1…showScreen10 | Boolean | host | Hide absent metrics, not genuine zeros |
 | groupSeparator | String | host (**adapter addition**) | Thousands separator for count-ups (default `,`; use `.` or a narrow NBSP per locale) |
@@ -100,45 +108,64 @@ If the persona is unknown or empty, the host sets `showScreen9=false`. The zero-
 - **Visible controls**: Previous, Continue, and Pause/Play (Share and Replay on the summary). All are at least 48 × 48 px, have `SemanticData` labels bound to the label strings, and a `FocusData` focus ring.
 - **Keyboard**: ←/→ navigate, Space pauses, Tab and Shift+Tab move focus, Enter activates the focused button. The file focuses its keyboard surface on start.
 - **Signature interaction**: hold the big heart leaf on the intro and it bends toward the pointer (a joystick driving two pose timelines). On release it springs back with an elastic overshoot. Its hit region is `isTargetOpaque`, so it never triggers navigation or a hold-pause, and it is moved off-canvas whenever scene 1 isn't current.
-- **Rapid navigation**: every scene layer reacts to `currentScreen` with zero-duration transitions, so interrupted entrances jump straight to leave states. The clock layer uses early exit, so it resets on every navigation. Verified headless: 12 Continue clicks 4 frames apart land cleanly on scene 10 (no overshoot), and taps every 40 frames step exactly one scene each.
+- **Rapid navigation**: every scene layer reacts to `currentScreen` with zero-duration transitions, so interrupted entrances jump straight to leave states. The dwell clock restarts on every `currentScreen` change. Verified headless: 12 Continue clicks 4 frames apart land cleanly on scene 10 (no overshoot), and taps every 40 frames step exactly one scene each.
 
 ## Motion system
 
-- **Per-scene score**: 0–200 ms is an anticipation beat (the vine-tip bud swells). 200–1200 ms reveals the hero, and the number counts up from 0 through a `currentScreen`-gated formula and a cubic `DataConverterInterpolator` (1.15 s, which reduced motion shortens to 20 ms). Headline words cascade in via text modifiers by 1.6 s, then the support line. After that only restrained idle loops run (seamless sine keys), and they freeze while paused (Idle ↔ Frozen states resume where they left off).
-- **Signature transition**:
-  - The persistent story vine on the right edge grows with `currentScreen`.
-  - A leaf-shaped clipping mask unfolds from the vine tip, with a glowing paper edge, while a large folded paper leaf sweeps across the camera (its halves flip mid-flight). This takes 730 ms.
-  - Going back uses a different handoff: the mask folds back into the left margin and the leaf sweeps the opposite way, uncovering the previous scene, which re-settles with a parallax drift.
-- **Continuity carries**: the opened seed travels from scene 1 to the vine root in scene 2, and the giant folded leaf of scene 4 shrinks into a cutting leaf in scene 5's jar.
+- **Per-scene score**: 0–200 ms is an anticipation beat (the vine-tip bud swells; scene 4's closed paper bud shivers;
+  scene 1/9 seeds squash). 200–1200 ms reveals the hero, and the number counts up from 0 through a `currentScreen`-gated
+  formula and a cubic `DataConverterInterpolator` (1.15 s); a following formula snaps to the final value under reduced
+  motion. Headline words cascade in via text modifiers by 1.6 s, then the support line. After that only restrained idle
+  loops run (seamless sine keys), and they freeze while paused (Idle ↔ Frozen states resume where they left off).
+- **Signature transition** (≈750 ms forward, ≈700 ms back; see [Improvement pass](#improvement-pass)):
+  - The persistent story vine on the right edge grows with `currentScreen`; its tip buds (anticipation).
+  - From the tip a second vine races round the screen edge in both directions, sprouting leaves, and **becomes the frame**
+    the next scene arrives in, then lets go.
+  - Inside the frame a leaf-shaped clipping mask unfolds from the tip with a glowing paper edge, while a **real 3D paper
+    leaf** (GPU) folds across the camera: it enters folded, opens, flips over its midrib (green face → cream underside),
+    curls toward the lens and casts a soft shadow. The outgoing scene recedes a little (camera pull-back).
+  - Going back: the frame **unweaves** into the vine tip, the 3D leaf sweeps the other way inner face first, the mask folds
+    back into the left margin, the closing scene is pushed toward the camera and the previous one re-settles with a
+    parallax drift.
+- **Continuity carries**: the opened 3D seed travels from scene 1 to the vine root in scene 2, and a leaf from scene 4's
+  canopy swoops into scene 5's jar as a cutting leaf.
 - **Hero sequences**:
-  - seed opening into a jungle, with the wordmark rising letter by letter (1)
-  - droplets sliding onto the vine and becoming leaves (2)
-  - pots fanning into a paper landscape (3)
-  - one enormous folded leaf opening around the number (4)
-  - roots tracing through a translucent jar (5)
-  - the vine advancing through 21 calendar knots that light up in sync with the count (6)
-  - a cutting passing between paper hands (7)
-  - four paper seasons orbiting a persistent plant, with month ticks lit by the count (8)
-  - the persona reveal (9)
+  - a closed 3D paper seed squashes, cracks and falls open; a jungle **unfurls** out of it (vertex-deformed leaves) and the
+    wordmark rises letter by letter (1)
+  - droplets slide onto a drawing vine and merge into leaves that uncurl from fiddleheads (2)
+  - pots fan out onto three sheets of green paper landscape (3)
+  - a giant 3D folded-paper bud shivers, then falls open, twisting its cream inner faces out around a sunrise diorama (4)
+  - roots trace through a translucent jar (5)
+  - the vine advances through 21 calendar knots that light up in sync with the count (6)
+  - a cutting is passed between two large paper hands toward a windowsill (7)
+  - four paper seasons orbit a persistent plant, with month ticks lit by the count (8)
+  - the persona reveal: a 3D seed swells and opens into a cradle, the arch rises out of it, pothos strands unroll inside,
+    then the persona's own emblem choreography (9)
   - card assembly (10)
-- **Reduced motion**: every scene uses a 250 ms opacity fade into its final pose. There is no wipe, camera move or idle loop, and numbers show their final value immediately. All controls stay available.
+- **Reduced motion**: every scene uses a 250 ms opacity fade into its final pose. There is no wipe, frame vine, 3D sweep,
+  camera move or idle loop (the canopy light is frozen), and numbers show their final value immediately. All controls
+  stay available.
 
 ## Captures (`captures/`)
+
+Regenerated by `tools/capture_all.sh` (it deletes the old PNGs first). Frame numbers count from the navigating click.
 
 | Files | What |
 |---|---|
 | `scene-01…10.png` | Settled scenes |
 | `persona-0…3-*.png` | Each persona (copy written with `--data`, as the adapter would) |
-| `transition-1to2-f4/14/24/34.png`, `transition-5to6-f10/24.png` | Forward wipe |
-| `transition-back-3to2-f8/20/32.png` | Reverse handoff |
-| `reduced-motion-*.png` | Reduced motion |
+| `transition-1to2-f8/16/24/34.png`, `transition-4to5-f12/24.png` | Forward: frame vine, leaf iris, 3D leaf across the camera |
+| `transition-back-4to3-f6/20/34.png` | Reverse handoff (frame unweaves, leaf sweeps back inner face first) |
+| `scene1-seed-closed-f8.png`, `scene4-paper-bud-f30.png`, `scene4-opening-f60.png`, `scene9-seed-cradle-f30.png`, `scene2-unfurl-f50.png` | 3D and deformation moments mid-motion |
+| `reduced-motion-*.png` | Reduced motion (scene 2 at 6 frames already shows 248) |
 | `zero-user-intro.png`, `zero-user-summary.png` | Intro, then the welcoming empty card |
 | `extreme-*.png` | 128,940 values, 52-character name, 40%+ longer copy |
 | `hidden-3-4-7-nav.png` | 7 progress segments; navigation skips the hidden scenes |
 | `paused-scene1.png` | Paused state |
 | `viewport-*.png` | 320×568, 430×932 and desktop 1280×800 with `fit=contain` |
 
-A complete motion preview is not exported: the CLI captures single frames. Run `rive .` to review timing.
+Motion preview: `apps/sprig/video.webm` (34.5 s, every scene and transition, rendered headless by
+`scripts/render-video.py sprig`).
 
 ## Fonts and licenses
 
@@ -147,29 +174,162 @@ A complete motion preview is not exported: the CLI captures single frames. Run `
 | `assets/fonts/Fraunces-Variable.ttf` | Fraunces variable (opsz, wght, SOFT, WONK), google/fonts | SIL OFL 1.1 (`OFL-Fraunces.txt`) |
 | `assets/fonts/DMSans-Variable.ttf` | DM Sans variable (opsz, wght), google/fonts | SIL OFL 1.1 (`OFL-DMSans.txt`) |
 
-Both are embedded in the `.riv`. `paper-grain.png` is generated noise (`make_grain()` in `sprig_main.py`), so there are no rights issues.
+Both are embedded in the `.riv`. All textures (paper fibre, canopy light, leaf veins) are procedural shaders.
 
 ## Unsupported techniques and substitutions
 
-- **Keyed vertex deformation for unfurling**: replaced by folded two-half leaves, where keyed scaleX on each half hinges on the midrib, plus rotation and back-eased scale.
-- **Variable-speed timer, and pause mid-timeline**: an AnimationState's speed can't be bound. Substitute: a 28-step chain whose blend durations are bound. Pause takes effect at the next step boundary, at most dwell/28 (250 ms at 7 s), and resumes from the same progress.
+- **Keyed deformation for unfurling**: now real (vertex x/y and bezier handles keyed from a rolled fiddlehead through a
+  half-open shape to the authored leaf). Rive has no "curl" primitive, so the roll is approximated by a short, narrow,
+  sideways-bent blade; the halves stay hinged on the midrib.
+- **3D**: Rive has no 3D scene graph; the 3D paper is drawn by `scripts/paperleaf` into GPU canvases (see below).
+- **Interpolator duration binding**: binding `DataConverterInterpolator.duration` to `reducedMotion` had no effect at
+  runtime (the first pass relied on it; counts still took 1.15 s under reduced motion). Substitute: a snap formula after the
+  interpolator, `x + rm·(target − x)`, reading the metric and `reducedMotion` through bound formula tokens.
 - **Event payloads**: `screenChanged` carries a constant `index` per scene through the Event's custom property. Read `currentScreen` if your runtime doesn't expose payloads.
 - **Locale formatting**: there is no in-file locale formatter. Count-ups group thousands with the adapter-supplied `groupSeparator`. Values at or above 1,000,000 show without inner grouping. Large values scale the numeral down in steps instead of overflowing.
-- **Responsive reflow**: the master is a fixed 390×844 composition, and smaller or wider screens rely on host `Fit.contain` with a forest letterbox (see the viewport captures). At 320×568 everything scales to 0.67, with body text at about 10.7 px. This is the main layout compromise.
+- **Responsive reflow**: the master is a fixed 390×844 composition, and smaller or wider screens rely on host `Fit.contain` with a forest letterbox (see the viewport captures). At 320×568 everything scales to 0.67; body text is now 18 px in the master, about 12.1 px there (was 10.7 px).
 - **Relative bind paths**: the CLI can't author them. All binds are absolute paths into `UserRecap`.
 
 ## Measurements
 
-- **`.riv` size**: 1,484,906 bytes. Fonts are about 600 KB and the grain is 580 KB; shrinking the grain or subsetting the fonts would roughly halve the file.
-- **Object counts**: SprigRecap has 24,658 objects and ShareCard 882; there are 19 state-machine layers.
-- **Frame rate**: not measured. No device or runtime profiler was available in this session. Headless renders of the full scene stack advance about 500 frames in 1.6 s on an M-series Mac.
-- **Render budget**: hidden scenes sit in a Hidden state (opacity 0, no idle loops). There is one clip mask per scene and bounded particle counts (5 droplets, 6 bubbles); nothing scales with raw counts.
+See the table in [Improvement pass](#performance). Object counts: SprigRecap 51,222 objects (was 24,658; the increase is
+almost all keyframes for the vertex morphs and their reverse/reduced holds), ShareCard 882, 18 state-machine layers.
+Frame rate on a device was not measured; no device or runtime profiler was available.
 
 ## Remaining limitations (honest)
 
+- **Web needs a signed build**: the `.riv` contains unsigned Luau/WGSL. Native runtimes and the previewer run it; web
+  runtimes reject unsigned scripts. Ship with `rive . --publish` (needs `rive login`, not done here). WebGPU validation of
+  the shaders was not exercised.
+- **No-script runtimes**: without scripting the recap still navigates, but does not auto-advance, the 3D pieces draw as
+  flat outlines (seed shells, giant leaves, cradle, transition leaf) and the paper/canopy light is absent.
 - **`.rev` not produced**: `rive . --once --rev=…` returned `Not logged in`. Run `rive login`, then the command above.
 - **`recapFinished`/`shareTapped`**: the headless CLI doesn't log fired events. `screenChanged` is proven indirectly, because `currentScreen` is written by its listener. These two are present in the binary but were not observed firing.
-- **Entrance freezing**: pause freezes the dwell clock and idle loops, but an entrance that is already playing finishes its ≤1.9 s choreography.
-- **Mid-scene data changes**: a host update of the current scene's number re-animates the count. A persona update during scene 9 swaps to the new persona's final pose without replaying its reveal.
-- **Untested here**: right-to-left layout, real screen readers, touch hardware, and the web runtime. Hit regions were exercised only with headless pointer clicks. Keyboard was checked with `--key` (Right twice gives scene 3, Space pauses).
-- **Copy positions**: some scenes position copy for English plus 40%. Very long headlines in scene 2 run under the vine art (see `extreme-scene2.png`).
+- **Entrance freezing**: pause freezes the dwell clock (exactly), idle loops, the 3D idle sway and the canopy light, but an entrance that is already playing finishes its ≤1.9 s choreography.
+- **Mid-scene data changes**: a host update of the current scene's number re-animates the count. A persona update during scene 9 swaps to the new persona's final pose without replaying its reveal. Returning to a scene replays its count-up.
+- **Untested here**: right-to-left layout, real screen readers, touch hardware, and the web runtime. Hit regions were exercised only with headless pointer clicks and keys.
+- **Copy positions**: some scenes position copy for English plus 40%. Very long headlines in scene 2 run under the vine art (see `extreme-scene2.png`), and a summary headline of 4+ lines would reach the share card.
+
+## Improvement pass
+
+### Critique of the first version (before changing anything)
+
+- **Flat leaves everywhere.** Every leaf "unfurled" by scaling two flat halves on a hinge; nothing had depth, and the
+  signature "leaf folds across the camera" was a flat two-tone vector leaf scaled up, which read as a cardboard cut-out.
+- **Gaps against the concept.** Scene 4 had the headline at the top, a pink blob behind the number and two flat green
+  wedges cutting the screen edges; the concept has the number on top and a huge folded paper leaf pair cradling a jungle
+  diorama. Scene 9's arch was a near-empty cream panel running behind the controls; the concept nests a lush arch in an
+  opened seed shell. Scene 1's seed was two flat ovals.
+- **The vine never became a frame.** The brief's signature ("a growing vine becomes the next screen's frame") was only a
+  thin vine on the right edge plus an iris wipe.
+- **Inconsistencies / overlaps.** Scene 7's support line ran into the window; scene 3's cream terraces swallowed the cream
+  Previous/Pause buttons (they vanished); scene 5's jar and scene 9's arch sat behind the controls; the summary headline
+  broke as "A little year. A lot / of you."; body text was 10.7 px at 320×568.
+- **Motion.** Every transition was the same iris + flat sweep; the outgoing scene never reacted; reverse was the same
+  move mirrored. Pause lagged up to 250 ms (28-step clock).
+- **Replay icon.** The arrowhead sat on the arc's *start* and pointed sideways, not along the arc.
+- **Latent bug.** Reduced motion did not make numbers final: the interpolator's bound duration is not honoured, so counts
+  still took 1.15 s.
+- **Paper.** A 580 KB static noise PNG did the "paper grain" and nothing suggested light through leaves.
+
+### What changed
+
+1. **Real 3D folded paper (`scripts/paperleaf.luau` + `.wgsl`).** One (u, v) grid (65 × 25, stored twice with a
+   mirror sign so a pair draws in one indexed draw) is shaped entirely in the vertex shader: a pointed leaf or an
+   almond seed half-shell outline, folded about the midrib, cupped, curled toward the camera (integrated bent midrib),
+   rolled at the tip, twisted and rippled; finite-difference normals; perspective projection. The fragment shader is the
+   paper: two stocks (green outer / cream inner face), pressed veins, long fibres + tooth + mottle, a cut-paper rim, crease
+   occlusion and **light through the blade when lit from behind** (veins darken against the glow). 4× MSAA where available.
+   Every pose value is a `ScriptInputNumber` keyed by the existing scene timelines, so choreography stays in the state
+   machine. A CPU twin of the vertex maths produces the outline for a feathered cast shadow and for the no-GPU fallback.
+   Used for: the transition leaf, scene 1's seed (closed almond → squash → crack → open), the carried seed in scene 2,
+   scene 4's giant leaf pair (closed paper bud → shiver → falls open, twisting its cream faces out) and scene 9's cradle.
+2. **The signature transition rebuilt.** A frame vine grows from the story-vine tip round the whole screen edge in both
+   directions (one closed path, two trimmed strokes whose `offset` starts at that scene's tip, 22 leaves popping as the
+   growth passes) and becomes the frame; the leaf iris opens inside it; the 3D leaf crosses the screen centre exactly
+   while the iris is half open, flipping from its green face to its cream underside; the old scene recedes. Reverse is
+   its own move: the frame unweaves into the tip, the leaf sweeps back inner face first, the closing scene pushes toward
+   the camera. The global pieces are keyed only by the entering scene's forward timeline and the leaving scene's back
+   timeline, and are excluded from the derived arrive/reduced holds, so no two layers fight over them.
+3. **Leaves unfurl through keyed vertex deformation** (`leaf(..., morph=True)` in `tools/rml.py`): each half's vertices
+   and bezier handles are keyed from a rolled fiddlehead through a half-open blade to the authored shape (angles unwrapped
+   to interpolate the short way), with the midrib drawing on. Every unfurling leaf in scenes 1, 2, 4, 5, 6, 9 and 10 uses it.
+4. **Paper + canopy light (`scripts/canopylight.luau` + `.wgsl`)** replaces the grain PNG: a static fibre/tooth/mottle
+   sheet with a soft vignette (rendered once, soft-light), and komorebi — light through gaps between leaves as soft flecks
+   drifting in a breeze, brightest from the upper left (low-res canvas, overlay). Its strength follows `currentScreen`
+   through an eased converter; reduced motion, pause and hold freeze it (a frozen pattern is not re-rendered).
+5. **Recompositions.** Scene 4 now matches the concept (number → unit → headline on top; sunrise, mist straps, ferns,
+   heart leaves and apricot leaves inside the opening 3D pair). Scene 9: the arch stage is smaller and higher, rises out
+   of a 3D seed cradle, has pothos strands unrolling inside and leaves spilling over the lip. Scene 3: green paper terraces
+   with lit edges and larger cream/apricot pots. Scene 7: two large paper hands reach in from the bottom corners and pass
+   the cutting (arc computed from the transformed palms); copy no longer touches the window. Scene 5's jar and scene 8's
+   orbit moved clear of the copy/controls. Summary headline width-capped so it breaks "A little year. / A lot of you.",
+   share card nudged down.
+6. **Exact pause (`scripts/dwellclock.luau`).** The 28-step state-machine clock and its probe are gone; the script owns
+   `screenProgress` and the auto-advance and stops on the very frame `isPaused`/`_holdPaused` flips (verified: 0.5222 →
+   0.5222 across 120 paused frames).
+7. **Type and fixes.** Support 16 → 18 px, units 15 → 16, persona description 17 → 19, labels 13 → 14 (12.1 px body at
+   320×568). Replay icon rebuilt from geometry: clockwise arc, arrowhead on its end aligned to the tangent. Reduced
+   motion now shows final numbers at once (snap formula).
+
+### 3D / shader techniques (and where not)
+
+- **Used:** `ScriptedDrawable` + `GPUCanvas` + `GPUPipeline` with a depth buffer and 4× MSAA resolve (paper leaf);
+  vertex-shader geometry from uniforms (no mesh data shipped), finite-difference normals, two-sided paper shading with
+  translucency; fragment-only full-screen-triangle passes for the paper sheet and the canopy light. All render headless in
+  `--screenshot` and in the video. MSAA/depth targets are cached per canvas size and shared.
+- **Not used:** imported meshes/bones (nothing needs them), textures (all procedural), 3D for the pots, jar, hands,
+  calendar or share card — those read well as flat folded paper and keep the editorial graphic edge; the share card stays
+  pure vector so host snapshots never depend on GPU scripting.
+- **Instancing note:** `@builtin(instance_index)` does not bake to MSL with this toolchain, and a per-instance vertex
+  buffer did not deliver the mirror sign; the grid is stored twice instead.
+
+### Fallbacks and reduced motion
+
+- No GPU scripting → each paper piece draws its projected outline as a flat vector shape (same keyed pose), the
+  paper/canopy overlay draws nothing. No scripting at all → no auto-advance (navigation still works).
+- Reduced motion → the ER/LR timelines hide the transition leaf and frame (`alpha`/`live` 0), 3D pieces hold their final
+  pose (no idle sway), the canopy light is frozen, numbers snap.
+- Every 3D piece has a `live` input keyed on scene entry and cleared by the scene's Hidden state, so off-screen pieces
+  issue no GPU work; a settled piece re-renders only when an input changes (idle sway does re-render it each frame).
+
+### New compromises
+
+- **Web needs `rive . --publish`** (signed scripts). Not done here (no login).
+- **GPU memory** (all canvases allocated up front): five paper canvases (transition 880×880, scene 4 pair 880×880,
+  two seeds 600×500, cradle 704×512) ≈ 10.1 MB, plus 4× MSAA colour + depth targets shared per size (three sizes)
+  ≈ 46.0 MB, plus the paper sheet 585×1266 (3.0 MB) and canopy light 133×287 — about 59 MB in
+  total. Only the current scene's pieces render; the scene 4 pair has the same pixel size as the transition leaf, so the
+  two share one MSAA/depth set.
+- 3D pieces render at a fixed pixel density (`res`, 1–2 px per unit, because a `Node` script is not told the surface
+  scale): sharp at 1×/2×, slightly soft at 3×.
+- Object count roughly doubled (vertex-morph keyframes); `.riv` still shrank because the grain PNG is gone.
+- The transition leaf is a single shared object: two transitions within ~0.7 s restart its sweep rather than stacking.
+
+### Checks
+
+`python3 tools/check.py` — 14/14 pass: Right/Left keys, hidden-scene skipping both ways, 12 rapid taps land on 10,
+auto-advance at 1.8 s settle + dwell, dwell clamped to 3 s, auto-advance disabled holds, pause freezes progress exactly
+and resumes from the same point, the summary never auto-advances, Replay returns to 1, Space pauses, hold pauses and its
+release does not navigate. `rive . --verify` 0 errors / 0 warnings, `rive inspect . --summary` problems `[]`.
+(The first version had no check script; nothing was changed to make a check pass.)
+
+### Performance
+`rive . --bench`, Apple-silicon Mac, headless at @1x, warm runs. Render is CPU-side submission, not GPU time; on-device
+frame rate and GPU time were not measured.
+
+| | Before | After |
+|---|---|---|
+| `.riv` size | 1,484,906 B | **1,296,615 B** (grain PNG removed; scripts, shaders and morph keyframes added) |
+| Scripts in the file | none | 3 Luau + 2 WGSL (web hosts need `rive . --publish`) |
+| `--bench=600` (intro) advance mean / p95 | 0.044 / 0.086 ms | 0.043 / 0.093 ms |
+| `--bench=600` (intro) render mean / p95 | 0.085 / 0.104 ms | 0.113 / 0.213 ms |
+| `--bench=1200`, `autoAdvanceSeconds=3` (four auto-advanced cuts) advance mean / p95 | 0.051 / 0.088 ms | 0.051 / 0.100 ms |
+| same, render mean / p95 (max = first frame incl. shader setup) | 0.134 / 0.127 ms (max 36 ms) | 0.169 / 0.225 ms (max 44 ms) |
+| Wasm memory growth | +0 | +0 |
+| Pause latency | up to dwell/28 (250 ms at 7 s) | 0 (same frame) |
+| Body text at 320×568 | 10.7 px | 12.1 px |
+
+GPU work per frame: the current scene's 3D piece re-renders only while one of its inputs moves (entrance, idle sway);
+the transition leaf renders only during a cut (~45 frames); the canopy light renders a 133×287 pass while it drifts;
+the paper sheet renders once.

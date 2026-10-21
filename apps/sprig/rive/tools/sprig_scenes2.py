@@ -157,12 +157,12 @@ def scene9():
     label_id, name_id, desc_id, col_id = ID(), ID(), ID(), ID()
     rg, rid = word_reveal(units=0)
     copy = column("Persona copy", 24, 104, 342, [
-        text("Label", [("Your personal style", P("personaLabel"))], font="dm", size=13, color=CREAM, wght=500, ls=2.6,
+        text("Label", [("Your personal style", P("personaLabel"))], font="dm", size=14, color=CREAM, wght=500, ls=2.4,
              align="center", lp=lp(), op=0.8, id=label_id),
         text("Persona", [("Canopy Keeper", P("personaName"))], font="fr", size=46, color=CREAM, wght=600, soft=80,
              wonk=1, lh=48, align="center", lp=lp(), id=name_id, modifiers=[rg]),
-        text("Description", [("You made room for a jungle.", P("personaDescription"))], font="dm", size=17,
-             color=CREAM, lh=24, align="center", lp=lp(), op=0.86, id=desc_id),
+        text("Description", [("You made room for a jungle.", P("personaDescription"))], font="dm", size=19,
+             color=CREAM, lh=26, align="center", lp=lp(), op=0.86, id=desc_id),
     ], gap=12, align="topCenter", id=col_id)
     sc.key(label_id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "outs"), (60, 0.8)])
     reveal_keys(sc.ef, rid, 48, 92, "out")
@@ -171,26 +171,65 @@ def scene9():
     rim_bind = bind(P("personaColor"), 37)
     clip_src = ID()
     emb_els, pa = persona_emblems()
-    emb_wrap = node("Emblems", E("ClippingShape", sourceId=clip_src, name="Arch clip"), *emb_els)
+    # hanging pothos strands inside the arch (every persona): they unroll down from the arch top and sway
+    strands = []
+    for i, (x, L, ph) in enumerate([(-96, 230, 0), (-70, 150, 60), (84, 200, 30), (104, 120, 90)]):
+        sid_, st_trim = ID(), ID()
+        kids = [line("Strand", f"M0 0 C 6 {L*0.3:.1f} -6 {L*0.65:.1f} 2 {L:.1f}", LEAF_DEEP, 2.0,
+                     trim_el=trim(0, 0, id=st_trim))]
+        sc.key(st_trim, "end", [(0, 0.0, "hold"), (46 + i * 5, 0.0, "outs"), (96 + i * 5, 1.0)])
+        n_l = int(L / 26)
+        for j in range(n_l):
+            f = (j + 0.7) / n_l
+            (px, py), ang = point_at(f"M0 0 C 6 {L*0.3:.1f} -6 {L*0.65:.1f} 2 {L:.1f}", f)
+            sd = 1 if j % 2 else -1
+            lf_, lp_ = leaf(f"Pothos {i}.{j}", px, py, 22, 22, rot=sd * 1.9, light=[LEAF, LEAF_DARK, LEAF_PALE][j % 3],
+                            dark=[LEAF_DARK, LEAF_DEEP, LEAF][j % 3], kind="heart", rib=None)
+            kids.append(lf_)
+            sc.pop(lp_["node"], 50 + i * 5 + f * 46, 64 + i * 5 + f * 46, 0.0, 1.0, "back")
+        strands.append(node(f"Pothos strand {i}", *kids, x=195 + x, y=772 - 392 + abs(x) * 0.2, id=sid_))
+        sc.sway(sid_, 0.0, 0.035, 420 + 40 * i, ph * 2)
+    emb_wrap = node("Emblems", E("ClippingShape", sourceId=clip_src, name="Arch clip"), *emb_els, *strands)
     arch = node("Arch", *stack(
         poly("Arch shadow", ARCH_D, "#05130E", a=0.4, y=14, feather=24),
         shape("Arch rim", *path_el(ARCH_D), stroke(col(CREAM), 10, bind=rim_bind)),
-        shape("Arch face", *path_el(ARCH_D), lin_grad([(0, col(CREAM)), (1, col(CREAM_SHADE))], 0, -404, 0, 0)),
+        shape("Arch face", *path_el(ARCH_D), lin_grad([(0, col("#FBF4E2")), (0.7, col("#F6E4CC")), (1, col(CREAM_SHADE))],
+                                                      0, -404, 0, 0)),
         shape("Accent halo", ellipse(170, 170), fill(col(CREAM), bind=bind(P("personaColor"), 37)),
               stroke(col(FOREST, 0.12), 2), x=50, y=-300, op=0.55),
         shape("Arch clip source", *path_el(ARCH_D), id=clip_src),
     ), x=195, y=772, id=arch_id)
-    sc.key(arch_id, "scaleY", [(0, 0.0, "hold"), (12, 0.0, "back"), (48, 1.0)])
-    sc.key(arch_id, "scaleX", [(0, 0.6, "hold"), (12, 0.6, "back"), (48, 1.0)])
-    # anticipation through the motif: the seed at the arch's foot pulses before the reveal
+    sc.key(arch_id, "scaleY", [(0, 0.0, "hold"), (22, 0.0, "back"), (58, 1.0)])
+    sc.key(arch_id, "scaleX", [(0, 0.6, "hold"), (22, 0.6, "back"), (58, 1.0)])
+    # the persona stage (arch + emblems) sits a little smaller and higher, clear of the controls
+    stage_id = ID()
+    stage = node("Persona stage", *stack(arch, emb_wrap), x=195 * 0.1, y=716 - 772 * 0.9, sx=0.9, sy=0.9, id=stage_id)
+    # anticipation through the motif: a closed paper seed (3D) at the arch's foot swells, cracks and opens
+    # into the cradle the arch rises out of
+    c3, ci = leaf3d("Cradle shells 3D", 195, 790, pair=1, shape=1, L=210, W=112, fold=0.0, cup=1.0, curl=0.2,
+                    wave=0.0, flip=1.45, spread=0.0, gap=0, veins=0.0, glow=0.25, fibre=0.8, ambient=0.64,
+                    front="#F6EBCB", back="#E8DAB2", rim="#FFFDF2", glowColor="#FBF0CF", seed=9,
+                    halfW=220, top=-280, bottom=40, res=1.6)
+    sc.live3d(ci)
     seed_id = ID()
-    seed = node("Persona seed", *stack(
-                shape("Glow", ellipse(120, 60), fill(col(LEAF_PALE, 0.5), feather=18)),
-                node("SL", poly("F", "M0 0 C-30 0 -40 -26 -38 -50 C-36 -76 -18 -92 0 -94 L0 0 Z", CREAM), rot=-0.7),
-                node("SR", poly("F", "M0 0 C30 0 40 -26 38 -50 C36 -76 18 -92 0 -94 L0 0 Z", CREAM_SHADE), rot=0.66)),
-                x=195, y=790, id=seed_id)
-    sc.key(seed_id, "scaleX", [(0, 0.4, "hold"), (1, 0.4, "back"), (10, 1.25, "io"), (20, 0.9, "back"), (34, 1.0)])
-    sc.key(seed_id, "scaleY", [(0, 0.4, "hold"), (1, 0.4, "back"), (10, 1.25, "io"), (20, 0.9, "back"), (34, 1.0)])
+    seed = node("Persona seed", c3, x=0, y=0, id=seed_id)
+    sc.key(seed_id, "y", [(0, 40, "hold"), (2, 40, "outs"), (14, 0.0)])
+    sc.k3(ci, "L", [(0, 120, "hold"), (2, 120, "backs"), (16, 150, "io"), (24, 140, "outs"), (40, 196)])
+    sc.k3(ci, "W", [(0, 64, "hold"), (2, 64, "backs"), (16, 82, "io"), (24, 76, "outs"), (40, 112)])
+    sc.k3(ci, "flip", [(0, 1.45, "hold"), (22, 1.45, "back"), (52, 0.5)])
+    sc.k3(ci, "spread", [(0, 0.0, "hold"), (22, 0.0, "back"), (54, 0.62)])
+    sc.k3(ci, "gap", [(0, 0.0, "hold"), (22, 0.0, "outs"), (50, 40.0)])
+    sc.idle.key(ci["spread"], "propertyValue", [(0, 0.62, "sine"), (200, 0.635, "sine"), (400, 0.62)])
+    # foliage spilling over the cradle's lip
+    spill = []
+    for i, (x, y, L, Wd, r, c1, c2, kind) in enumerate([(86, 790, 96, 50, -1.05, LEAF, LEAF_DARK, "leaf"),
+                                                        (304, 792, 104, 52, 1.1, LEAF_DARK, LEAF_DEEP, "leaf"),
+                                                        (120, 800, 80, 74, -0.5, FOREST_PALE, FOREST_SOFT, "heart"),
+                                                        (272, 802, 78, 70, 0.55, LEAF_PALE, LEAF, "heart")]):
+        n, p = leaf(f"Spill leaf {i}", x, y, L, Wd, rot=r, light=c1, dark=c2, kind=kind, rib_a=0.35, morph=True)
+        spill.append(n)
+        sc.unfurl(p, 52 + i * 6, 84 + i * 6, rot=r)
+        sc.sway(p["node"], r, 0.03, 360, i * 80)
     sparkles = []
     for i, (x, y, s) in enumerate([(338, 404, 16), (356, 446, 10), (48, 470, 12)]):
         spid = ID()
@@ -207,12 +246,13 @@ def scene9():
     content = stack(bg_rect(FOREST),
                     shape("Glow", ellipse(520, 520), rad_grad([(0, col(LEAF, 0.2)), (1, col(LEAF, 0))], 0, 0, 260),
                           x=195, y=560),
-                    back, arch, emb_wrap, seed, sparkles, copy)
+                    back, stage, seed, spill, sparkles, copy)
     sc.settle.append((col_id, "y", 8.0))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     sc.persona = pa
     sc.emb_wrap = emb_wrap
+    sc.stage = stage_id
     return sc, root
 
 
@@ -396,28 +436,32 @@ def scene10(card_ab, card_sm):
     sc = Scene(10, CREAM, light=True, dur=110)
     head_id, sup_id, col_id = ID(), ID(), ID()
     rg, rid = word_reveal()
-    copy = column("Summary copy", 65, 104, 260, [
-        text("Headline", [("A little year. A lot of you.", P("summaryHeadline"))], font="fr", size=28, color=FOREST,
-             wght=560, soft=60, lh=31, align="center", lp=lp(), modifiers=[rg], id=head_id),
-        text("Support", [("Take a piece of your year with you.", P("summarySupport"))], font="dm", size=15,
-             color=FOREST, lh=21, align="center", lp=lp(), op=0.8, id=sup_id),
+    # the headline is width-capped so English breaks after the first sentence ("A little year. / A lot of you.");
+    # the support line keeps the full column so it never orphans a word
+    copy = column("Summary copy", 30, 100, 330, [
+        E("LayoutComponent", hst := lstyle(layoutWidthScaleType="fixed", layoutHeightScaleType="hug"),
+          text("Headline", [("A little year. A lot of you.", P("summaryHeadline"))], font="fr", size=30, color=FOREST,
+               wght=560, soft=60, lh=32, align="center", lp=lp(), modifiers=[rg], id=head_id),
+          width=192.0, height=10.0, styleId=hst.id, name="Headline box", id=ID()),
+        text("Support", [("Take a piece of your year with you.", P("summarySupport"))], font="dm", size=17,
+             color=FOREST, lh=23, align="center", lp=lp(), op=0.8, id=sup_id),
     ], gap=8, align="topCenter", id=col_id)
     reveal_keys(sc.ef, rid, 40, 80)
     sc.key(sup_id, "opacity", [(0, 0.0, "hold"), (70, 0.0, "outs"), (94, 0.8)])
     card_id = ID()
     card = E("NestedArtboard", E("NestedStateMachine", animationId=card_sm, name="Card machine"),
-             artboardId=card_ab, x=30.0, y=224.0, name="Share card", id=card_id)
-    sc.key(card_id, "y", [(0, 380, "hold"), (8, 380, "back"), (54, 224)])
+             artboardId=card_ab, x=195 - CARD_W * 0.47, y=256.0, scaleX=0.94, scaleY=0.94, name="Share card", id=card_id)
+    sc.key(card_id, "y", [(0, 410, "hold"), (8, 410, "back"), (54, 256)])
     sc.key(card_id, "rotation", [(0, -0.08, "hold"), (8, -0.08, "back"), (60, 0.0)])
     sc.idle.key(card_id, "rotation", [(0, 0.0, "sine"), (180, 0.006, "sine"), (360, 0.0)])
     shadow_id = ID()
     card_shadow = shape("Card shadow", rect(CARD_W - 20, CARD_H - 30, 30), fill(col("#3A3420", 0.35), feather=22),
-                        x=195, y=224 + CARD_H / 2 + 18, id=shadow_id)
+                        x=195, y=256 + CARD_H * 0.47 + 18, sx=0.94, sy=0.94, id=shadow_id)
     sc.key(shadow_id, "opacity", [(0, 0.0, "hold"), (20, 0.0, "outs"), (60, 1.0)])
     deco = []
     for i, (x, y, L, r, c1, c2) in enumerate([(-4, 300, 160, 1.1, LEAF, LEAF_DARK), (396, 640, 170, -1.1, LEAF_DARK, LEAF_DEEP),
                                               (14, 690, 120, 0.7, APRICOT, APRICOT_DARK)]):
-        n, p = leaf(f"Summary leaf {i}", x, y, L, L * 0.55, rot=r, light=c1, dark=c2)
+        n, p = leaf(f"Summary leaf {i}", x, y, L, L * 0.55, rot=r, light=c1, dark=c2, morph=True)
         deco.append(n)
         sc.unfurl(p, 20 + i * 10, 50 + i * 10, rot=r)
         sc.sway(p["node"], r, 0.03, 360, i * 100)

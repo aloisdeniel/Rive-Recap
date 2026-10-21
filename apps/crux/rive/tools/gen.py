@@ -40,6 +40,7 @@ def main():
         "3-components.rml": doc(art.wordmark_artboard(), art.wordmark_asset()),
         "4-data.rml": doc(model.view_model(), *conv.CONVS,
                           rml.E("ScriptAsset", file="director.luau", name="director", id=main_ab.DIRECTOR_ASSET),
+                          *art.script_assets(),
                           *art.font_assets()),
     }
     for name, text in files.items():

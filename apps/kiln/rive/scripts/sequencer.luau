@@ -53,13 +53,13 @@ local SETTLE_REDUCED = 0.35
 local HOLD = 0.35
 local MIN_DWELL = 3.0
 local MAX_DWELL = 60.0
-local SPIN = 0.045 -- revolutions per second while idle
+local SPIN = 0.02 -- turntable revolutions per second while idle (the 3D vessel turns with it)
 
 -- turntable hit regions in art-stage coordinates (390 x 560, bottom anchored)
 local TURN_ZONES: { [number]: { number } } = {
     [1] = { 110, 150, 280, 420 },
     [2] = { 165, 90, 345, 450 },
-    [3] = { 95, 330, 295, 432 },
+    [3] = { 80, 330, 310, 470 },
     [7] = { 110, 170, 335, 420 },
 }
 
@@ -214,10 +214,13 @@ local function place(self: Seq)
     setNum(self, '_artScale', s)
     setNum(self, '_artX', w / 2 - 195 * s)
     setNum(self, '_artY', h - 560 * s)
-    local cs = math.clamp(math.min((h - 330) / 514, (w - 48) / 300), 0.5, 1.12)
+    -- the card starts below the summary copy (two headline lines + support at most) and
+    -- ends above the footer; on short screens it shrinks rather than covering the copy
+    local cy = math.clamp(h * 0.28, 196, 252)
+    local cs = math.clamp(math.min((h - 330) / 514, (h - cy - 104) / 440, (w - 48) / 300), 0.5, 1.12)
     setNum(self, '_cardScale', cs)
     setNum(self, '_cardX', w / 2 - 150 * cs)
-    setNum(self, '_cardY', math.clamp(h * 0.28, 150, 252))
+    setNum(self, '_cardY', cy)
 end
 
 -- ---------------------------------------------------------------- lifecycle

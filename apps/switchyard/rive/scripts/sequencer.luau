@@ -34,6 +34,7 @@ type Seq = {
     prevPaused: boolean,
     lastPersona: number,
     initialised: boolean,
+    idleT: { number },
     paint: Paint,
     track: Paint,
     done: Paint,
@@ -46,6 +47,7 @@ local STORY_BOTTOM = 738
 local HOLD_SECONDS = 0.35
 local SETTLE = 1.8
 local SETTLE_RM = 0.35
+local IDLE_SECONDS = 8 -- every scene's idle loop is 480 frames (tools/gen.py IDLE_FRAMES)
 
 local PERSONAS = {
     { name = 'City Connector', desc = 'You make the connections.', color = Color.rgb(0x1B, 0x4E, 0xD0), dark = true },
@@ -178,6 +180,10 @@ local function goTo(self: Seq, target: number, dir: number)
     if target >= 2 and target <= 8 then
         setNum(self, '_count' .. tostring(target), 0)
     end
+    -- the entering scene's idle loop restarts from its rest pose; the leaving
+    -- scene's playhead simply stops where it is (no snap during its exit)
+    self.idleT[target] = 0
+    setNum(self, '_idle' .. tostring(target), -1)
     self.sceneTime = 0
     self.lastScreen = target
 end
@@ -372,6 +378,21 @@ function advance(self: Seq, seconds: number): boolean
     if cur == 9 then
         settle = if rm then SETTLE_RM else 2.6
     end
+
+    -- idle-loop playhead of the current scene (a Joystick scrubs the loop from it):
+    -- runs only once the entrance has settled, freezes while paused, and stays on
+    -- the rest pose (frame 0) under reduced motion
+    if rm then
+        if self.idleT[cur] ~= 0 then
+            self.idleT[cur] = 0
+        end
+        setNum(self, '_idle' .. tostring(cur), -1)
+    elseif not paused and self.sceneTime > settle then
+        local t = (self.idleT[cur] or 0) + seconds
+        self.idleT[cur] = t
+        local ph = (t % IDLE_SECONDS) / IDLE_SECONDS
+        setNum(self, '_idle' .. tostring(cur), ph * 2 - 1)
+    end
     local dwell = num(self, 'autoAdvanceSeconds', 7)
     dwell = math.clamp(dwell, 4, 60)
     local enabled = bool(self, 'autoAdvanceEnabled', true)
@@ -407,6 +428,7 @@ end
 
 function pointerDown(self: Seq, event: PointerEvent)
     local x, y = event.position.x, event.position.y
+    setNum(self, '_focusVisible', 0) -- pointer input hides the keyboard focus ring
     if y < STORY_TOP or y > STORY_BOTTOM or inChips(self, x, y) > 0 then
         return
     end
@@ -508,6 +530,7 @@ return function(context: Context): Layout<Seq>
         prevPaused = false,
         lastPersona = -99,
         initialised = false,
+        idleT = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
         paint = Paint.with({ color = Color.rgb(0xF4, 0x45, 0x33) }),
         track = Paint.with({ color = Color.rgba(0x17, 0x1B, 0x20, 40) }),
         done = Paint.with({ color = Color.rgb(0x17, 0x1B, 0x20) }),

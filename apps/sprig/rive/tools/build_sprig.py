@@ -104,6 +104,53 @@ FIXTURES = {
                 "introHeadline": "Your whole 2026, told through Sprig"},
 }
 
+# ===================================================================== GPU scripts (scripts/*.luau + *.wgsl)
+# Scripts and shaders are scanned from scripts/ by the CLI; the ScriptAssets are declared (in this order,
+# modules first) by sprig_main so ScriptedDrawables can name them.
+SCRIPTS = {n: ID() for n in ("dwellclock", "paperleaf", "canopylight")}
+
+
+def scripted(name, script, nums=None, cols=None, bools=None, x=0.0, y=0.0, id=None, op=None, sx=None, sy=None):
+    """A ScriptedDrawable with typed inputs. Values may be (value, DataBindContext) to bind them.
+    Returns (element, {input name: input id}); key inputs on property 'propertyValue'."""
+    ids = {}
+    kids = []
+    for tag, items in (("ScriptInputNumber", nums), ("ScriptInputColor", cols), ("ScriptInputBoolean", bools)):
+        for k, v in (items or {}).items():
+            iid = ID()
+            ids[k] = iid
+            b = None
+            if isinstance(v, tuple):
+                v, b = v
+            if tag == "ScriptInputNumber":
+                v = float(v)
+            elif tag == "ScriptInputColor":
+                v = col(v) if not isinstance(v, Col) else v
+            kids.append(E(tag, b, propertyValue=v, name=k, id=iid))
+    el = E("ScriptedDrawable", *kids, x=float(x), y=float(y), opacity=_f(op), scaleX=_f(sx), scaleY=_f(sy),
+           scriptAssetId=SCRIPTS[script], name=name, id=id or ID())
+    return el, ids
+
+
+LEAF3D_DEFAULTS = dict(L=300, W=110, shape=0, fold=0.35, cup=0.1, curl=0.3, tipCurl=0, twist=0, wave=0.3, flip=0,
+                       spread=0, gap=0, pair=0, yaw=0, pitch=0, spin=0, persp=1400, seed=1, glow=0.8, veins=1,
+                       fibre=1, ambient=0.42, light=0, shadow=0, shadowX=14, shadowY=22, shadowBlur=24, alpha=1,
+                       live=0, halfW=200, top=-360, bottom=60, res=2, msaa=4, cy=0)
+LEAF3D_COLS = dict(front=LEAF, back=CREAM_SHADE, glowColor="#D6EC96", rim=CREAM)
+
+
+def leaf3d(name, x, y, id=None, op=None, **kw):
+    """A lit 3D folded-paper leaf / seed shell (scripts/paperleaf). Returns (element, input ids)."""
+    nums = dict(LEAF3D_DEFAULTS)
+    cols = dict(LEAF3D_COLS)
+    for k, v in kw.items():
+        if k in cols:
+            cols[k] = v
+        else:
+            nums[k] = v
+    return scripted(name, "paperleaf", nums=nums, cols=cols, x=x, y=y, id=id, op=op)
+
+
 # ===================================================================== converters
 CV = Converters()
 
@@ -126,10 +173,10 @@ def c_show_display():
 
 
 def c_rm_duration():
-    rm = CV.add("rmmap", lambda cid: E("DataConverterRangeMapper", minInput=0.0, maxInput=1.0, minOutput=1.15,
-                                       maxOutput=0.02, clampLower=True, clampUpper=True,
-                                       name="Count duration (reduced motion = instant)", id=cid))
-    return CV.group("rmdur", [c_b2n(), rm], "Reduced motion to duration")
+    # reducedMotion (bool -> 0/1) -> count duration in seconds: 1.15 normally, 0.02 (instant) when reduced
+    f = CV.add("rmdurf", formula("Count duration (reduced motion = instant)", [tV(1.15), tOp("-"), tIn(), tOp("*"),
+                                                                              tV(1.13)]))
+    return CV.group("rmdur", [c_b2n(), f], "Reduced motion to duration")
 
 
 def c_interp(key="count", dur=1.15, ease=(0.22, 0.0, 0.18, 1.0)):
@@ -176,8 +223,22 @@ def c_pad3():
                                         name="Pad to 3", id=cid))
 
 
-def count_chain(k, tail, key):
-    return CV.group((k, key), [c_clamp_nonneg(), c_gate(k), c_interp()] + tail, f"Count s{k} {key}")
+def f_snap(k, metric):
+    """After the count interpolator: out = x + rm * (target - x). Reduced motion shows the final value at once.
+    (The interpolator's bound duration is not honoured at runtime, so the snap is done here instead.)"""
+    cur = lambda: tV(bind_el=bind(P("currentScreen"), 777))
+    tgt = lambda: [tF("max"), tV(0), tSep(), tV(bind_el=bind(P(metric), 777)), tC(), tOp("*"), tO(), tV(1), tOp("-"),
+                   tF("min"), tV(1), tSep(), tO(), cur(), tOp("-"), tV(k), tC(), tOp("*"), tO(), cur(), tOp("-"),
+                   tV(k), tC(), tC(), tC()]
+    rm = lambda: tV(bind_el=bind(P("reducedMotion"), 777, c_b2n()))
+    return CV.add(("snap", k, metric), formula(f"Snap s{k} {metric} (reduced motion)",
+                                               [tIn(), tOp("+"), rm(), tOp("*"), tO()] + tgt() + [tOp("-"), tIn(), tC()]))
+
+
+def count_chain(k, tail, key, metric=None):
+    metric = metric or METRIC[k]
+    return CV.group((k, key, metric), [c_clamp_nonneg(), c_gate(k), c_interp(), f_snap(k, metric)] + tail,
+                    f"Count s{k} {metric} {key}")
 
 
 def f_unit_clamp(i, scale=1.0, name="Lit"):
@@ -294,18 +355,18 @@ def hero_number(k, metric, x, y, w, size=112, color=CREAM, align="center", wght=
     kw = dict(font="fr", size=size, color=color, wght=wght, soft=40, wonk=0, lh=size * 1.0, wrap=False)
 
     def disp(conv_tail, key):
-        return bind(src, 596, count_chain(k, conv_tail, key))
+        return bind(src, 596, count_chain(k, conv_tail, key, metric))
 
     def mk_box(name, txt, dkey, dtail):
         bst = lstyle(layoutWidthScaleType="hug", layoutHeightScaleType="hug")
         bst.add(disp(dtail, dkey))
         return E("LayoutComponent", bst, txt, width=10.0, height=10.0, styleId=bst.id, name=name, id=ID())
 
-    t_th = text("Thousands", [("0", src, count_chain(k, [f_thousands(), c_tostr()], "thou")),
+    t_th = text("Thousands", [("0", src, count_chain(k, [f_thousands(), c_tostr()], "thou", metric)),
                               (",", P("groupSeparator"), None)], lp=lp("hug", "hug"), **kw)
-    t_rest = text("Rest", [("000", src, count_chain(k, [f_rest(), c_tostr(), c_pad3()], "rest"))], lp=lp("hug", "hug"),
+    t_rest = text("Rest", [("000", src, count_chain(k, [f_rest(), c_tostr(), c_pad3()], "rest", metric))], lp=lp("hug", "hug"),
                   **kw)
-    t_raw = text("Value", [("0", src, count_chain(k, [c_tostr()], "raw"))], lp=lp("hug", "hug"), **kw)
+    t_raw = text("Value", [("0", src, count_chain(k, [c_tostr()], "raw", metric))], lp=lp("hug", "hug"), **kw)
     row = E("LayoutComponent", st,
             mk_box("Big A", t_th, "dbig", [f_disp_big()]),
             mk_box("Big B", t_rest, "dbig", [f_disp_big()]),
@@ -447,6 +508,14 @@ class Scene:
     def key(self, obj, prop, keys):
         self.ef.key(obj, prop, keys)
 
+    def live3d(self, ins):
+        """A 3D piece renders only while its scene is on screen: live from entry, 0 once hidden."""
+        self.ef.key(ins["live"], "propertyValue", [(0, 1.0, "hold")])
+        self.extra_hidden.append((ins["live"], "propertyValue", 0.0))
+
+    def k3(self, ins, name, keys):
+        self.ef.key(ins[name], "propertyValue", keys)
+
     def appear(self, obj, f0, f1, dy=24.0, y0=None, ease="outs", fade=True, base_y=None):
         """fade + rise; base_y is the authored y."""
         if fade:
@@ -459,10 +528,24 @@ class Scene:
         self.key(obj, "scaleY", [(0, s0, "hold"), (f0, s0, ease), (f1, s1)])
 
     def unfurl(self, parts, f0, f1, rot=None, rot0=None):
-        """Leaf opens from its folded midrib: halves widen, node scales and rotates into place."""
-        self.pop(parts["node"], f0, f1, 0.0, 1.0, "backs")
-        self.key(parts["left"], "scaleX", [(0, 0.05, "hold"), (f0 + 3, 0.05, "out"), (f1 + 6, 1.0)])
-        self.key(parts["right"], "scaleX", [(0, 0.05, "hold"), (f0 + 7, 0.05, "out"), (f1 + 10, 1.0)])
+        """Leaf opens from its folded midrib. With morph data this is a real deformation: the blade starts
+        as a tight fiddlehead rolled to one side, uncurls through a half-open shape and settles with a
+        soft overshoot, while its vein draws on; otherwise the halves widen on the hinge."""
+        m = parts.get("morph")
+        if m:
+            fm = f0 + (f1 - f0) * 0.45
+            self.pop(parts["node"], f0, f1, 0.35, 1.0, "backs")
+            self.key(parts["node"], "opacity", [(0, 0.0, "hold"), (f0, 0.0, "lin"), (f0 + 4, 1.0)])
+            for vid, prm in m:
+                for key in prm["open"]:
+                    self.key(vid, key, [(0, prm["curl"][key], "hold"), (f0, prm["curl"][key], "in"),
+                                        (fm, prm["half"][key], "out"), (f1 + 6, prm["open"][key])])
+            if parts.get("rib_trim"):
+                self.key(parts["rib_trim"], "end", [(0, 0.0, "hold"), (fm, 0.0, "outs"), (f1 + 10, 1.0)])
+        else:
+            self.pop(parts["node"], f0, f1, 0.0, 1.0, "backs")
+            self.key(parts["left"], "scaleX", [(0, 0.05, "hold"), (f0 + 3, 0.05, "out"), (f1 + 6, 1.0)])
+            self.key(parts["right"], "scaleX", [(0, 0.05, "hold"), (f0 + 7, 0.05, "out"), (f1 + 10, 1.0)])
         if rot is not None:
             r0 = rot0 if rot0 is not None else rot * 0.3
             self.key(parts["node"], "rotation", [(0, r0, "hold"), (f0, r0, "out"), (f1 + 8, rot)])
@@ -492,13 +575,80 @@ class Scene:
         self.idle.key(obj, prop, [(f, v, "sine") for f, v in dedup])
 
 
+# ===================================================================== signature transition (global pieces)
+# A vine grows out of the story-vine tip and runs round the screen edge in both directions, becoming the
+# frame the next scene arrives in; inside it a leaf-shaped iris unfolds from the tip while a real 3D
+# folded-paper leaf (scripts/paperleaf) sweeps across the camera, flipping over its midrib and casting a
+# shadow. These pieces are shared by every scene: only the entering scene's forward timeline (EF) and the
+# leaving scene's back timeline (LB) key them, so two layers never fight over them.
+
+FRAME_IN, FRAME_R, FRAME_LEAVES = 9.0, 38.0, 22
+TG = {}
+
+
+def frame_d(mirror=False):
+    a, r = FRAME_IN, FRAME_R
+    c = r * 0.5523
+    x0, y0, x1, y1 = a, a, W - a, H - a
+    pts = [("M", (W / 2, y0)), ("L", (x1 - r, y0)), ("C", (x1 - r + c, y0), (x1, y0 + r - c), (x1, y0 + r)),
+           ("L", (x1, y1 - r)), ("C", (x1, y1 - r + c), (x1 - r + c, y1), (x1 - r, y1)),
+           ("L", (x0 + r, y1)), ("C", (x0 + r - c, y1), (x0, y1 - r + c), (x0, y1 - r)),
+           ("L", (x0, y0 + r)), ("C", (x0, y0 + r - c), (x0 + r - c, y0), (x0 + r, y0)), ("L", (W / 2, y0))]
+    out = []
+    for cmd, *ps in pts:
+        out.append(cmd + " " + " ".join(f"{(W - x) if mirror else x:.2f} {y:.2f}" for x, y in ps))
+    return " ".join(out) + " Z"
+
+
+def frac_at(d, target):
+    pts, acc = sample_bezier(d, 800)
+    best = min(range(len(pts)), key=lambda i: (pts[i][0] - target[0]) ** 2 + (pts[i][1] - target[1]) ** 2)
+    return acc[best] / acc[-1]
+
+
+def transition_globals():
+    if TG:
+        return TG
+    d, dm = frame_d(), frame_d(True)
+    trims, cols, kids = {}, [], []
+    for nm, dd in (("cw", d), ("ccw", dm)):
+        t1, t2, c1 = ID(), ID(), ID()
+        kids.append(shape(f"Frame vine light {nm}", *path_el(dd), stroke(col(LEAF_PALE, 0.55), 1.1, trim=trim(0, 0, id=t2))))
+        kids.append(shape(f"Frame vine {nm}", *path_el(dd), stroke(col(LEAF), 3.6, trim=trim(0, 0, id=t1), color_id=c1)))
+        trims[nm] = (t1, t2)
+        cols.append(c1)
+    leaves = []
+    for j in range(FRAME_LEAVES):
+        fj = (j + 0.5) / FRAME_LEAVES
+        (px, py), ang = point_at(d, fj)
+        nx, ny = -math.sin(ang), math.cos(ang)            # inward normal of the clockwise frame
+        side = 1 if j % 2 else -1
+        rot = math.atan2(ny, nx) + side * 0.62 + math.pi / 2
+        L = 20 + 6 * ((j * 5) % 3)
+        n, p = leaf(f"Frame leaf {j}", px, py, L, L * 0.62, rot=rot, light=[LEAF, LEAF_PALE, LEAF_DARK][j % 3],
+                    dark=[LEAF_DARK, LEAF, LEAF_DEEP][j % 3], rib=None, s=0.0)
+        kids.append(n)
+        leaves.append((p["node"], fj))
+    frame_id = ID()
+    frame = node("Frame vine", *kids, op=0.0, id=frame_id)
+    lnode = ID()
+    lf, lin = leaf3d("Transition leaf 3D", 0, 0, id=lnode, L=560, W=190, cy=280, halfW=440, top=-440, bottom=440,
+                     res=1.0, persp=900, cup=0.25, wave=0.5, fold=0.6, curl=0.4, shadow=0.3, shadowX=46, shadowY=70,
+                     shadowBlur=50, front="#86B455", back="#EFE6C9", glowColor="#E2F2A8", glow=0.9, alpha=0, live=0)
+    TG.update(d=d, frame=frame, frame_id=frame_id, trims=trims, cols=cols, leaves=leaves, leaf=lf, leaf_node=lnode,
+              lin=lin)
+    gset = {frame_id, lnode, *lin.values(), *cols, *[i for t in trims.values() for i in t], *[l for l, _ in leaves]}
+    TG["ids"] = gset
+    return TG
+
+
 def wipe_leaf_d():
     # leaf silhouette centred on origin (length 100, width 70), tip up-left
     return ("M0 -50 C 26 -36 36 -6 30 14 C 24 34 10 46 0 50 C -10 46 -24 34 -30 14 C -36 -6 -26 -36 0 -50 Z")
 
 
 def build_scene_root(sc, content_kids, overlay_kids=None, clip=True):
-    """root node: [overlay (unclipped wipe edge, flying leaf)] above [content (clipped by mask)] + mask shape."""
+    """root node: [overlay (unclipped wipe edge, bud)] above [content (clipped by mask)] + mask shape."""
     k = sc.k
     ox, oy = vine_tip(k)
     sc.origin = (ox, oy)
@@ -506,59 +656,97 @@ def build_scene_root(sc, content_kids, overlay_kids=None, clip=True):
     content = node(f"S{k} content", *content_kids, id=sc.content)
     if clip and k > 1:
         content.kids.insert(0, E("ClippingShape", sourceId=sc.mask, name="Wipe clip"))
-    # wipe overlay: edge outline following the mask + a big folded leaf crossing the camera
+    # wipe overlay: a paper edge with a soft green glow following the mask
     edge_id = ID()
     sc.edge = edge_id
     edge = shape(f"S{k} wipe edge", *path_el(wipe_leaf_d()),
                  stroke(col(CREAM, 0.9), 2.2, fixed=True),
                  stroke(col(LEAF, 0.55), 14, fixed=True, feather=8),
                  x=ox, y=oy, sx=26, sy=26, rot=0.2, op=0.0, id=edge_id)
-    fl, fparts = leaf(f"S{k} fold leaf", ox + 120, oy + 300, 560, 330, rot=-0.5, light=LEAF, dark=LEAF_DEEP,
-                      rib=CREAM, rib_a=0.5)
-    sc.fold = fparts
-    fl.attrs["opacity"] = 0.0
     bud_id = ID()
     bud = node(f"S{k} bud",
                shape("Bud glow", ellipse(30, 30), fill(col(LEAF_PALE, 0.5), feather=8)),
                shape("Bud", *path_el(leaf_full_d(18, 14)), fill(col(LEAF)), y=8),
                x=ox, y=oy, sx=0.0, sy=0.0, id=bud_id)
     sc.bud = bud_id
-    ov = node(f"S{k} wipe overlay", fl, edge, bud, *(overlay_kids or []), id=sc.overlay)
+    ov = node(f"S{k} wipe overlay", edge, bud, *(overlay_kids or []), id=sc.overlay)
     root = node(f"Scene {k}", ov, content, mask, op=0.0, id=sc.root)
     return root
 
 
+def _outs_inv(x):
+    """time fraction at which an ease-out reveal has covered fraction x of its length (approximation)."""
+    x = min(max(x, 0.0), 1.0)
+    return 1 - (1 - x) ** (1 / 2.4)
+
+
 def scene_wipe_in(sc):
-    """Signature transition: vine tip buds (anticipation), a leaf-shaped iris unfolds from it while a big paper
-    leaf folds across the camera."""
+    """Signature transition: the vine tip buds (anticipation), a vine runs round the screen edge from it and
+    becomes the frame, a leaf-shaped iris unfolds from the tip and a 3D paper leaf sweeps across the camera."""
+    g = transition_globals()
     ox, oy = sc.origin
     a = sc.ef
     a.key(sc.root, "opacity", [(0, 1.0, "hold")])
-    a.key(sc.bud, "scaleX", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.5, "in"), (18, 0.0)])
-    a.key(sc.bud, "scaleY", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.5, "in"), (18, 0.0)])
+    a.key(sc.content, "x", [(0, 0.0, "hold")])
+    a.key(sc.content, "y", [(0, 0.0, "hold")])
+    a.key(sc.content, "scaleX", [(0, 1.0, "hold")])
+    a.key(sc.content, "scaleY", [(0, 1.0, "hold")])
+    a.key(sc.bud, "scaleX", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.6, "in"), (18, 0.0)])
+    a.key(sc.bud, "scaleY", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.6, "in"), (18, 0.0)])
     a.key(sc.mask, "x", [(0, ox, "hold")])
     a.key(sc.mask, "y", [(0, oy, "hold")])
-    a.key(sc.mask, "scaleX", [(0, 0.01, "hold"), (8, 0.01, "fold"), (44, 26.0)])
-    a.key(sc.mask, "scaleY", [(0, 0.01, "hold"), (8, 0.01, "fold"), (44, 26.0)])
-    a.key(sc.mask, "rotation", [(0, -0.6, "hold"), (8, -0.6, "fold"), (44, 0.2)])
+    a.key(sc.mask, "scaleX", [(0, 0.01, "hold"), (10, 0.01, "fold"), (44, 26.0)])
+    a.key(sc.mask, "scaleY", [(0, 0.01, "hold"), (10, 0.01, "fold"), (44, 26.0)])
+    a.key(sc.mask, "rotation", [(0, -0.6, "hold"), (10, -0.6, "fold"), (46, 0.2)])
     for p in ("x", "y", "scaleX", "scaleY", "rotation"):
         a.tracks[(sc.edge, p)] = list(a.tracks[(sc.mask, p)])
-    a.key(sc.edge, "opacity", [(0, 0.0, "hold"), (8, 1.0, "hold"), (40, 1.0, "in"), (46, 0.0)])
-    f = sc.fold
-    a.key(f["node"], "opacity", [(0, 0.0, "hold"), (4, 1.0, "hold"), (40, 1.0, "hold"), (41, 0.0)])
-    a.key(f["node"], "x", [(0, ox + 160, "hold"), (4, ox + 160, "fold"), (40, ox - 640)])
-    a.key(f["node"], "y", [(0, oy + 520, "hold"), (4, oy + 520, "fold"), (40, oy - 380)])
-    a.key(f["node"], "rotation", [(0, -0.2, "hold"), (4, -0.2, "fold"), (40, -1.25)])
-    a.key(f["right"], "scaleX", [(0, 1.0, "hold"), (10, 1.0, "fold"), (34, -0.85)])
-    a.key(f["left"], "scaleX", [(0, 1.0, "hold"), (14, 1.0, "fold"), (38, 0.35)])
+    a.key(sc.edge, "opacity", [(0, 0.0, "hold"), (10, 1.0, "hold"), (42, 1.0, "in"), (48, 0.0)])
+    # ---- the vine runs round the edge both ways and becomes the frame, then lets go
+    f0 = frac_at(g["d"], (W - FRAME_IN, oy))
+    for nm, off in (("cw", f0), ("ccw", 1 - f0)):
+        for tid in g["trims"][nm]:
+            a.key(tid, "offset", [(0, off, "hold")])
+            a.key(tid, "start", [(0, 0.0, "hold")])
+            a.key(tid, "end", [(0, 0.0, "hold"), (2, 0.0, (0.3, 0.3, 0.3, 1.0)), (32, 0.5)])
+    a.key(g["frame_id"], "opacity", [(0, 1.0, "hold"), (36, 1.0, "io"), (58, 0.0)])
+    for cid in g["cols"]:
+        a.key(cid, "colorValue", [(0, col(LEAF_DEEP if sc.light else LEAF), "hold")])
+    for lid, fj in g["leaves"]:
+        dd = abs(fj - f0)
+        dd = min(dd, 1 - dd) / 0.5
+        t0 = 2 + 28 * _outs_inv(dd)
+        for p in ("scaleX", "scaleY"):
+            a.key(lid, p, [(0, 0.0, "hold"), (t0, 0.0, "back"), (t0 + 12, 1.0), (40, 1.0, "in"), (56, 0.0)])
+    # ---- the 3D paper leaf folds across the camera (tip leading, flipping over its midrib)
+    li, ln = g["lin"], g["leaf_node"]
+    K = lambda n, keys: a.key(li[n], "propertyValue", keys)
+    K("live", [(0, 1.0, "hold"), (46, 0.0, "hold")])
+    K("alpha", [(0, 0.0, "hold"), (4, 1.0, "hold"), (40, 1.0, "lin"), (45, 0.0)])
+    # crosses the screen centre as the iris is half open (frame ~25), so the leaf carries the cut
+    a.key(ln, "x", [(0, W / 2 + 470, "hold"), (4, W / 2 + 470, (0.3, 0.1, 0.62, 0.9)), (44, W / 2 - 470)])
+    a.key(ln, "y", [(0, 440 + 400, "hold"), (4, 440 + 400, (0.3, 0.1, 0.62, 0.9)), (44, 440 - 420)])
+    a.key(ln, "scaleX", [(0, 0.85, "hold"), (4, 0.85, "io"), (25, 1.32, "io"), (44, 1.0)])
+    a.key(ln, "scaleY", [(0, 0.85, "hold"), (4, 0.85, "io"), (25, 1.32, "io"), (44, 1.0)])
+    K("spin", [(0, -0.3, "hold"), (4, -0.3, "io"), (42, -1.05)])
+    K("flip", [(0, -0.5, "hold"), (4, -0.5, "fold"), (42, 2.7)])
+    K("fold", [(0, 1.15, "hold"), (4, 1.15, "outs"), (22, 0.22, "io"), (42, 0.6)])
+    K("curl", [(0, 0.9, "hold"), (4, 0.9, "io"), (42, 0.22)])
+    K("tipCurl", [(0, 0.8, "hold"), (4, 0.8, "outs"), (26, 0.0)])
+    K("pitch", [(0, 0.5, "hold"), (4, 0.5, "io"), (42, -0.35)])
 
 
 def scene_derive(sc):
     """Build reverse (EB), reduced-motion (ER), leave (LF/LB/LR) and hidden (H) timelines from the entrance."""
     k = sc.k
     ox, oy = sc.origin
+    gset = transition_globals()["ids"]
+    for p_, v_ in (("x", 0.0), ("y", 0.0), ("scaleX", 1.0), ("scaleY", 1.0)):
+        if (sc.content, p_) not in sc.ef.tracks:
+            sc.ef.key(sc.content, p_, [(0, v_, "hold")])   # leave timelines move it; every entry resets it
     final = {}
     for (obj, p), keys in sc.ef.tracks.items():
+        if obj in gset:
+            continue   # shared transition pieces: never held by a settled scene
         final[(obj, p)] = keys[-1][1]
     # wipe pieces settle invisible / mask fully open
     final[(sc.root, "opacity")] = 1.0
@@ -574,8 +762,19 @@ def scene_derive(sc):
     for (obj, p), v in final.items():
         er.key(obj, p, [(0, v, "hold")])
     er.key(sc.root, "opacity", [(0, 0.0, "lin"), (14, 1.0)])
+    g = transition_globals()
+
+    def hide_globals(an):
+        an.key(g["lin"]["alpha"], "propertyValue", [(0, 0.0, "hold")])
+        an.key(g["lin"]["live"], "propertyValue", [(0, 0.0, "hold")])
+        an.key(g["frame_id"], "opacity", [(0, 0.0, "hold")])
+    hide_globals(er)
+    # leaving forward: the old scene recedes a little (camera pulls back) while the leaf passes over it
+    cx, cy = W / 2, H * 0.45
     lf = Anim(f"S{k} leave fwd", 50)
     lf.key(sc.root, "opacity", [(0, 1.0, "hold"), (48, 0.0, "hold")])
+    for p, v0, v1 in (("scaleX", 1.0, 0.94), ("scaleY", 1.0, 0.94), ("x", 0.0, cx * 0.06), ("y", 0.0, cy * 0.06)):
+        lf.key(sc.content, p, [(0, v0, "antic"), (6, v0 + (v0 - v1) * 0.2, "io"), (46, v1)])
     for i in sc.fade_leave:
         lf.key(i, "opacity", [(0, 1.0, "lin"), (10, 0.0)])
     for hid, hx in sc.hits:
@@ -591,19 +790,47 @@ def scene_derive(sc):
     for p in ("x", "y", "scaleX", "scaleY", "rotation"):
         lb.tracks[(sc.edge, p)] = list(lb.tracks[(sc.mask, p)])
     lb.key(sc.edge, "opacity", [(0, 0.0, "lin"), (6, 1.0, "hold"), (34, 1.0, "lin"), (40, 0.0)])
-    f = sc.fold
-    lb.key(f["node"], "opacity", [(0, 0.0, "hold"), (2, 1.0, "hold"), (36, 1.0, "hold"), (37, 0.0)])
-    lb.key(f["node"], "x", [(0, -260, "fold"), (36, W + 300)])
-    lb.key(f["node"], "y", [(0, oy - 420, "fold"), (36, oy + 560)])
-    lb.key(f["node"], "rotation", [(0, 2.4, "fold"), (36, 1.6)])
-    lb.key(f["right"], "scaleX", [(0, -0.85, "fold"), (30, 1.0)])
-    lb.key(f["left"], "scaleX", [(0, 0.35, "fold"), (30, 1.0)])
+    # the folding-away scene is pushed toward the camera as it closes
+    for p, v1 in (("scaleX", 1.05), ("scaleY", 1.05), ("x", -cx * 0.05), ("y", -cy * 0.05)):
+        lb.key(sc.content, p, [(0, 1.0 if p.startswith("scale") else 0.0, "fold"), (40, v1)])
+    if k > 1:
+        # reverse: the frame unweaves back into the tip and the 3D leaf sweeps the other way, inner face first
+        f0 = frac_at(g["d"], (W - FRAME_IN, oy))
+        for nm, off in (("cw", f0), ("ccw", 1 - f0)):
+            for tid in g["trims"][nm]:
+                lb.key(tid, "offset", [(0, off, "hold")])
+                lb.key(tid, "start", [(0, 0.0, "hold")])
+                lb.key(tid, "end", [(0, 0.5, "fold"), (34, 0.0)])
+        lb.key(g["frame_id"], "opacity", [(0, 1.0, "hold"), (30, 1.0, "lin"), (40, 0.0)])
+        for cid in g["cols"]:
+            lb.key(cid, "colorValue", [(0, col(LEAF_DEEP if sc.light else LEAF), "hold")])
+        for lid, fj in g["leaves"]:
+            dd = abs(fj - f0)
+            dd = min(dd, 1 - dd) / 0.5
+            t1 = 2 + 30 * (1 - _outs_inv(1 - dd))
+            for p in ("scaleX", "scaleY"):
+                lb.key(lid, p, [(0, 1.0, "hold"), (t1, 1.0, "in"), (t1 + 6, 0.0)])
+        li, ln = g["lin"], g["leaf_node"]
+        K = lambda n, keys: lb.key(li[n], "propertyValue", keys)
+        K("live", [(0, 1.0, "hold"), (42, 0.0, "hold")])
+        K("alpha", [(0, 0.0, "hold"), (2, 1.0, "hold"), (34, 1.0, "lin"), (40, 0.0)])
+        lb.key(ln, "x", [(0, W / 2 - 470, "hold"), (2, W / 2 - 470, (0.3, 0.1, 0.62, 0.9)), (38, W / 2 + 470)])
+        lb.key(ln, "y", [(0, 440 - 420, "hold"), (2, 440 - 420, (0.3, 0.1, 0.62, 0.9)), (38, 440 + 400)])
+        lb.key(ln, "scaleX", [(0, 0.96, "hold"), (2, 0.96, "io"), (20, 1.3, "io"), (38, 0.85)])
+        lb.key(ln, "scaleY", [(0, 0.96, "hold"), (2, 0.96, "io"), (20, 1.3, "io"), (38, 0.85)])
+        K("spin", [(0, 2.25, "hold"), (2, 2.25, "io"), (38, 1.85)])
+        K("flip", [(0, 2.7, "hold"), (2, 2.7, "fold"), (38, -0.4)])
+        K("fold", [(0, 0.6, "hold"), (2, 0.6, "io"), (20, 0.2, "io"), (38, 1.1)])
+        K("curl", [(0, 0.25, "hold"), (2, 0.25, "io"), (38, 0.85)])
+        K("tipCurl", [(0, 0.0, "hold")])
+        K("pitch", [(0, -0.35, "hold"), (2, -0.35, "io"), (38, 0.5)])
     for i in sc.fade_leave:
         lb.key(i, "opacity", [(0, 1.0, "lin"), (8, 0.0)])
     for hid, hx in sc.hits:
         lb.key(hid, "x", [(0, hx + 2000, "hold")])
     lr = Anim(f"S{k} leave reduced", 13)
     lr.key(sc.root, "opacity", [(0, 1.0, "lin"), (12, 0.0)])
+    hide_globals(lr)
     for hid, hx in sc.hits:
         lr.key(hid, "x", [(0, hx + 2000, "hold")])
     hd = Anim(f"S{k} hidden", 1)
@@ -630,14 +857,14 @@ def metric_text(sc, num_kw, head_xy, head_w, head_align, unit_kw=None, dark_text
     sc.fade_leave.append(hero_id)
     uk = dict(unit_kw or {})
     unit_id = ID()
-    unit = text("Unit", [("unit", P(f"screen{k}Unit"))], font="dm", size=15, color=c, wght=500, ls=1.6,
+    unit = text("Unit", [("unit", P(f"screen{k}Unit"))], font="dm", size=16, color=c, wght=500, ls=1.5,
                 op=0.86, id=unit_id, wrap=True, **uk)
     hx, hy = head_xy
     rg, rid = word_reveal()
     head = text("Headline", [("Headline", P(f"screen{k}Headline"))], font="fr", size=head_size, color=c, wght=560,
                 soft=60, lh=head_size * 1.06, align=head_align, lp=lp(), modifiers=[rg])
     sup_id = ID()
-    sup = text("Support", [("Support", P(f"screen{k}Support"))], font="dm", size=16, color=c, wght=400, lh=23,
+    sup = text("Support", [("Support", P(f"screen{k}Support"))], font="dm", size=18, color=c, wght=400, lh=25,
                align=head_align, op=0.82, lp=lp(), id=sup_id)
     col_id = ID()
     al = {"left": "topLeft", "center": "topCenter", "right": "topRight"}[head_align]

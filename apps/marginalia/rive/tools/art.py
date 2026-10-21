@@ -273,54 +273,91 @@ def scene2(sc, ctx):
 # ======================================================================= scene 3
 def scene3(sc, ctx):
     serif, sans = ctx["serif"], ctx["sans"]
-    # composition: headline on top, monumental numeral mid-stage, support low
+    # composition: headline on top, monumental numeral mid-stage; a gilt-edged
+    # ribbon of page edges climbs out of an open book along the right margin
+    # and runs in behind the numeral's last digit (it "becomes" the number)
     head = copy_text(ctx, "Headline", 24, 6, serif(34, INK, 500, lh=37), "screen3Headline", w=342, h=78,
                      overflow="fitFontSize", wrap="wrap")
-    num = text("Hero Number", 10, 150, [(serif(150, OX, 600, ls=-3, lining=True), "9,840", bind("pagesReadText", 268))],
+    num = text("Hero Number", 10, 128, [(serif(150, OX, 600, ls=-3, lining=True), "9,840", bind("pagesReadText", 268))],
                w=370, h=160, align="center", overflow="fitFontSize", wrap="noWrap", valign="middle")
-    unit = copy_text(ctx, "Unit", 20, 314, sans(15, INK, 500, ls=1.6, lh=18), "screen3Unit", w=350, h=36,
+    unit = copy_text(ctx, "Unit", 20, 292, sans(15, INK, 500, ls=1.6, lh=18), "screen3Unit", w=350, h=36,
                      overflow="ellipsis", wrap="wrap")
-    rule = gold_rule(SW / 2, 356, 150)
-    sup = copy_text(ctx, "Support", 30, 612, sans(14, INK2, 400), "screen3Support", w=330)
+    rule = gold_rule(SW / 2, 334, 150)
+    sup = copy_text(ctx, "Support", 60, 348, sans(14, INK2, 400, lh=19), "screen3Support", w=270, h=40,
+                    overflow="ellipsis", wrap="wrap")
     copy = node("Copy", head, num, unit, rule, sup)
-    # ribbon of page edges: parallel strokes sweeping up into the numeral
+
+    # the band: twelve page edges (paper / shade / ink hairlines) with a gilt edge
     rib = node("Page-edge Ribbon").ensure()
-    base = [(90, 612), (150, 560), (170, 470), (120, 390), (200, 330), (300, 270), (420, 250)]
+    base = [(196, 606), (148, 588), (96, 552), (76, 504), (100, 466), (172, 448), (262, 442), (326, 414),
+            (348, 362), (334, 306), (308, 252), (296, 214)]
+    def offset(pts, off):
+        out = []
+        for i, (x, y) in enumerate(pts):
+            x0, y0 = pts[max(0, i - 1)]
+            x1, y1 = pts[min(len(pts) - 1, i + 1)]
+            tx, ty = x1 - x0, y1 - y0
+            l = math.hypot(tx, ty) or 1
+            out.append((x - ty / l * off, y + tx / l * off))
+        return out
     trims = []
-    for i in range(9):
-        off = (i - 4) * 4.2
-        pts = [(x + off * 0.4, y + off) for x, y in base]
-        col = [PAPER, PDEEP, PAPER, PSHADE, PAPER, PDEEP, PAPER, PSHADE, PAPER][i]
+    # body of the band, then the page hairlines on it, a dark fore-edge and a gilt edge
+    layers = [(0, PAPER, 30, 1.0)] + [((i - 5.5) * 2.5, PDEEP if i % 3 == 0 else PSHADE, 0.9, 0.9) for i in range(12)] \
+        + [(-15.2, INK2, 1.6, 0.8), (15.2, GOLD, 2.6, 1.0)]
+    for i, (off, col, w, a) in enumerate(layers):
         tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
-        sh = shape(f"Edge {i}", smooth(pts, closed=False), stroke(col, 3.2, cap="round", effects=[tr]))
-        rib.add(sh)
+        rib.add(shape(f"Edge {i}", smooth(offset(base, off), closed=False),
+                      stroke(col, w, a, cap="butt" if i == 0 else "round", effects=[tr])))
         trims.append(tr)
-    glint_tr = N("TrimPath", start=0, end=0.08, offset=0, name="Glint").ensure()
-    glint = shape("Gold Glint", smooth(base, closed=False), stroke(GOLDL, 2.0, cap="round", effects=[glint_tr]), opacity=0).ensure()
-    rib.add(glint)
-    shadow = shape("Ribbon Shadow", smooth([(x + 6, y + 14) for x, y in base], closed=False),
-                   stroke(PDEEP, 26, 0.35, cap="round"))
-    stack = node("Source Book", x=70, y=628, rotation=-0.12).ensure()
-    stack.add(shape("Edge Lines", *[rect(118, 0.8, x=4, y=-17 + j * 4) for j in range(9)], fill(PDEEP)))
-    stack.add(shape("Pages", rect(120, 36, x=4, y=0), fill(PAPER)))
-    stack.add(shape("Cover", rect(134, 46, x=0, y=0, r=4), fill(INK)))
-    stack.add(shape("Cover Band", rect(4, 46, x=-50, y=0), fill(GOLD)))
-    sc.content.add(copy, plx("ribbon", "mid", rib, shadow, stack))
-    # choreography: edges flow in (staggered), numeral resolves from them
+    rib.children.reverse()   # body at the back, gilt on top
+    cols = layers
+    glint_tr = N("TrimPath", start=0, end=0.07, offset=0, name="Glint").ensure()
+    glint = shape("Gold Glint", smooth(offset(base, 15.2), closed=False),
+                  stroke(GOLDL, 3.0, cap="round", effects=[glint_tr]), opacity=0).ensure()
+    rib.children.insert(0, glint)
+    shadow_tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
+    trims.append(shadow_tr)
+    shadow = shape("Ribbon Shadow", smooth([(x + 6, y + 10) for x, y in base], closed=False),
+                   stroke(PDEEP, 34, 0.35, cap="round", effects=[shadow_tr]))
+    # loose leaves lifting off the band toward the numeral
+    leaves = []
+    for i, (lx, ly, lr) in enumerate([(300, 230, -0.3), (262, 200, 0.4), (330, 196, 0.15), (236, 236, -0.5),
+                                       (350, 250, 0.6)]):
+        lf = node(f"Loose Leaf {i}", x=lx, y=ly, rotation=lr, opacity=0).ensure()
+        lf.add(shape("Lines", rect(10, 1, y=-3), rect(8, 1, x=-1, y=1), rect(10, 1, y=5), fill(INK3, 0.5)))
+        lf.add(shape("Leaf", rect(16, 21, r=1), fill(PAPER), stroke(PDEEP, 0.8)))
+        leaves.append(lf)
+    book, bparts = open_book("Source Book", SW / 2, 650, 270, cover=INK)
+    sc.content.add(copy, plx("leaves", "near", leaves), plx("ribbon", "mid", rib, shadow, book))
+    # choreography: book opens (anticipation), edges stream out of it (staggered),
+    # loose leaves lift toward the numeral, which resolves as they arrive
+    sc.tw(bparts["left"], "scaleX", 0, 380, 0.05, 1.0, "inout")
+    sc.tw(bparts["right"], "scaleX", 0, 380, 0.05, 1.0, "inout")
     for i, tr in enumerate(trims):
-        sc.tw(tr, "end", 120 + i * 35, 950 + i * 35, 0.0, 1.0, "inout")
-    sc.tw(stack, "y", 0, 300, 680, 640, "out")
-    sc.tw(num, "opacity", 650, 1100, 0.0, 1.0, "soft")
-    sc.tw(num, "scaleX", 650, 1200, 0.9, 1.0, "back")
-    sc.tw(num, "scaleY", 650, 1200, 0.9, 1.0, "back")
+        k = 0 if i == 0 else (abs(i - 6.5) * 0.5 if i < len(cols) else 2)
+        sc.tw(tr, "end", 160 + k * 30, 1000 + k * 30, 0.0, 1.0, "inout")
+    for i, lf in enumerate(leaves):
+        t0 = 620 + i * 90
+        y0 = lf.attrs["y"]
+        sc.tw(lf, "opacity", t0, t0 + 160, 0.0, 1.0, "linear")
+        sc.tw(lf, "y", t0, t0 + 700, 330, y0, "out")
+        sc.tw(lf, "x", t0, t0 + 700, 320, lf.attrs["x"], "out")
+        sc.tw(lf, "rotation", t0, t0 + 700, 1.2, lf.attrs["rotation"], "back")
+    sc.tw(num, "opacity", 600, 1050, 0.0, 1.0, "soft")
+    sc.tw(num, "scaleX", 600, 1200, 0.92, 1.0, "back")
+    sc.tw(num, "scaleY", 600, 1200, 0.92, 1.0, "back")
     sc.tw(head, "opacity", 0, 400, 0.0, 1.0, "soft")
     sc.tw(unit, "opacity", 1000, 1300, 0.0, 1.0, "soft")
     sc.tw(rule, "scaleX", 1100, 1500, 0.0, 1.0, "inout")
     fade_up(sc, sup, 1300, 1750)
     sc.tw(glint, "opacity", 1200, 1500, 0.0, 1.0, "soft")
-    # idle: a gold glint travels along the ribbon (offset loops 0->1, seamless)
+    # idle: a gold glint runs up the gilt edge; the loose leaves breathe
     sc.idle_ms = 4000
     sc.idle_keys(glint_tr, "offset", [(0, 0, "linear"), (4000, 1, "linear")])
+    for i, lf in enumerate(leaves):
+        y0 = lf.attrs["y"]
+        o = (i * 700) % 2000
+        sc.idle_keys(lf, "y", [(0, y0, "sine"), (1000 + o, y0 - 4, "sine"), (2000 + o, y0, "sine"), (4000, y0, "linear")])
 
 
 # ======================================================================= scene 4
@@ -431,36 +468,40 @@ def scene5(sc, ctx):
 def scene6(sc, ctx):
     serif = ctx["serif"]
     italic = ctx["italic"]
-    copy, P = ctx["metric_copy"](sc, "passagesSaved", layout="left", head_w=250)
-    # the persistent ribbon becomes the big bookmark (see persistent pose 6)
+    copy, P = ctx["metric_copy"](sc, "passagesSaved", layout="left", head_w=230)
+    # the persistent ribbon becomes the bookmark (pose 6, x=298) laid over a
+    # pile of anonymous slips; type ornaments drift round it
     pile = node("Fragment Pile").ensure()
     frags = []
+    r6 = random.Random(61)
     targets = []
-    for i in range(12):
-        targets.append((318 + rng.uniform(-34, 26), 628 - i * 15, rng.uniform(-0.07, 0.07)))
+    for i in range(13):
+        targets.append((274 + r6.uniform(-26, 22), 630 - i * 14.5, r6.uniform(-0.09, 0.09)))
     for i, (tx, ty, tr) in enumerate(targets):
-        w = rng.choice([90, 120, 140, 80, 110])
+        w = r6.choice([118, 140, 156, 128, 146])
         g = node(f"Fragment {i}", x=tx, y=ty, rotation=tr).ensure()
-        g.add(shape("Lines", rect(w * 0.8, 1.8, y=-3.5), rect(w * 0.55, 1.8, x=-w * 0.12, y=2.5), fill(INK3, 0.55)))
-        g.add(shape("Slip", rect(w, 15, r=1), fill(PAPER), stroke(PDEEP, 0.9)))
+        g.add(shape("Lines", rect(w * 0.78, 1.6, x=-w * 0.03, y=-4), rect(w * 0.62, 1.6, x=-w * 0.1, y=0.5),
+                    rect(w * 0.7, 1.6, x=-w * 0.06, y=5), fill(INK3, 0.5)))
+        g.add(shape("Slip", rect(w, 19, r=1.5), fill(PAPER if i % 3 else "FBF6EA"), stroke(PDEEP, 0.9)))
+        g.add(shape("Slip Shadow", rect(w, 19, x=2, y=3, r=1.5), fill(PDEEP, 0.35)))
         frags.append(g)
     glyphs = []
-    for i, (gch, gx, gy, gs, col) in enumerate([("“", 238, 410, 84, OX), ("¶", 372, 452, 50, GOLDD), ("”", 372, 548, 70, OX),
-                                               ("§", 232, 520, 44, GOLDD)]):
-        t = text(f"Glyph {i}", gx - 30, gy - gs * 0.6, [(italic(gs, col, 500), gch, None)], w=60, align="center")
+    for i, (gch, gx, gy, gs, col) in enumerate([("\u201c", 172, 430, 104, OX), ("\u00b6", 362, 432, 56, GOLDD),
+                                               ("\u201d", 366, 560, 80, OX), ("\u00a7", 168, 560, 52, GOLDD)]):
+        t = text(f"Glyph {i}", gx - 40, gy - gs * 0.6, [(italic(gs, col, 500), gch, None)], w=80, align="center")
         glyphs.append(t)
     for g in reversed(frags):
         pile.add(g)
     pile.children[0:0] = glyphs
     sc.content.add(copy, plx("pile", "mid", pile))
     starts = [(-60, 380), (450, 300), (-40, 560), (440, 640), (120, 720), (460, 450), (-80, 470), (200, 260),
-              (480, 560), (60, 700), (-70, 300), (470, 380)]
+              (480, 560), (60, 700), (-70, 300), (470, 380), (230, 760)]
     for i, g in enumerate(frags):
         sx, sy = starts[i]
-        t0 = 200 + i * 75
+        t0 = 200 + i * 70
         sc.tw(g, "x", t0, t0 + 700, sx, g.attrs["x"], "out")
         sc.tw(g, "y", t0, t0 + 700, sy, g.attrs["y"], "back")
-        sc.tw(g, "rotation", t0, t0 + 700, rng.uniform(-1.2, 1.2), g.attrs["rotation"], "out")
+        sc.tw(g, "rotation", t0, t0 + 700, r6.uniform(-1.2, 1.2), g.attrs["rotation"], "out")
         sc.tw(g, "opacity", t0, t0 + 200, 0.0, 1.0, "linear")
     for i, t in enumerate(glyphs):
         t0 = 900 + i * 110
@@ -477,21 +518,23 @@ def scene6(sc, ctx):
 # ======================================================================= scene 7
 def scene7(sc, ctx):
     copy, P = ctx["metric_copy"](sc, "longestStreakDays", layout="left", num_size=128, head_w=300)
-    stack = node("Lit Stack", x=230, y=630).ensure()
-    glow = shape("Lamp Glow", ellipse(420, 300, x=-40, y=-200),
-                 fill(paint=rad(-40, -200, 210, [(0, GOLDL, 0.55), (1, GOLDL, 0)]))).ensure()
+    # a brass reading lamp leans in from the right; its cone of light falls on
+    # a stack of volumes whose day-tabs tick out one after another
+    stack = node("Lit Stack", x=176, y=630).ensure()
     books = node("Books").ensure()
-    cols = [INK, OX, GREEN, INK2]
-    hs = [46, 38, 52, 40]
+    cols = [INK, OX, GREEN, INK2, OXD]
+    hs = [40, 34, 46, 36, 30]
+    ws = [228, 214, 232, 206, 196]
     y = 0
     blocks = []
-    for i in range(4):
-        h = hs[i]
-        b = node(f"Volume {i + 1}", x=(i % 2) * 10 - 5, y=y - h / 2).ensure()
-        b.add(shape("Page Lines", *[rect(176, 0.8, x=6, y=-h / 2 + 6 + j * 4) for j in range(int((h - 10) // 4))],
+    for i in range(5):
+        h, w = hs[i], ws[i]
+        b = node(f"Volume {i + 1}", x=((i * 7) % 3 - 1) * 8, y=y - h / 2).ensure()
+        b.add(shape("Page Lines", *[rect(w - 22, 0.8, x=6, y=-h / 2 + 6 + j * 3.6) for j in range(int((h - 10) // 3.6))],
                     fill(PDEEP)))
-        b.add(shape("Pages", rect(178, h - 8, x=6, y=0), fill(PAPER)))
-        b.add(shape("Cover", rect(196, h, x=0, y=0, r=4), fill(cols[i])))
+        b.add(shape("Pages", rect(w - 20, h - 8, x=6, y=0), fill(PAPER)))
+        b.add(shape("Spine Band", rect(3, h, x=-w / 2 + 14, y=0), fill(GOLD, 0.9)))
+        b.add(shape("Cover", rect(w, h, x=0, y=0, r=4), fill(cols[i])))
         blocks.append(b)
         y -= h + 2
     for b in reversed(blocks):
@@ -500,25 +543,45 @@ def scene7(sc, ctx):
     tab_cols = [OX, GOLD, INK2, OX, GOLD, INK2, OX]
     tabs_n = node("Day Tabs").ensure()
     for i in range(7):
-        t = node(f"Tab {i + 1}", x=96, y=-12 - i * 24).ensure()
-        t.add(shape("Tab", rect(26, 16, x=13, y=0, rtl=0.1, rtr=6, rbl=0.1, rbr=6), fill(tab_cols[i])))
+        t = node(f"Tab {i + 1}", x=112, y=-10 - i * 25).ensure()
+        t.add(shape("Tab", rect(26, 15, x=13, y=0, rtl=0.1, rtr=6, rbl=0.1, rbr=6), fill(tab_cols[i])))
         tabs.append(t)
         tabs_n.add(t)
-    stack.add(books, tabs_n, glow)
-    sc.content.add(copy, plx("stack", "mid", stack))
+    stack.add(books, tabs_n)
+    # lamp
+    lamp = node("Reading Lamp", x=0, y=0).ensure()
+    cone = shape("Light Cone", poly([(272, 360), (304, 386), (300, 452), (52, 452)]),
+                 fill(paint=lin(292, 372, 176, 452, [(0, "FFF3D2", 0.7), (1, GOLDL, 0.05)])), opacity=0).ensure()
+    pool = shape("Light Pool", ellipse(250, 30, x=176, y=440),
+                 fill(paint=rad(176, 440, 125, [(0, "FFF3D2", 0.6), (1, GOLDL, 0)])), opacity=0).ensure()
+    bulb = shape("Bulb", ellipse(16, 16, x=291, y=371), fill(paint=rad(291, 371, 10, [(0, "FFFBEA", 1), (1, GOLDL, 1)])),
+                 opacity=0).ensure()
+    arm = node("Lamp Arm", x=366, y=640).ensure()
+    # shade: narrow end at the arm (upper right), mouth facing down-left
+    arm.add(shape("Shade Rim", poly([(-96, -270), (-64, -244)], closed=False), stroke(GOLDL, 2, cap="round")))
+    arm.add(shape("Shade", poly([(-48, -318), (-30, -300), (-64, -244), (-96, -270)]),
+                  fill(paint=lin(-40, -310, -80, -256, [(0, GOLDD, 1), (1, GOLD, 1)])), stroke(GOLDD, 1)))
+    arm.add(shape("Arm", smooth([(0, 0), (0, -150), (-8, -250), (-38, -308)], closed=False), stroke(GOLDD, 4, cap="round")))
+    arm.add(shape("Base", ellipse(60, 12, x=0, y=0), fill(GOLDD)))
+    lamp.add(bulb, arm)
+    sc.content.add(copy, plx("lamp", "far", lamp), plx("stack", "mid", cone, pool, stack))
     for i, b in enumerate(blocks):
-        sc.tw(b, "y", 150 + i * 90, 650 + i * 90, b.attrs["y"] - 60, b.attrs["y"], "back")
-        sc.tw(b, "opacity", 150 + i * 90, 300 + i * 90, 0.0, 1.0, "linear")
+        sc.tw(b, "y", 150 + i * 80, 650 + i * 80, b.attrs["y"] - 60, b.attrs["y"], "back")
+        sc.tw(b, "opacity", 150 + i * 80, 300 + i * 80, 0.0, 1.0, "linear")
+    sc.tw(arm, "rotation", 0, 700, 0.18, 0.0, "back")
+    sc.tw(bulb, "opacity", 520, 640, 0.0, 1.0, "linear")
+    sc.tw(cone, "opacity", 600, 1000, 0.0, 1.0, "soft")
+    sc.tw(pool, "opacity", 700, 1100, 0.0, 1.0, "soft")
     for i, t in enumerate(tabs):
         t0 = 700 + i * 110   # ticking rhythm
-        sc.tw(t, "x", t0, t0 + 180, 70, 96, "back")
+        sc.tw(t, "x", t0, t0 + 180, 84, 112, "back")
         sc.tw(t, "opacity", t0, t0 + 60, 0.0, 1.0, "linear")
-    sc.tw(glow, "opacity", 0, 900, 0.0, 1.0, "soft")
     sc.idle_ms = 7000
     for i, t in enumerate(tabs):
         o = 300 + i * 160
-        sc.idle_keys(t, "x", [(0, 96, "linear"), (o, 96, "out"), (o + 140, 102, "inout"), (o + 360, 96, "linear"), (7000, 96, "linear")])
-    sc.idle_keys(glow, "opacity", [(0, 1, "sine"), (3500, 0.75, "sine"), (7000, 1, "linear")])
+        sc.idle_keys(t, "x", [(0, 112, "linear"), (o, 112, "out"), (o + 140, 118, "inout"), (o + 360, 112, "linear"), (7000, 112, "linear")])
+    sc.idle_keys(cone, "opacity", [(0, 1, "sine"), (3500, 0.8, "sine"), (7000, 1, "linear")])
+    sc.idle_keys(pool, "opacity", [(0, 1, "sine"), (3500, 0.75, "sine"), (7000, 1, "linear")])
 
 
 # ======================================================================= scene 8
@@ -530,22 +593,28 @@ def scene8(sc, ctx):
     # two ribbons weave around the book: each passes behind it, then over it
     trs = []
 
-    def band(name, pts, col, w, edge):
+    def band(name, pts, col, w, edge, hi):
+        # a satin bookmark ribbon: dark selvedge, body, and a light sheen line
         tr = N("TrimPath", start=0, end=1, modeValue="sequential", name="Draw").ensure()
         trs.append(tr)
-        return shape(name, smooth(pts, closed=False), stroke(edge, w + 3, cap="round", effects=[tr]),
-                     stroke(col, w, cap="round", effects=[N("TrimPath", start=0, end=1, name="Draw Twin").ensure()]))
+        return shape(name, smooth(pts, closed=False), stroke(edge, w + 3, cap="butt", effects=[tr]),
+                     stroke(col, w, cap="butt", effects=[N("TrimPath", start=0, end=1, name="Draw Twin").ensure()]),
+                     stroke(hi, w * 0.22, 0.7, cap="butt",
+                            effects=[N("TrimPath", start=0, end=1, name="Draw Sheen").ensure()]))
     a_back = [(-210, -230), (-150, -150), (-60, -95), (40, -80)]
     a_front = [(40, -80), (120, -60), (150, -10), (90, 40), (-40, 46)]
     b_back = [(210, -250), (140, -170), (60, -100), (-40, -78)]
     b_front = [(-40, -78), (-120, -55), (-150, -5), (-90, 42), (40, 50)]
     back = node("Under").ensure()
-    back.add(band("Gold Ribbon (behind)", b_back, GOLD, 12, GOLDD), band("Oxblood Ribbon (behind)", a_back, OX, 12, OXD))
+    back.add(band("Gold Ribbon (behind)", b_back, GOLD, 17, GOLDD, GOLDL),
+             band("Oxblood Ribbon (behind)", a_back, OX, 17, OXD, OXL))
     front = node("Over").ensure()
-    front.add(band("Gold Ribbon (over)", b_front, GOLD, 12, GOLDD), band("Oxblood Ribbon (over)", a_front, OX, 12, OXD))
+    front.add(band("Gold Ribbon (over)", b_front, GOLD, 17, GOLDD, GOLDL),
+              band("Oxblood Ribbon (over)", a_front, OX, 17, OXD, OXL))
     quotes = []
-    for i, (qx, qy, ch, s) in enumerate([(-130, -190, "“", 54), (120, -200, "”", 54), (0, -240, "“", 30)]):
-        q = text(f"Quote {i}", qx - 25, qy, [(italic(s, OX if i < 2 else GOLDD, 500), ch, None)], w=50, align="center")
+    # two voices: an opening quote on one side, a closing quote answering it
+    for i, (qx, qy, ch, s, col) in enumerate([(-128, -214, "\u201c", 84, OX), (128, -222, "\u201d", 84, GOLDD)]):
+        q = text(f"Quote {i}", qx - 40, qy, [(italic(s, col, 500), ch, None)], w=80, align="center")
         quotes.append(q)
     hero.add(quotes, front, book, back)
     sc.content.add(copy, plx("weave", "mid", hero))
@@ -897,9 +966,9 @@ def card_layers(prefix, parts):
 def scene10(sc, ctx):
     serif, sans, italic = ctx["serif"], ctx["sans"], ctx["italic"]
     sc.enter_ms = 2000
-    head = copy_text(ctx, "Summary Headline", 85, 0, serif(32, INK, 500, lh=34), "summaryHeadline", w=220,
-                     h=72, overflow="fitFontSize", wrap="wrap")
-    sup = copy_text(ctx, "Summary Support", 30, 80, sans(14, INK2, 400, lh=18), "summarySupport", w=330, h=36,
+    head = copy_text(ctx, "Summary Headline", 22, 8, serif(28, INK, 500, lh=31), "summaryHeadline", w=346,
+                     h=64, overflow="fitFontSize", wrap="wrap")
+    sup = copy_text(ctx, "Summary Support", 30, 74, sans(14, INK2, 400, lh=18), "summarySupport", w=330, h=36,
                     overflow="ellipsis", wrap="wrap")
     full = node("Full Summary").ensure()
     card, cp = card_content(ctx, "Summary Card")
@@ -954,21 +1023,21 @@ def scene10(sc, ctx):
 # ======================================================================= persistent objects
 RIBBON_POSES = {
     #  x,   end-y, sway, width, tilt     (kept clear of the copy: edges, or art zones)
-    1: (378, 300, 3, 18, -40),   # runs down the margin into the pop-up book
+    1: (382, 300, 2, 18, -16),   # runs down the margin toward the pop-up book
     2: (378, 128, 3, 18, 0),
     3: (12, 214, 5, 18, 4),
     4: (378, 112, 3, 18, 0),
     5: (378, 226, -4, 18, 0),
-    6: (322, 470, 5, 44, 0),     # becomes the bookmark the fragments collect under
+    6: (274, 448, 5, 44, 0),     # becomes the bookmark the fragments collect under
     7: (378, 168, 4, 18, -3),
     8: (12, 300, 5, 18, 10),
     9: (378, 150, 2, 18, 0),
-    10: (362, 206, 2, 18, -4),   # drapes over the share card's corner
+    10: (362, 168, 2, 18, -3),   # tucked over the share card's corner
 }
 
 
 def ribbon_vertices(end, sway, w, tilt):
-    top = -110
+    top = -14   # emerges from under the progress rule (the book's headband)
     ts = [0, 0.25, 0.5, 0.75, 1.0]
     cxs = [sway * math.sin(math.pi * t) + tilt * t for t in ts]
     cys = [top + (end - top) * t for t in ts]
@@ -980,7 +1049,7 @@ def ribbon_vertices(end, sway, w, tilt):
 
 
 def persistent(ctx):
-    root = node("Persistent (above scenes)").ensure()
+    root = node("Carried Objects").ensure()
     layers = []
     # ---- the bookmark ribbon: one object for the whole story
     verts0 = ribbon_vertices(*RIBBON_POSES[1][1:])
@@ -1029,12 +1098,22 @@ def persistent(ctx):
 
     # ---- the moon: carried from scene 4 into scene 5 (becomes the spotlight)
     moon = node("Carried Moon", x=SW / 2, y=280, opacity=0).ensure()
-    line = shape("Pendulum Line", rect(1.4, 120, x=0, y=60), fill(GOLD)).ensure()
+    line = shape("Pendulum Line", rect(1.4, 76, x=0, y=38), fill(GOLD)).ensure()
     disc = node("Moon Disc", x=0, y=120).ensure()
-    halo = shape("Halo", ellipse(130, 130), fill(paint=rad(0, 0, 65, [(0, PAPER, 0.55), (1, PAPER, 0)]))).ensure()
-    disc.add(shape("Craters", ellipse(14, 12, x=-14, y=-8), ellipse(9, 8, x=12, y=10), ellipse(7, 6, x=8, y=-16),
-                   fill(PDEEP, 0.75)))
-    disc.add(shape("Moon", ellipse(76, 76), fill(paint=rad(-12, -14, 50, [(0, PAPER, 1), (1, PSHADE, 1)])), stroke(GOLD, 1.2)))
+    halo = shape("Halo", ellipse(156, 156), fill(paint=rad(0, 0, 78, [(0, PAPER, 0.5), (1, PAPER, 0)]))).ensure()
+    # the moon itself is a lit sphere printed as an engraving (scripts/moon.luau
+    # + shaders/moon.wgsl); keyed swing / carry / spotlight shrink still apply
+    V = ctx["V"]
+    etched = N("ScriptedDrawable",
+               N("ScriptInputNumber", propertyValue=88, name="size"),
+               N("ScriptInputNumber", N("DataBindContext", sourcePathIds=V.path("currentScreen"), propertyKey=243),
+                 propertyValue=1, name="screen"),
+               N("ScriptInputBoolean", N("DataBindContext", sourcePathIds=V.path("reducedMotion"), propertyKey=245),
+                 name="still"),
+               N("ScriptInputBoolean", N("DataBindContext", sourcePathIds=V.path("_motionPaused"), propertyKey=245),
+                 name="paused"),
+               scriptAssetId=ctx["moon_script"].id, name="Etched Moon")
+    disc.add(etched)
     disc.add(halo)
     moon.add(line, disc)
     root.add(moon)
@@ -1078,33 +1157,52 @@ def persistent(ctx):
     trans(s_h, s_sp, at(5), ms=400, ease="soft")
     layers.append((L3, anims3))
 
-    # ---- page-turn fold shadow (cast by the turning leaf)
-    fold = node("Page Fold", x=SW, y=0, opacity=0).ensure()
-    fold.add(shape("Fold Shadow", rect(70, SH + 300, x=35, y=SH / 2),
-                   fill(paint=lin(0, 0, 70, 0, [(0, INK, 0.38), (1, INK, 0)]))))
-    fold.add(shape("Fold Light", rect(10, SH + 300, x=-5, y=SH / 2),
-                   fill(paint=lin(-10, 0, 0, 0, [(0, "FFFFFF", 0), (1, "FFFFFF", 0.7)]))))
-    root.add(fold)
-    L4 = Layer("Page Turn")
-    ms = ctx["EXIT_MS"]
-    rest = Anim("Turn Rest", 17).set(fold, "opacity", 0.0)
-    fwd = Anim("Turn Forward", ms)
-    fwd.tw(fold, "x", 0, ms, SW, 0, "inout")
-    fwd.k(fold, "opacity", 0, 0.0, "out").k(fold, "opacity", 120, 1.0, "linear").k(fold, "opacity", ms - 80, 1.0, "linear").k(fold, "opacity", ms, 0.0)
-    bwd = Anim("Turn Back", ms)
-    bwd.tw(fold, "x", 0, ms, 0, SW, "inout")
-    bwd.k(fold, "opacity", 0, 0.0, "out").k(fold, "opacity", 120, 1.0, "linear").k(fold, "opacity", ms - 80, 1.0, "linear").k(fold, "opacity", ms, 0.0)
-    s_r = L4.state(rest, 100, 0)
-    s_f = L4.state(fwd, 360, -120)
-    s_b = L4.state(bwd, 360, 120)
-    L4.start(s_r)
-    trans(L4.any, s_f, ctrig("_turnFwd"))
-    trans(L4.any, s_b, ctrig("_turnBack"))
-    trans(s_f, s_r, exit_pct=100)
-    trans(s_b, s_r, exit_pct=100)
-    layers.append((L4, [rest, fwd, bwd]))
-    root.children = [fold, ribbon, moon]
+    root.children = [ribbon, moon]
     return root, layers
+
+
+# ======================================================================= the book cover
+def cover_artboard(ctx):
+    """The closed book the recap opens on: oxblood cloth, gilt frame, stamped
+    wordmark and year. The Page Stage script turns it open (a stiff 3D leaf
+    with a marbled endpaper on its back) to reveal page 1. Static artwork:
+    no state machine of its own."""
+    V, italic, sans = ctx["V"], ctx["italic"], ctx["sans"]
+    st = N("LayoutComponentStyle", name="Cover Style").ensure()
+    ab = N("Artboard", isComponent=True, width=SW, height=SH, styleId=st.id,
+           viewModelId=V.el.id, viewModelInstanceId=V.inst.id, clip=True, name="Cover").ensure()
+    g = node("Book Cover").ensure()
+    cx = SW / 2
+    # gilt frame (double rule) with corner fleurons
+    frame = node("Gilt Frame").ensure()
+    frame.add(shape("Outer Rule", rect(SW - 44, SH - 44, x=cx, y=SH / 2, r=2), stroke(GOLD, 1.4)))
+    frame.add(shape("Inner Rule", rect(SW - 58, SH - 58, x=cx, y=SH / 2, r=1), stroke(GOLD, 0.7, 0.8)))
+    for i, (fx, fy) in enumerate([(22, 22), (SW - 22, 22), (22, SH - 22), (SW - 22, SH - 22)]):
+        frame.add(shape(f"Fleuron {i}", star(16, 16, 4, 0.25, x=fx, y=fy), fill(GOLDL)))
+    # emblem: an open-book doorway, stamped in gold
+    emb = node("Emblem", x=cx, y=258).ensure()
+    emb.add(shape("Door", arch(46, 70, x=0, y=6), stroke(GOLDL, 1.6)))
+    emb.add(shape("Door Inner", arch(34, 56, x=0, y=6), fill(GOLD, 0.35)))
+    emb.add(shape("Book", smooth([(-70, 16), (-36, 6), (0, 16), (36, 6), (70, 16), (70, 24), (36, 14), (0, 24),
+                                  (-36, 14), (-70, 24)], sharp={0, 2, 4, 5, 7, 9}), fill(GOLDL)))
+    emb.add(shape("Star", star(14, 14, 4, 0.25, x=0, y=-70), fill(GOLDL)))
+    # stamped title: debossed shadow under gilt
+    title_sh = text("Title Shadow", 0, 324, [(italic(58, OXD, 600), "Marginalia", None)], w=SW, align="center")
+    title_sh.attrs.update(x=1.2, y=326)
+    title = text("Title", 0, 324, [(italic(58, GOLDL, 600), "Marginalia", None)], w=SW, align="center")
+    rule = node("Title Rule", x=cx, y=418).ensure()
+    rule.add(shape("Line L", rect(64, 1, x=-48), fill(GOLD)), shape("Line R", rect(64, 1, x=48), fill(GOLD)),
+             shape("Lozenge", star(9, 9, 4, 0.4), fill(GOLDL)))
+    year = text("Year", 0, 432, [(sans(14, GOLDL, 500, ls=6), str(ctx["DATA"].get("year")), bind("yearText", 268))],
+                w=SW, align="center")
+    # cloth: oxblood with a deeper hinge along the spine and a soft sheen
+    hinge = shape("Hinge", rect(16, SH, x=8, y=SH / 2), fill(paint=lin(0, 0, 16, 0, [(0, "000000", 0.35), (1, "000000", 0)])))
+    groove = shape("Groove", rect(2, SH, x=24, y=SH / 2), fill("000000", 0.18))
+    cloth = shape("Cloth", rect(SW, SH, x=cx, y=SH / 2),
+                  fill(paint=lin(0, 0, SW, SH, [(0, OXD, 1), (0.45, OX, 1), (1, OXD, 1)])))
+    g.add(year, rule, title, title_sh, emb, frame, groove, hinge, cloth)
+    ab.add(st, g)
+    return ab
 
 
 # ======================================================================= share card artboard

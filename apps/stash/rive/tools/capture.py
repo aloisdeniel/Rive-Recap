@@ -82,13 +82,13 @@ def groups():
     def transitions():
         for k in range(1, 10):
             base = fixture_flags("sample") + SEEN + [f"--data=currentScreen={k}", "--advance=2.6s", "--key=right"]
-            job(f"{CAP}/transitions/forward-{k:02d}-to-{k + 1:02d}-f20.png", base + ["--advance=20"])
-            job(f"{CAP}/transitions/forward-{k:02d}-to-{k + 1:02d}-f30.png", base + ["--advance=30"])
+            job(f"{CAP}/transitions/forward-{k:02d}-to-{k + 1:02d}-f26.png", base + ["--advance=26"])
+            job(f"{CAP}/transitions/forward-{k:02d}-to-{k + 1:02d}-f34.png", base + ["--advance=34"])
             back = fixture_flags("sample") + SEEN + [f"--data=currentScreen={k + 1}", "--advance=2.6s", "--key=left"]
-            job(f"{CAP}/transitions/back-{k + 1:02d}-to-{k:02d}-f14.png", back + ["--advance=14"])
+            job(f"{CAP}/transitions/back-{k + 1:02d}-to-{k:02d}-f24.png", back + ["--advance=24"])
         rm = fixture_flags("sample") + SEEN + ["--data=reducedMotion=true", "--data=currentScreen=2", "--advance=1s", "--key=right"]
         job(f"{CAP}/reduced-motion/transition-02-to-03-f8.png", rm + ["--advance=8"])
-        for f in (4, 10, 17, 22, 28, 40):
+        for f in (8, 16, 24, 28, 32, 40):
             job(f"{CAP}/transitions/signature-02-to-03/frame{f:02d}.png",
                 fixture_flags("sample") + SEEN + ["--data=currentScreen=2", "--advance=2.6s", "--key=right", f"--advance={f}"])
     g["transitions"] = transitions
@@ -112,14 +112,24 @@ def groups():
     def interaction():
         base = fixture_flags("sample") + SEEN + ["--data=currentScreen=4", "--advance=3s"]
         job(f"{CAP}/interaction/coin-toy-rest.png", base)
-        for f in (12, 30, 50):
-            job(f"{CAP}/interaction/coin-toy-nudge-f{f}.png", base + ["--pointer=click@50,694", f"--advance={f}"])
+        for f in (8, 20, 34):
+            job(f"{CAP}/interaction/coin-toy-nudge-f{f}.png", base + ["--pointer=click@129,718", f"--advance={f}"])
         job(f"{CAP}/interaction/keyboard-focus-continue.png", fixture_flags("sample") + ["--advance=1s", "--key=tab", "--key=tab", "--key=tab", "--advance=10"])
         job(f"{CAP}/interaction/paused.png", fixture_flags("sample") + ["--advance=2.5s", "--key=space", "--advance=20"])
         job(f"{CAP}/interaction/runtime-update-before.png", fixture_flags("sample") + SEEN + ["--data=currentScreen=3", "--advance=2.8s"])
         job(f"{CAP}/interaction/runtime-update-after-deposits-4321.png", fixture_flags("sample") + SEEN +
             ["--data=currentScreen=3", "--data=deposits=4321", "--data=locale=de-DE", "--advance=2.8s"])
     g["interaction"] = interaction
+
+    def gpu():
+        base = fixture_flags("sample") + SEEN
+        job(f"{CAP}/gpu/jar-coins-2x.png", base + ["--viewport=780x1688", "--data=currentScreen=2", "--advance=3s"])
+        job(f"{CAP}/gpu/merged-coin-2x.png", base + ["--viewport=780x1688", "--data=currentScreen=5", "--advance=3s"])
+        job(f"{CAP}/gpu/arcade-screen-2x.png", base + ["--viewport=780x1688", "--data=currentScreen=6", "--advance=4s"])
+        job(f"{CAP}/gpu/goal-tokens-2x.png", base + ["--viewport=780x1688", "--data=currentScreen=4", "--advance=3s"])
+        job(f"{CAP}/gpu/springs-fire-2x.png", base + ["--viewport=780x1688", "--data=currentScreen=2", "--advance=3s",
+                                                     "--key=right", "--advance=32"])
+    g["gpu"] = gpu
     return g
 
 
@@ -128,7 +138,7 @@ def main():
     want = sys.argv[1:] or list(gs)
     for w in want:
         gs[w]()
-    with ThreadPoolExecutor(max_workers=8) as ex:
+    with ThreadPoolExecutor(max_workers=4) as ex:
         list(ex.map(lambda j: shot(*j), JOBS))
     # contact sheets
     for folder in ("settled", "reduced-motion", "fixtures/extreme-long-copy"):
@@ -139,7 +149,7 @@ def main():
         sheet([f"{CAP}/personas/persona{i}.png" for i in range(4)], f"{CAP}/personas/sheet.png", 1040)
     sig = f"{CAP}/transitions/signature-02-to-03"
     if os.path.exists(f"{sig}/frame04.png"):
-        sheet([f"{sig}/frame{f:02d}.png" for f in (4, 10, 17, 22, 28, 40)], f"{sig}/sheet.png", 1560)
+        sheet([f"{sig}/frame{f:02d}.png" for f in (8, 16, 24, 28, 32, 40)], f"{sig}/sheet.png", 1560)
     print(f"{len(JOBS)} captures")
 
 

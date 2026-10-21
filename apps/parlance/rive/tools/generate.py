@@ -16,7 +16,8 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 import rml  # noqa: E402
 from rml import (E, nid, node, shape, rect, ellipse, smooth_path, fill, stroke, solid, text, tstyle, run,
-                 bind, Anim, cond, trans, write, fire_trigger, toggle, copy_str, fire_event, astate)  # noqa
+                 bind, Anim, cond, trans, write, fire_trigger, toggle, copy_str, fire_event, astate,
+                 cubic_path, key_morph, lingrad)  # noqa
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W, H = 390, 844
@@ -101,6 +102,7 @@ prop("_pointerDown", "b", False)
 prop("_pressSide", "n", 0)
 prop("_finishedLatch", "b", False)
 prop("_mouthTap", "t", None)
+prop("_focusVisible", "n", 0)   # 1 after Tab / Shift+Tab, 0 after any pointer press: a :focus-visible ring
 
 
 def V(name):
@@ -203,46 +205,59 @@ C_SEG = [None] + [formula(f"Segment {k} fill", fmax(0, fmin(1, ((("in", "+", ("v
                   for k in range(1, 11)]
 C_RIB2 = formula("Ribbon 2 if >=2", fmax(0, fmin(1, ("in", "-", 1))))
 C_RIB3 = formula("Ribbon 3 if >=3", fmax(0, fmin(1, ("in", "-", 2))))
-C_FOCUS = [formula(f"Focus ring {k}", fmax(0, (1, "-", fmin(1, (("in", "-", k), "*", ("in", "-", k))))))
+C_FOCUS = [formula(f"Focus ring {k}", (fmax(0, (1, "-", fmin(1, (("in", "-", k), "*", ("in", "-", k))))), "*",
+                                        ("vm", V("_focusVisible"))))
            for k in range(0, 6)]
 
 # ---------------------------------------------------------------- assets / fonts
 F_DISP = nid()
 F_TEXT = nid()
+F_CJK = nid()
+GRAIN = nid()
 FONTS = [E("FontAsset", {"file": "assets/fonts/BricolageGrotesque-VF.ttf", "name": "Bricolage Grotesque",
                          "id": F_DISP}),
-         E("FontAsset", {"file": "assets/fonts/NotoSans-wght400-700.ttf", "name": "Noto Sans", "id": F_TEXT})]
+         E("FontAsset", {"file": "assets/fonts/NotoSans-wght400-700.ttf", "name": "Noto Sans", "id": F_TEXT}),
+         # 5 KB subset (ありがとう 안녕 감사) of Noto Sans KR @600 for the two CJK word blocks in scene 4
+         E("FontAsset", {"file": "assets/fonts/NotoSansKR-600-subset.ttf", "name": "Noto Sans KR subset", "id": F_CJK}),
+         # restrained paper grain (tools/grain.py), drawn with the overlay blend under live copy
+         E("ImageAsset", {"file": "assets/images/grain.png", "name": "Paper grain", "id": GRAIN})]
 
 
-def disp(size, color, wght=800, wdth=None, cid=None, cbinds=None, lh=None, ls=None, sid=None):
+def disp(size, color, wght=800, wdth=None, cid=None, cbinds=None, lh=None, ls=None, sid=None, axis_ids=None):
     sid = sid or nid()
     style = {800: "ExtraBold", 700: "Bold", 600: "SemiBold", 500: "Medium", 400: "Regular"}.get(wght, "Custom")
     return sid, tstyle(sid, F_DISP, size, color, wght=wght, wdth=wdth, opsz=min(96, max(12, size)), cid=cid,
-                       cbinds=cbinds, lh=lh, ls=ls, family="Bricolage Grotesque", style=style)
+                       cbinds=cbinds, lh=lh, ls=ls, family="Bricolage Grotesque", style=style, axis_ids=axis_ids)
 
 
-def body(size, color, wght=400, cid=None, cbinds=None, lh=None, sid=None):
+def body(size, color, wght=400, cid=None, cbinds=None, lh=None, sid=None, font=None):
     sid = sid or nid()
     style = {400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold"}.get(wght, "Custom")
+    if font == F_CJK:
+        return sid, tstyle(sid, F_CJK, size, color, cid=cid, lh=lh, family="Noto Sans KR", style="SemiBold")
     return sid, tstyle(sid, F_TEXT, size, color, wght=wght, cid=cid, cbinds=cbinds, lh=lh,
                        family="Noto Sans", style=style)
 
 
 def bound_text(name, x, y, w, prop_name, font="disp", size=30, color=D, wght=800, lh=None, align=None,
                h=None, sizing="autoHeight", overflow=None, wrap="wrap", tid=None, cid=None, literal=None,
-               op=None, conv_id=None, wdth=None):
+               op=None, conv_id=None, wdth=None, ls=None, valign=None, mods=None, axis_ids=None):
     tid = tid or nid()
     cid = cid or nid()
     if font == "disp":
-        sid, st = disp(size, color, wght, cid=cid, lh=lh, wdth=wdth)
+        sid, st = disp(size, color, wght, cid=cid, lh=lh, wdth=wdth, ls=ls, axis_ids=axis_ids)
     else:
         sid, st = body(size, color, wght, cid=cid, lh=lh)
     lit = literal if literal is not None else str(PROPS[prop_name][2])
     return tid, cid, text(name, x, y, [st], [run(sid, lit, [bind(V(prop_name), 268, conv_id)])], id=tid, w=w,
-                          h=h, sizing=sizing, overflow=overflow, wrap=wrap, align=align, op=op)
+                          h=h, sizing=sizing, overflow=overflow, wrap=wrap, align=align, op=op, valign=valign,
+                          extra_children=mods)
 
 
-def hero_number(name, prop_name, x, y, w, size, color, align=None, counting=True, wdth=88, wght=800):
+HERO_AX = {}  # hero node id -> wdth axis ids of its three tiers (keyed so digits stretch while counting)
+
+
+def hero_number(name, prop_name, x, y, w, size, color, align=None, counting=True, wdth=88, wght=800, ls=None):
     """Three tier texts (<1,000 / <1,000,000 / larger) inside one node. Returns (node_id, xml, color ids)."""
     tc = TC if counting else TS
     nid_ = nid()
@@ -250,10 +265,13 @@ def hero_number(name, prop_name, x, y, w, size, color, align=None, counting=True
     src = V(prop_name)
     kids, cids = [], []
     hh = size * 1.12
+    HERO_AX[nid_] = []
 
     def tier(label, runs_spec, op_conv):
         cid = nid()
-        sid, st = disp(size, color, wght, wdth=wdth, cid=cid, lh=size * 1.0)
+        ax = nid()
+        HERO_AX[nid_].append(ax)
+        sid, st = disp(size, color, wght, wdth=wdth, cid=cid, lh=size * 1.0, ls=ls, axis_ids={"wdth": ax})
         runs = []
         for kind, cv in runs_spec:
             if kind == "sep":
@@ -272,73 +290,132 @@ def hero_number(name, prop_name, x, y, w, size, color, align=None, counting=True
 
 
 # ---------------------------------------------------------------- motif art
-def bubble_pts(s=1.0, mirror=False):
-    pts = [(0, -100), (72, -72), (102, -2), (84, 58), (106, 128, "c", 7), (34, 96), (-4, 101), (-72, 71),
-           (-102, 0), (-72, -72)]
+# The hero motif: two oversized speech forms shaped like punctuation -- a round head whose tail sweeps down like a
+# comma. Bodies that take part in transitions are all-cubic 10-vertex paths so they truly morph (rest ->
+# anticipation squash -> elongated cover and back) by keying every vertex, not just by scaling.
+BUB_REST = [(0, -100), (72, -72), (102, -2), (102, 70), (132, 168, "c", 5), (44, 116), (-6, 102), (-72, 72),
+            (-102, 0), (-72, -72)]
+BUB_SQUASH = [(0, -82), (84, -60), (116, 2), (110, 58), (150, 140, "c", 5), (62, 98), (-6, 94), (-84, 68),
+              (-116, 2), (-84, -60)]
+BUB_TALL = [(0, -132), (82, -100), (110, -6), (106, 130), (150, 340, "c", 5), (66, 254), (-6, 246), (-82, 198),
+            (-110, 40), (-82, -96)]
+
+# travelling stretch (squash-and-stretch while a form is carried): 40% of the way from rest to the cover shape
+BUB_STRETCH = [tuple([round(r[0] + (t[0] - r[0]) * 0.4, 2), round(r[1] + (t[1] - r[1]) * 0.4, 2)]) + tuple(r[2:])
+               for r, t in zip(BUB_REST, BUB_TALL)]
+
+
+def bub(pts, s=1.0, mirror=False):
     out = []
     for p in pts:
         x, y = p[0] * s, p[1] * s
-        if mirror:
-            x = -x
-        out.append((x, y) + tuple(p[2:]))
+        out.append(((-x if mirror else x), y) + tuple(p[2:]))
     if mirror:
         out = [out[0]] + out[1:][::-1]
     return out
 
 
-def face(prefix, s=1.0, ink=D, tongue=PD, ids=None):
-    """Expressive punctuation face: happy closed eyes + open laughing mouth."""
+def bubble_pts(s=1.0, mirror=False):
+    return bub(BUB_REST, s, mirror)
+
+
+def shade_fills(color, shade, light, s=1.0, grad=True):
+    """Soft tactile shading in place of flat colour: a diagonal light->base->shade gradient plus an inner shadow
+    on the lower-right rim (Feather inner). Both paints sit on the body itself so they follow its morphs."""
+    base = fill(None, grad=lingrad([(light, 0), (color, 0.42), (color, 0.7), (shade, 1)], -80 * s, -110 * s,
+                                   100 * s, 160 * s)) if grad else fill(color)
+    inner = E("Fill", {"fillRule": "clockwise", "name": "Inner shade"}, [
+        solid("99" + shade[2:]),
+        E("Feather", {"strength": 22 * s, "offsetX": -10 * s, "offsetY": -14 * s, "inner": True, "spaceValue": "local",
+                      "name": "Feather"})])
+    return [base, inner]
+
+
+def face(prefix, s=1.0, ink=DD, tongue=PD, ids=None, look=0):
+    """Expressive punctuation face: closed happy arcs and a huge laughing D-mouth with a paper teeth band."""
     ids = ids if ids is not None else {}
     ids["mouth"] = nid()
     ids["eyes"] = nid()
-    eye = lambda ex: shape(f"{prefix} eye", [smooth_path([(-13 * s, 5 * s), (0, -8 * s), (13 * s, 5 * s)], closed=False)],
-                           [stroke(ink, 8 * s)], x=ex * s, y=-20 * s)
+    lx = look * s
+    eye = lambda ex, s=s: shape(f"{prefix} eye", [smooth_path([(-15 * s, 7 * s), (0, -9 * s), (15 * s, 7 * s)], closed=False)],
+                           [stroke(ink, 8.5 * s)], x=ex * s + lx, y=-40 * s)
+    s0, s = s, s * 1.16
     mouth = node(f"{prefix} mouth", [
-        shape(f"{prefix} tongue", [ellipse(36 * s, 16 * s)], [fill(tongue)], y=33 * s),
-        shape(f"{prefix} mouth shape", [smooth_path([(-40 * s, 0, "c", 5 * s), (40 * s, 0, "c", 5 * s), (28 * s, 30 * s),
-                                                     (0, 45 * s), (-28 * s, 30 * s)])], [fill(ink)]),
-    ], id=ids["mouth"], y=14 * s)
-    cheeks = [shape(f"{prefix} cheek", [ellipse(22 * s, 12 * s)], [fill("55FFFFFF")], x=cx * s, y=6 * s)
-              for cx in (-56, 56)]
-    return node(f"{prefix} face", [mouth, node(f"{prefix} eyes", [eye(-34), eye(34)], id=ids["eyes"])] + cheeks,
+        shape(f"{prefix} teeth", [smooth_path([(-44 * s, 3 * s), (44 * s, 3 * s), (33 * s, 15 * s), (0, 19 * s),
+                                               (-33 * s, 15 * s)])], [fill(WP)]),
+        shape(f"{prefix} tongue", [ellipse(44 * s, 20 * s)], [fill(tongue)], y=44 * s),
+        shape(f"{prefix} mouth shape", [smooth_path([(-54 * s, 0, "c", 9 * s), (54 * s, 0, "c", 9 * s), (42 * s, 36 * s),
+                                                     (0, 58 * s), (-42 * s, 36 * s)])], [fill(ink)]),
+    ], id=ids["mouth"], x=lx, y=0)
+    return node(f"{prefix} face", [mouth, node(f"{prefix} eyes", [eye(-34), eye(34)], id=ids["eyes"])],
                 id=ids.get("face"))
 
 
-def motif_bubble(prefix, color, shade, mirror=False, s=1.0, with_face=True, ids=None, tongue=PD):
+def motif_bubble(prefix, color, shade, mirror=False, s=1.0, with_face=True, ids=None, tongue=PD, light=None,
+                 look=None, morph=False):
     ids = ids if ids is not None else {}
     ids.setdefault("root", nid())
     ids.setdefault("bob", nid())
     ids.setdefault("elastic", nid())
     ids.setdefault("face", nid())
-    hl_x = 48 if mirror else -48
+    light = light or {P: PL, L: LL}.get(color, color)
+    look = (-14 if mirror else 14) if look is None else look
     kids = []
     if with_face:
-        kids.append(face(prefix, s, ids=ids, tongue=tongue))
-    kids += [
-        shape(f"{prefix} highlight", [ellipse(34 * s, 16 * s)], [fill("66FFFFFF")], x=hl_x * s, y=-60 * s,
-              rot=0.6 if mirror else -0.6),
-        shape(f"{prefix} body", [smooth_path(bubble_pts(s, mirror))], [fill(color)], id=ids.get("body")),
-        shape(f"{prefix} depth", [smooth_path(bubble_pts(s, mirror))], [fill(shade)], x=6 * s, y=9 * s),
-    ]
+        kids.append(face(prefix, s, ids=ids, tongue=tongue, look=look))
+    kids.append(shape(f"{prefix} highlight", [ellipse(46 * s, 22 * s)],
+                      [fill("88FFFFFF", feather=(7 * s,))], x=(52 if mirror else -52) * s, y=-62 * s,
+                      rot=0.7 if mirror else -0.7))
+    if morph:
+        ids["verts"] = [nid() for _ in range(10)]
+        ids["s"], ids["mirror"] = s, mirror
+        geo = cubic_path(bub(BUB_REST, s, mirror), ids["verts"])
+    else:
+        geo = smooth_path(bub(BUB_REST, s, mirror))
+    kids.append(shape(f"{prefix} body", [geo], shade_fills(color, shade, light, s), id=ids.get("body")))
     return node(prefix, [node(f"{prefix} bob", [node(f"{prefix} elastic", kids, id=ids["elastic"])], id=ids["bob"])],
                 id=ids["root"])
 
 
+def morph_motif(anim, ids, keys):
+    """keys: [(frame, BUB_* table, ease)] -> true vertex morph of a motif body."""
+    if "verts" not in ids:
+        return
+    s_, m_ = ids["s"], ids["mirror"]
+    key_morph(anim, ids["verts"], [(f, bub(t, s_, m_), e) for f, t, e in keys], bub(BUB_REST, s_, m_))
+
+
+# a quotation-mark comma (head on top, tail sweeping down-left) and the same 9 vertices gathered into a dot
+COMMA = [(0, -62), (44, -40), (52, 6), (34, 66), (-22, 130, "c", 5), (-10, 70), (-34, 38), (-50, -6), (-40, -44)]
+COMMA_DOT = [(round(math.cos(-math.pi / 2 + k * 2 * math.pi / 9) * 34, 2),
+              round(math.sin(-math.pi / 2 + k * 2 * math.pi / 9) * 34 - 4, 2)) for k in range(9)]
+
+
 def comma_pts(s=1.0):
-    # a quotation-mark comma: round head with a tapering tail sweeping down-left
-    return [(0, -62 * s), (44 * s, -40 * s), (52 * s, 6 * s), (34 * s, 66 * s), (-22 * s, 130 * s, "c", 6 * s),
-            (-10 * s, 70 * s), (-34 * s, 38 * s), (-50 * s, -6 * s), (-40 * s, -44 * s)]
+    return [(p[0] * s, p[1] * s) + tuple(p[2:]) for p in COMMA]
 
 
-def quote_mark(prefix, s, color, shade, x=0, y=0, id=None, hl=True):
-    kids = []
-    for dx in (-64 * s, 64 * s):
-        if hl:
-            kids.append(shape(f"{prefix} glint", [ellipse(22 * s, 12 * s)], [fill("70FFFFFF")], x=dx - 18 * s,
-                              y=-38 * s, rot=-0.6))
-        kids.append(shape(f"{prefix} comma", [smooth_path(comma_pts(s))], [fill(color)], x=dx))
-        kids.append(shape(f"{prefix} comma depth", [smooth_path(comma_pts(s))], [fill(shade)], x=dx + 7 * s, y=9 * s))
-    return node(prefix, kids, id=id, x=x, y=y)
+def block_quote_pts(s=1.0):
+    """Concept screen 4: a flat-topped block quote whose right side rolls down into a comma tail."""
+    pts = [(-66, -104, "c", 16), (66, -104, "c", 16), (70, -6), (62, 52), (34, 98), (-30, 122, "c", 4),
+           (-4, 74), (4, 34), (-30, 26), (-66, 6, "c", 14)]
+    return [(p[0] * s, p[1] * s) + tuple(p[2:]) for p in pts]
+
+
+def sparkle(name, size, color, x, y, id=None, rot=0):
+    return shape(name, [E("Star", {"width": size, "height": size, "points": 4, "innerRadius": 0.3, "cornerRadius": 0.6,
+                                   "name": "Path"})], [fill(color)], id=id or nid(), x=x, y=y, rot=rot)
+
+
+def ground(name, w, h, color, x, y, id=None):
+    """Soft ground shadow (feathered ellipse) -- concept's lemon / lilac pools under the speech forms."""
+    return shape(name, [ellipse(w, h)], [fill(color, feather=(10,))], id=id or nid(), x=x, y=y)
+
+
+def grain(name="grain", op=0.55):
+    """Restrained raster grain over a scene's art (never carries text), overlay-blended, 2x scale."""
+    return E("Image", {"assetId": GRAIN, "x": 195, "y": 422, "scaleX": 2, "scaleY": 2, "opacity": op,
+                       "blendModeValue": "overlay", "name": name})
 
 
 # ---------------------------------------------------------------- scene scaffolding
@@ -384,8 +461,36 @@ def pop(sc, obj, f0, dur=26, ease="back", s0=0.0, rot0=None, rot1=0):
         sc.track(obj, "rotation", [(0, rot0, "hold"), (f0, rot0, ease), (f0 + dur, rot1, "hold")])
 
 
-def count(sc, f0=24, f1=84):
+def count(sc, f0=24, f1=84, hero=None):
+    """Hero value counts 0 -> bound value; its digits start condensed (wdth 75) and stretch out to full width
+    as the count lands, so the number itself feels elastic."""
     sc.track(DRIVER, "x", [(0, 0, "hold"), (f0, 0, "out2"), (f1, 1, "hold")])
+    for ax in HERO_AX.get(hero or getattr(sc, "hero", None), []):
+        sc.track(ax, "axisValue", [(0, 75, "hold"), (f0, 75, "out2"), (f1 - 10, 104, "sine"), (f1 + 8, 100, "hold")])
+
+
+def kinetic(units=2, y=40, x=0, rot=0.0, scale=None, ease=(0.3, -0.55, 0.55, 1)):
+    """Per-word / per-letter cascade on a live text. Authored at the settled (fully revealed) pose; timelines
+    key the range. The range ease dips below zero at its revealed edge, so each unit overshoots its rest
+    position (follow-through) before settling. Returns (range_id, modifier xml)."""
+    rng = nid()
+    a = {"modifyOpacity": True, "invertOpacity": True, "modifyTranslation": True, "opacity": 0, "x": x, "y": y,
+         "modifyOrigin": True, "originX": 0.5, "originY": 1, "name": "Kinetic cascade"}
+    if rot:
+        a.update({"modifyRotation": True, "rotation": rot})
+    if scale:
+        a.update({"modifyScale": True, "scaleX": scale[0], "scaleY": scale[1]})
+    return rng, E("TextModifierGroup", a, [
+        E("TextModifierRange", {"unitsValue": units, "modifyFrom": 1.6, "modifyTo": 3, "falloffFrom": 2.2,
+                                "falloffTo": 3, "name": "Sweep", "id": rng},
+          [E("CubicInterpolatorComponent", {"x1": ease[0], "y1": ease[1], "x2": ease[2], "y2": ease[3],
+                                            "name": "Overshoot"})])])
+
+
+def sweep(sc, rng, f0, dur=34, width=0.5, idle=False):
+    """Reveal a kinetic() text from its first unit to its last between f0 and f0+dur."""
+    sc.track(rng, 327, [(0, -width - 0.02, "hold"), (f0, -width - 0.02, "lin"), (f0 + dur, 1.6, "hold")])
+    sc.track(rng, 317, [(0, 0, "hold"), (f0, 0, "lin"), (f0 + dur, 2.2, "hold")])
 
 
 def flow_text(name, w, prop_name, **kw):
@@ -416,35 +521,45 @@ def column(name, x, y, w, items, gap=8, op=None, cid=None, bottom=None):
                                    "name": f"{name} style", "id": sid_})] + items)
 
 
-def copy_block(sc, x, y, n, w=342, head_size=34, head_color=D, sup_color=D, unit_size=30, unit_y=None,
-               head_y=None, sup_y=None, align=None, f0=70):
-    """unit + headline + support for a metric scene, flowed in columns so long copy pushes down instead of
-    overlapping. Items closer than 150pt share one column."""
+# ---- the concept's type system (screens 2 / 4 / 9) ----------------------------------------------------------
+HERO_Y, HERO_SIZE = 84, 138        # giant numeral, heavy and tight
+UNIT_Y, UNIT_SIZE = 216, 27        # unit sits right under the numeral
+HEAD_Y, HEAD_SIZE, HEAD_LH = 256, 39, 41
+HEAD_LINES = 3                     # long localized headlines shrink to fit three lines instead of running on
+CAPTION_BOTTOM = 94                # the support line is a caption on the control bar, growing upwards
+
+
+def top_copy(sc, n, x=24, w=342, unit_y=UNIT_Y, head_y=HEAD_Y, ink=D, align=None, f0=56, unit=True,
+             head_lines=HEAD_LINES, head_size=HEAD_SIZE):
+    """Unit (one line, fit) + headline (fixed box of head_lines lines, fit). Both boxes are bounded, so even the
+    extreme fixture's copy cannot grow into the illustration zone below (~y 400-712)."""
     ids = {}
-    entries = []
-    if unit_y is not None:
-        ids["unit"], ids["unit_c"], t = flow_text(f"S{n} unit", w, f"screen{n}Unit", size=unit_size,
-                                                  color=head_color, wght=700, align=align, lh=unit_size * 1.1)
-        entries.append((unit_y, t, "unit", 40, 18))
-    ids["head"], ids["head_c"], t = flow_text(f"S{n} headline", w, f"screen{n}Headline", size=head_size,
-                                              color=head_color, wght=800, lh=head_size * 1.04, align=align, wdth=92)
-    entries.append((head_y, t, "head", f0, 26))
-    ids["sup"], ids["sup_c"], t = flow_text(f"S{n} support", w, f"screen{n}Support", font="body", size=17,
-                                            color=sup_color, wght=500, lh=23, align=align)
-    entries.append((sup_y, t, "sup", f0 + 12, 16))
-    entries.sort(key=lambda e: e[0])
-    groups = []
-    for e in entries:
-        if groups and e[0] - groups[-1][-1][0] < 150:
-            groups[-1].append(e)
-        else:
-            groups.append([e])
-    for gi, g in enumerate(groups):
-        bottom = 92 if g[0][0] > 500 else None   # lower copy blocks sit on the control bar and grow upwards
-        cid, xml = column(f"S{n} copy {gi}", x, g[0][0], w, [e[1] for e in g], gap=10, bottom=bottom)
-        sc.parts.append(xml)
-        for (_y, _t, key, fr, dy) in g:
-            rise(sc, ids[key], fr, base_y=0, dy=dy)
+    if unit:
+        ids["unit_rng"], m = kinetic(units=0, y=0, x=-14, ease=(0.4, 0, 0.2, 1))
+        ids["unit"], ids["unit_c"], t = bound_text(f"S{n} unit", x, unit_y, w, f"screen{n}Unit", size=UNIT_SIZE,
+                                                   color=ink, wght=650, wdth=96, sizing="fixed", h=UNIT_SIZE * 1.25,
+                                                   overflow="fitFontSize", wrap="noWrap", align=align, ls=-0.3,
+                                                   mods=[m])
+        sc.parts.append(t)
+        sweep(sc, ids["unit_rng"], f0 - 22, 26, 0.3)
+    hl = head_size * 41 / 39
+    ids["head_rng"], m = kinetic(units=2, y=hl * 1.1, rot=0.08)
+    ids["head"], ids["head_c"], t = bound_text(f"S{n} headline", x, head_y, w, f"screen{n}Headline", size=head_size,
+                                               color=ink, wght=800, wdth=96, lh=hl, sizing="fixed", h=hl * head_lines + 4,
+                                               overflow="fitFontSize", wrap="wrap", align=align, ls=-0.6, valign="top",
+                                               mods=[m])
+    sc.parts.append(t)
+    sweep(sc, ids["head_rng"], f0, 40, 0.45)
+    return ids
+
+
+def caption(sc, n, ink=DL, align=None, f0=86, bottom=CAPTION_BOTTOM, prop=None, x=24, w=342):
+    ids = {}
+    ids["sup_rng"], m = kinetic(units=2, y=14, ease=(0.4, 0, 0.2, 1))
+    ids["sup"], ids["sup_c"], t = flow_text(f"S{n} support", w, prop or f"screen{n}Support", font="body", size=16,
+                                            color=ink, wght=500, lh=21, align=align, mods=[m])
+    sc.parts.append(column(f"S{n} caption", x, 0, w, [t], bottom=bottom)[1])
+    sweep(sc, ids["sup_rng"], f0, 30, 0.4)
     return ids
 
 
@@ -454,11 +569,12 @@ MB = {"root": nid(), "body": nid()}
 DRIVER = nid()
 MOUTH_HIT = nid()
 
-# motif poses: (x, y, sx, sy, rot, faceOpacity)
-OFF_A = (-260, -240, 1.2, 1.2, -0.5, 1)
-OFF_B = (660, 1120, 1.2, 1.2, 0.5, 1)
-COVER_A = (195, 430, 7.4, 8.8, 0.18, 0)
-COVER_B = (195, 430, 7.6, 9.0, -0.18, 0)
+# motif poses: (x, y, sx, sy, rot, faceOpacity). COVER_* are paired with the BUB_TALL morph: the elongated
+# speech form, scaled ~3x, fills the 390x844 frame.
+OFF_A = (560, 1040, 1.2, 1.2, 0.5, 1)
+OFF_B = (-170, 1040, 1.2, 1.2, -0.5, 1)
+COVER_A = (195, 200, 2.95, 2.95, 0.04, 0)
+COVER_B = (195, 200, 2.95, 2.95, -0.04, 0)
 
 
 def motif_keys(anim, ids, keys):
@@ -470,30 +586,30 @@ def motif_keys(anim, ids, keys):
 
 # ================================================================ SCENES
 # Each scene: parts (xml, top-first), enter tracks (frames relative to In start, 60 fps),
-# final pose, idle loop.
+# final pose, idle loop. Metric scenes share the concept's type system (top_copy + caption): giant numeral,
+# unit tight underneath, a heavy 2-3 line headline, and the support line as a caption on the control bar,
+# leaving a protected illustration zone of roughly y 400-712.
 
 # ---------- 1. Invitation ----------------------------------------------------
 s = Scene(1, WP)
-s.motifA = (128, 318, 1.38, 1.38, -0.14, 1)
-s.motifB = (284, 408, 1.12, 1.12, 0.12, 1)
+s.parts.append(grain())
+s.motifA = (126, 300, 1.3, 1.3, -0.12, 1)
+s.motifB = (292, 392, 1.06, 1.06, 0.1, 1)
 name_t = nid()
 sid, st = body(17, D, 600)
 pill_bg = E("TextStyleBackground", {"cornerRadius": 15, "name": "Pill"}, [fill(L)])
 st_pill = st.replace("</TextStylePaint>", pill_bg + "</TextStylePaint>", 1)
-s.parts.append(text("S1 name", 24, 102, [st_pill], [run(sid, "  Alex  ", [])], id=name_t, w=250, h=26,
-                    sizing="fixed", overflow="ellipsis", wrap="noWrap"))
-# The name run is bound below (needs padding spaces around it -> three runs)
-s.parts[-1] = text("S1 name", 24, 102, [st_pill], [run(sid, " ", []), run(sid, "Alex", [bind(V("userName"), 268)]),
-                                                    run(sid, " ", [])], id=name_t, w=280, h=26, sizing="fixed",
-                   overflow="ellipsis", wrap="noWrap")
-rise(s, name_t, 52, base_y=102, dy=14)
-per_t, _c, t_ = bound_text("S1 period", 24, 136, 342, "periodLabel", font="body", size=13, color=DL, wght=500)
+s.parts.append(text("S1 name", 24, 96, [st_pill], [run(sid, " ", []), run(sid, "Alex", [bind(V("userName"), 268)]),
+                                                   run(sid, " ", [])], id=name_t, w=280, h=26, sizing="fixed",
+                    overflow="ellipsis", wrap="noWrap"))
+rise(s, name_t, 52, base_y=96, dy=14)
+per_t, _c, t_ = bound_text("S1 period", 24, 130, 342, "periodLabel", font="body", size=13, color=DL, wght=500)
 s.parts.append(t_)
-rise(s, per_t, 60, base_y=136, dy=10)
+rise(s, per_t, 60, base_y=130, dy=10)
 # wordmark (kinetic): letters stretch up out of a speech envelope
 wm_t = nid()
 wm_range = nid()
-sid, st = disp(84, D, 800, wdth=78, lh=84)
+sid, st = disp(86, D, 800, wdth=84, lh=86, ls=-2)
 wm_mod = E("TextModifierGroup", {"modifyOpacity": True, "modifyTranslation": True, "modifyScale": True,
                                  "invertOpacity": True, "opacity": 0, "y": 46, "scaleY": 2.1, "scaleX": 0.6,
                                  "originX": 0.5, "originY": 1, "modifyOrigin": True, "name": "Envelope stretch"},
@@ -502,177 +618,257 @@ wm_mod = E("TextModifierGroup", {"modifyOpacity": True, "modifyTranslation": Tru
               [E("CubicInterpolatorComponent", {"x1": 0.2, "y1": 0, "x2": 0.2, "y2": 1, "name": "Ease"})])])
 dot_id = nid()
 s.parts.append(node("S1 wordmark", [
-    text("S1 wordmark text", 0, 0, [st], [run(sid, "parlance")], id=wm_t, extra_children=[wm_mod]),
-    shape("S1 wordmark bubble", [smooth_path(bubble_pts(0.17))], [fill(P)], id=dot_id, x=268, y=58),
-], x=22, y=500))
+    text("S1 wordmark text", 0, 0, [st], [run(sid, "Parlance")], id=wm_t, extra_children=[wm_mod]),
+    shape("S1 wordmark comma", [smooth_path(comma_pts(0.3))], [fill(P)], id=dot_id, x=334, y=70),
+], x=22, y=508))
 s.track(wm_range, 327, [(0, -0.35, "hold"), (34, -0.35, "lin"), (78, 1.0, "hold")])
 s.track(wm_range, 317, [(0, -0.1, "hold"), (34, -0.1, "lin"), (78, 1.25, "hold")])
 pop(s, dot_id, 74, 24, "back2", rot0=-1.2)
-ih_t, ih_c, t1_ = flow_text("S1 headline", 342, "introHeadline", size=32, color=D, wght=800, lh=34, wdth=92)
-is_t, is_c, t2_ = flow_text("S1 support", 342, "introSupport", font="body", size=17, color=D, wght=500, lh=23)
-s.parts.append(column("S1 copy", 24, 606, 342, [t1_, t2_], gap=12, bottom=96)[1])
-rise(s, ih_t, 84, base_y=0)
-rise(s, is_t, 96, base_y=0, dy=14)
+ih_rng, m1 = kinetic(units=2, y=40, rot=0.08)
+is_rng, m2 = kinetic(units=2, y=14, ease=(0.4, 0, 0.2, 1))
+# bounded boxes: a long localized intro shrinks to two lines instead of climbing over the wordmark
+ih_t, ih_c, t1_ = bound_text("S1 headline", 24, 604, 342, "introHeadline", size=37, color=D, wght=800, lh=39, wdth=96,
+                             ls=-0.6, sizing="fixed", h=82, overflow="fitFontSize", valign="top", mods=[m1])
+is_t, is_c, t2_ = bound_text("S1 support", 24, 692, 342, "introSupport", font="body", size=16, color=DL, wght=500,
+                             lh=21, sizing="fixed", h=44, overflow="ellipsis", mods=[m2])
+s.parts += [t1_, t2_]
+sweep(s, ih_rng, 84, 40)
+sweep(s, is_rng, 104, 30, 0.4)
 # giant punctuation sculptures behind the motif
-q1 = nid()
-q2 = nid()
+q1, q2 = nid(), nid()
 sid, st = disp(300, Y, 800)
-s.parts.append(text("S1 giant quote", 196, 92, [st], [run(sid, "“")], id=q1, rot=0.12))
+s.parts.append(text("S1 giant quote", 196, 80, [st], [run(sid, "“")], id=q1, rot=0.12))
 sid, st = disp(190, LL, 800)
-s.parts.append(text("S1 giant bang", 14, 300, [st], [run(sid, "!")], id=q2, rot=-0.22))
+s.parts.append(text("S1 giant bang", 10, 288, [st], [run(sid, "!")], id=q2, rot=-0.22))
 pop(s, q1, 20, 34, "back", s0=0.4, rot0=0.7, rot1=0.12)
 pop(s, q2, 30, 30, "back", s0=0.3, rot0=-0.9, rot1=-0.22)
 s.itrack(q1, "rotation", [(0, 0.12, "sine"), (120, 0.04, "sine"), (240, 0.12, "hold")])
 s.itrack(q2, "rotation", [(0, -0.22, "sine"), (120, -0.14, "sine"), (240, -0.22, "hold")])
+for i, (x, y, sz, col) in enumerate([(338, 120, 26, D), (40, 250, 18, Y), (356, 470, 16, P)]):
+    sp = nid()
+    s.parts.append(sparkle(f"S1 sparkle {i}", sz, col, x, y, id=sp))
+    pop(s, sp, 60 + i * 8, 22, "back2", rot0=-1)
+    s.itrack(sp, "rotation", [(0, 0, "sine"), (120, 0.4, "sine"), (240, 0, "hold")])
+s.parts.append(ground("S1 shadow A", 190, 26, "77F6E97C", 128, 476))
 
 # ---------- 2. Conversations -------------------------------------------------
 s = Scene(2, WP)
-s.motifA = (96, 646, 1.18, 1.18, 0.08, 1)
-s.motifB = (300, 654, 1.08, 1.08, -0.08, 1)
-s.mouth_hit = (96, 650, 170, 150)
-hid, hx, hc = hero_number("S2 hero", "conversations", 24, 92, 342, 150, D)
-s.parts.insert(0, hx)
+s.parts.append(grain())
+s.motifA = (68, 506, 1.06, 1.06, -0.06, 1)
+s.motifB = (356, 526, 0.96, 0.96, 0.06, 1)
+s.mouth_hit = (90, 520, 180, 170)
+hid, hx, hc = hero_number("S2 hero", "conversations", 24, HERO_Y, 342, HERO_SIZE, D, wdth=100, ls=-5)
+s.parts.append(hx)
 s.hero = hid
-ids2 = copy_block(s, 24, 0, 2, unit_y=258, head_y=304, sup_y=386)
-rise(s, hid, 14, base_y=92, dy=30, dur=20)
-count(s)
-# punctuation tokens exchanged between the two speech forms
-TOK = [("?", P), ("!", D), (";", LD), ("”", P), ("…", D), ("¿", LD), (",", P)]
-tok_ids = []
-for i, (ch, col) in enumerate(TOK):
-    tid = nid()
-    inner = nid()
-    sid, st = disp(54 if ch not in ("…",) else 44, col, 800)
-    s.parts.append(node(f"S2 token {i}", [text(f"S2 token glyph {i}", 0, 0, [st], [run(sid, ch)], ox=0.5, oy=0.5,
-                                               id=inner)], id=tid, x=195, y=600, op=0))
-    tok_ids.append((tid, inner))
-    # idle: arc from one mouth to the other, alternating direction
-    period = 300
-    off = i * 30
-    left = (140, 610)
-    right = (256, 618)
-    a, b = (left, right) if i % 2 == 0 else (right, left)
-    peak = 460 + (i % 3) * 30
-
-    def ph(t):
-        return (t + off) % period
-    # build a piecewise loop: start at t0 = off
-    keys_x, keys_y, keys_o, keys_r = [], [], [], []
-    t0 = off
-    for (dt, x, y, o, r, ex, ey) in [(0, a[0], a[1], 0, -0.6, "lin", "out"),
-                                     (8, a[0] + (b[0] - a[0]) * 0.1, a[1] - 40, 1, -0.3, "lin", "out"),
-                                     (40, (a[0] + b[0]) / 2, peak, 1, 0.2, "lin", "in"),
-                                     (74, b[0], b[1] - 30, 1, 0.6, "lin", "out"),
-                                     (82, b[0], b[1], 0, 0.8, "lin", "lin")]:
-        pass
-    # simpler deterministic loop: travel during first 82 frames of a 150 frame cycle, offset by staggering start
-    start = int(off)
-    kx = [(0, a[0], "hold"), (start, a[0], "lin"), (start + 82, b[0], "hold"), (period, b[0], "hold")]
-    ky = [(0, a[1], "hold"), (start, a[1], "out"), (start + 40, peak, "in"), (start + 82, b[1], "hold"),
-          (period, b[1], "hold")]
-    ko = [(0, 0, "hold"), (start, 0, "lin"), (start + 8, 1, "hold"), (start + 72, 1, "lin"), (start + 82, 0, "hold"),
-          (period, 0, "hold")]
-    kr = [(0, -0.7, "hold"), (start, -0.7, "lin"), (start + 82, 0.9 if i % 2 == 0 else -0.9, "hold"),
-          (period, 0.9 if i % 2 == 0 else -0.9, "hold")]
-    s.itrack(tid, "x", kx)
-    s.itrack(tid, "y", ky)
-    s.itrack(tid, "opacity", ko)
-    s.itrack(inner, "rotation", kr)
+rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
+count(s, 20, 82)
+ids2 = top_copy(s, 2)
+ids2.update(caption(s, 2))
+# punctuation tokens: a cascade of marks between the two speech forms (settled composition from the concept)
+TOK = [(",", L, 208, 394, 0.35, 58), ("?", P, 236, 418, 0.18, 70), (",", Y, 172, 430, 0.5, 44),
+       ("!", D, 202, 480, -0.1, 76), ("pill", Y, 236, 510, 0.5, 0), ("dot", DL, 206, 540, 0, 0),
+       (",", L, 196, 572, 0.25, 54), (",", P, 214, 606, 0.0, 60)]
+mouthA = (110, 540)
+for i, (ch, col, x, y, r, sz) in enumerate(TOK):
+    tid, inner = nid(), nid()
+    if ch == "pill":
+        g = shape(f"S2 token pill {i}", [rect(16, 40, 8)], [fill(col)])
+    elif ch == "dot":
+        g = shape(f"S2 token dot {i}", [ellipse(14, 14)], [fill(col)])
+    else:
+        sid, st = disp(sz, col, 800)
+        g = text(f"S2 token glyph {i}", 0, 0, [st], [run(sid, ch)], ox=0.5, oy=0.5)
+    s.parts.append(node(f"S2 token {i}", [node(f"S2 token bob {i}", [g], id=inner, rot=r)], id=tid, x=x, y=y))
+    # entrance: each mark is spat out of the persimmon mouth and arcs to its place (staggered)
+    f0 = 34 + i * 5
+    s.track(tid, "x", [(0, mouthA[0], "hold"), (f0, mouthA[0], "out"), (f0 + 26, x, "hold")])
+    s.track(tid, "y", [(0, mouthA[1], "hold"), (f0, mouthA[1], (0.2, 1.6, 0.4, 1)), (f0 + 26, y, "hold")])
+    s.track(tid, "scaleX", [(0, 0.2, "hold"), (f0, 0.2, "back2"), (f0 + 22, 1, "hold")])
+    s.track(tid, "scaleY", [(0, 0.2, "hold"), (f0, 0.2, "back2"), (f0 + 22, 1, "hold")])
+    s.track(tid, "opacity", [(0, 0, "hold"), (f0, 1, "hold")])
+    per = 240
+    ph = (i * 37) % 120
+    s.itrack(inner, "y", [(0, 0, "sine"), (ph + 30, -6, "sine"), (ph + 90, 4, "sine"), (per, 0, "hold")])
+    s.itrack(inner, "rotation", [(0, r, "sine"), (ph + 60, r + (0.14 if i % 2 else -0.14), "sine"), (per, r, "hold")])
+# travelling tokens: a few marks keep passing from one mouth to the other (idle exchange)
+for i, (ch, col) in enumerate([("?", P), ("!", D), (",", LD)]):
+    tid, inner = nid(), nid()
+    sid, st = disp(40, col, 800)
+    s.parts.append(node(f"S2 traveller {i}", [text(f"S2 traveller glyph {i}", 0, 0, [st], [run(sid, ch)], ox=0.5,
+                                                    oy=0.5, id=inner)], id=tid, x=140, y=560, op=0))
+    a_, b_ = ((130, 552), (320, 560)) if i % 2 == 0 else ((320, 560), (130, 552))
+    st0 = 10 + i * 72
+    s.itrack(tid, "x", [(0, a_[0], "hold"), (st0, a_[0], "sine"), (st0 + 70, b_[0], "hold"), (st0 + 72, a_[0], "hold"),
+                        (240, a_[0], "hold")])
+    s.itrack(tid, "y", [(0, a_[1], "hold"), (st0, a_[1], "out"), (st0 + 35, 430 + i * 14, "in"), (st0 + 70, b_[1], "hold"),
+                        (st0 + 72, a_[1], "hold"), (240, a_[1], "hold")])
+    s.itrack(tid, "opacity", [(0, 0, "hold"), (st0, 0, "lin"), (st0 + 8, 1, "hold"), (st0 + 60, 1, "lin"),
+                              (st0 + 70, 0, "hold"), (240, 0, "hold")])
+    s.itrack(inner, "rotation", [(0, -0.6, "hold"), (st0, -0.6, "lin"), (st0 + 70, 0.8, "hold"), (st0 + 72, -0.6, "hold"),
+                                 (240, -0.6, "hold")])
     s.settle(tid, "opacity", 0)
-s.idle_dur = 300
-# soft lemon shadows under the speech forms
+# motion dashes by the lilac mouth
+for i, (x, y, r) in enumerate([(244, 470, -0.5), (240, 544, 0.0), (162, 610, 0.5)]):
+    dsh = nid()
+    s.parts.append(shape(f"S2 dash {i}", [rect(16, 4.5, 2.2)], [fill(D)], id=dsh, x=x, y=y, rot=r))
+    pop(s, dsh, 60 + i * 4, 16, "back")
+    s.itrack(dsh, "opacity", [(0, 1, "sine"), (60 + i * 20, 0.35, "sine"), (240, 1, "hold")])
+s.idle_dur = 240
+# soft lemon / lilac pools under the speech forms
 sh1, sh2 = nid(), nid()
-s.parts.append(shape("S2 shadow A", [ellipse(170, 26)], [fill("99F6E97C")], id=sh1, x=100, y=770))
-s.parts.append(shape("S2 shadow B", [ellipse(150, 24)], [fill("99C7B7F2")], id=sh2, x=304, y=772))
+s.parts.append(ground("S2 shadow A", 176, 30, "AAF6E97C", 92, 700, id=sh1))
+s.parts.append(ground("S2 shadow B", 156, 26, "AAC7B7F2", 306, 704, id=sh2))
 pop(s, sh1, 10, 24, "out")
 pop(s, sh2, 18, 24, "out")
 
 # ---------- 3. Minutes practising -------------------------------------------
 s = Scene(3, L)
-s.mouth_hit = (195, 486, 330, 250)
-ids3 = copy_block(s, 24, 0, 3, unit_y=98, head_y=140, sup_y=694)
-MOUTH = {"outer": nid(), "breath": nid(), "elastic": nid(), "open": nid(), "teeth": nid(), "tongue": nid()}
-lips = [(-176, 0, "c", 40), (-104, -112), (-34, -122), (0, -98), (34, -122), (104, -112), (176, 0, "c", 40),
-        (104, 120), (0, 134), (-104, 120)]
+s.parts.append(grain())
+s.mouth_hit = (195, 548, 330, 250)
+ids3 = top_copy(s, 3, unit_y=92, head_y=132, f0=40)
+ids3.update(caption(s, 3, ink=D))
+MOUTH = {"outer": nid(), "breath": nid(), "elastic": nid(), "open": nid(), "teeth": nid(), "tongue": nid(),
+         "lips": nid(), "inner": nid(), "lipverts": [nid() for _ in range(10)]}
+# lips: 10 all-cubic vertices, ordered like the speech-form body so the mouth can morph into a speech bubble
+LIPS = [(0, -96), (36, -122), (106, -112), (178, 0, "c", 30), (106, 120), (0, 134), (-106, 120), (-178, 0, "c", 30),
+        (-106, -112), (-36, -122)]
+LIPS_PUCKER = [(0, -100), (30, -128), (86, -120), (138, 0, "c", 20), (86, 128), (0, 142), (-86, 128), (-138, 0, "c", 20),
+               (-86, -120), (-30, -128)]
 opening = [(-134, 0, "c", 34), (-64, -64), (0, -58), (64, -64), (134, 0, "c", 34), (64, 80), (0, 92), (-64, 80)]
-hid, hx, hc = hero_number("S3 hero", "practiceMinutes", -122, -52, 244, 104, WP, align="center", wdth=80)
+hid, hx, hc = hero_number("S3 hero", "practiceMinutes", -122, -52, 244, 104, WP, align="center", wdth=100, ls=-3)
 s.hero = hid
 mouth_xml = node("S3 mouth", [node("S3 mouth breath", [node("S3 mouth elastic", [
-    hx,
-    shape("S3 teeth", [rect(124, 24, 9)], [fill(WP)], id=MOUTH["teeth"], y=-50),
-    shape("S3 tongue", [ellipse(150, 40)], [fill(PD)], id=MOUTH["tongue"], y=66),
-    shape("S3 opening", [smooth_path(opening)], [fill(DD)], id=MOUTH["open"]),
-    shape("S3 lip glint", [ellipse(90, 16)], [fill("66FFFFFF")], x=-70, y=-96, rot=-0.15),
-    shape("S3 lip glint 2", [ellipse(40, 10)], [fill("55FFFFFF")], x=86, y=104, rot=-0.3),
-    shape("S3 lips", [smooth_path(lips)], [fill(P)]),
-    shape("S3 lips depth", [smooth_path(lips)], [fill(PD)], x=8, y=12),
-], id=MOUTH["elastic"])], id=MOUTH["breath"])], id=MOUTH["outer"], x=195, y=486)
-s.parts.insert(0, mouth_xml)
+    node("S3 mouth inner", [
+        hx,
+        shape("S3 teeth", [rect(124, 24, 9)], [fill(WP)], id=MOUTH["teeth"], y=-50),
+        shape("S3 tongue", [ellipse(150, 40)], [fill(PD)], id=MOUTH["tongue"], y=66),
+        shape("S3 opening", [smooth_path(opening)], [fill(DD)], id=MOUTH["open"]),
+        shape("S3 lip glint", [ellipse(90, 16)], [fill("66FFFFFF", feather=(4,))], x=-70, y=-96, rot=-0.15),
+        shape("S3 lip glint 2", [ellipse(40, 10)], [fill("55FFFFFF", feather=(3,))], x=86, y=104, rot=-0.3),
+    ], id=MOUTH["inner"]),
+    shape("S3 lips", [cubic_path(LIPS, MOUTH["lipverts"])], shade_fills(P, PD, PL, 1.6), id=MOUTH["lips"]),
+], id=MOUTH["elastic"])], id=MOUTH["breath"])], id=MOUTH["outer"], x=195, y=548)
+s.parts.append(mouth_xml)
 pop(s, MOUTH["outer"], 6, 40, "el2", s0=0.15)
 s.track(MOUTH["open"], "scaleY", [(0, 0.05, "hold"), (16, 0.05, "el"), (64, 1, "hold")])
 s.track(MOUTH["teeth"], "opacity", [(0, 0, "hold"), (30, 0, "lin"), (40, 1, "hold")])
 s.track(hid, "scaleY", [(0, 0.2, "hold"), (22, 0.2, "el"), (80, 1, "hold")])
 count(s, 22, 86)
-# floating syllable chips around the mouth ("ah", "oh", "mm")
-for i, (syl, x, y, col, r) in enumerate([("ah", 52, 330, P, -0.25), ("oh", 330, 350, D, 0.2), ("mm", 318, 640, WP, 0.15)]):
+for i, (syl, x, y, col, r) in enumerate([("ah", 54, 404, P, -0.25), ("oh", 334, 420, D, 0.2), ("mm", 322, 700, WP, 0.15)]):
     cid_ = nid()
-    sid, st = disp(28, col, 800)
+    sid, st = disp(30, col, 800)
     s.parts.append(text(f"S3 syllable {syl}", x, y, [st], [run(sid, syl)], id=cid_, ox=0.5, oy=0.5, rot=r))
     pop(s, cid_, 44 + i * 8, 24, "back", rot0=r - 0.8, rot1=r)
     s.itrack(cid_, "y", [(0, y, "sine"), (120, y - 10, "sine"), (240, y, "hold")])
+for i, (x, y, sz, col) in enumerate([(64, 640, 22, WP), (336, 560, 16, D)]):
+    sp = nid()
+    s.parts.append(sparkle(f"S3 sparkle {i}", sz, col, x, y, id=sp))
+    pop(s, sp, 70 + i * 8, 22, "back2", rot0=-1)
+    s.itrack(sp, "rotation", [(0, 0, "sine"), (120, 0.5, "sine"), (240, 0, "hold")])
+s.parts.append(ground("S3 shadow", 260, 30, "55A894E6", 195, 718))
 s.itrack(MOUTH["breath"], "scaleY", [(0, 1, "sine"), (60, 1.035, "sine"), (120, 1, "sine"), (180, 1.035, "sine"), (240, 1, "hold")])
 s.itrack(MOUTH["breath"], "scaleX", [(0, 1, "sine"), (60, 0.985, "sine"), (120, 1, "sine"), (180, 0.985, "sine"), (240, 1, "hold")])
 
 # ---------- 4. Phrases saved -------------------------------------------------
 s = Scene(4, D)
-hid, hx, hc = hero_number("S4 hero", "phrasesSaved", 24, 92, 342, 150, WP)
+s.parts.append(grain(op=0.45))
+hid, hx, hc = hero_number("S4 hero", "phrasesSaved", 24, HERO_Y, 342, HERO_SIZE, WP, wdth=100, ls=-5)
 s.parts.append(hx)
 s.hero = hid
-rise(s, hid, 14, base_y=92, dy=30, dur=20)
-count(s)
-ids4 = copy_block(s, 24, 0, 4, unit_y=258, head_y=304, sup_y=386, w=250, head_color=WP, sup_color=LL)
-QUOTES = nid()
-s.parts.append(quote_mark("S4 quotes", 1.12, Y, YD, x=200, y=640, id=QUOTES))
-pop(s, QUOTES, 10, 34, "back", s0=0.2)
-s.track(QUOTES, "y", [(0, 700, "hold"), (10, 700, "back"), (44, 640, "hold")])
-WORDS = [("hola", P, D), ("merci", Y, D), ("ciao", L, D), ("hallo", LL, D), ("olá", P, WP), ("grazie", WP, D),
-         ("привет", L, D), ("γεια", Y, D)]
-REST = [(300, 300, 0.32), (322, 372, -0.18), (282, 438, 0.12), (210, 500, -0.22), (330, 512, 0.26),
-        (120, 520, 0.18), (250, 568, -0.08), (156, 586, -0.3)]
-for i, ((word, bgc, ink), (rx, ry, rr)) in enumerate(zip(WORDS, REST)):
-    wid = nid()
-    inner = nid()
-    wpx = 22 + len(word) * 13.5
-    sid, st = body(21, ink, 600)
-    s.parts.insert(0, node(f"S4 word {word}", [node(f"S4 word float {i}", [
+rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
+count(s, 20, 82)
+ids4 = top_copy(s, 4, ink=WP, w=272)
+ids4.update(caption(s, 4, ink=LL))
+# word-shaped blocks cascade from the upper right into the gap between two giant block quotes
+WORDS = [("ありがとう", L, D, 318, 222, 0.36, True), ("merci", Y, D, 344, 292, -0.32, False),
+         ("ciao", L, D, 338, 392, 0.36, False), ("hola", P, D, 246, 414, -0.1, False),
+         ("안녕", P, D, 312, 452, -0.16, True), ("hallo", LL, D, 214, 470, 0.36, False),
+         ("olá", Y, D, 150, 448, -0.3, False), ("привет", L, D, 284, 516, 0.1, False)]
+BLANKS = [(P, 344, 162, 28, 40, -0.4), (Y, 282, 262, 22, 22, 0.3), (L, 350, 344, 26, 26, 0.5), (Y, 140, 404, 30, 30, 0.4),
+          (LL, 262, 474, 16, 34, 0.4), (Y, 350, 470, 18, 40, 0.5), (L, 96, 476, 32, 28, -0.4)]
+CONF = [(P, 274, 300, 9), (P, 206, 536, 14), (L, 206, 574, 14), (Y, 120, 362, 8)]
+blk = []
+for i, (word, bgc, ink, rx, ry, rr, cjk) in enumerate(WORDS):
+    wid, inner = nid(), nid()
+    if cjk:
+        wpx = 26 + len(word) * 20
+        sid, st = body(19, ink, 600, font=F_CJK)
+    else:
+        wpx = 26 + len(word) * 12.5
+        sid, st = body(21, ink, 600)
+    s.parts.insert(1, node(f"S4 word {i}", [node(f"S4 word float {i}", [
         text(f"S4 word text {i}", 0, 0, [st], [run(sid, word)], ox=0.5, oy=0.5),
-        shape(f"S4 word block {i}", [rect(wpx, 42, 13)], [fill(bgc)]),
-        shape(f"S4 word block depth {i}", [rect(wpx, 42, 13)], [fill("40000000")], x=3, y=5),
+        shape(f"S4 word block {i}", [rect(wpx, 44, 13)], shade_fills(bgc, {P: PD, L: LD, Y: YD, LL: L}[bgc], bgc, 0.35)),
     ], id=inner)], id=wid, x=rx, y=ry, rot=rr))
-    f0 = 26 + i * 7
-    s.track(wid, "y", [(0, -80, "hold"), (f0, -80, "back"), (f0 + 30, ry, "hold")])
-    s.track(wid, "rotation", [(0, rr + 1.2, "hold"), (f0, rr + 1.2, "out"), (f0 + 34, rr, "hold")])
+    blk.append((wid, inner, rx, ry, rr))
+for i, (col, x, y, w_, h_, r) in enumerate(BLANKS):
+    wid, inner = nid(), nid()
+    s.parts.insert(1, node(f"S4 blank {i}", [node(f"S4 blank float {i}", [
+        shape(f"S4 blank block {i}", [rect(w_, h_, 7)], shade_fills(col, {P: PD, L: LD, Y: YD, LL: L}[col], col, 0.25))],
+        id=inner)], id=wid, x=x, y=y, rot=r))
+    blk.append((wid, inner, x, y, r))
+for i, (col, x, y, sz) in enumerate(CONF):
+    wid, inner = nid(), nid()
+    s.parts.insert(1, node(f"S4 confetti {i}", [node(f"S4 confetti float {i}", [
+        shape(f"S4 diamond {i}", [rect(sz, sz, 2)], [fill(col)], rot=0.785)], id=inner)], id=wid, x=x, y=y))
+    blk.append((wid, inner, x, y, 0))
+# the cascade: everything falls in along the diagonal from top-right, lands with a tilt overshoot
+blk.sort(key=lambda b: b[3])
+for i, (wid, inner, rx, ry, rr) in enumerate(blk):
+    f0 = 22 + i * 3.2
+    s.track(wid, "x", [(0, rx + 140, "hold"), (f0, rx + 140, "out"), (f0 + 30, rx, "hold")])
+    s.track(wid, "y", [(0, ry - 300, "hold"), (f0, ry - 300, (0.25, 1.25, 0.5, 1)), (f0 + 30, ry, "hold")])
+    s.track(wid, "rotation", [(0, rr + 1.4, "hold"), (f0, rr + 1.4, "back"), (f0 + 34, rr, "hold")])
     s.track(wid, "opacity", [(0, 0, "hold"), (f0, 1, "hold")])
-    s.itrack(inner, "y", [(0, 0, "sine"), (60 + i * 7, -7, "sine"), (240, 0, "hold")])
+    s.itrack(inner, "y", [(0, 0, "sine"), (60 + (i * 13) % 90, -6, "sine"), (240, 0, "hold")])
     s.itrack(inner, "rotation", [(0, 0, "sine"), (120, 0.06 * (1 if i % 2 else -1), "sine"), (240, 0, "hold")])
-# sparkle ticks
-for i, (x, y, r) in enumerate([(70, 570, -0.6), (348, 600, 0.5), (58, 640, -0.2)]):
+# a slow stream of tiny blocks keeps pouring into the quotes (idle, seamless)
+for i, col in enumerate([Y, L, P]):
+    tid = nid()
+    s.parts.insert(1, shape(f"S4 pour {i}", [rect(12, 16, 4)], [fill(col)], id=tid, x=300, y=300, op=0))
+    st0 = i * 70
+    s.itrack(tid, "x", [(0, 330, "hold"), (st0, 330, "in"), (st0 + 90, 206, "hold"), (st0 + 92, 330, "hold"), (240, 330, "hold")])
+    s.itrack(tid, "y", [(0, 250, "hold"), (st0, 250, "in"), (st0 + 90, 560, "hold"), (st0 + 92, 250, "hold"), (240, 250, "hold")])
+    s.itrack(tid, "rotation", [(0, 0, "hold"), (st0, 0, "lin"), (st0 + 90, 3.2, "hold"), (st0 + 92, 0, "hold"), (240, 0, "hold")])
+    s.itrack(tid, "opacity", [(0, 0, "hold"), (st0, 0, "lin"), (st0 + 12, 1, "hold"), (st0 + 74, 1, "lin"),
+                              (st0 + 90, 0, "hold"), (240, 0, "hold")])
+    s.settle(tid, "opacity", 0)
+# the giant block quotes (concept screen 4)
+QUOTES, QL, QR = nid(), nid(), nid()
+qkids = []
+for qid, qx in ((QL, -92), (QR, 92)):
+    qkids.append(node("S4 quote", [
+        shape("S4 quote glint", [ellipse(60, 14)], [fill("66FFFFFF", feather=(4,))], x=-14, y=-94),
+        shape("S4 quote body", [smooth_path(block_quote_pts(1.0))], shade_fills(Y, YD, "FFFFF6B8", 1.0)),
+    ], id=qid, x=qx))
+s.parts.append(node("S4 quotes", qkids, id=QUOTES, x=195, y=574))
+for i, qid in enumerate((QL, QR)):
+    f0 = 8 + i * 6
+    s.track(qid, "y", [(0, 260, "hold"), (f0, 260, (0.3, 1.35, 0.55, 1)), (f0 + 30, 0, "hold")])
+    s.track(qid, "scaleY", [(0, 1.3, "hold"), (f0 + 20, 1.3, "lin"), (f0 + 28, 0.82, "el"), (f0 + 70, 1, "hold")])
+    s.track(qid, "scaleX", [(0, 0.8, "hold"), (f0 + 20, 0.8, "lin"), (f0 + 28, 1.14, "el"), (f0 + 70, 1, "hold")])
+    s.itrack(qid, "rotation", [(0, 0, "sine"), (120, 0.025 * (1 if i else -1), "sine"), (240, 0, "hold")])
+for i, (x, y, r) in enumerate([(50, 420, -0.55), (34, 456, -1.0), (370, 610, 0.6), (30, 640, -0.3)]):
     tk = nid()
-    s.parts.append(shape(f"S4 tick {i}", [rect(5, 30, 2.5)], [fill(Y)], id=tk, x=x, y=y, rot=r))
-    pop(s, tk, 40 + i * 6, 20, "back")
+    s.parts.append(shape(f"S4 tick {i}", [rect(5, 28, 2.5)], [fill(Y)], id=tk, x=x, y=y, rot=r))
+    pop(s, tk, 46 + i * 5, 20, "back")
     s.itrack(tk, "opacity", [(0, 1, "sine"), (40 + i * 30, 0.3, "sine"), (240, 1, "hold")])
+s.parts.append(ground("S4 shadow L", 150, 22, "CC2A1640", 104, 694))
+s.parts.append(ground("S4 shadow R", 150, 22, "CC2A1640", 288, 694))
+
 # ---------- 5. Topics explored ----------------------------------------------
 s = Scene(5, Y)
-hid, hx, hc = hero_number("S5 hero", "topicsExplored", 24, 92, 342, 168, D, align="right")
+s.parts.append(grain())
+hid, hx, hc = hero_number("S5 hero", "topicsExplored", 24, HERO_Y, 342, HERO_SIZE, D, align="right", wdth=100, ls=-5)
 s.parts.append(hx)
 s.hero = hid
-rise(s, hid, 14, base_y=92, dy=30, dur=20)
-count(s)
-ids5 = copy_block(s, 24, 0, 5, unit_y=272, head_y=630, sup_y=708, align=None)
+rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
+count(s, 20, 82)
+ids5 = top_copy(s, 5, align="right")
+ids5.update(caption(s, 5, align="right", ink=D))
 RING = nid()
 RING_SPIN = nid()
-symbols = []
-bub = []
+bub5 = []
 
 
 def symbol(kind, col):
@@ -696,47 +892,54 @@ def symbol(kind, col):
 
 
 ring_kids = []
-for i, (bcol, shade, sym_a, sym_b, inkc) in enumerate([(P, PD, "sun", "leaf", WP), (L, LD, "star", "wave", D),
-                                                      (D, DD, "cup", "dots", Y)]):
+for i, (bcol, shade, light, sym_a, sym_b, inkc) in enumerate([(P, PD, PL, "sun", "leaf", WP), (L, LD, LL, "star", "wave", D),
+                                                              (D, DD, DL, "cup", "dots", Y)]):
     ang = -math.pi / 2 + i * 2 * math.pi / 3
-    bx, by = 112 * math.cos(ang), 112 * math.sin(ang)
+    bx, by = 104 * math.cos(ang), 104 * math.sin(ang)
     b_id, cr, sa, sb = nid(), nid(), nid(), nid()
     ring_kids.append(node(f"S5 bubble {i}", [node(f"S5 bubble upright {i}", [
-        node("sym a", [symbol(sym_a, inkc)], id=sa, y=-4),
-        node("sym b", [symbol(sym_b, inkc)], id=sb, y=-4, op=0),
-        shape(f"S5 bubble body {i}", [smooth_path(bubble_pts(0.58, i == 1))], [fill(bcol)]),
-        shape(f"S5 bubble depth {i}", [smooth_path(bubble_pts(0.58, i == 1))], [fill(shade)], x=4, y=6),
+        node("sym a", [symbol(sym_a, inkc)], id=sa, y=-6),
+        node("sym b", [symbol(sym_b, inkc)], id=sb, y=-6, op=0),
+        shape(f"S5 bubble body {i}", [smooth_path(bubble_pts(0.52, i == 1))], shade_fills(bcol, shade, light, 0.52)),
     ], id=cr)], id=b_id, x=bx, y=by))
-    bub.append((b_id, cr, sa, sb))
+    bub5.append((b_id, cr, sa, sb))
     pop(s, b_id, 20 + i * 8, 30, "back")
-    # symbols swap: a -> b -> a over the idle loop, staggered
     st0 = 100 + i * 40
     s.itrack(sa, "opacity", [(0, 1, "hold"), (st0, 1, "lin"), (st0 + 12, 0, "hold"), (st0 + 300, 0, "lin"), (st0 + 312, 1, "hold"), (720, 1, "hold")])
     s.itrack(sb, "opacity", [(0, 0, "hold"), (st0, 0, "lin"), (st0 + 12, 1, "hold"), (st0 + 300, 1, "lin"), (st0 + 312, 0, "hold"), (720, 0, "hold")])
     s.itrack(sa, "scaleX", [(0, 1, "hold"), (st0, 1, "in"), (st0 + 12, 0.3, "hold"), (st0 + 300, 0.3, "back"), (st0 + 324, 1, "hold"), (720, 1, "hold")])
     s.itrack(sb, "scaleX", [(0, 0.3, "hold"), (st0, 0.3, "back"), (st0 + 24, 1, "hold"), (st0 + 300, 1, "in"), (st0 + 312, 0.3, "hold"), (720, 0.3, "hold")])
     s.itrack(cr, "rotation", [(0, 0, "lin"), (720, -2 * math.pi, "hold")])
-orbit = shape("S5 orbit", [ellipse(224, 224)], [stroke("553D2456", 2.5, effects=[E("DashPath", {"name": "Dots"}, [
+orbit = shape("S5 orbit", [ellipse(208, 208)], [stroke("663D2456", 2.5, effects=[E("DashPath", {"name": "Dots"}, [
     E("Dash", {"length": 2, "name": "On"}), E("Dash", {"length": 12, "name": "Off"})])])], id=nid())
-s.parts.append(node("S5 ring", [node("S5 ring spin", ring_kids + [orbit], id=RING_SPIN)], id=RING, x=195, y=458))
+s.parts.append(node("S5 ring", [node("S5 ring spin", ring_kids + [orbit], id=RING_SPIN)], id=RING, x=195, y=548))
 s.track(RING, "rotation", [(0, -2.4, "hold"), (14, -2.4, "out"), (80, 0, "hold")])
 s.itrack(RING_SPIN, "rotation", [(0, 0, "lin"), (720, 2 * math.pi, "hold")])
+for i, (x, y, sz, col) in enumerate([(60, 430, 22, D), (336, 680, 18, P), (70, 690, 14, WP)]):
+    sp = nid()
+    s.parts.append(sparkle(f"S5 sparkle {i}", sz, col, x, y, id=sp))
+    pop(s, sp, 60 + i * 8, 22, "back2", rot0=-1)
+s.parts.append(ground("S5 shadow", 240, 26, "55E2D15A", 195, 712))
 s.idle_dur = 720
 
 # ---------- 6. Languages practised ------------------------------------------
 s = Scene(6, WP)
-hid, hx, hc = hero_number("S6 hero", "languagesPractised", 24, 92, 342, 168, D)
+s.parts.append(grain())
+hid, hx, hc = hero_number("S6 hero", "languagesPractised", 24, HERO_Y, 342, HERO_SIZE, D, wdth=100, ls=-5)
 s.parts.append(hx)
 s.hero = hid
-rise(s, hid, 14, base_y=92, dy=30, dur=20)
-count(s)
-ids6 = copy_block(s, 24, 0, 6, unit_y=272, head_y=616, sup_y=694)
+rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
+count(s, 20, 82)
+ids6 = top_copy(s, 6)
+ids6.update(caption(s, 6))
 RIB = []
+DY6 = 104
 rib_specs = [
     (P, [(-40, 400), (60, 360), (170, 420), (270, 470), (430, 420)], "hello · hola · ciao · hallo · olá · hej · ", WP, None),
     (L, [(-40, 520), (80, 450), (190, 390), (300, 430), (430, 500)], "merci · grazie · danke · obrigado · ", D, C_RIB2),
     (D, [(-40, 460), (90, 540), (210, 500), (320, 380), (430, 360)], "привет · γεια · salut · ahoj · ", Y, C_RIB3),
 ]
+rib_specs = [(c, [(x, y + DY6) for x, y in pts], w, ink, oc) for c, pts, w, ink, oc in rib_specs]
 rib_parts = []
 for i, (col, pts, words, ink, opconv) in enumerate(rib_specs):
     rid, sid_, trim, tmod, grp = nid(), nid(), nid(), nid(), nid()
@@ -760,30 +963,37 @@ for i, (col, pts, words, ink, opconv) in enumerate(rib_specs):
     drift = -0.12 if i != 1 else 0.12
     s.itrack(tmod, "offset", [(0, 0, "sine"), (300, drift, "sine"), (600, 0, "hold")])
     s.itrack(rid, "y", [(0, 0, "sine"), (150 + i * 20, -8 + i * 5, "sine"), (600, 0, "hold")])
-# weave: a trimmed copy of the plum ribbon drawn over the persimmon one
 weave = shape("S6 weave over", [smooth_path(rib_specs[2][1], closed=False)],
               [E("Stroke", {"thickness": 36, "cap": "butt", "join": "round", "name": "Band"},
                  [solid(D), E("TrimPath", {"start": 0.62, "end": 0.78, "modeValue": "sequential", "name": "Segment"})])],
               id=nid(), binds=[bind(V("languagesPractised"), 18, C_RIB3)])
 s.parts.append(node("S6 ribbons", [weave] + rib_parts, id=nid()))
-s.track(weave_id := None, "opacity", []) if False else None
+s.parts.append(ground("S6 shadow", 300, 26, "44C7B7F2", 195, 712))
 s.idle_dur = 600
 
 # ---------- 7. Day practice streak ------------------------------------------
 s = Scene(7, P)
-ids7 = copy_block(s, 24, 0, 7, head_y=98, sup_y=180, head_color=DD, sup_color=DD)
-hid, hx, hc = hero_number("S7 hero", "longestStreakDays", 24, 556, 342, 168, DD, wdth=80)
+s.parts.append(grain())
+ids7 = top_copy(s, 7, unit=False, head_y=92, ink=DD, f0=40, head_lines=2)
+ids7["sup_rng"], m = kinetic(units=2, y=14, ease=(0.4, 0, 0.2, 1))
+ids7["sup"], ids7["sup_c"], t_ = bound_text("S7 support", 24, 92 + 2 * 39 + 14, 342, "screen7Support", font="body",
+                                            size=16, color=DD, wght=500, lh=21, sizing="fixed", h=44,
+                                            overflow="ellipsis", mods=[m])
+s.parts.append(t_)
+sweep(s, ids7["sup_rng"], 76, 30, 0.4)
+hid, hx, hc = hero_number("S7 hero", "longestStreakDays", 24, 540, 342, 176, DD, wdth=100, ls=-6)
 s.parts.append(hx)
 s.hero = hid
-rise(s, hid, 30, base_y=556, dy=30, dur=20)
-count(s, 30, 90)
-u7, u7c, t_ = bound_text("S7 unit", 24, 724, 342, "screen7Unit", size=26, color=DD, wght=700, sizing="fixed", h=32,
-                         overflow="fitFontSize", wrap="noWrap")
+rise(s, hid, 30, base_y=540, dy=34, dur=22, ease="back")
+count(s, 30, 92)
+u7rng, m = kinetic(units=0, y=0, x=-14, ease=(0.4, 0, 0.2, 1))
+u7, u7c, t_ = bound_text("S7 unit", 24, 724, 342, "screen7Unit", size=UNIT_SIZE, color=DD, wght=650, wdth=96,
+                         sizing="fixed", h=34, overflow="fitFontSize", wrap="noWrap", ls=-0.3, mods=[m])
 s.parts.append(t_)
-rise(s, u7, 46, base_y=724, dy=12)
+sweep(s, u7rng, 50, 26, 0.3)
 LINE = nid()
 LINE_TRIM = nid()
-line_pts = [(-30, 300), (120, 262), (330, 300), (360, 360), (240, 400), (60, 420), (40, 470), (160, 520), (420, 500)]
+line_pts = [(-30, 330), (120, 292), (330, 330), (360, 390), (240, 430), (60, 450), (40, 500), (160, 548), (420, 528)]
 tokens7 = []
 for i, (ch, col) in enumerate([(".", WP), (",", DD), (";", WP), ("!", DD), ("?", WP)]):
     tid, bounce, fp = nid(), nid(), nid()
@@ -792,9 +1002,7 @@ for i, (ch, col) in enumerate([(".", WP), (",", DD), (";", WP), ("!", DD), ("?",
     tokens7.append(E("Node", {"name": f"S7 hop {i}", "id": tid}, [
         E("FollowPathConstraint", {"targetId": LINE, "distance": d0, "orient": False, "name": "Ride line", "id": fp}),
         node(f"S7 hop bounce {i}", [text(f"S7 hop glyph {i}", 0, 0, [st], [run(sid, ch)], ox=0.5, oy=1)], id=bounce)]))
-    # idle: travel along the sentence line while hopping (squash on landing)
-    s.itrack(fp, "distance", [(0, d0, "lin"), (480, d0 + 0.2, "lin"), (481, d0, "hold")] if False else
-             [(0, d0, "sine"), (240, d0 + 0.08, "sine"), (480, d0, "hold")])
+    s.itrack(fp, "distance", [(0, d0, "sine"), (240, d0 + 0.08, "sine"), (480, d0, "hold")])
     s.itrack(bounce, "y", sum([[(j * 40, -4, "out"), (j * 40 + 20, -40, "in")] for j in range(12)], []) + [(480, -4, "hold")])
     s.itrack(bounce, "scaleY", sum([[(j * 40, 0.8, "out"), (j * 40 + 8, 1.12, "sine"), (j * 40 + 34, 1, "in")]
                                     for j in range(12)], []) + [(480, 0.8, "hold")])
@@ -811,12 +1019,14 @@ s.idle_dur = 480
 
 # ---------- 8. Voice notes ---------------------------------------------------
 s = Scene(8, D)
-hid, hx, hc = hero_number("S8 hero", "voiceNotes", 24, 96, 342, 150, WP, align="center")
+s.parts.append(grain(op=0.45))
+hid, hx, hc = hero_number("S8 hero", "voiceNotes", 24, HERO_Y, 342, HERO_SIZE, WP, align="center", wdth=100, ls=-5)
 s.parts.append(hx)
 s.hero = hid
-rise(s, hid, 14, base_y=96, dy=30, dur=20)
-count(s)
-ids8 = copy_block(s, 24, 0, 8, unit_y=262, head_y=628, sup_y=706, head_color=WP, sup_color=LL, align="center")
+rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
+count(s, 20, 82)
+ids8 = top_copy(s, 8, ink=WP, align="center")
+ids8.update(caption(s, 8, ink=LL, align="center"))
 BARS = []
 heights = [36, 62, 104, 150, 92, 132, 172, 124, 80, 140, 100, 58, 34]
 bar_kids = []
@@ -828,7 +1038,6 @@ for i, hgt in enumerate(heights):
     BARS.append(b)
     s.track(b, "scaleY", [(0, 0.05, "hold"), (12 + abs(i - 6) * 3, 0.05, "el"), (52 + abs(i - 6) * 3, 1, "hold")])
     seq = [(0, 1, "sine")]
-    ph = (i * 7) % 5
     for j in range(6):
         seq.append((j * 40 + 20, 0.45 + 0.1 * ((i + j) % 4), "sine"))
         seq.append((j * 40 + 40, 1, "sine"))
@@ -838,14 +1047,20 @@ SPEECH = nid()
 SPEECH_TRIM = nid()
 SPEECH_FILL = nid()
 speech = node("S8 speech shape", [
-    shape("S8 speech outline", [smooth_path(bubble_pts(1.32))],
+    shape("S8 speech outline", [smooth_path(bubble_pts(1.08))],
           [E("Stroke", {"thickness": 9, "cap": "round", "join": "round", "name": "Outline"},
              [solid(L), E("TrimPath", {"start": 0, "end": 1, "modeValue": "sequential", "name": "Draw",
                                        "id": SPEECH_TRIM})])]),
-    shape("S8 speech fill", [smooth_path(bubble_pts(1.32))], [fill("33C7B7F2")], id=SPEECH_FILL),
-], id=SPEECH, x=195, y=436)
-s.parts.append(node("S8 voice", bar_kids, id=(VOICE := nid()), x=195, y=440))
+    shape("S8 speech fill", [smooth_path(bubble_pts(1.08))], [fill("33C7B7F2")], id=SPEECH_FILL),
+], id=SPEECH, x=195, y=528)
+s.parts.append(node("S8 voice", bar_kids, id=(VOICE := nid()), x=195, y=528))
 s.parts.append(speech)
+for i, (x, y, sz, col) in enumerate([(60, 440, 20, Y), (340, 640, 16, L), (330, 430, 12, P)]):
+    sp = nid()
+    s.parts.append(sparkle(f"S8 sparkle {i}", sz, col, x, y, id=sp))
+    pop(s, sp, 90 + i * 8, 22, "back2", rot0=-1)
+    s.itrack(sp, "rotation", [(0, 0, "sine"), (120, 0.5, "sine"), (240, 0, "hold")])
+s.parts.append(ground("S8 shadow", 220, 24, "CC2A1640", 195, 716))
 s.track(SPEECH_TRIM, "end", [(0, 0, "hold"), (50, 0, "io"), (100, 1, "hold")])
 s.track(SPEECH_FILL, "opacity", [(0, 0, "hold"), (80, 0, "out"), (110, 1, "hold")])
 s.track(SPEECH, "scaleX", [(0, 0.6, "hold"), (50, 0.6, "back"), (100, 1, "hold")])
@@ -854,166 +1069,177 @@ s.itrack(SPEECH, "rotation", [(0, 0, "sine"), (120, 0.04, "sine"), (240, 0, "hol
 
 # ---------- 9. Persona -------------------------------------------------------
 s = Scene(9, L)
-BG9 = nid()
+s.parts.append(grain())
 p9 = {}
-p9["label"], p9["label_c"], tl_ = flow_text("S9 label", 342, "personaLabel", font="body", size=15, color=D, wght=600)
+p9["label"], p9["label_c"], tl_ = flow_text("S9 label", 342, "personaLabel", font="body", size=16, color=D, wght=500)
 rise(s, p9["label"], 70, base_y=0, dy=10)
-p9["title"], p9["title_c"], tt_ = flow_text("S9 title", 342, "personaName", size=48, color=D, wght=800, lh=48, wdth=86)
-p9["desc"], p9["desc_c"], td_ = flow_text("S9 description", 342, "personaDescription", font="body", size=20,
-                                       color=D, wght=600, lh=26)
-s.parts.append(column("S9 copy", 24, 98, 342, [tl_, tt_, td_], gap=8)[1])
-rise(s, p9["desc"], 104, base_y=0, dy=14)
-TITLE_RANGE = nid()
-# title letters reveal via modifier (kinetic)
-s.parts = [p.replace(f'id="{p9["title"]}">', f'id="{p9["title"]}">', 1) for p in s.parts]
-s.track(p9["title"], "opacity", [(0, 0, "hold"), (82, 0, "lin"), (86, 1, "hold")])
-s.track(p9["title"], "y", [(0, 26, "hold"), (82, 26, "back"), (110, 0, "hold")])
-s.motifA = (195, 520, 0.001, 0.001, 0, 0)
-s.motifB = (195, 520, 0.001, 0.001, 0, 0)
-EMB = []  # per persona: (root id, reveal tracks, idle tracks)
+p9["title_rng"], m = kinetic(units=0, y=34, scale=(0.6, 0.2), ease=(0.3, -0.7, 0.5, 1))
+p9["title"], p9["title_c"], tt_ = flow_text("S9 title", 342, "personaName", size=52, color=D, wght=800, lh=52, wdth=94,
+                                         ls=-1.2, mods=[m])
+p9["desc_rng"], m = kinetic(units=2, y=18, ease=(0.4, -0.3, 0.3, 1))
+p9["desc"], p9["desc_c"], td_ = flow_text("S9 description", 342, "personaDescription", size=22, color=D, wght=600,
+                                       lh=27, wdth=96, mods=[m])
+s.parts.append(column("S9 copy", 24, 104, 342, [tl_, tt_, td_], gap=8)[1])
+sweep(s, p9["title_rng"], 80, 30, 0.35)
+sweep(s, p9["desc_rng"], 104, 30, 0.4)
+STAGE_Y = 540
+s.motifA = OFF_A   # the pair only passes through (anticipation), then hides inside the emblem
+s.motifB = OFF_B
 
 
-def emblem0(scale=1.0):
-    ids_a, ids_b = {}, {}
-    a = motif_bubble("E0 bubble A", P, PD, False, 0.78 * scale, ids=ids_a)
-    b = motif_bubble("E0 bubble B", L, LD, True, 0.74 * scale, ids=ids_b)
-    stars = []
-    for i, (x, y, sz) in enumerate([(-10, -150, 30), (120, -110, 22), (-130, -96, 18), (8, 112, 16)]):
-        stars.append(shape(f"E0 star {i}", [E("Star", {"width": sz * scale, "height": sz * scale, "points": 4,
-                                                       "innerRadius": 0.35, "name": "Path"})], [fill(Y if i % 2 == 0 else D)],
-                           id=nid(), x=x * scale, y=y * scale))
-    marks_id = nid()
-    sid, st = disp(90 * scale, D, 800)
-    marks = text("E0 speech marks", 0, -40 * scale, [st], [run(sid, "“ ”")], ox=0.5, oy=0.5, id=marks_id)
-    return {"a": ids_a, "b": ids_b, "stars": [x.split('id="')[-1].split('"')[0] for x in []], "marks": marks_id,
-            "xml": [marks] + stars + [a, b], "star_xml": stars}
+WRAPS = set()
 
 
-def find_ids(xml_list, prefix):
-    import re
-    out = []
-    for x in xml_list:
-        m = re.search(r'name="' + prefix + r'[^"]*" id="([0-9:]+)"', x)
-        if m:
-            out.append(m.group(1))
-    return out
+def blob(cx, cy, r, k, s_=1.0):
+    pts = []
+    for j in range(7):
+        a = j * 2 * math.pi / 7
+        rr = r * (0.72 + 0.28 * math.sin(j * 2.3 + k))
+        pts.append(((cx + math.cos(a) * rr * 1.25) * s_, (cy + math.sin(a) * rr) * s_))
+    return pts
 
 
 def build_emblems(scale=1.0, tag="E"):
-    """Four persona emblems with distinct silhouettes. Returns list of dict(root, reveal(anim), idle(anim), xml)."""
+    """Four persona emblems with distinct silhouettes and choreography. Returns list of
+    dict(root, xml, rev tracks, idle tracks, dur, ring colours)."""
+    S_ = scale
     out = []
-    # 0 Conversation Starter: welcoming speech marks between two greeting faces
-    ia, ib = {}, {}
-    a = motif_bubble(f"{tag}0 bubble A", P, PD, False, 0.78 * scale, ids=ia)
-    b = motif_bubble(f"{tag}0 bubble B", L, LD, True, 0.74 * scale, ids=ib)
-    stars = []
-    star_ids = []
-    for i, (x, y, sz, col) in enumerate([(-10, -150, 34, Y), (126, -108, 24, D), (-132, -96, 20, D), (6, 118, 18, Y)]):
-        si = nid()
-        star_ids.append(si)
-        stars.append(shape(f"{tag}0 star {i}", [E("Star", {"width": sz * scale, "height": sz * scale, "points": 4,
-                                                           "innerRadius": 0.32, "name": "Path"})], [fill(col)],
-                           id=si, x=x * scale, y=y * scale))
-    marks = nid()
-    sid, st = disp(96 * scale, D, 800)
-    root = nid()
-    xml = node(f"{tag}0 conversation starter", [text(f"{tag}0 marks", 0, -36 * scale, [st], [run(sid, "“ ”")],
-                                                     ox=0.5, oy=0.5, id=marks)] + stars + [a, b], id=root)
-    rev, idle = [], []
-    rev += [(ia["root"], "x", [(0, -300 * scale, "hold"), (8, -300 * scale, "back"), (40, -78 * scale, "hold")]),
-            (ia["root"], "y", [(0, 40 * scale, "hold")]),
-            (ia["root"], "rotation", [(0, -0.6, "hold"), (8, -0.6, "back"), (40, 0.12, "hold")]),
-            (ib["root"], "x", [(0, 300 * scale, "hold"), (14, 300 * scale, "back"), (46, 80 * scale, "hold")]),
-            (ib["root"], "y", [(0, 52 * scale, "hold")]),
-            (ib["root"], "rotation", [(0, 0.6, "hold"), (14, 0.6, "back"), (46, -0.12, "hold")]),
-            (marks, "scaleX", [(0, 0, "hold"), (40, 0, "el"), (80, 1, "hold")]),
-            (marks, "scaleY", [(0, 0, "hold"), (40, 0, "el"), (80, 1, "hold")])]
-    for i, si in enumerate(star_ids):
-        rev += [(si, "scaleX", [(0, 0, "hold"), (50 + i * 6, 0, "back2"), (70 + i * 6, 1, "hold")]),
-                (si, "scaleY", [(0, 0, "hold"), (50 + i * 6, 0, "back2"), (70 + i * 6, 1, "hold")])]
-        idle.append((si, "rotation", [(0, 0, "sine"), (60 + i * 20, 0.5, "sine"), (240, 0, "hold")]))
-    idle += [(ia["bob"], "rotation", [(0, 0, "sine"), (60, 0.08, "sine"), (120, 0, "sine"), (240, 0, "hold")]),
-             (ib["bob"], "rotation", [(0, 0, "hold"), (120, 0, "sine"), (180, -0.08, "sine"), (240, 0, "hold")]),
-             (ia["mouth"], "scaleY", [(0, 1, "sine"), (30, 0.55, "sine"), (60, 1, "hold"), (240, 1, "hold")]),
-             (ib["mouth"], "scaleY", [(0, 1, "hold"), (120, 1, "sine"), (150, 0.55, "sine"), (180, 1, "hold"), (240, 1, "hold")])]
-    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 240})
 
-    # 1 Phrase Collector: a quotation-mark archive (stacked index cards)
+    def tick(name, x, y, rot, col, w=7, h=30):
+        i_ = nid()
+        return i_, shape(name, [rect(w * S_, h * S_, w * S_ / 2)], [fill(col)], id=i_, x=x * S_, y=y * S_, rot=rot)
+
+    # 0 Conversation Starter: two laughing speech forms hug a little world (concept screen 9)
+    ia, ib = {}, {}
+    a = motif_bubble(f"{tag}0 bubble A", P, PD, False, 0.88 * S_, ids=ia, look=-22)
+    b = motif_bubble(f"{tag}0 bubble B", L, LD, True, 0.84 * S_, ids=ib, look=22)
+    root, globe, land, gclip = nid(), nid(), nid(), nid()
+    R = 80
+    lands = []
+    for copy_ in (0, 1):
+        for j, (cx, cy, r) in enumerate([(-40, -34, 34), (30, 14, 30), (-22, 52, 20), (54, -46, 16)]):
+            lands.append(shape(f"{tag}0 land {copy_}{j}", [smooth_path(blob(cx + copy_ * 2 * R, cy, r, j, S_))],
+                               [fill(Y)]))
+    world = node(f"{tag}0 world", [
+        shape(f"{tag}0 globe rim", [ellipse(2 * R * S_, 2 * R * S_)], [fill("55FFFFFF", feather=(6 * S_,))], x=-14 * S_,
+              y=-16 * S_, op=0.6),
+        node(f"{tag}0 lands", lands + [E("ClippingShape", {"sourceId": gclip, "name": "Clip to globe"})], id=land),
+        shape(f"{tag}0 globe", [ellipse(2 * R * S_, 2 * R * S_)], shade_fills(D, DD, DL, 0.8 * S_)),
+        shape(f"{tag}0 globe clip", [ellipse(2 * R * S_ - 2, 2 * R * S_ - 2)], [], id=gclip),
+    ], id=globe, y=-40 * S_)
+    ticks = [tick(f"{tag}0 tick {k}", x, y, r, c) for k, (x, y, r, c) in enumerate(
+        [(-150, -176, -0.7, P), (-168, -138, -1.2, P), (12, -196, 0.05, D), (128, -184, 0.6, D), (150, -150, 1.0, D)])]
+    xml = node(f"{tag}0 conversation starter", [t[1] for t in ticks] + [
+        world,
+        node(f"{tag}0 pair A", [a], x=-120 * S_, y=-78 * S_, rot=-0.1, sx=0.84),
+        node(f"{tag}0 pair B", [b], x=122 * S_, y=-68 * S_, rot=0.1, sx=0.84)], id=root)
+    rev = [(ia["root"], "x", [(0, -260 * S_, "hold"), (10, -260 * S_, (0.3, 1.3, 0.5, 1)), (40, 0, "hold")]),
+           (ia["root"], "rotation", [(0, -0.8, "hold"), (10, -0.8, "back"), (44, 0, "hold")]),
+           (ib["root"], "x", [(0, 260 * S_, "hold"), (16, 260 * S_, (0.3, 1.3, 0.5, 1)), (46, 0, "hold")]),
+           (ib["root"], "rotation", [(0, 0.8, "hold"), (16, 0.8, "back"), (50, 0, "hold")]),
+           (globe, "scaleX", [(0, 0, "hold"), (2, 0, "el2"), (44, 1, "hold")]),
+           (globe, "scaleY", [(0, 0, "hold"), (2, 0, "el2"), (44, 1, "hold")]),
+           (land, "x", [(0, -2 * R * S_, "hold"), (2, -2 * R * S_, "out"), (60, 0, "hold")]),
+           (ia["mouth"], "scaleY", [(0, 0.3, "hold"), (30, 0.3, "back2"), (48, 1, "hold")]),
+           (ib["mouth"], "scaleY", [(0, 0.3, "hold"), (38, 0.3, "back2"), (56, 1, "hold")])]
+    for k, (ti, _x) in enumerate(ticks):
+        rev += [(ti, "scaleY", [(0, 0, "hold"), (44 + k * 4, 0, "back2"), (60 + k * 4, 1, "hold")])]
+    WRAPS.add((land, "x"))  # two copies of the land, 2R apart: 0 -> -2R is a seamless spin
+    idle = [(land, "x", [(0, 0, "lin"), (480, -2 * R * S_, "hold")]),
+            (ia["bob"], "rotation", [(0, 0, "sine"), (120, 0.06, "sine"), (240, 0, "sine"), (480, 0, "hold")]),
+            (ib["bob"], "rotation", [(0, 0, "sine"), (120, -0.06, "sine"), (240, 0, "sine"), (480, 0, "hold")]),
+            (ia["mouth"], "scaleY", [(0, 1, "sine"), (30, 0.55, "sine"), (60, 1, "hold"), (240, 1, "sine"), (270, 0.6, "sine"),
+                                     (300, 1, "hold"), (480, 1, "hold")]),
+            (ib["mouth"], "scaleY", [(0, 1, "hold"), (120, 1, "sine"), (150, 0.55, "sine"), (180, 1, "hold"), (360, 1, "sine"),
+                                     (390, 0.6, "sine"), (420, 1, "hold"), (480, 1, "hold")])]
+    for k, (ti, _x) in enumerate(ticks):
+        idle.append((ti, "opacity", [(0, 1, "sine"), (60 + k * 50, 0.35, "sine"), (480, 1, "hold")]))
+    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 480, "rings": (LL, Y, WP), "ground": "55A894E6"})
+
+    # 1 Phrase Collector: a quotation-mark archive (stacked index cards, each holding a kept phrase mark)
     root = nid()
     cards, rev, idle = [], [], []
-    for i, (col, ink) in enumerate([(WP, D), (Y, D), (P, WP), (L, D)]):
-        cid_, gid = nid(), nid()
-        sid, st = disp(84 * scale, ink, 800)
+    for i, (col, ink, shade) in enumerate([(WP, D, WD), (Y, D, YD), (P, WP, PD), (L, D, LD)]):
+        cid_ = nid()
+        sid, st = disp(110 * S_, ink, 800)
         cards.append(node(f"{tag}1 card {i}", [
-            text(f"{tag}1 card mark {i}", 0, 14 * scale, [st], [run(sid, "”")], ox=0.5, oy=0.5),
-            shape(f"{tag}1 card tab {i}", [rect(56 * scale, 18 * scale, 7 * scale)], [fill(col)], x=-44 * scale + i * 30 * scale, y=-70 * scale),
-            shape(f"{tag}1 card face {i}", [rect(200 * scale, 130 * scale, 22 * scale)], [fill(col)]),
-            shape(f"{tag}1 card depth {i}", [rect(200 * scale, 130 * scale, 22 * scale)], [fill("40000000")], x=4 * scale, y=8 * scale),
-        ], id=cid_, y=(i * 34 - 60) * scale, rot=(-0.12 + i * 0.08)))
+            text(f"{tag}1 card mark {i}", 0, 28 * S_, [st], [run(sid, "”")], ox=0.5, oy=0.5),
+            shape(f"{tag}1 card tab {i}", [rect(64 * S_, 22 * S_, 8 * S_)], shade_fills(col, shade, col, 0.3 * S_),
+                  x=(-60 + i * 36) * S_, y=-84 * S_),
+            shape(f"{tag}1 card face {i}", [rect(236 * S_, 156 * S_, 24 * S_)], shade_fills(col, shade, col, 0.9 * S_)),
+        ], id=cid_, y=(i * 40 - 92) * S_, rot=(-0.12 + i * 0.08)))
         f0 = 4 + (3 - i) * 9
-        ry = (i * 34 - 60) * scale
-        rev += [(cid_, "y", [(0, -420 * scale, "hold"), (f0, -420 * scale, "back"), (f0 + 26, ry, "hold")]),
-                (cid_, "rotation", [(0, 0.8 - i * 0.3, "hold"), (f0, 0.8 - i * 0.3, "out"), (f0 + 30, -0.12 + i * 0.08, "hold")])]
-        idle.append((cid_, "y", [(0, ry, "sine"), (60 + i * 15, ry - 6 * (4 - i) * scale, "sine"), (240, ry, "hold")]))
-    xml = node(f"{tag}1 phrase collector", cards[::-1], id=root)
-    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 240})
+        ry = (i * 40 - 92) * S_
+        rev += [(cid_, "y", [(0, -460 * S_, "hold"), (f0, -460 * S_, (0.3, 1.3, 0.5, 1)), (f0 + 26, ry, "hold")]),
+                (cid_, "rotation", [(0, 0.8 - i * 0.3, "hold"), (f0, 0.8 - i * 0.3, "out"), (f0 + 30, -0.12 + i * 0.08, "hold")]),
+                (cid_, "scaleY", [(0, 1, "hold"), (f0 + 24, 1, "lin"), (f0 + 28, 0.86, "el"), (f0 + 60, 1, "hold")])]
+        idle.append((cid_, "y", [(0, ry, "sine"), (60 + i * 15, ry - 6 * (4 - i) * S_, "sine"), (240, ry, "hold")]))
+    ticks = [tick(f"{tag}1 tick {k}", x, y, r, c) for k, (x, y, r, c) in enumerate(
+        [(-150, -170, -0.7, Y), (150, -170, 0.7, Y), (0, -206, 0, L)])]
+    xml = node(f"{tag}1 phrase collector", [t[1] for t in ticks] + cards[::-1], id=root)
+    for k, (ti, _x) in enumerate(ticks):
+        rev += [(ti, "scaleY", [(0, 0, "hold"), (50 + k * 4, 0, "back2"), (66 + k * 4, 1, "hold")])]
+        idle.append((ti, "opacity", [(0, 1, "sine"), (60 + k * 40, 0.35, "sine"), (240, 1, "hold")]))
+    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 240, "rings": (L, P, Y), "ground": "CC2A1640"})
 
-    # 2 Careful Listener: an open parenthesis that becomes an ear, with ripples flowing in
+    # 2 Careful Listener: an open parenthesis that becomes an ear; another voice's ripples flow into it
     root, ear, inner, rip = nid(), nid(), nid(), []
     rev, idle = [], []
-    paren = [(26, -150, "c", 12), (-42, -92), (-66, 0), (-42, 92), (26, 150, "c", 12), (4, 150, "c", 8), (-22, 90),
-             (-34, 0), (-22, -90), (4, -150, "c", 8)]
-    swirl = [(18, -60), (-14, -30), (-10, 10), (14, 26), (6, 52)]
     kids = []
     for i in range(3):
         ri = nid()
         rip.append(ri)
-        kids.append(shape(f"{tag}2 ripple {i}", [smooth_path([(0, -90 * scale), (40 * scale, 0), (0, 90 * scale)], closed=False)],
-                          [stroke(D if i != 1 else P, 9 * scale)], id=ri, x=(84 + i * 38) * scale))
-    xml = node(f"{tag}2 careful listener", kids + [
+        kids.append(shape(f"{tag}2 ripple {i}", [smooth_path([(0, -90 * S_), (40 * S_, 0), (0, 90 * S_)], closed=False)],
+                          [stroke(D if i != 1 else P, 10 * S_)], id=ri, x=(40 + i * 40) * S_, y=-30 * S_))
+    vb = {}
+    voice = node(f"{tag}2 voice", [motif_bubble(f"{tag}2 voice bubble", L, LD, True, 0.42 * S_, ids=vb, look=-10)],
+                 id=(VOICE_ID := nid()), x=150 * S_, y=-120 * S_)
+    paren = [(34, -150), (-36, -82), (-56, 0), (-36, 82), (34, 150)]
+    xml = node(f"{tag}2 careful listener", [voice] + kids + [
         node(f"{tag}2 ear", [
-            shape(f"{tag}2 swirl", [smooth_path([(x * scale, y * scale) for x, y in swirl], closed=False)],
-                  [stroke(P, 12 * scale)], id=inner, x=-6 * scale),
-            shape(f"{tag}2 paren", [smooth_path([(34 * scale, -140 * scale), (-34 * scale, -76 * scale), (-52 * scale, 0),
-                                                (-34 * scale, 76 * scale), (34 * scale, 140 * scale)], closed=False)],
-                  [stroke(D, 46 * scale)]),
-            shape(f"{tag}2 paren depth", [smooth_path([(34 * scale, -140 * scale), (-34 * scale, -76 * scale), (-52 * scale, 0),
-                                                      (-34 * scale, 76 * scale), (34 * scale, 140 * scale)], closed=False)],
-                  [stroke(DL, 46 * scale)], x=7 * scale, y=8 * scale),
-        ], id=ear, x=-40 * scale)], id=root)
+            shape(f"{tag}2 swirl", [smooth_path([(18 * S_, -62 * S_), (-16 * S_, -30 * S_), (-12 * S_, 12 * S_),
+                                                 (16 * S_, 28 * S_), (6 * S_, 56 * S_)], closed=False)],
+                  [stroke(P, 13 * S_)], id=inner, x=-4 * S_),
+            shape(f"{tag}2 paren", [smooth_path([(x * S_, y * S_) for x, y in paren], closed=False)],
+                  [E("Stroke", {"thickness": 52 * S_, "cap": "round", "join": "round", "name": "Stroke"},
+                    [lingrad([(DL, 0), (D, 0.5), (DD, 1)], -60 * S_, -150 * S_, 40 * S_, 150 * S_)])]),
+        ], id=ear, x=-62 * S_, y=-30 * S_)], id=root)
     rev += [(ear, "rotation", [(0, -1.4, "hold"), (4, -1.4, "back"), (40, 0, "hold")]),
             (ear, "scaleX", [(0, 0.2, "hold"), (4, 0.2, "el"), (56, 1, "hold")]),
             (ear, "scaleY", [(0, 0.2, "hold"), (4, 0.2, "el"), (56, 1, "hold")]),
-            (inner, "opacity", [(0, 0, "hold"), (36, 0, "lin"), (46, 1, "hold")])]
+            (inner, "opacity", [(0, 0, "hold"), (36, 0, "lin"), (46, 1, "hold")]),
+            (VOICE_ID, "x", [(0, 300 * S_, "hold"), (20, 300 * S_, "back"), (50, 150 * S_, "hold")])]
     for i, ri in enumerate(rip):
-        rev.append((ri, "opacity", [(0, 0, "hold"), (40 + i * 8, 0, "lin"), (50 + i * 8, 1, "hold")]))
-        # sound arriving: each ripple swells and dims in turn (seamless 180-frame loop)
+        rev.append((ri, "opacity", [(0, 0, "hold"), (44 + i * 8, 0, "lin"), (54 + i * 8, 1, "hold")]))
         ph = i * 30
         idle += [(ri, "scaleY", [(0, 1, "sine"), (ph + 30, 1.18, "sine"), (ph + 90, 0.9, "sine"), (180, 1, "hold")]),
                  (ri, "opacity", [(0, 1, "sine"), (ph + 30, 0.45, "sine"), (ph + 90, 1, "hold"), (180, 1, "hold")])]
-    idle.append((inner, "rotation", [(0, 0, "sine"), (90, 0.12, "sine"), (180, 0, "hold")]))
-    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 180})
+    idle += [(inner, "rotation", [(0, 0, "sine"), (90, 0.12, "sine"), (180, 0, "hold")]),
+             (vb["mouth"], "scaleY", [(0, 1, "sine"), (45, 0.5, "sine"), (90, 1, "sine"), (135, 0.5, "sine"), (180, 1, "hold")])]
+    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 180, "rings": (P, L, WP), "ground": "66E2D15A"})
 
-    # 3 Brave Improviser: an elastic exclamation mark
-    root, bar, dot, squash = nid(), nid(), nid(), nid()
+    # 3 Brave Improviser: an elastic exclamation mark that jumps, squashes and bursts
+    root, dot, squash = nid(), nid(), nid()
     rev, idle = [], []
     bursts = []
     kids = []
-    for i in range(6):
-        ang = -math.pi / 2 + (i - 2.5) * 0.5
+    for i in range(7):
+        ang = -math.pi / 2 + (i - 3) * 0.42
         bi = nid()
         bursts.append(bi)
-        kids.append(shape(f"{tag}3 burst {i}", [rect(8 * scale, 34 * scale, 4 * scale)], [fill(P if i % 2 else D)], id=bi,
-                          x=math.cos(ang) * 150 * scale, y=math.sin(ang) * 150 * scale - 20 * scale, rot=ang + math.pi / 2))
+        kids.append(shape(f"{tag}3 burst {i}", [rect(9 * S_, 36 * S_, 4.5 * S_)], [fill(P if i % 2 else D)], id=bi,
+                          x=math.cos(ang) * 168 * S_, y=math.sin(ang) * 168 * S_ - 10 * S_, rot=ang + math.pi / 2))
+    bar = [(0, -132), (40, -100), (26, 60), (0, 78), (-26, 60), (-40, -100)]
     xml = node(f"{tag}3 brave improviser", kids + [node(f"{tag}3 bang", [
         node(f"{tag}3 squash", [
-            shape(f"{tag}3 bar", [rect(74 * scale, 200 * scale, 37 * scale)], [fill(P)], id=bar, y=-70 * scale),
-            shape(f"{tag}3 bar glint", [rect(14 * scale, 120 * scale, 7 * scale)], [fill("66FFFFFF")], x=-18 * scale, y=-84 * scale),
-            shape(f"{tag}3 bar depth", [rect(74 * scale, 200 * scale, 37 * scale)], [fill(PD)], x=7 * scale, y=-62 * scale),
-        ], id=squash, y=40 * scale),
-        shape(f"{tag}3 dot", [ellipse(76 * scale, 76 * scale)], [fill(D)], id=dot, y=118 * scale),
-    ])], id=root)
-    rev += [(squash, "y", [(0, -500 * scale, "hold"), (4, -500 * scale, "in"), (24, 40 * scale, "hold")]),
+            shape(f"{tag}3 bar glint", [rect(14 * S_, 110 * S_, 7 * S_)], [fill("77FFFFFF", feather=(4 * S_,))],
+                  x=-14 * S_, y=-30 * S_, rot=0.04),
+            shape(f"{tag}3 bar", [smooth_path([(x * S_, y * S_) for x, y in bar])],
+                  shade_fills(P, PD, PL, 1.0 * S_)),
+        ], id=squash, y=-30 * S_),
+        shape(f"{tag}3 dot", [ellipse(76 * S_, 76 * S_)], shade_fills(D, DD, DL, 0.4 * S_), id=dot, y=96 * S_),
+    ], y=-24 * S_)], id=root)
+    rev += [(squash, "y", [(0, -560 * S_, "hold"), (4, -560 * S_, "in"), (24, -30 * S_, "hold")]),
             (squash, "scaleY", [(0, 1.3, "hold"), (24, 1.3, "lin"), (28, 0.62, "el"), (70, 1, "hold")]),
             (squash, "scaleX", [(0, 0.8, "hold"), (24, 0.8, "lin"), (28, 1.32, "el"), (70, 1, "hold")]),
             (dot, "scaleX", [(0, 0, "hold"), (30, 0, "back2"), (46, 1, "hold")]),
@@ -1021,40 +1247,83 @@ def build_emblems(scale=1.0, tag="E"):
     for i, bi in enumerate(bursts):
         rev += [(bi, "scaleY", [(0, 0, "hold"), (28 + i * 2, 0, "back2"), (44 + i * 2, 1, "hold")])]
         idle.append((bi, "scaleY", [(0, 1, "sine"), (40, 0.4, "sine"), (80, 1, "hold"), (160, 1, "hold")]))
-    idle += [(squash, "y", [(0, 40 * scale, "out"), (28, -30 * scale, "in"), (56, 40 * scale, "hold"), (160, 40 * scale, "hold")]),
+    idle += [(squash, "y", [(0, -30 * S_, "out"), (28, -90 * S_, "in"), (56, -30 * S_, "hold"), (160, -30 * S_, "hold")]),
              (squash, "scaleY", [(0, 1, "lin"), (56, 1, "lin"), (60, 0.8, "el"), (110, 1, "hold"), (160, 1, "hold")]),
              (squash, "scaleX", [(0, 1, "lin"), (56, 1, "lin"), (60, 1.15, "el"), (110, 1, "hold"), (160, 1, "hold")])]
-    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 160})
+    out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 160, "rings": (L, Y, P), "ground": "55C7B7F2"})
     return out
 
 
+def emblem_stage(EM, scale, tag):
+    """Shared base under every persona emblem: three swirl rings (colour keyed per persona), a soft ground pool and
+    sparkles. Returns (xml, ids)."""
+    S_ = scale
+    ids = {"rings": [], "ring_c": [], "trim": [], "ground_c": nid(), "sparks": [], "root": nid()}
+    rings = []
+    for k, (w_, h_, th, rot) in enumerate([(330, 84, 18, -0.08), (296, 62, 11, 0.1), (356, 100, 5, 0.02)]):
+        rid, cid, tid = nid(), nid(), nid()
+        ids["rings"].append(rid)
+        ids["ring_c"].append(cid)
+        ids["trim"].append(tid)
+        rings.append(shape(f"{tag} ring {k}", [ellipse(w_ * S_, h_ * S_)],
+                           [E("Stroke", {"thickness": th * S_, "cap": "round", "name": "Ring"},
+                              [solid(EM[0]["rings"][k], id=cid),
+                               E("TrimPath", {"start": 0, "end": 1, "offset": k * 0.3, "modeValue": "sequential",
+                                              "name": "Draw", "id": tid})])], id=rid, y=100 * S_, rot=rot))
+    sparks = []
+    for k, (x, y, sz, col) in enumerate([(-170, 54, 30, Y), (-78, 118, 30, D), (156, 52, 26, D), (110, 134, 18, D),
+                                         (-176, 128, 14, Y), (176, 6, 18, Y)]):
+        si = nid()
+        ids["sparks"].append(si)
+        sparks.append(sparkle(f"{tag} sparkle {k}", sz * S_, col, x * S_, y * S_, id=si))
+    xml = node(f"{tag} stage", sparks + [e["xml"] for e in EM] + rings + [
+        shape(f"{tag} ground", [ellipse(240 * S_, 34 * S_)], [fill(EM[0]["ground"], cid=ids["ground_c"], feather=(10 * S_,))],
+              y=186 * S_)], id=ids["root"])
+    return xml, ids
+
+
 EMB = build_emblems(1.0, "E")
-halo = nid()
-s.parts.append(node("S9 emblem stage", [e["xml"] for e in EMB] + [
-    shape("S9 halo", [ellipse(330, 120)], [stroke("88FFFFFF", 3)], id=halo, y=150),
-    shape("S9 halo 2", [ellipse(250, 80)], [fill("44FFFFFF")], y=160),
-], id=(EMB_STAGE := nid()), x=195, y=500))
-pop(s, halo, 70, 30, "out")
+stage_xml, STG = emblem_stage(EMB, 1.0, "S9")
+s.parts.append(node("S9 emblem", [stage_xml], id=(EMB_STAGE := nid()), x=195, y=STAGE_Y))
+# the motif pair's collapse (frame ~68) releases a ring burst: swirl rings draw on, sparkles pop
+for k, (rid, tid) in enumerate(zip(STG["rings"], STG["trim"])):
+    s.track(tid, "end", [(0, 0, "hold"), (60 + k * 6, 0, (0.2, 0, 0.2, 1)), (102 + k * 6, 1, "hold")])
+    s.track(rid, "scaleX", [(0, 0.3, "hold"), (58, 0.3, "back"), (94 + k * 6, 1, "hold")])
+for k, si in enumerate(STG["sparks"]):
+    pop(s, si, 68 + k * 5, 22, "back2", rot0=-1.4)
+    s.itrack(si, "rotation", [(0, 0, "sine"), (120, 0.5 * (1 if k % 2 else -1), "sine"), (240, 0, "hold")])
 s.idle_dur = 240
 
 # ---------- 10. Summary ------------------------------------------------------
 s = Scene(10, D)
+s.parts.append(grain(op=0.45))
 sum_h = {}
-sum_h["head"], sum_h["head_c"], ta_ = flow_text("S10 headline", 342, "summaryHeadline", size=30, color=WP, wght=800, lh=32, wdth=92)
-sum_h["sup"], _c, tb_ = flow_text("S10 support", 342, "summarySupport", font="body", size=15, color=LL, wght=500, lh=20)
-sum_h["ehead"], _c, tc_ = flow_text("S10 empty headline", 342, "emptyHeadline", size=30, color=WP, wght=800, lh=32, wdth=92)
-sum_h["esup"], _c, td_ = flow_text("S10 empty support", 342, "emptySupport", font="body", size=15, color=LL, wght=500, lh=20)
-sum_h["col"], xa = column("S10 copy", 24, 96, 342, [ta_, tb_], gap=8)
-sum_h["ecol"], xb = column("S10 new-user copy", 24, 96, 342, [tc_, td_], gap=8, op=0)
-s.parts += [xa, xb]
-rise(s, sum_h["col"], 20, base_y=0, fade=False)
+sum_h["head_rng"], m = kinetic(units=2, y=36, rot=0.08)
+# bounded: two headline lines (fit) + one support line, so long copy never reaches the card at y 196
+hb = dict(sizing="fixed", h=70, overflow="fitFontSize", valign="top")
+sb = dict(font="body", size=15, color=LL, wght=500, lh=20, sizing="fixed", h=22, overflow="ellipsis", wrap="noWrap")
+sum_h["head"], sum_h["head_c"], ta_ = bound_text("S10 headline", 0, 0, 342, "summaryHeadline", size=32, color=WP, wght=800,
+                                                lh=34, wdth=96, ls=-0.5, mods=[m], **hb)
+sum_h["sup"], _c, tb_ = bound_text("S10 support", 0, 74, 342, "summarySupport", **sb)
+sum_h["ehead"], _c, tc_ = bound_text("S10 empty headline", 0, 0, 342, "emptyHeadline", size=32, color=WP, wght=800,
+                                     lh=34, wdth=96, ls=-0.5, **hb)
+sum_h["esup"], _c, td_ = bound_text("S10 empty support", 0, 74, 342, "emptySupport", **sb)
+sum_h["col"] = nid()
+sum_h["ecol"] = nid()
+s.parts += [node("S10 copy", [ta_, tb_], id=sum_h["col"], x=24, y=90),
+            node("S10 new-user copy", [tc_, td_], id=sum_h["ecol"], x=24, y=90, op=0)]
+sweep(s, sum_h["head_rng"], 18, 36)
+rise(s, sum_h["sup"], 40, base_y=74, dy=10)
 CARD = nid()
 CARD_SM = nid()
 CARD_AB = nid()
-s.parts.insert(0, E("NestedArtboard", {"artboardId": CARD_AB, "x": 24, "y": 200, "name": "S10 share card", "id": CARD},
+s.parts.insert(1, E("NestedArtboard", {"artboardId": CARD_AB, "x": 24, "y": 196, "name": "S10 share card", "id": CARD},
                     [E("NestedStateMachine", {"animationId": CARD_SM, "name": "Card machine"})]))
-s.track(CARD, "y", [(0, 900, "hold"), (8, 900, "back"), (44, 200, "hold")])
-s.track(CARD, "rotation", [(0, 0.3, "hold"), (8, 0.3, "out"), (50, 0, "hold")])
+# the card is thrown up from below, overshoots, tilts back and lands with a squash
+s.track(CARD, "y", [(0, 900, "hold"), (6, 900, (0.25, 1.25, 0.5, 1)), (40, 196, "hold")])
+s.track(CARD, "rotation", [(0, 0.35, "hold"), (6, 0.35, "back"), (48, 0, "hold")])
+s.track(CARD, "scaleY", [(0, 1.08, "hold"), (36, 1.08, "lin"), (42, 0.95, "el"), (80, 1, "hold")])
+count(s, 60, 120)
 
 # ================================================================ CHROME
 CH = {}
@@ -1062,23 +1331,23 @@ chrome = []
 # top: wordmark + year
 CH["wm_c"] = nid()
 CH["dot_c"] = nid()
-sid, st = disp(22, D, 800, wdth=80, cid=CH["wm_c"])
+sid, st = disp(21, D, 750, wdth=92, cid=CH["wm_c"], ls=-0.3)
+# concept wordmark: "Parlance" in heavy title case; the comma is a tiny persimmon speech mark
 chrome.append(node("Chrome wordmark", [
-    shape("Chrome wordmark bubble", [smooth_path(bubble_pts(0.055))], [fill(P, cid=CH["dot_c"])], x=91, y=16),
-    text("Chrome wordmark text", 0, 0, [st], [run(sid, "parlance")])], x=24, y=30))
+    text("Chrome wordmark text", 0, 0, [st], [run(sid, "Parlance")])], x=24, y=30))
 CH["year_c"] = nid()
-sid, st = disp(15, D, 700, cid=CH["year_c"])
-chrome.append(text("Chrome year", 366, 34, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1))
+sid, st = disp(15, D, 600, cid=CH["year_c"])
+chrome.append(text("Chrome year", 366, 35, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1))
 # progress segments: a flex row; hidden scenes are display:none so exactly the visible count renders
 SEG = {}
 seg_kids = []
 for k in range(1, 11):
     SEG[k] = {"lc": nid(), "style": nid(), "fill": nid(), "fstyle": nid(), "track_c": nid(), "fill_c": nid()}
-    seg_kids.append(E("LayoutComponent", {"width": 10, "height": 4, "styleId": SEG[k]["style"], "name": f"Segment {k}",
+    seg_kids.append(E("LayoutComponent", {"width": 10, "height": 3.5, "styleId": SEG[k]["style"], "name": f"Segment {k}",
                                           "id": SEG[k]["lc"]}, [
         E("LayoutComponentStyle", {"layoutWidthScaleType": "fill", "cornerRadiusTL": 2, "name": f"Segment {k} style",
                                    "id": SEG[k]["style"]}),
-        E("LayoutComponent", {"width": 100, "height": 4, "styleId": SEG[k]["fstyle"], "name": f"Segment {k} fill",
+        E("LayoutComponent", {"width": 100, "height": 3.5, "styleId": SEG[k]["fstyle"], "name": f"Segment {k} fill",
                               "id": SEG[k]["fill"]}, [
             E("LayoutComponentStyle", {"positionTypeValue": "absolute", "widthUnitsValue": "percent",
                                        "layoutHeightScaleType": "fill", "cornerRadiusTL": 2,
@@ -1086,7 +1355,7 @@ for k in range(1, 11):
             bind(V("currentScreen"), 16, C_SEG[k]),
             fill(P, cid=SEG[k]["fill_c"])]),
         fill("333D2456", cid=SEG[k]["track_c"])]))
-chrome.append(E("LayoutComponent", {"width": 342, "height": 4, "styleId": (PSTYLE := nid()),
+chrome.append(E("LayoutComponent", {"width": 342, "height": 3.5, "styleId": (PSTYLE := nid()),
                                     "name": "Progress", "id": (PROG := nid())},
                 [E("LayoutComponentStyle", {"flexDirectionValue": "row", "gapHorizontal": 4,
                                             "gapHorizontalUnitsValue": "points", "positionTypeValue": "absolute",
@@ -1139,8 +1408,8 @@ def icon_pause(b):
 
 controls = [
     button("Previous", 1, 50, 790, 52, 52, "previousLabel", icon=icon_prev),
-    button("Pause", 2, 112, 790, 52, 52, "pauseLabel", icon=icon_pause),
-    button("Continue", 3, 260, 790, 212, 52, "continueLabel"),
+    button("Pause", 2, 110, 790, 52, 52, "pauseLabel", icon=icon_pause),
+    button("Continue", 3, 254, 790, 224, 56, "continueLabel"),
     button("Replay", 4, -400, 790, 128, 52, "replayLabel", label_size=16),
     button("Share", 5, -400, 790, 140, 52, "shareLabel", label_size=16),
 ]
@@ -1155,18 +1424,25 @@ mouth_hit_xml = E("Shape", {"x": -500, "y": -500, "isTargetOpaque": True, "name"
                             "id": MOUTH_HIT}, [rect(10, 10), fill(CLEAR)])
 
 # global motif
-mA = motif_bubble("Motif A", P, PD, False, 1.0, ids=MA)
-mB = motif_bubble("Motif B", L, LD, True, 1.0, ids=MB, tongue=P)
+mA = motif_bubble("Motif A", P, PD, False, 1.0, ids=MA, morph=True)
+mB = motif_bubble("Motif B", L, LD, True, 1.0, ids=MB, tongue=P, morph=True)
 # hidden drivers (two-way bound: their animated x writes the view model)
 driver_xml = node("Hero reveal driver", [], id=DRIVER, x=1, binds=[bind(V("_heroReveal"), 13, None, twoWay=True)])
 # aperture used by the signature transition (quote-shaped clip for scene 4)
+# One quote-shaped aperture is the clip source for every scene: a pair of commas whose 9 vertices morph from two
+# round dots (":") into a quotation mark, then open until the next scene fills the frame.
 APER = nid()
-APER_CLIP = nid()
+APER_BLOOM = nid()
+APER_V = {"L": [nid() for _ in COMMA], "R": [nid() for _ in COMMA]}
 aperture = node("Quote aperture", [
-    shape("Aperture bloom", [ellipse(100, 100)], [], id=(APER_BLOOM := nid()), sx=0.01, sy=0.01),
-    shape("Aperture comma L", [smooth_path(comma_pts(1.0))], [], x=-50),
-    shape("Aperture comma R", [smooth_path(comma_pts(1.0))], [], x=50),
-], id=APER, x=195, y=440, sx=0.01, sy=0.01)
+    shape("Aperture bloom", [ellipse(100, 100)], [], id=APER_BLOOM, sx=0.01, sy=0.01),
+    shape("Aperture comma L", [cubic_path(COMMA_DOT, APER_V["L"])], [], x=-54),
+    shape("Aperture comma R", [cubic_path(COMMA_DOT, APER_V["R"])], [], x=54),
+], id=APER, x=195, y=430, sx=0.01, sy=0.01)
+# the plate under every scene: the colour of the speech form that just filled the frame, seen around the
+# aperture while it opens (and around the closing quote on the way back)
+PLATE, PLATE_C = nid(), nid()
+plate_xml = shape("Transition plate", [rect(W + 40, H + 40, 0, 0, 0)], [fill(P, cid=PLATE_C)], id=PLATE, x=-20, y=-20)
 
 # clock component placement
 CLOCK = nid()
@@ -1188,10 +1464,8 @@ for n in range(10, 0, -1):
     else:
         bgfill = fill(sc.bg, cid=sc.bg_c)
     kids = list(sc.parts) + [shape(f"S{n} background", [rect(W + 40, H + 40, 0, 0, 0)], [bgfill], id=sc.bg_id, x=-20, y=-20)]
-    extra = {}
-    clip = []
-    if n == 4:
-        clip = [E("ClippingShape", {"sourceId": APER, "isVisible": False, "name": "Quote aperture clip", "id": APER_CLIP})]
+    sc.clip = nid()
+    clip = [E("ClippingShape", {"sourceId": APER, "isVisible": False, "name": "Quote aperture clip", "id": sc.clip})]
     scene_xml.append(E("Node", {"name": f"Scene {n}", "id": sc.root, "opacity": 1 if n == 1 else 0}, clip + kids))
 
 # ================================================================ EVENTS
@@ -1255,45 +1529,113 @@ def apply_enter(a, sc, offset=0, scale=1.0):
         a.k(obj, prop_, [(offset + f * scale, v, e) for f, v, e in keys], kind)
 
 
-def scene4_clip_off(a, frame=0):
-    a.hold(APER_CLIP, "isVisible", False, kind="b", frame=frame)
+def clip(a, sc, keys):
+    """keys: [(frame, bool)] for this scene's quote-aperture clip."""
+    a.k(sc.clip, "isVisible", [(f, v, "hold") for f, v in keys], kind="b")
+
+
+def motif_pose(a, M, keys, morph=None):
+    """Motif transform keys plus (optionally) its true body morph: morph = [(frame, BUB_* table, ease)]."""
+    motif_keys(a, M, keys)
+    offscreen = all(k[1][:2] in (OFF_A[:2], OFF_B[:2]) for k in keys)
+    if morph or not offscreen:   # an off-stage form keeps whatever shape it had; elongate() always re-keys it
+        morph_motif(a, M, morph or [(keys[0][0], BUB_REST, "hold")])
+
+
+def aperture_open(a, f0=0, rot0=-0.35, flip=False):
+    """THE SIGNATURE, second half: two dots (":") sprout comma tails into a quotation mark that opens until the
+    next scene fills the frame. ~40 frames. flip turns the mark into an opening quote."""
+    base = math.pi if flip else 0.0
+    a.k(APER, "scaleX", [(0, 0.5, "hold"), (f0, 0.5, "back"), (f0 + 10, 1.2, (0.6, 0, 0.9, 0.5)), (f0 + 34, 14, "hold")])
+    a.k(APER, "scaleY", [(0, 0.5, "hold"), (f0, 0.5, "back"), (f0 + 10, 1.2, (0.6, 0, 0.9, 0.5)), (f0 + 34, 14, "hold")])
+    a.k(APER, "rotation", [(0, base + rot0, "hold"), (f0, base + rot0, "out"), (f0 + 34, base + rot0 + 0.3, "hold")])
+    a.k(APER, "y", [(0, 430, "hold"), (f0 + 10, 430, "in"), (f0 + 34, 380, "hold")])
+    for side in ("L", "R"):
+        key_morph(a, APER_V[side], [(0, COMMA_DOT, "hold"), (f0 + 1, COMMA_DOT, (0.3, 1.5, 0.5, 1)), (f0 + 13, COMMA, "hold")],
+                  COMMA_DOT)
+    a.k(APER_BLOOM, "scaleX", [(0, 0.01, "hold"), (f0 + 12, 0.01, "in"), (f0 + 34, 2.6, "hold")])
+    a.k(APER_BLOOM, "scaleY", [(0, 0.01, "hold"), (f0 + 12, 0.01, "in"), (f0 + 34, 2.6, "hold")])
+
+
+def aperture_close(a, f1=30):
+    """Designed reverse: the scene shrinks into a closing quotation mark, whose tails retract into two dots that
+    blink out -- the signature transition played backwards."""
+    a.k(APER, "scaleX", [(0, 14, "out"), (f1 * 0.55, 1.1, "in"), (f1 * 0.85, 0.55, "in"), (f1, 0.0, "hold")])
+    a.k(APER, "scaleY", [(0, 14, "out"), (f1 * 0.55, 1.1, "in"), (f1 * 0.85, 0.55, "in"), (f1, 0.0, "hold")])
+    a.k(APER, "rotation", [(0, -0.05, "out"), (f1, -0.4, "hold")])
+    a.k(APER, "y", [(0, 380, "out"), (f1 * 0.55, 430, "hold")])
+    for side in ("L", "R"):
+        key_morph(a, APER_V[side], [(0, COMMA, "hold"), (f1 * 0.5, COMMA, "in"), (f1 * 0.85, COMMA_DOT, "hold")],
+                  COMMA_DOT)
+    a.k(APER_BLOOM, "scaleX", [(0, 2.6, "out"), (f1 * 0.45, 0.01, "hold")])
+    a.k(APER_BLOOM, "scaleY", [(0, 2.6, "out"), (f1 * 0.45, 0.01, "hold")])
+
+
+def plate(a, color, frame=0):
+    a.k(PLATE_C, "colorValue", [(frame, color, "hold")], kind="c")
+
+
+# Which speech form elongates into each scene (its colour must differ from that scene's background)
+COVER_INTO = {1: "A", 2: "A", 3: "A", 4: "A", 5: "A", 6: "B", 7: "B", 8: "A", 9: "A", 10: "B"}
+MOT = {"A": (MA, OFF_A, COVER_A, P), "B": (MB, OFF_B, COVER_B, L)}
+
+
+def elongate(a, which, start=None, dur=32):
+    """THE SIGNATURE, first half: a speech form swings in, gathers (squash = anticipation), then its tail and body
+    truly elongate (vertex morph) until it fills the frame. Its colour is left on the plate."""
+    M, off, cover, col = MOT[which]
+    start = start or off
+    mid = (195 + (90 if which == "A" else -90), 560, 1.25, 1.25, (0.3 if which == "A" else -0.3), 1)
+    motif_pose(a, M, [(0, start, "out"), (dur * 0.3, mid, (0.5, 0, 0.3, 1)), (dur, cover, "hold")],
+               [(0, BUB_REST, "hold"), (dur * 0.08, BUB_REST, "out"), (dur * 0.3, BUB_SQUASH, (0.5, 0, 0.2, 1)),
+                (dur, BUB_TALL, "hold")])
+    a.k(M["face"], "opacity", [(0, 1, "hold"), (dur * 0.45, 1, "lin"), (dur * 0.7, 0, "hold")])
+    a.k(M["mouth"], "scaleY", [(0, 1, "out"), (dur * 0.3, 0.4, "out"), (dur * 0.6, 1.3, "hold")])
+    plate(a, col)
 
 
 for n in range(1, 11):
     sc = SCENES[n]
     a_pose, b_pose = sc.motifA, sc.motifB
 
-    # ---- In (generic: arrives from the persimmon cover pose) ----
+    # ---- In (forward): the frame is one solid speech-form colour; the scene opens through a quote aperture ----
     a = anim(f"{n:02d} In", 130)
     sc.anim_in = a
     hide_others(a, n)
     root_reset(a, sc)
     mouth_hit(a, sc)
-    if n == 4:
-        scene4_clip_off(a)
-    if a_pose == OFF_A:
-        motif_keys(a, MA, [(0, COVER_A, "antic"), (26, (-240, -260, 1.3, 2.6, -0.5, 0), "hold"), (27, OFF_A, "hold")])
+    if n == 1:
+        # intro / replay: the covering speech form deflates (TALL -> SQUASH -> REST) into the motif pair
+        clip(a, sc, [(0, False)])
+        motif_pose(a, MA, [(0, COVER_A, (0.6, 0, 0.25, 1)), (34, a_pose, "hold")],
+                   [(0, BUB_TALL, (0.6, 0, 0.25, 1)), (26, BUB_SQUASH, "el"), (60, BUB_REST, "hold")])
+        motif_pose(a, MB, [(0, OFF_B, "hold"), (18, (60, b_pose[1] + 80) + b_pose[2:5] + (1,), "back"), (48, b_pose, "hold")],
+                   [(0, BUB_REST, "hold"), (40, BUB_SQUASH, "el"), (70, BUB_REST, "hold")])
+        apply_enter(a, sc)
     else:
-        motif_keys(a, MA, [(0, COVER_A, "out"), (30, a_pose, "hold")])
-    if b_pose == OFF_B:
-        motif_keys(a, MB, [(0, OFF_B, "hold")])
-    else:
-        motif_keys(a, MB, [(0, OFF_B, "hold"), (16, (520, b_pose[1] + 60) + b_pose[2:5] + (1,), "back"), (44, b_pose, "hold")])
-    apply_enter(a, sc)
-    if n in (2,):
-        pass
+        clip(a, sc, [(0, True), (36, False)])
+        aperture_open(a, 0, rot0=-0.35 + 0.12 * (n % 3), flip=(n % 2 == 1))
+        for M, pose, off in ((MA, a_pose, OFF_A), (MB, b_pose, OFF_B)):
+            if pose[:2] == off[:2]:
+                motif_pose(a, M, [(0, off, "hold")])
+            else:
+                motif_pose(a, M, [(0, off, "hold"), (14, off, "back"), (46, pose, "hold")])
+        apply_enter(a, sc, offset=8)
 
-    # ---- Back-in (alternate: lilac cover retreats to the right, compressed rebuild) ----
+    # ---- Back-in (designed reverse): the lilac form that filled the frame deflates down-left ----
     a = anim(f"{n:02d} Back In", 84)
     sc.anim_backin = a
     hide_others(a, n)
     root_reset(a, sc)
     mouth_hit(a, sc)
-    if n == 4:
-        scene4_clip_off(a)
-    a.k(sc.root, "x", [(0, -60, "hold"), (6, -60, "out"), (40, 0, "hold")])
-    motif_keys(a, MB, [(0, COVER_B, "antic"), (26, (640, 980, 1.6, 2.2, 0.6, 0), "hold"), (27, b_pose, "hold")])
-    motif_keys(a, MA, [(0, a_pose, "hold")])
+    clip(a, sc, [(0, False)])
+    a.k(sc.root, "x", [(0, -40, "hold"), (6, -40, "out"), (40, 0, "hold")])
+    a.k(sc.root, "rotation", [(0, -0.03, "hold"), (6, -0.03, "out"), (40, 0, "hold")])
+    end_b = b_pose if b_pose[:2] != OFF_B[:2] else (-200, 1000, 1.1, 1.1, -0.6, 1)
+    motif_pose(a, MB, [(0, COVER_B, (0.55, 0, 0.3, 1)), (30, end_b, "hold")] + ([(31, b_pose, "hold")] if end_b != b_pose else []),
+               [(0, BUB_TALL, (0.4, 0, 0.2, 1)), (16, BUB_SQUASH, "el"), (44, BUB_REST, "hold")])
+    a.k(MB["face"], "opacity", [(0, 0, "hold"), (10, 0, "lin"), (22, 1, "hold")])
+    motif_pose(a, MA, [(0, a_pose, "hold")])
     apply_enter(a, sc, offset=0, scale=0.6)
 
     # ---- Settled (reduced motion: final values + short opacity fade, no movement) ----
@@ -1301,35 +1643,40 @@ for n in range(1, 11):
     sc.anim_rm = a
     hide_others(a, n)
     root_reset(a, sc)
+    clip(a, sc, [(0, False)])
     a.k(sc.root, "opacity", [(0, 0, "lin"), (12, 1, "hold")])
     mouth_hit(a, sc)
-    if n == 4:
-        scene4_clip_off(a)
-    motif_keys(a, MA, [(0, a_pose, "hold")])
-    motif_keys(a, MB, [(0, b_pose, "hold")])
+    motif_pose(a, MA, [(0, a_pose, "hold")])
+    motif_pose(a, MB, [(0, b_pose, "hold")])
     apply_final(a, sc)
 
-    # ---- Out (generic: persimmon motif sweeps in, stretches and covers) ----
+    # ---- Out (forward handoff, generic): the next scene's speech form elongates over this one ----
     a = anim(f"{n:02d} Out", 28)
     sc.anim_out = a
-    motif_keys(a, MA, [(0, a_pose if a_pose != OFF_A else (470, 1010, 1.0, 1.0, 0.7, 1), "antic"),
-                       (12, (300, 700, 2.0, 2.8, 0.45, 0.4), "in"), (28, COVER_A, "hold")])
-    a.k(sc.root, "scaleX", [(0, 1, "in"), (28, 0.94, "hold")])
-    a.k(sc.root, "scaleY", [(0, 1, "in"), (28, 0.94, "hold")])
-    a.k(sc.root, "x", [(0, 0, "in"), (28, 12, "hold")])
-    a.k(sc.root, "y", [(0, 0, "in"), (28, 26, "hold")])
+    elongate(a, COVER_INTO[min(n + 1, 10)], dur=28)
+    a.k(sc.root, "scaleX", [(0, 1, "antic"), (28, 0.95, "hold")])
+    a.k(sc.root, "scaleY", [(0, 1, "antic"), (28, 0.95, "hold")])
+    a.k(sc.root, "x", [(0, 0, "in"), (28, -10, "hold")])
+    a.k(sc.root, "y", [(0, 0, "antic"), (28, -30, "hold")])
 
-    # ---- Out back (mirror: lilac motif sweeps in from the left) ----
+    # ---- Out back (designed reverse): the scene closes into a quotation mark on a lilac plate ----
     a = anim(f"{n:02d} Out Back", 30)
     sc.anim_outback = a
-    motif_keys(a, MB, [(0, b_pose if b_pose != OFF_B else (-160, 200, 1.0, 1.0, -0.7, 1), "antic"),
-                       (13, (90, 330, 2.0, 2.8, -0.45, 0.4), "in"), (30, COVER_B, "hold")])
-    a.k(sc.root, "x", [(0, 0, "in"), (30, 40, "hold")])
-    a.k(sc.root, "rotation", [(0, 0, "in"), (30, 0.04, "hold")])
+    plate(a, L)
+    clip(a, sc, [(0, True)])
+    aperture_close(a, 30)
+    a.k(sc.root, "scaleX", [(0, 1, "in"), (30, 0.9, "hold")])
+    a.k(sc.root, "scaleY", [(0, 1, "in"), (30, 0.9, "hold")])
+    a.k(sc.root, "x", [(0, 0, "in"), (30, 20, "hold")])
+    a.k(sc.root, "y", [(0, 0, "in"), (30, 43, "hold")])
+    for M, pose, off in ((MA, a_pose, OFF_A), (MB, b_pose, OFF_B)):
+        if pose[:2] != off[:2]:   # visible motif pieces get swallowed by the closing quote
+            motif_keys(a, M, [(0, pose, "in"), (20, (195, 430, 0.05, 0.05, pose[4], 1), "hold")])
 
     # ---- reduced-motion out: a short fade ----
     a = anim(f"{n:02d} Out (reduced motion)", 10)
     sc.anim_outrm = a
+    plate(a, WP)
     a.k(sc.root, "opacity", [(0, 1, "lin"), (10, 0, "hold")])
     a.k(MA["root"], "opacity", [(0, 1, "lin"), (10, 0, "hold")])
     a.k(MB["root"], "opacity", [(0, 1, "lin"), (10, 0, "hold")])
@@ -1352,22 +1699,28 @@ for n in range(1, 11):
 # ---- persona anticipation: the motif pair circles, winds up and collapses into the emblem ----
 s9 = SCENES[9]
 a = s9.anim_in
-motif_keys(a, MA, [(0, COVER_A, "out"), (24, (112, 500, 0.62, 0.62, -0.2, 1), "sine"), (40, (195, 420, 0.58, 0.58, 0.3, 1), "sine"),
-                   (54, (278, 500, 0.62, 0.62, 0.5, 1), "antic"), (68, (195, 520, 0.02, 0.02, 1.4, 0), "hold")])
-motif_keys(a, MB, [(0, OFF_B, "hold"), (14, (560, 520, 0.6, 0.6, 0.4, 1), "out"), (28, (278, 500, 0.58, 0.58, 0.2, 1), "sine"),
-                   (42, (195, 590, 0.56, 0.56, -0.3, 1), "sine"), (54, (112, 500, 0.6, 0.6, -0.5, 1), "antic"),
-                   (68, (195, 520, 0.02, 0.02, -1.4, 0), "hold")])
+cy = STAGE_Y - 20
+motif_pose(a, MA, [(0, OFF_A, "hold"), (10, OFF_A, "out"), (26, (112, cy, 0.62, 0.62, -0.2, 1), "sine"),
+                   (40, (195, cy - 80, 0.58, 0.58, 0.3, 1), "sine"), (54, (278, cy, 0.62, 0.62, 0.5, 1), "antic"),
+                   (68, (195, cy + 20, 0.02, 0.02, 1.4, 0), "hold"), (69, OFF_A, "hold")],
+           [(0, BUB_REST, "hold"), (50, BUB_REST, "sine"), (58, BUB_SQUASH, "in"), (68, BUB_TALL, "hold")])
+motif_pose(a, MB, [(0, OFF_B, "hold"), (14, (-60, cy, 0.6, 0.6, -0.4, 1), "out"), (28, (278, cy - 20, 0.58, 0.58, 0.2, 1), "sine"),
+                   (42, (195, cy + 70, 0.56, 0.56, -0.3, 1), "sine"), (54, (112, cy, 0.6, 0.6, -0.5, 1), "antic"),
+                   (68, (195, cy + 20, 0.02, 0.02, -1.4, 0), "hold"), (69, OFF_B, "hold")],
+           [(0, BUB_REST, "hold"), (50, BUB_REST, "sine"), (58, BUB_SQUASH, "in"), (68, BUB_TALL, "hold")])
 a.k(MA["mouth"], "scaleY", [(0, 1, "sine"), (30, 0.5, "sine"), (44, 1.2, "sine"), (68, 1, "hold")])
 a.k(MB["mouth"], "scaleY", [(0, 1, "sine"), (36, 1.25, "sine"), (50, 0.5, "sine"), (68, 1, "hold")])
-burst9 = nid()
 
 # ---- special continuity transitions ----------------------------------------
-# 1 -> 2: the two speech forms are carried down into the conversation scene
+# 1 -> 2: the two speech forms are carried down into the conversation scene, landing with a squash
 s1, s2, s3, s4 = SCENES[1], SCENES[2], SCENES[3], SCENES[4]
 a = anim("01 Out (carry motif to 2)", 40)
 s1.anim_out_special = a
-motif_keys(a, MA, [(0, s1.motifA, "antic"), (10, (s1.motifA[0] + 6, s1.motifA[1] - 30) + s1.motifA[2:], "io"), (40, s2.motifA, "hold")])
-motif_keys(a, MB, [(0, s1.motifB, "antic"), (14, (s1.motifB[0] - 6, s1.motifB[1] - 24) + s1.motifB[2:], "io"), (40, s2.motifB, "hold")])
+plate(a, WP)
+motif_pose(a, MA, [(0, s1.motifA, "antic"), (10, (s1.motifA[0] + 6, s1.motifA[1] - 30) + s1.motifA[2:], "io"), (40, s2.motifA, "hold")],
+           [(0, BUB_REST, "sine"), (12, BUB_STRETCH, "sine"), (26, BUB_REST, "hold")])
+motif_pose(a, MB, [(0, s1.motifB, "antic"), (14, (s1.motifB[0] - 6, s1.motifB[1] - 24) + s1.motifB[2:], "io"), (40, s2.motifB, "hold")],
+           [(0, BUB_REST, "sine"), (16, BUB_STRETCH, "sine"), (30, BUB_REST, "hold")])
 a.k(s1.root, "y", [(0, 0, "in"), (28, -60, "hold")])
 a.k(s1.root, "opacity", [(0, 1, "in"), (28, 0, "hold")])
 a = anim("02 Carry In (from 1)", 120)
@@ -1375,16 +1728,19 @@ s2.anim_carry = a
 hide_others(a, 2)
 root_reset(a, s2)
 mouth_hit(a, s2)
-motif_keys(a, MA, [(0, s2.motifA, "hold")])
-motif_keys(a, MB, [(0, s2.motifB, "hold")])
-a.k(MA["elastic"], "scaleY", [(0, 1, "lin"), (6, 0.82, "el"), (40, 1, "hold")])
-a.k(MB["elastic"], "scaleY", [(0, 1, "lin"), (12, 0.82, "el"), (46, 1, "hold")])
+clip(a, s2, [(0, False)])
+motif_pose(a, MA, [(0, s2.motifA, "hold")], [(0, BUB_SQUASH, "el"), (40, BUB_REST, "hold")])
+motif_pose(a, MB, [(0, s2.motifB, "hold")], [(0, BUB_REST, "hold"), (6, BUB_SQUASH, "el"), (46, BUB_REST, "hold")])
+a.k(MA["elastic"], "scaleY", [(0, 1, "lin"), (6, 0.88, "el"), (40, 1, "hold")])
+a.k(MB["elastic"], "scaleY", [(0, 1, "lin"), (12, 0.88, "el"), (46, 1, "hold")])
 apply_enter(a, s2)
 
 # 2 -> 3: persimmon speech form flies centre-stage, its mouth becomes the elastic mouth
 a = anim("02 Out (carry motif to 3)", 34)
 s2.anim_out_special = a
-motif_keys(a, MA, [(0, s2.motifA, "antic"), (34, (195, 470, 2.7, 2.7, 0, 1), "hold")])
+plate(a, L)
+motif_pose(a, MA, [(0, s2.motifA, "antic"), (34, (195, 520, 2.7, 2.7, 0, 1), "hold")],
+           [(0, BUB_REST, "antic"), (12, BUB_SQUASH, "out"), (34, BUB_REST, "hold")])
 motif_keys(a, MB, [(0, s2.motifB, "in"), (24, (560, 700, 1.0, 1.0, 0.6, 1), "hold")])
 a.k(MA["mouth"], "scaleY", [(0, 1, "io"), (34, 1.9, "hold")])
 a.k(MA["mouth"], "scaleX", [(0, 1, "io"), (34, 1.25, "hold")])
@@ -1395,15 +1751,76 @@ s3.anim_carry = a
 hide_others(a, 3)
 root_reset(a, s3)
 mouth_hit(a, s3)
-motif_keys(a, MA, [(0, (195, 470, 2.7, 2.7, 0, 1), "in"), (18, (195, 486, 3.6, 3.2, 0, 0), "hold"), (19, OFF_A, "hold")])
-a.k(MA["root"], "opacity", [(0, 1, "lin"), (18, 0, "hold"), (19, 1, "hold")])
+clip(a, s3, [(0, False)])
+motif_pose(a, MA, [(0, (195, 520, 2.7, 2.7, 0, 1), "in"), (18, (195, 548, 3.6, 3.2, 0, 0), "hold"), (19, OFF_A, "hold")])
+a.k(MA["root"], "opacity", [(0, 1, "lin"), (12, 0, "hold"), (19, 1, "hold")])
 a.k(MA["mouth"], "scaleY", [(0, 1.9, "hold"), (19, 1, "hold")])
 a.k(MA["mouth"], "scaleX", [(0, 1.25, "hold"), (19, 1, "hold")])
 a.k(MA["eyes"], "opacity", [(0, 0, "hold"), (19, 1, "hold")])
-motif_keys(a, MB, [(0, OFF_B, "hold")])
+motif_pose(a, MB, [(0, OFF_B, "hold")])
 apply_enter(a, s3)
 a.k(MOUTH["outer"], "scaleX", [(0, 0.7, "hold"), (8, 0.7, "el2"), (50, 1, "hold")])
 a.k(MOUTH["outer"], "scaleY", [(0, 0.7, "hold"), (8, 0.7, "el2"), (50, 1, "hold")])
+# 3 -> 4 SIGNATURE (hero version): the mouth purses, closes and becomes a speech bubble (true vertex morph of the
+# lips into the motif silhouette), the bubble elongates until it fills the frame, then opens as a quotation mark
+# onto scene 4, whose giant quotes land where the aperture was.
+SIG = 1.6
+a = anim("03 Out (signature: mouth -> bubble fills frame)", 44)
+s3.anim_out_special = a
+plate(a, P)
+key_morph(a, MOUTH["lipverts"], [(0, LIPS, "antic"), (10, LIPS_PUCKER, (0.5, 0, 0.3, 1)),
+                                 (24, bub(BUB_REST, SIG), (0.4, 0, 0.3, 1)), (44, bub(BUB_TALL, SIG), "hold")], LIPS)
+a.k(MOUTH["inner"], "scaleX", [(0, 1, "in"), (12, 0.0, "hold")])
+a.k(MOUTH["inner"], "scaleY", [(0, 1, "in"), (10, 0.0, "hold")])
+a.k(MOUTH["outer"], "scaleX", [(0, 1, "antic"), (10, 0.92, "out"), (24, 1.0, "in"), (40, 1.9, "lin"), (44, 2.4, "hold")])
+a.k(MOUTH["outer"], "scaleY", [(0, 1, "antic"), (10, 1.04, "out"), (24, 1.0, "in"), (40, 1.9, "lin"), (44, 2.4, "hold")])
+a.k(MOUTH["outer"], "y", [(0, 548, "antic"), (24, 470, "in"), (44, 200, "hold")])
+a.k(MOUTH["outer"], "rotation", [(0, 0, "out"), (24, -0.08, "in"), (44, 0.04, "hold")])
+for key_ in ("unit", "head", "sup"):
+    a.k(ids3[key_], "opacity", [(0, 1, "lin"), (12, 0, "hold")])
+a = anim("04 Carry In (signature aperture)", 130)
+s4.anim_carry = a
+hide_others(a, 4)
+root_reset(a, s4)
+mouth_hit(a, s4)
+clip(a, s4, [(0, True), (36, False)])
+aperture_open(a, 0, rot0=-0.2)
+motif_pose(a, MA, [(0, OFF_A, "hold")])
+motif_pose(a, MB, [(0, OFF_B, "hold")])
+apply_enter(a, s4, offset=6)
+# restore scene 3 parts that the signature changed
+for an in [s3.anim_in, s3.anim_backin, s3.anim_rm, s3.anim_carry]:
+    key_morph(an, MOUTH["lipverts"], [(0, LIPS, "hold")], LIPS)
+    for prop_, v in (("y", 548), ("rotation", 0)):
+        an.hold(MOUTH["outer"], prop_, v)
+    if an is not s3.anim_carry and an is not s3.anim_in and an is not s3.anim_backin:
+        an.hold(MOUTH["outer"], "scaleX", 1)
+        an.hold(MOUTH["outer"], "scaleY", 1)
+    an.hold(MOUTH["inner"], "scaleX", 1)
+    an.hold(MOUTH["inner"], "scaleY", 1)
+    for key_ in ("unit", "head", "sup"):
+        an.hold(ids3[key_], "opacity", 1)
+# cover used when a carry transition's target scene is hidden
+for n in (1, 2, 3):
+    sc = SCENES[n]
+    a = anim(f"{n:02d} Cover (skip)", 24)
+    sc.anim_cover = a
+    elongate(a, "A", dur=24)
+
+# replay cover
+REPLAY_COVER = anim("Replay cover", 32)
+elongate(REPLAY_COVER, "A")
+REPLAY_COVER.k(DRIVER, "x", [(0, 0, "hold")])
+BOOT = anim("Boot", 1)
+for an_ in (BOOT, REPLAY_COVER):
+    an_.hold(MA["root"], "opacity", 1)
+    an_.hold(MB["root"], "opacity", 1)
+motif_pose(BOOT, MA, [(0, COVER_A, "hold")], [(0, BUB_TALL, "hold")])
+motif_pose(BOOT, MB, [(0, OFF_B, "hold")])
+plate(BOOT, P)
+BOOT.hold(SCENES[1].root, "opacity", 1)
+hide_others(BOOT, 1)
+
 for an in [x for x in ANIMS if x.name.endswith("In") or "Settled" in x.name or "Back In" in x.name
            or ("Carry In" in x.name and "from 2" not in x.name)]:
     if "Settled" in an.name:
@@ -1412,66 +1829,14 @@ for an in [x for x in ANIMS if x.name.endswith("In") or "Settled" in x.name or "
     else:
         an.hold(MA["root"], "opacity", 1)
         an.hold(MB["root"], "opacity", 1)
-    an.hold(MA["mouth"], "scaleX", 1)
-    an.hold(MA["mouth"], "scaleY", 1)
-    an.hold(MA["eyes"], "opacity", 1)
+    for M in (MA, MB):
+        an.hold(M["mouth"], "scaleX", 1)
+        if "scaleY" not in an.tracks.get(M["mouth"], {}):
+            an.hold(M["mouth"], "scaleY", 1)
+        an.hold(M["eyes"], "opacity", 1)
+        if "opacity" not in an.tracks.get(M["face"], {}):
+            an.hold(M["face"], "opacity", 1)
 
-# 3 -> 4 SIGNATURE: the mouth elongates to fill the frame, then opens as a quotation mark onto scene 4
-a = anim("03 Out (signature: mouth fills frame)", 36)
-s3.anim_out_special = a
-a.k(MOUTH["outer"], "scaleY", [(0, 1, "antic"), (36, 7.5, "hold")])
-a.k(MOUTH["outer"], "scaleX", [(0, 1, "lin"), (8, 0.86, "in"), (36, 2.9, "hold")])
-a.k(MOUTH["outer"], "y", [(0, 486, "in"), (36, 430, "hold")])
-a.k(MOUTH["open"], "scaleY", [(0, 1, "in"), (36, 0.1, "hold")])
-a.k(MOUTH["teeth"], "opacity", [(0, 1, "lin"), (14, 0, "hold")])
-for key_ in ("unit", "head", "sup"):
-    a.k(ids3[key_], "opacity", [(0, 1, "lin"), (12, 0, "hold")])
-a.k(s3.hero, "opacity", [(0, 1, "lin"), (10, 0, "hold")])
-a = anim("04 Carry In (signature aperture)", 130)
-s4.anim_carry = a
-a.hold(MA["root"], "opacity", 1)
-a.hold(MB["root"], "opacity", 1)
-hide_others(a, 4, keep=(3,))
-a.k(SCENES[3].root, "opacity", [(0, 1, "hold"), (44, 0, "hold")])
-root_reset(a, s4)
-mouth_hit(a, s4)
-motif_keys(a, MA, [(0, OFF_A, "hold")])
-motif_keys(a, MB, [(0, OFF_B, "hold")])
-a.k(APER_CLIP, "isVisible", [(0, True, "hold"), (44, False, "hold")], kind="b")
-a.k(APER, "scaleX", [(0, 0.05, "hold"), (2, 0.05, "in"), (42, 9.5, "hold")])
-a.k(APER, "scaleY", [(0, 0.05, "hold"), (2, 0.05, "in"), (42, 9.5, "hold")])
-a.k(APER, "rotation", [(0, -0.5, "hold"), (2, -0.5, "out"), (42, 0, "hold")])
-a.k(APER_BLOOM, "scaleX", [(0, 0.01, "hold"), (18, 0.01, "in"), (42, 2.4, "hold")])
-a.k(APER_BLOOM, "scaleY", [(0, 0.01, "hold"), (18, 0.01, "in"), (42, 2.4, "hold")])
-apply_enter(a, s4, offset=10)
-# restore scene 3 parts that the signature out changed
-for an in [s3.anim_in, s3.anim_backin, s3.anim_rm, s3.anim_carry]:
-    an.hold(MOUTH["open"], "scaleY", 1) if (MOUTH["open"], "scaleY") not in [(o, p) for o, p, _, _ in s3.enter] else None
-    an.hold(MOUTH["outer"], "y", 486)
-    for key_ in ("unit", "head", "sup"):
-        pass
-    an.hold(s3.hero, "opacity", 1)
-for an in [s2.anim_in, s2.anim_backin, s2.anim_rm, s2.anim_carry]:
-    an.hold(MA["mouth"], "scaleX", 1)
-# cover used when a carry transition's target scene is hidden
-for n in (1, 2, 3):
-    sc = SCENES[n]
-    a = anim(f"{n:02d} Cover (skip)", 18)
-    sc.anim_cover = a
-    motif_keys(a, MA, [(0, (470, 1010, 1.0, 1.0, 0.7, 1), "in"), (18, COVER_A, "hold")])
-
-# replay cover
-REPLAY_COVER = anim("Replay cover", 30)
-motif_keys(REPLAY_COVER, MA, [(0, (470, 1010, 1.0, 1.0, 0.7, 1), "antic"), (30, COVER_A, "hold")])
-REPLAY_COVER.k(DRIVER, "x", [(0, 0, "hold")])
-BOOT = anim("Boot", 1)
-for an_ in (BOOT, REPLAY_COVER):
-    an_.hold(MA["root"], "opacity", 1)
-    an_.hold(MB["root"], "opacity", 1)
-motif_keys(BOOT, MA, [(0, COVER_A, "hold")])
-motif_keys(BOOT, MB, [(0, OFF_B, "hold")])
-BOOT.hold(SCENES[1].root, "opacity", 1)
-hide_others(BOOT, 1)
 
 # mouth expressions (signature interaction, silent)
 SQ3 = anim("Mouth tap: scene 3 elastic", 60)
@@ -1484,7 +1849,7 @@ SQ2.k(MA["elastic"], "scaleY", [(0, 1, "out"), (5, 0.78, "el"), (50, 1, "hold")]
 SQ2.k(MA["elastic"], "scaleX", [(0, 1, "out"), (5, 1.16, "el"), (50, 1, "hold")])
 SQ2.k(MA["mouth"], "scaleX", [(0, 1, "out"), (5, 1.3, "el"), (50, 1, "hold")])
 
-# Persona animations
+# Persona animations (reveal starts as the motif pair collapses at frame 64 of the scene-9 entrance)
 PERS = []
 for k, e in enumerate(EMB):
     rev = anim(f"Persona {k} reveal", 150)
@@ -1504,16 +1869,18 @@ for k, e in enumerate(EMB):
     for an in (rev, stat):
         for cidk in ("label_c", "title_c", "desc_c"):
             an.k(p9[cidk], "colorValue", [(0, ink, "hold")], kind="c")
+        for ci, col in zip(STG["ring_c"], e["rings"]):
+            an.k(ci, "colorValue", [(0, col, "hold")], kind="c")
+        an.k(STG["ground_c"], "colorValue", [(0, e["ground"], "hold")], kind="c")
     PERS.append((rev, stat, idle))
 
 # Theme animations (chrome colours per background)
 THEMES = {}
-for tname, ink, btn_bg, btn_ink, track, fillc in [("light", D, D, WP, "333D2456", P), ("dark", WP, L, D, "40FFF8EC", Y),
+for tname, ink, btn_bg, btn_ink, track, fillc in [("light", D, D, WP, "333D2456", P), ("dark", WP, L, D, "55C7B7F2", P),
                                                    ("warm", DD, DD, WP, "402A1640", WP)]:
     a = anim(f"Theme {tname}", 1)
     a.k(CH["wm_c"], "colorValue", [(0, ink, "hold")], kind="c")
     a.k(CH["year_c"], "colorValue", [(0, ink, "hold")], kind="c")
-    a.k(CH["dot_c"], "colorValue", [(0, P if tname != "warm" else WP, "hold")], kind="c")
     for k in range(1, 11):
         a.k(SEG[k]["track_c"], "colorValue", [(0, track, "hold")], kind="c")
         a.k(SEG[k]["fill_c"], "colorValue", [(0, fillc, "hold")], kind="c")
@@ -1638,17 +2005,17 @@ for n in range(1, 11):
     # forward gate
     g = []
     if always:
-        g += [trans(S[("In", n)], [RMF], dur=150, early=True), trans(S[("RMIn", n)], [RMT])]
+        g += [trans(S[("In", n)], [RMF]), trans(S[("RMIn", n)], [RMT])]
     else:
-        g += [trans(S[("In", n)], [cond(show(n), "b", True), RMF], dur=150, early=True), trans(S[("RMIn", n)], [cond(show(n), "b", True), RMT]),
+        g += [trans(S[("In", n)], [cond(show(n), "b", True), RMF]), trans(S[("RMIn", n)], [cond(show(n), "b", True), RMT]),
               trans(nxt, [cond(show(n), "b", False)])]
     seq_states.append(astate(S[("G", n)], EMPTY.id, col(n), row["G"], g, caption=f"Gate {n} (forward)"))
     # back gate
     g = []
     if always:
-        g += [trans(S[("BackIn", n)], [RMF], dur=150, early=True), trans(S[("RMIn", n)], [RMT])]
+        g += [trans(S[("BackIn", n)], [RMF]), trans(S[("RMIn", n)], [RMT])]
     else:
-        g += [trans(S[("BackIn", n)], [cond(show(n), "b", True), RMF], dur=150, early=True), trans(S[("RMIn", n)], [cond(show(n), "b", True), RMT]),
+        g += [trans(S[("BackIn", n)], [cond(show(n), "b", True), RMF]), trans(S[("RMIn", n)], [cond(show(n), "b", True), RMT]),
               trans(prv, [cond(show(n), "b", False)])]
     seq_states.append(astate(S[("B", n)], EMPTY.id, col(n), row["B"], g, caption=f"Gate {n} (back)"))
     # entering states
@@ -1840,14 +2207,16 @@ def keylis(target, key, actions, name, mods=None):
 
 
 for tgt, side, nm in ((NAV_R, 1, "next"), (NAV_L, -1, "back")):
-    lis(tgt, "down", [write(V("_pointerDown"), "b", True), write(V("_pressSide"), "n", side)], f"Press {nm} region")
+    lis(tgt, "down", [write(V("_pointerDown"), "b", True), write(V("_pressSide"), "n", side),
+                      write(V("_focusVisible"), "n", 0)], f"Press {nm} region")
     lis(tgt, "up", [write(V("_pointerDown"), "b", False)], f"Release {nm} region")
     lis(tgt, "exit", [write(V("_pointerDown"), "b", False)], f"Leave {nm} region")
-lis(BTN["Previous"]["id"], "click", [fire_trigger(V("goPrevious"))], "Previous button")
-lis(BTN["Pause"]["id"], "click", [toggle(V("isPaused"), C_NOT)], "Pause button")
-lis(BTN["Continue"]["id"], "click", [fire_trigger(V("goNext"))], "Continue button")
-lis(BTN["Replay"]["id"], "click", [fire_trigger(V("requestReplay"))], "Replay button")
-lis(BTN["Share"]["id"], "click", [E("ListenerFireEvent", {"eventId": EV["shareTapped"]})], "Share button")
+FV0 = lambda: write(V("_focusVisible"), "n", 0)
+lis(BTN["Previous"]["id"], "click", [fire_trigger(V("goPrevious")), FV0()], "Previous button")
+lis(BTN["Pause"]["id"], "click", [toggle(V("isPaused"), C_NOT), FV0()], "Pause button")
+lis(BTN["Continue"]["id"], "click", [fire_trigger(V("goNext")), FV0()], "Continue button")
+lis(BTN["Replay"]["id"], "click", [fire_trigger(V("requestReplay")), FV0()], "Replay button")
+lis(BTN["Share"]["id"], "click", [E("ListenerFireEvent", {"eventId": EV["shareTapped"]}), FV0()], "Share button")
 lis(MOUTH_HIT, "down", [write(V("_pressSide"), "n", 0)], "Mouth press (cancels story tap)")
 lis(MOUTH_HIT, "click", [write(V("_pressSide"), "n", 0), fire_trigger(V("_mouthTap"))], "Tap the mouth")
 for key_, b in BTN.items():
@@ -1858,11 +2227,11 @@ keylis(KEYHOST, "left", [fire_trigger(V("goPrevious"))], "Key: Left")
 keylis(KEYHOST, "space", [toggle(V("isPaused"), C_NOT)], "Key: Space")
 listeners.append(E("StateMachineListener", {"targetId": KEYHOST, "name": "Key: Tab"}, [
     E("ListenerInputTypeKeyboard", {"listenerTypeValue": "keyboard"}, [E("KeyboardInput", {"keyType": "tab", "keyPhase": 1})]),
-    E("FocusActionTraversal", {"traversalKind": "next"})]))
+    E("FocusActionTraversal", {"traversalKind": "next"}), write(V("_focusVisible"), "n", 1)]))
 listeners.append(E("StateMachineListener", {"targetId": KEYHOST, "name": "Key: Shift+Tab"}, [
     E("ListenerInputTypeKeyboard", {"listenerTypeValue": "keyboard"},
       [E("KeyboardInput", {"keyType": "tab", "keyPhase": 1, "modifiers": 1})]),
-    E("FocusActionTraversal", {"traversalKind": "previous"})]))
+    E("FocusActionTraversal", {"traversalKind": "previous"}), write(V("_focusVisible"), "n", 1)]))
 enter_actions = {"Previous": [fire_trigger(V("goPrevious"))], "Pause": [toggle(V("isPaused"), C_NOT)],
                  "Continue": [fire_trigger(V("goNext"))], "Replay": [fire_trigger(V("requestReplay"))],
                  "Share": [E("ListenerFireEvent", {"eventId": EV["shareTapped"]})]}
@@ -1885,7 +2254,7 @@ main_children.append(E("LayoutComponent", {"width": W, "height": H, "styleId": S
     E("LayoutComponentStyle", {"positionTypeValue": "absolute", "positionLeft": 0, "positionTop": 0,
                                "positionLeftUnitsValue": "points", "positionTopUnitsValue": "points",
                                "name": "Stage style", "id": STAGE_STYLE}),
-    node("Stage content", chrome + [mouth_hit_xml, clock_xml, driver_xml, aperture, mA, mB] + scene_xml)]))
+    node("Stage content", chrome + [mouth_hit_xml, clock_xml, driver_xml, aperture, mA, mB] + scene_xml + [plate_xml])]))
 main_children += [fill(WP)] + events + [sm_xml] + [a.xml() for a in ANIMS]
 main_xml = E("Artboard", {"defaultStateMachineId": MAIN_SM, "viewModelId": VM, "viewModelInstanceId": "0:95",
                           "styleId": MAIN_STYLE, "width": W, "height": H, "clip": True, "x": 0, "y": 0,
@@ -1922,10 +2291,9 @@ cd = {"style": nid()}
 card_parts = []
 card_anims = []
 # top row
-sid, st = disp(24, D, 800, wdth=80)
+sid, st = disp(23, D, 750, wdth=92, ls=-0.3)
 card_parts.append(node("Card wordmark", [
-    shape("Card wordmark bubble", [smooth_path(bubble_pts(0.06))], [fill(P)], x=99, y=17),
-    text("Card wordmark text", 0, 0, [st], [run(sid, "parlance")])], id=(CD_WM := nid()), x=24, y=22))
+    text("Card wordmark text", 0, 0, [st], [run(sid, "Parlance")])], id=(CD_WM := nid()), x=24, y=22))
 sid, st = disp(24, P, 800)
 card_parts.append(text("Card year", 318, 24, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1, id=(CD_YEAR := nid())))
 CD_NAME, _c, t_ = bound_text("Card name", 24, 58, 294, "userName", font="body", size=14, color=DL, wght=600,
@@ -1934,9 +2302,10 @@ card_parts.append(t_)
 # persona block
 CEMB = build_emblems(0.42, "CE")
 CD_EMB = nid()
-card_parts.append(node("Card persona emblem", [e["xml"] for e in CEMB], id=CD_EMB, x=171, y=150))
-CD_PT, CD_PT_C, t_ = bound_text("Card persona title", 24, 232, 294, "personaName", size=26, color=D, wght=800, lh=27,
-                                align="center", wdth=86)
+cstage_xml, CSTG = emblem_stage(CEMB, 0.42, "Card")
+card_parts.append(node("Card persona emblem", [cstage_xml], id=CD_EMB, x=171, y=140))
+CD_PT, CD_PT_C, t_ = bound_text("Card persona title", 24, 232, 294, "personaName", size=27, color=D, wght=800, lh=28,
+                                align="center", wdth=94, ls=-0.6)
 card_parts.append(t_)
 CD_PD, _c, t_ = bound_text("Card persona description", 24, 264, 294, "personaDescription", font="body", size=13,
                            color=DL, wght=500, lh=17, align="center")
@@ -1944,8 +2313,8 @@ card_parts.append(t_)
 # neutral motif (shown when persona hidden / new user)
 CD_NEUTRAL = nid()
 na, nb = {}, {}
-card_parts.append(node("Card neutral motif", [motif_bubble("Card motif A", P, PD, False, 0.5, ids=na),
-                                              motif_bubble("Card motif B", L, LD, True, 0.45, ids=nb)],
+card_parts.append(node("Card neutral motif", [node("Card neutral A", [motif_bubble("Card motif A", P, PD, False, 0.5, ids=na)], x=-36),
+                                              node("Card neutral B", [motif_bubble("Card motif B", L, LD, True, 0.45, ids=nb)], x=44, y=10)],
                        id=CD_NEUTRAL, x=171, y=160, op=0))
 card_parts[-1] = card_parts[-1]  # positions of the two bubbles set below via x attributes
 card_parts[-1] = card_parts[-1].replace(f'name="Card motif A" id="{na["root"]}"', f'name="Card motif A" id="{na["root"]}" x="-42"', 1) \
@@ -1965,15 +2334,17 @@ for i, (pn, un, bgc, ink, scr) in enumerate(tile_specs):
     tx = 24 + (i % 2) * 151
     ty = 316 + (i // 2) * 76
     t_id = nid()
-    hn, hx_, _ = hero_number(f"Card {pn}", pn, 14, 8, 115, 30, ink, counting=False, wdth=84)
-    un_id, _c, ut = bound_text(f"Card {pn} label", 14, 44, 115, un, font="body", size=11, color=ink, wght=600,
+    hn, hx_, _ = hero_number(f"Card {pn}", pn, 14 - 71, 8 - 34, 115, 30, ink, counting=True, wdth=100, ls=-1)
+    un_id, _c, ut = bound_text(f"Card {pn} label", 14 - 71, 44 - 34, 115, un, font="body", size=11, color=ink, wght=600,
                                sizing="fixed", h=16, overflow="ellipsis", wrap="noWrap")
     mask = nid()
     sid, st = disp(30, ink, 800)
-    masked = text(f"Card {pn} private", 14, 8, [st], [run(sid, "—")], id=mask, op=0)
-    TILES.append({"id": t_id, "num": hn, "mask": mask, "scr": scr})
-    card_parts.append(node(f"Card tile {pn}", [hx_, masked, ut,
-                                               shape("tile", [rect(143, 68, 18, 0, 0)], [fill(bgc)])], id=t_id, x=tx, y=ty))
+    masked = text(f"Card {pn} private", 14 - 71, 8 - 34, [st], [run(sid, "—")], id=mask, op=0)
+    fly = nid()
+    TILES.append({"id": t_id, "num": hn, "mask": mask, "scr": scr, "fly": fly})
+    card_parts.append(node(f"Card tile {pn}", [node(f"Card tile fly {pn}", [
+        hx_, masked, ut, shape("tile", [rect(143, 68, 18, 0, 0)], [fill(bgc)], x=-71, y=-34)], id=fly, x=71, y=34)],
+        id=t_id, x=tx, y=ty))
 CD_MTILE = nid()
 mt_a, mt_b = {}, {}
 card_parts.append(node("Card tile motif", [
@@ -1988,33 +2359,47 @@ card_parts.append(shape("Card shadow", [rect(CARD_W, CARD_H, 30, 0, 0)], [fill("
 
 # card animations
 c_rest = Anim("Card settled", 1)
-c_asm = Anim("Card assemble", 110)
+c_asm = Anim("Card assemble", 140)
 c_empty_off = Anim("Card mode: stats", 1)
 c_empty_on = Anim("Card mode: new user", 1)
 c_name_on, c_name_off = Anim("Card name shown", 1), Anim("Card name hidden", 1)
 c_sens_on, c_sens_off = Anim("Card minutes shown", 1), Anim("Card minutes private", 1)
 c_pers_on, c_pers_off = Anim("Card persona shown", 1), Anim("Card persona hidden (neutral motif)", 1)
 c_pick = [Anim(f"Card persona {k}", 1) for k in range(4)]
-assemble_items = [(CD_WM, 0), (CD_YEAR, 4), (CD_EMB, 14), (CD_PT, 26), (CD_PD, 32)] + \
-                 [(t["id"], 40 + i * 7) for i, t in enumerate(TILES)] + [(CD_MTILE, 76)]
-for obj, f0 in assemble_items:
-    c_asm.k(obj, "opacity", [(0, 0, "hold"), (f0, 0, "out"), (f0 + 14, 1, "hold")])
-    c_rest.hold(obj, "opacity", 1)
-for t in TILES + [{"id": CD_MTILE}]:
-    oy = None
+# Assembly: the wordmark slides in, the year lands like a stamp, the persona emblem drops in with a squash and its
+# rings draw on, the title cascades, then the five tiles are dealt in from alternating sides (counting up) and the
+# collectible motif tile flips in last.
+def asm(obj, prop_, keys, rest):
+    c_asm.k(obj, prop_, keys)
+    c_rest.hold(obj, prop_, rest)
+
+
+for obj, f0 in [(CD_WM, 0), (CD_YEAR, 6), (CD_EMB, 12), (CD_PT, 30), (CD_PD, 38), (CD_MTILE, 84)] + \
+        [(t["id"], 44 + i * 6) for i, t in enumerate(TILES)]:
+    asm(obj, "opacity", [(0, 0, "hold"), (f0, 1, "hold")], 1)
+asm(CD_WM, "x", [(0, -80, "hold"), (0, -80, (0.25, 1.3, 0.5, 1)), (22, 24, "hold")], 24)
+asm(CD_YEAR, "scaleX", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
+asm(CD_YEAR, "scaleY", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
+asm(CD_YEAR, "rotation", [(0, -0.5, "hold"), (6, -0.5, "out"), (16, 0.04, "el"), (44, 0, "hold")], 0)
+asm(CD_EMB, "y", [(0, 30, "hold"), (12, 30, (0.5, 0, 0.9, 0.5)), (30, 140, "hold")], 140)
+asm(CD_EMB, "scaleY", [(0, 1.2, "hold"), (28, 1.2, "lin"), (32, 0.74, "el"), (74, 1, "hold")], 1)
+asm(CD_EMB, "scaleX", [(0, 0.86, "hold"), (28, 0.86, "lin"), (32, 1.22, "el"), (74, 1, "hold")], 1)
+for k, tid in enumerate(CSTG["trim"]):
+    asm(tid, "end", [(0, 0, "hold"), (32 + k * 5, 0, "io"), (64 + k * 5, 1, "hold")], 1)
+for k, si in enumerate(CSTG["sparks"]):
+    asm(si, "scaleX", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
+    asm(si, "scaleY", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
+asm(CD_PT, "y", [(0, 252, "hold"), (30, 252, "back"), (50, 232, "hold")], 232)
+asm(CD_PD, "y", [(0, 276, "hold"), (38, 276, "out"), (58, 264, "hold")], 264)
 for i, t in enumerate(TILES):
-    ty = 316 + (i // 2) * 76
-    f0 = 40 + i * 7
-    c_asm.k(t["id"], "y", [(0, ty - 40, "hold"), (f0, ty - 40, "back"), (f0 + 24, ty, "hold")])
-    c_rest.hold(t["id"], "y", ty)
-c_asm.k(CD_MTILE, "y", [(0, 430, "hold"), (76, 430, "back"), (100, 468, "hold")])
-c_asm.k(CD_MTILE, "rotation", [(0, 0.5, "hold"), (76, 0.5, "back"), (100, 0, "hold")])
-c_rest.hold(CD_MTILE, "y", 468)
-c_rest.hold(CD_MTILE, "rotation", 0)
-c_asm.k(CD_EMB, "scaleX", [(0, 1.8, "hold"), (14, 1.8, "el"), (60, 1, "hold")])
-c_asm.k(CD_EMB, "scaleY", [(0, 1.8, "hold"), (14, 1.8, "el"), (60, 1, "hold")])
-c_rest.hold(CD_EMB, "scaleX", 1)
-c_rest.hold(CD_EMB, "scaleY", 1)
+    f0 = 44 + i * 6
+    side = -1 if i % 2 == 0 else 1
+    asm(t["fly"], "x", [(0, 71 + side * 260, "hold"), (f0, 71 + side * 260, (0.2, 1.2, 0.45, 1)), (f0 + 26, 71, "hold")], 71)
+    asm(t["fly"], "rotation", [(0, side * 0.7, "hold"), (f0, side * 0.7, "back"), (f0 + 30, 0, "hold")], 0)
+    asm(t["fly"], "scaleX", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 1.08, "el"), (f0 + 56, 1, "hold")], 1)
+    asm(t["fly"], "scaleY", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 0.9, "el"), (f0 + 56, 1, "hold")], 1)
+asm(CD_MTILE, "y", [(0, 420, "hold"), (84, 420, "back"), (104, 468, "hold")], 468)
+asm(CD_MTILE, "rotation", [(0, 0.6, "hold"), (84, 0.6, "back"), (108, 0, "hold")], 0)
 for an, empty in ((c_empty_off, False), (c_empty_on, True)):
     for t in TILES:
         an.hold(t["id"], "x", -900 if empty else (24 + (TILES.index(t) % 2) * 151))
@@ -2037,6 +2422,9 @@ for k, an in enumerate(c_pick):
         an.hold(e["root"], "opacity", 1 if m == k else 0)
         for obj, prop_, keys in e["rev"]:
             an.hold(obj, prop_, keys[-1][1])
+    for ci, col in zip(CSTG["ring_c"], CEMB[k]["rings"]):
+        an.k(ci, "colorValue", [(0, col, "hold")], kind="c")
+    an.k(CSTG["ground_c"], "colorValue", [(0, CEMB[k]["ground"], "hold")], kind="c")
 CARD_ANIMS = [c_rest, c_asm, c_empty_off, c_empty_on, c_name_on, c_name_off, c_sens_on, c_sens_off, c_pers_on, c_pers_off] + c_pick
 
 
@@ -2142,7 +2530,7 @@ for an in ANIMS + CARD_ANIMS:
             ks = sorted(keys, key=lambda t: t[0])
             if len(ks) > 1 and kind == "d":
                 v0, v1 = ks[0][1], ks[-1][1]
-                wrap_ok = prop_ == "rotation" and abs(abs(v1 - v0) - 2 * math.pi) < 1e-3
+                wrap_ok = (prop_ == "rotation" and abs(abs(v1 - v0) - 2 * math.pi) < 1e-3) or (obj, prop_) in WRAPS
                 if abs(v0 - v1) > 1e-6 and not wrap_ok:
                     print(f"SEAM WARNING {an.name}: {obj}.{prop_} {v0} -> {v1}")
                 if ks[-1][0] > an.dur:

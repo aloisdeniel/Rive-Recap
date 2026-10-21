@@ -100,794 +100,1029 @@
     <ViewModelPropertyTrigger name="screenSignal" id="0:90098"/>
     <ViewModelPropertyTrigger name="finishSignal" id="0:90099"/>
     <ViewModelInstance exports="true" name="Fixture" id="0:89999">
-      <ViewModelInstanceString propertyValue="Alex" viewModelPropertyId="0:90001" id="0:25763"/>
-      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:25764"/>
-      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:90003" id="0:25765"/>
-      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:90004" id="0:25766"/>
-      <ViewModelInstanceNumber propertyValue="86" viewModelPropertyId="0:90005" id="0:25767"/>
-      <ViewModelInstanceNumber propertyValue="214" viewModelPropertyId="0:90006" id="0:25768"/>
-      <ViewModelInstanceNumber propertyValue="1320" viewModelPropertyId="0:90007" id="0:25769"/>
-      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:90008" id="0:25770"/>
-      <ViewModelInstanceNumber propertyValue="105" viewModelPropertyId="0:90009" id="0:25771"/>
-      <ViewModelInstanceNumber propertyValue="39" viewModelPropertyId="0:90010" id="0:25772"/>
-      <ViewModelInstanceNumber propertyValue="9" viewModelPropertyId="0:90011" id="0:25773"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90012" id="0:25774"/>
-      <ViewModelInstanceString propertyValue="Route Reader" viewModelPropertyId="0:90013" id="0:25775"/>
-      <ViewModelInstanceString propertyValue="You see the way through." viewModelPropertyId="0:90014" id="0:25776"/>
-      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:25777"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90016" id="0:25778"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:25779"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:25780"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:25781"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:25782"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:25783"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:25784"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90023" id="0:25785"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:25786"/>
-      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:90025" id="0:25787"/>
-      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:25788"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:25789"/>
-      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:25790"/>
-      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:25791"/>
-      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:25792"/>
-      <ViewModelInstanceString propertyValue="Your 2026 on Crux" viewModelPropertyId="0:90031" id="0:25793"/>
-      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:90032" id="0:25794"/>
-      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:90033" id="0:25795"/>
-      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:90034" id="0:25796"/>
-      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:25797"/>
-      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:25798"/>
-      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:90037" id="0:25799"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:25800"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90039" id="0:25801"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90040" id="0:25802"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90041" id="0:25803"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90042" id="0:25804"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90043" id="0:25805"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90044" id="0:25806"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90045" id="0:25807"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90046" id="0:25808"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:25809"/>
-      <ViewModelInstanceString propertyValue="You kept showing up." viewModelPropertyId="0:90048" id="0:25810"/>
-      <ViewModelInstanceString propertyValue="One wall. A thousand ways to move." viewModelPropertyId="0:90049" id="0:25811"/>
-      <ViewModelInstanceString propertyValue="sessions" viewModelPropertyId="0:90050" id="0:25812"/>
-      <ViewModelInstanceString propertyValue="Problems, solved." viewModelPropertyId="0:90051" id="0:25813"/>
-      <ViewModelInstanceString propertyValue="Every finish started with a first move." viewModelPropertyId="0:90052" id="0:25814"/>
-      <ViewModelInstanceString propertyValue="sends" viewModelPropertyId="0:90053" id="0:25815"/>
-      <ViewModelInstanceString propertyValue="Every try counted." viewModelPropertyId="0:90054" id="0:25816"/>
-      <ViewModelInstanceString propertyValue="The work between the wins mattered too." viewModelPropertyId="0:90055" id="0:25817"/>
-      <ViewModelInstanceString propertyValue="attempts" viewModelPropertyId="0:90056" id="0:25818"/>
-      <ViewModelInstanceString propertyValue="You found another way." viewModelPropertyId="0:90057" id="0:25819"/>
-      <ViewModelInstanceString propertyValue="Footwork and balance got their own spotlight." viewModelPropertyId="0:90058" id="0:25820"/>
-      <ViewModelInstanceString propertyValue="technique sessions" viewModelPropertyId="0:90059" id="0:25821"/>
-      <ViewModelInstanceString propertyValue="Time on the wall." viewModelPropertyId="0:90060" id="0:25822"/>
-      <ViewModelInstanceString propertyValue="Your longest logged session this year." viewModelPropertyId="0:90061" id="0:25823"/>
-      <ViewModelInstanceString propertyValue="minutes" viewModelPropertyId="0:90062" id="0:25824"/>
-      <ViewModelInstanceString propertyValue="Built over time." viewModelPropertyId="0:90063" id="0:25825"/>
-      <ViewModelInstanceString propertyValue="Your rhythm, at your pace." viewModelPropertyId="0:90064" id="0:25826"/>
-      <ViewModelInstanceString propertyValue="active weeks" viewModelPropertyId="0:90065" id="0:25827"/>
-      <ViewModelInstanceString propertyValue="Better with a belay buddy." viewModelPropertyId="0:90066" id="0:25828"/>
-      <ViewModelInstanceString propertyValue="People who shared the puzzle." viewModelPropertyId="0:90067" id="0:25829"/>
-      <ViewModelInstanceString propertyValue="climbing partners" viewModelPropertyId="0:90068" id="0:25830"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90069" id="0:25831"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:25832"/>
-      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:25833"/>
-      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:25834"/>
-      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:25835"/>
-      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:25836"/>
-      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:25837"/>
-      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:25838"/>
-      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:25839"/>
-      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:25840"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:25841"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:25842"/>
-      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:25843"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:25844"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:25845"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:25846"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:25847"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:25848"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:25849"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:25850"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:25851"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:25852"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:25853"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:25854"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:25855"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:25856"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:25857"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:25858"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:25859"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:25860"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:25861"/>
+      <ViewModelInstanceString propertyValue="Alex" viewModelPropertyId="0:90001" id="0:29587"/>
+      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:29588"/>
+      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:90003" id="0:29589"/>
+      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:90004" id="0:29590"/>
+      <ViewModelInstanceNumber propertyValue="86" viewModelPropertyId="0:90005" id="0:29591"/>
+      <ViewModelInstanceNumber propertyValue="214" viewModelPropertyId="0:90006" id="0:29592"/>
+      <ViewModelInstanceNumber propertyValue="1320" viewModelPropertyId="0:90007" id="0:29593"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:90008" id="0:29594"/>
+      <ViewModelInstanceNumber propertyValue="105" viewModelPropertyId="0:90009" id="0:29595"/>
+      <ViewModelInstanceNumber propertyValue="39" viewModelPropertyId="0:90010" id="0:29596"/>
+      <ViewModelInstanceNumber propertyValue="9" viewModelPropertyId="0:90011" id="0:29597"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90012" id="0:29598"/>
+      <ViewModelInstanceString propertyValue="Route Reader" viewModelPropertyId="0:90013" id="0:29599"/>
+      <ViewModelInstanceString propertyValue="You see the way through." viewModelPropertyId="0:90014" id="0:29600"/>
+      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:29601"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90016" id="0:29602"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:29603"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:29604"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:29605"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:29606"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:29607"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:29608"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90023" id="0:29609"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:29610"/>
+      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:90025" id="0:29611"/>
+      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:29612"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:29613"/>
+      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:29614"/>
+      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:29615"/>
+      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:29616"/>
+      <ViewModelInstanceString propertyValue="Your 2026 on Crux" viewModelPropertyId="0:90031" id="0:29617"/>
+      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:90032" id="0:29618"/>
+      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:90033" id="0:29619"/>
+      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:90034" id="0:29620"/>
+      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:29621"/>
+      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:29622"/>
+      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:90037" id="0:29623"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:29624"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90039" id="0:29625"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90040" id="0:29626"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90041" id="0:29627"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90042" id="0:29628"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90043" id="0:29629"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90044" id="0:29630"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90045" id="0:29631"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90046" id="0:29632"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:29633"/>
+      <ViewModelInstanceString propertyValue="You kept showing up." viewModelPropertyId="0:90048" id="0:29634"/>
+      <ViewModelInstanceString propertyValue="One wall. A thousand ways to move." viewModelPropertyId="0:90049" id="0:29635"/>
+      <ViewModelInstanceString propertyValue="sessions" viewModelPropertyId="0:90050" id="0:29636"/>
+      <ViewModelInstanceString propertyValue="Problems, solved." viewModelPropertyId="0:90051" id="0:29637"/>
+      <ViewModelInstanceString propertyValue="Every finish started with a first move." viewModelPropertyId="0:90052" id="0:29638"/>
+      <ViewModelInstanceString propertyValue="sends" viewModelPropertyId="0:90053" id="0:29639"/>
+      <ViewModelInstanceString propertyValue="Every try counted." viewModelPropertyId="0:90054" id="0:29640"/>
+      <ViewModelInstanceString propertyValue="The work between the wins mattered too." viewModelPropertyId="0:90055" id="0:29641"/>
+      <ViewModelInstanceString propertyValue="attempts" viewModelPropertyId="0:90056" id="0:29642"/>
+      <ViewModelInstanceString propertyValue="You found another way." viewModelPropertyId="0:90057" id="0:29643"/>
+      <ViewModelInstanceString propertyValue="Footwork and balance got their own spotlight." viewModelPropertyId="0:90058" id="0:29644"/>
+      <ViewModelInstanceString propertyValue="technique sessions" viewModelPropertyId="0:90059" id="0:29645"/>
+      <ViewModelInstanceString propertyValue="Time on the wall." viewModelPropertyId="0:90060" id="0:29646"/>
+      <ViewModelInstanceString propertyValue="Your longest logged session this year." viewModelPropertyId="0:90061" id="0:29647"/>
+      <ViewModelInstanceString propertyValue="minutes" viewModelPropertyId="0:90062" id="0:29648"/>
+      <ViewModelInstanceString propertyValue="Built over time." viewModelPropertyId="0:90063" id="0:29649"/>
+      <ViewModelInstanceString propertyValue="Your rhythm, at your pace." viewModelPropertyId="0:90064" id="0:29650"/>
+      <ViewModelInstanceString propertyValue="active weeks" viewModelPropertyId="0:90065" id="0:29651"/>
+      <ViewModelInstanceString propertyValue="Better with a belay buddy." viewModelPropertyId="0:90066" id="0:29652"/>
+      <ViewModelInstanceString propertyValue="People who shared the puzzle." viewModelPropertyId="0:90067" id="0:29653"/>
+      <ViewModelInstanceString propertyValue="climbing partners" viewModelPropertyId="0:90068" id="0:29654"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90069" id="0:29655"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:29656"/>
+      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:29657"/>
+      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:29658"/>
+      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:29659"/>
+      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:29660"/>
+      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:29661"/>
+      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:29662"/>
+      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:29663"/>
+      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:29664"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:29665"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:29666"/>
+      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:29667"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:29668"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:29669"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:29670"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:29671"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:29672"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:29673"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:29674"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:29675"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:29676"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:29677"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:29678"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:29679"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:29680"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:29681"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:29682"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:29683"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:29684"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:29685"/>
     </ViewModelInstance>
-    <ViewModelInstance exports="true" name="NewUser" id="0:25862">
-      <ViewModelInstanceString propertyValue="Sam" viewModelPropertyId="0:90001" id="0:25863"/>
-      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:25864"/>
-      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:90003" id="0:25865"/>
-      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:90004" id="0:25866"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90005" id="0:25867"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90006" id="0:25868"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90007" id="0:25869"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90008" id="0:25870"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90009" id="0:25871"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90010" id="0:25872"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90011" id="0:25873"/>
-      <ViewModelInstanceNumber propertyValue="-1" viewModelPropertyId="0:90012" id="0:25874"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90013" id="0:25875"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90014" id="0:25876"/>
-      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:25877"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90016" id="0:25878"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:25879"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:25880"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:25881"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:25882"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:25883"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:25884"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90023" id="0:25885"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:25886"/>
-      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:90025" id="0:25887"/>
-      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:25888"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:25889"/>
-      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:25890"/>
-      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:25891"/>
-      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:25892"/>
-      <ViewModelInstanceString propertyValue="Your 2026 on Crux" viewModelPropertyId="0:90031" id="0:25893"/>
-      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:90032" id="0:25894"/>
-      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:90033" id="0:25895"/>
-      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:90034" id="0:25896"/>
-      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:25897"/>
-      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:25898"/>
-      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:90037" id="0:25899"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:25900"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90039" id="0:25901"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90040" id="0:25902"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90041" id="0:25903"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90042" id="0:25904"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90043" id="0:25905"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90044" id="0:25906"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90045" id="0:25907"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90046" id="0:25908"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:25909"/>
-      <ViewModelInstanceString propertyValue="You kept showing up." viewModelPropertyId="0:90048" id="0:25910"/>
-      <ViewModelInstanceString propertyValue="One wall. A thousand ways to move." viewModelPropertyId="0:90049" id="0:25911"/>
-      <ViewModelInstanceString propertyValue="sessions" viewModelPropertyId="0:90050" id="0:25912"/>
-      <ViewModelInstanceString propertyValue="Problems, solved." viewModelPropertyId="0:90051" id="0:25913"/>
-      <ViewModelInstanceString propertyValue="Every finish started with a first move." viewModelPropertyId="0:90052" id="0:25914"/>
-      <ViewModelInstanceString propertyValue="sends" viewModelPropertyId="0:90053" id="0:25915"/>
-      <ViewModelInstanceString propertyValue="Every try counted." viewModelPropertyId="0:90054" id="0:25916"/>
-      <ViewModelInstanceString propertyValue="The work between the wins mattered too." viewModelPropertyId="0:90055" id="0:25917"/>
-      <ViewModelInstanceString propertyValue="attempts" viewModelPropertyId="0:90056" id="0:25918"/>
-      <ViewModelInstanceString propertyValue="You found another way." viewModelPropertyId="0:90057" id="0:25919"/>
-      <ViewModelInstanceString propertyValue="Footwork and balance got their own spotlight." viewModelPropertyId="0:90058" id="0:25920"/>
-      <ViewModelInstanceString propertyValue="technique sessions" viewModelPropertyId="0:90059" id="0:25921"/>
-      <ViewModelInstanceString propertyValue="Time on the wall." viewModelPropertyId="0:90060" id="0:25922"/>
-      <ViewModelInstanceString propertyValue="Your longest logged session this year." viewModelPropertyId="0:90061" id="0:25923"/>
-      <ViewModelInstanceString propertyValue="minutes" viewModelPropertyId="0:90062" id="0:25924"/>
-      <ViewModelInstanceString propertyValue="Built over time." viewModelPropertyId="0:90063" id="0:25925"/>
-      <ViewModelInstanceString propertyValue="Your rhythm, at your pace." viewModelPropertyId="0:90064" id="0:25926"/>
-      <ViewModelInstanceString propertyValue="active weeks" viewModelPropertyId="0:90065" id="0:25927"/>
-      <ViewModelInstanceString propertyValue="Better with a belay buddy." viewModelPropertyId="0:90066" id="0:25928"/>
-      <ViewModelInstanceString propertyValue="People who shared the puzzle." viewModelPropertyId="0:90067" id="0:25929"/>
-      <ViewModelInstanceString propertyValue="climbing partners" viewModelPropertyId="0:90068" id="0:25930"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90069" id="0:25931"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:25932"/>
-      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:25933"/>
-      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:25934"/>
-      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:25935"/>
-      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:25936"/>
-      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:25937"/>
-      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:25938"/>
-      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:25939"/>
-      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:25940"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:25941"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:25942"/>
-      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:25943"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:25944"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:25945"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:25946"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:25947"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:25948"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:25949"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:25950"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:25951"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:25952"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:25953"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:25954"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:25955"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:25956"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:25957"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:25958"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:25959"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:25960"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:25961"/>
+    <ViewModelInstance exports="true" name="NewUser" id="0:29686">
+      <ViewModelInstanceString propertyValue="Sam" viewModelPropertyId="0:90001" id="0:29687"/>
+      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:29688"/>
+      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:90003" id="0:29689"/>
+      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:90004" id="0:29690"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90005" id="0:29691"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90006" id="0:29692"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90007" id="0:29693"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90008" id="0:29694"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90009" id="0:29695"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90010" id="0:29696"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90011" id="0:29697"/>
+      <ViewModelInstanceNumber propertyValue="-1" viewModelPropertyId="0:90012" id="0:29698"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90013" id="0:29699"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90014" id="0:29700"/>
+      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:29701"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90016" id="0:29702"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:29703"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:29704"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:29705"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:29706"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:29707"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:29708"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90023" id="0:29709"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:29710"/>
+      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:90025" id="0:29711"/>
+      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:29712"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:29713"/>
+      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:29714"/>
+      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:29715"/>
+      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:29716"/>
+      <ViewModelInstanceString propertyValue="Your 2026 on Crux" viewModelPropertyId="0:90031" id="0:29717"/>
+      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:90032" id="0:29718"/>
+      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:90033" id="0:29719"/>
+      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:90034" id="0:29720"/>
+      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:29721"/>
+      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:29722"/>
+      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:90037" id="0:29723"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:29724"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90039" id="0:29725"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90040" id="0:29726"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90041" id="0:29727"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90042" id="0:29728"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90043" id="0:29729"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90044" id="0:29730"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90045" id="0:29731"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90046" id="0:29732"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:29733"/>
+      <ViewModelInstanceString propertyValue="You kept showing up." viewModelPropertyId="0:90048" id="0:29734"/>
+      <ViewModelInstanceString propertyValue="One wall. A thousand ways to move." viewModelPropertyId="0:90049" id="0:29735"/>
+      <ViewModelInstanceString propertyValue="sessions" viewModelPropertyId="0:90050" id="0:29736"/>
+      <ViewModelInstanceString propertyValue="Problems, solved." viewModelPropertyId="0:90051" id="0:29737"/>
+      <ViewModelInstanceString propertyValue="Every finish started with a first move." viewModelPropertyId="0:90052" id="0:29738"/>
+      <ViewModelInstanceString propertyValue="sends" viewModelPropertyId="0:90053" id="0:29739"/>
+      <ViewModelInstanceString propertyValue="Every try counted." viewModelPropertyId="0:90054" id="0:29740"/>
+      <ViewModelInstanceString propertyValue="The work between the wins mattered too." viewModelPropertyId="0:90055" id="0:29741"/>
+      <ViewModelInstanceString propertyValue="attempts" viewModelPropertyId="0:90056" id="0:29742"/>
+      <ViewModelInstanceString propertyValue="You found another way." viewModelPropertyId="0:90057" id="0:29743"/>
+      <ViewModelInstanceString propertyValue="Footwork and balance got their own spotlight." viewModelPropertyId="0:90058" id="0:29744"/>
+      <ViewModelInstanceString propertyValue="technique sessions" viewModelPropertyId="0:90059" id="0:29745"/>
+      <ViewModelInstanceString propertyValue="Time on the wall." viewModelPropertyId="0:90060" id="0:29746"/>
+      <ViewModelInstanceString propertyValue="Your longest logged session this year." viewModelPropertyId="0:90061" id="0:29747"/>
+      <ViewModelInstanceString propertyValue="minutes" viewModelPropertyId="0:90062" id="0:29748"/>
+      <ViewModelInstanceString propertyValue="Built over time." viewModelPropertyId="0:90063" id="0:29749"/>
+      <ViewModelInstanceString propertyValue="Your rhythm, at your pace." viewModelPropertyId="0:90064" id="0:29750"/>
+      <ViewModelInstanceString propertyValue="active weeks" viewModelPropertyId="0:90065" id="0:29751"/>
+      <ViewModelInstanceString propertyValue="Better with a belay buddy." viewModelPropertyId="0:90066" id="0:29752"/>
+      <ViewModelInstanceString propertyValue="People who shared the puzzle." viewModelPropertyId="0:90067" id="0:29753"/>
+      <ViewModelInstanceString propertyValue="climbing partners" viewModelPropertyId="0:90068" id="0:29754"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90069" id="0:29755"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:29756"/>
+      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:29757"/>
+      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:29758"/>
+      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:29759"/>
+      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:29760"/>
+      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:29761"/>
+      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:29762"/>
+      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:29763"/>
+      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:29764"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:29765"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:29766"/>
+      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:29767"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:29768"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:29769"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:29770"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:29771"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:29772"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:29773"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:29774"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:29775"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:29776"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:29777"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:29778"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:29779"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:29780"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:29781"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:29782"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:29783"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:29784"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:29785"/>
     </ViewModelInstance>
-    <ViewModelInstance exports="true" name="Extreme" id="0:25962">
-      <ViewModelInstanceString propertyValue="Maximiliana-Alexandrina Featherstonehaugh-Okonkwo" viewModelPropertyId="0:90001" id="0:25963"/>
-      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:25964"/>
-      <ViewModelInstanceString propertyValue="1. Januar – 31. Dezember 2026 (vollständiges Kalenderjahr)" viewModelPropertyId="0:90003" id="0:25965"/>
-      <ViewModelInstanceString propertyValue="de-DE" viewModelPropertyId="0:90004" id="0:25966"/>
-      <ViewModelInstanceNumber propertyValue="4821" viewModelPropertyId="0:90005" id="0:25967"/>
-      <ViewModelInstanceNumber propertyValue="98765" viewModelPropertyId="0:90006" id="0:25968"/>
-      <ViewModelInstanceNumber propertyValue="1234567" viewModelPropertyId="0:90007" id="0:25969"/>
-      <ViewModelInstanceNumber propertyValue="999" viewModelPropertyId="0:90008" id="0:25970"/>
-      <ViewModelInstanceNumber propertyValue="1440" viewModelPropertyId="0:90009" id="0:25971"/>
-      <ViewModelInstanceNumber propertyValue="53" viewModelPropertyId="0:90010" id="0:25972"/>
-      <ViewModelInstanceNumber propertyValue="250" viewModelPropertyId="0:90011" id="0:25973"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90012" id="0:25974"/>
-      <ViewModelInstanceString propertyValue="Route Reader" viewModelPropertyId="0:90013" id="0:25975"/>
-      <ViewModelInstanceString propertyValue="You see the way through." viewModelPropertyId="0:90014" id="0:25976"/>
-      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:25977"/>
-      <ViewModelInstanceNumber propertyValue="0.5" viewModelPropertyId="0:90016" id="0:25978"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:25979"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:25980"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:25981"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:25982"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:25983"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:25984"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90023" id="0:25985"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:25986"/>
-      <ViewModelInstanceString propertyValue="Weiter zur nächsten Seite" viewModelPropertyId="0:90025" id="0:25987"/>
-      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:25988"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:25989"/>
-      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:25990"/>
-      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:25991"/>
-      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:25992"/>
-      <ViewModelInstanceString propertyValue="Your entire 2026 on Crux, every single climb" viewModelPropertyId="0:90031" id="0:25993"/>
-      <ViewModelInstanceString propertyValue="A whole year of climbing, uniquely and entirely yours." viewModelPropertyId="0:90032" id="0:25994"/>
-      <ViewModelInstanceString propertyValue="A little year. A whole lot of you, Maximiliana." viewModelPropertyId="0:90033" id="0:25995"/>
-      <ViewModelInstanceString propertyValue="Take a collectible piece of your year with you wherever you go." viewModelPropertyId="0:90034" id="0:25996"/>
-      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:25997"/>
-      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:25998"/>
-      <ViewModelInstanceString propertyValue="Your very own personal climbing style" viewModelPropertyId="0:90037" id="0:25999"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:26000"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90039" id="0:26001"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90040" id="0:26002"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90041" id="0:26003"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90042" id="0:26004"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90043" id="0:26005"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90044" id="0:26006"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90045" id="0:26007"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90046" id="0:26008"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:26009"/>
-      <ViewModelInstanceString propertyValue="You kept showing up, week after week." viewModelPropertyId="0:90048" id="0:26010"/>
-      <ViewModelInstanceString propertyValue="One wall, one gym, and a thousand different ways to move." viewModelPropertyId="0:90049" id="0:26011"/>
-      <ViewModelInstanceString propertyValue="bouldering sessions" viewModelPropertyId="0:90050" id="0:26012"/>
-      <ViewModelInstanceString propertyValue="Problems, puzzles and projects solved." viewModelPropertyId="0:90051" id="0:26013"/>
-      <ViewModelInstanceString propertyValue="Every single finish started with a hesitant first move." viewModelPropertyId="0:90052" id="0:26014"/>
-      <ViewModelInstanceString propertyValue="completed sends" viewModelPropertyId="0:90053" id="0:26015"/>
-      <ViewModelInstanceString propertyValue="Every single try counted for something." viewModelPropertyId="0:90054" id="0:26016"/>
-      <ViewModelInstanceString propertyValue="All the work between the wins mattered just as much too." viewModelPropertyId="0:90055" id="0:26017"/>
-      <ViewModelInstanceString propertyValue="logged attempts" viewModelPropertyId="0:90056" id="0:26018"/>
-      <ViewModelInstanceString propertyValue="You kept finding another way up." viewModelPropertyId="0:90057" id="0:26019"/>
-      <ViewModelInstanceString propertyValue="Footwork, balance and body position got their own spotlight." viewModelPropertyId="0:90058" id="0:26020"/>
-      <ViewModelInstanceString propertyValue="dedicated technique sessions" viewModelPropertyId="0:90059" id="0:26021"/>
-      <ViewModelInstanceString propertyValue="So much time spent on the wall." viewModelPropertyId="0:90060" id="0:26022"/>
-      <ViewModelInstanceString propertyValue="Your longest logged session anywhere this whole year." viewModelPropertyId="0:90061" id="0:26023"/>
-      <ViewModelInstanceString propertyValue="minutes on the wall" viewModelPropertyId="0:90062" id="0:26024"/>
-      <ViewModelInstanceString propertyValue="Built patiently over a long time." viewModelPropertyId="0:90063" id="0:26025"/>
-      <ViewModelInstanceString propertyValue="Your own rhythm, always at your own pace." viewModelPropertyId="0:90064" id="0:26026"/>
-      <ViewModelInstanceString propertyValue="active climbing weeks" viewModelPropertyId="0:90065" id="0:26027"/>
-      <ViewModelInstanceString propertyValue="Always better with a trusted belay buddy." viewModelPropertyId="0:90066" id="0:26028"/>
-      <ViewModelInstanceString propertyValue="All the people who shared the puzzle with you this year." viewModelPropertyId="0:90067" id="0:26029"/>
-      <ViewModelInstanceString propertyValue="different climbing partners" viewModelPropertyId="0:90068" id="0:26030"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90069" id="0:26031"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:26032"/>
-      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:26033"/>
-      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:26034"/>
-      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:26035"/>
-      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:26036"/>
-      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:26037"/>
-      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:26038"/>
-      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:26039"/>
-      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:26040"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:26041"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:26042"/>
-      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:26043"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:26044"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:26045"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:26046"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:26047"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:26048"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:26049"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:26050"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:26051"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:26052"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:26053"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:26054"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:26055"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:26056"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:26057"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:26058"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:26059"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:26060"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:26061"/>
+    <ViewModelInstance exports="true" name="Extreme" id="0:29786">
+      <ViewModelInstanceString propertyValue="Maximiliana-Alexandrina Featherstonehaugh-Okonkwo" viewModelPropertyId="0:90001" id="0:29787"/>
+      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:90002" id="0:29788"/>
+      <ViewModelInstanceString propertyValue="1. Januar – 31. Dezember 2026 (vollständiges Kalenderjahr)" viewModelPropertyId="0:90003" id="0:29789"/>
+      <ViewModelInstanceString propertyValue="de-DE" viewModelPropertyId="0:90004" id="0:29790"/>
+      <ViewModelInstanceNumber propertyValue="4821" viewModelPropertyId="0:90005" id="0:29791"/>
+      <ViewModelInstanceNumber propertyValue="98765" viewModelPropertyId="0:90006" id="0:29792"/>
+      <ViewModelInstanceNumber propertyValue="1234567" viewModelPropertyId="0:90007" id="0:29793"/>
+      <ViewModelInstanceNumber propertyValue="999" viewModelPropertyId="0:90008" id="0:29794"/>
+      <ViewModelInstanceNumber propertyValue="1440" viewModelPropertyId="0:90009" id="0:29795"/>
+      <ViewModelInstanceNumber propertyValue="53" viewModelPropertyId="0:90010" id="0:29796"/>
+      <ViewModelInstanceNumber propertyValue="250" viewModelPropertyId="0:90011" id="0:29797"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:90012" id="0:29798"/>
+      <ViewModelInstanceString propertyValue="Route Reader" viewModelPropertyId="0:90013" id="0:29799"/>
+      <ViewModelInstanceString propertyValue="You see the way through." viewModelPropertyId="0:90014" id="0:29800"/>
+      <ViewModelInstanceColor propertyValue="FF20221F" viewModelPropertyId="0:90015" id="0:29801"/>
+      <ViewModelInstanceNumber propertyValue="0.5" viewModelPropertyId="0:90016" id="0:29802"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90017" id="0:29803"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90018" id="0:29804"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90019" id="0:29805"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90020" id="0:29806"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90021" id="0:29807"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90022" id="0:29808"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90023" id="0:29809"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90024" id="0:29810"/>
+      <ViewModelInstanceString propertyValue="Weiter zur nächsten Seite" viewModelPropertyId="0:90025" id="0:29811"/>
+      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:90026" id="0:29812"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90027" id="0:29813"/>
+      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:90028" id="0:29814"/>
+      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:90029" id="0:29815"/>
+      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:90030" id="0:29816"/>
+      <ViewModelInstanceString propertyValue="Your entire 2026 on Crux, every single climb" viewModelPropertyId="0:90031" id="0:29817"/>
+      <ViewModelInstanceString propertyValue="A whole year of climbing, uniquely and entirely yours." viewModelPropertyId="0:90032" id="0:29818"/>
+      <ViewModelInstanceString propertyValue="A little year. A whole lot of you, Maximiliana." viewModelPropertyId="0:90033" id="0:29819"/>
+      <ViewModelInstanceString propertyValue="Take a collectible piece of your year with you wherever you go." viewModelPropertyId="0:90034" id="0:29820"/>
+      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:90035" id="0:29821"/>
+      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:90036" id="0:29822"/>
+      <ViewModelInstanceString propertyValue="Your very own personal climbing style" viewModelPropertyId="0:90037" id="0:29823"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90038" id="0:29824"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90039" id="0:29825"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90040" id="0:29826"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90041" id="0:29827"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90042" id="0:29828"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90043" id="0:29829"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90044" id="0:29830"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90045" id="0:29831"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90046" id="0:29832"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90047" id="0:29833"/>
+      <ViewModelInstanceString propertyValue="You kept showing up, week after week." viewModelPropertyId="0:90048" id="0:29834"/>
+      <ViewModelInstanceString propertyValue="One wall, one gym, and a thousand different ways to move." viewModelPropertyId="0:90049" id="0:29835"/>
+      <ViewModelInstanceString propertyValue="bouldering sessions" viewModelPropertyId="0:90050" id="0:29836"/>
+      <ViewModelInstanceString propertyValue="Problems, puzzles and projects solved." viewModelPropertyId="0:90051" id="0:29837"/>
+      <ViewModelInstanceString propertyValue="Every single finish started with a hesitant first move." viewModelPropertyId="0:90052" id="0:29838"/>
+      <ViewModelInstanceString propertyValue="completed sends" viewModelPropertyId="0:90053" id="0:29839"/>
+      <ViewModelInstanceString propertyValue="Every single try counted for something." viewModelPropertyId="0:90054" id="0:29840"/>
+      <ViewModelInstanceString propertyValue="All the work between the wins mattered just as much too." viewModelPropertyId="0:90055" id="0:29841"/>
+      <ViewModelInstanceString propertyValue="logged attempts" viewModelPropertyId="0:90056" id="0:29842"/>
+      <ViewModelInstanceString propertyValue="You kept finding another way up." viewModelPropertyId="0:90057" id="0:29843"/>
+      <ViewModelInstanceString propertyValue="Footwork, balance and body position got their own spotlight." viewModelPropertyId="0:90058" id="0:29844"/>
+      <ViewModelInstanceString propertyValue="dedicated technique sessions" viewModelPropertyId="0:90059" id="0:29845"/>
+      <ViewModelInstanceString propertyValue="So much time spent on the wall." viewModelPropertyId="0:90060" id="0:29846"/>
+      <ViewModelInstanceString propertyValue="Your longest logged session anywhere this whole year." viewModelPropertyId="0:90061" id="0:29847"/>
+      <ViewModelInstanceString propertyValue="minutes on the wall" viewModelPropertyId="0:90062" id="0:29848"/>
+      <ViewModelInstanceString propertyValue="Built patiently over a long time." viewModelPropertyId="0:90063" id="0:29849"/>
+      <ViewModelInstanceString propertyValue="Your own rhythm, always at your own pace." viewModelPropertyId="0:90064" id="0:29850"/>
+      <ViewModelInstanceString propertyValue="active climbing weeks" viewModelPropertyId="0:90065" id="0:29851"/>
+      <ViewModelInstanceString propertyValue="Always better with a trusted belay buddy." viewModelPropertyId="0:90066" id="0:29852"/>
+      <ViewModelInstanceString propertyValue="All the people who shared the puzzle with you this year." viewModelPropertyId="0:90067" id="0:29853"/>
+      <ViewModelInstanceString propertyValue="different climbing partners" viewModelPropertyId="0:90068" id="0:29854"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:90069" id="0:29855"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90070" id="0:29856"/>
+      <ViewModelInstanceString propertyValue="86" viewModelPropertyId="0:90071" id="0:29857"/>
+      <ViewModelInstanceString propertyValue="214" viewModelPropertyId="0:90072" id="0:29858"/>
+      <ViewModelInstanceString propertyValue="1,320" viewModelPropertyId="0:90073" id="0:29859"/>
+      <ViewModelInstanceString propertyValue="24" viewModelPropertyId="0:90074" id="0:29860"/>
+      <ViewModelInstanceString propertyValue="105" viewModelPropertyId="0:90075" id="0:29861"/>
+      <ViewModelInstanceString propertyValue="39" viewModelPropertyId="0:90076" id="0:29862"/>
+      <ViewModelInstanceString propertyValue="9" viewModelPropertyId="0:90077" id="0:29863"/>
+      <ViewModelInstanceString propertyValue="2026" viewModelPropertyId="0:90078" id="0:29864"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90079" id="0:29865"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90080" id="0:29866"/>
+      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:90081" id="0:29867"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90082" id="0:29868"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90083" id="0:29869"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:90084" id="0:29870"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:90085" id="0:29871"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:90086" id="0:29872"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90087" id="0:29873"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90088" id="0:29874"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90089" id="0:29875"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90090" id="0:29876"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90091" id="0:29877"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:90092" id="0:29878"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90093" id="0:29879"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90094" id="0:29880"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90095" id="0:29881"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90096" id="0:29882"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90097" id="0:29883"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90098" id="0:29884"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:90099" id="0:29885"/>
     </ViewModelInstance>
   </ViewModel>
-  <DataConverterFormula name="Minutes Arc" id="0:3062">
-    <FormulaTokenFunction functionType="0" id="0:3063"/>
-    <FormulaTokenValue operationValue="1" id="0:3064"/>
-    <FormulaTokenArgumentSeparator id="0:3065"/>
-    <FormulaTokenFunction functionType="1" id="0:3066"/>
-    <FormulaTokenValue operationValue="0" id="0:3067"/>
-    <FormulaTokenArgumentSeparator id="0:3068"/>
-    <FormulaTokenInput id="0:3069"/>
-    <FormulaTokenOperation operationType="3" id="0:3070"/>
-    <FormulaTokenValue operationValue="180" id="0:3071"/>
-    <FormulaTokenParenthesisClose id="0:3072"/>
-    <FormulaTokenParenthesisClose id="0:3073"/>
-    <FormulaTokenOperation operationType="2" id="0:3074"/>
-    <FormulaTokenValue operationValue="0" id="0:3076">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3075"/>
+  <DataConverterFormula name="Minutes Arc" id="0:2102">
+    <FormulaTokenFunction functionType="0" id="0:2103"/>
+    <FormulaTokenValue operationValue="1" id="0:2104"/>
+    <FormulaTokenArgumentSeparator id="0:2105"/>
+    <FormulaTokenFunction functionType="1" id="0:2106"/>
+    <FormulaTokenValue operationValue="0" id="0:2107"/>
+    <FormulaTokenArgumentSeparator id="0:2108"/>
+    <FormulaTokenInput id="0:2109"/>
+    <FormulaTokenOperation operationType="3" id="0:2110"/>
+    <FormulaTokenValue operationValue="180" id="0:2111"/>
+    <FormulaTokenParenthesisClose id="0:2112"/>
+    <FormulaTokenParenthesisClose id="0:2113"/>
+    <FormulaTokenOperation operationType="2" id="0:2114"/>
+    <FormulaTokenValue operationValue="0" id="0:2116">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2115"/>
     </FormulaTokenValue>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 1" id="0:3247">
-    <FormulaTokenFunction functionType="0" id="0:3248"/>
-    <FormulaTokenValue operationValue="1" id="0:3249"/>
-    <FormulaTokenArgumentSeparator id="0:3250"/>
-    <FormulaTokenFunction functionType="1" id="0:3251"/>
-    <FormulaTokenValue operationValue="0" id="0:3252"/>
-    <FormulaTokenArgumentSeparator id="0:3253"/>
-    <FormulaTokenParenthesisOpen id="0:3254"/>
-    <FormulaTokenInput id="0:3255"/>
-    <FormulaTokenOperation operationType="1" id="0:3256"/>
-    <FormulaTokenValue operationValue="0" id="0:3257"/>
-    <FormulaTokenParenthesisClose id="0:3258"/>
-    <FormulaTokenOperation operationType="3" id="0:3259"/>
-    <FormulaTokenValue operationValue="4" id="0:3260"/>
-    <FormulaTokenParenthesisClose id="0:3261"/>
-    <FormulaTokenParenthesisClose id="0:3262"/>
-    <FormulaTokenOperation operationType="2" id="0:3263"/>
-    <FormulaTokenValue operationValue="0" id="0:3265">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3264"/>
+  <DataConverterFormula name="Weeks Panel 1" id="0:2316">
+    <FormulaTokenFunction functionType="0" id="0:2317"/>
+    <FormulaTokenValue operationValue="1" id="0:2318"/>
+    <FormulaTokenArgumentSeparator id="0:2319"/>
+    <FormulaTokenFunction functionType="1" id="0:2320"/>
+    <FormulaTokenValue operationValue="0" id="0:2321"/>
+    <FormulaTokenArgumentSeparator id="0:2322"/>
+    <FormulaTokenParenthesisOpen id="0:2323"/>
+    <FormulaTokenInput id="0:2324"/>
+    <FormulaTokenOperation operationType="1" id="0:2325"/>
+    <FormulaTokenValue operationValue="0" id="0:2326"/>
+    <FormulaTokenParenthesisClose id="0:2327"/>
+    <FormulaTokenOperation operationType="3" id="0:2328"/>
+    <FormulaTokenValue operationValue="4" id="0:2329"/>
+    <FormulaTokenParenthesisClose id="0:2330"/>
+    <FormulaTokenParenthesisClose id="0:2331"/>
+    <FormulaTokenOperation operationType="2" id="0:2332"/>
+    <FormulaTokenValue operationValue="0" id="0:2334">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2333"/>
     </FormulaTokenValue>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 2" id="0:3272">
-    <FormulaTokenFunction functionType="0" id="0:3273"/>
-    <FormulaTokenValue operationValue="1" id="0:3274"/>
-    <FormulaTokenArgumentSeparator id="0:3275"/>
-    <FormulaTokenFunction functionType="1" id="0:3276"/>
-    <FormulaTokenValue operationValue="0" id="0:3277"/>
-    <FormulaTokenArgumentSeparator id="0:3278"/>
-    <FormulaTokenParenthesisOpen id="0:3279"/>
-    <FormulaTokenInput id="0:3280"/>
-    <FormulaTokenOperation operationType="1" id="0:3281"/>
-    <FormulaTokenValue operationValue="4" id="0:3282"/>
-    <FormulaTokenParenthesisClose id="0:3283"/>
-    <FormulaTokenOperation operationType="3" id="0:3284"/>
-    <FormulaTokenValue operationValue="4" id="0:3285"/>
-    <FormulaTokenParenthesisClose id="0:3286"/>
-    <FormulaTokenParenthesisClose id="0:3287"/>
-    <FormulaTokenOperation operationType="2" id="0:3288"/>
-    <FormulaTokenValue operationValue="0" id="0:3290">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3289"/>
+  <DataConverterFormula name="Weeks Panel 2" id="0:2372">
+    <FormulaTokenFunction functionType="0" id="0:2373"/>
+    <FormulaTokenValue operationValue="1" id="0:2374"/>
+    <FormulaTokenArgumentSeparator id="0:2375"/>
+    <FormulaTokenFunction functionType="1" id="0:2376"/>
+    <FormulaTokenValue operationValue="0" id="0:2377"/>
+    <FormulaTokenArgumentSeparator id="0:2378"/>
+    <FormulaTokenParenthesisOpen id="0:2379"/>
+    <FormulaTokenInput id="0:2380"/>
+    <FormulaTokenOperation operationType="1" id="0:2381"/>
+    <FormulaTokenValue operationValue="4" id="0:2382"/>
+    <FormulaTokenParenthesisClose id="0:2383"/>
+    <FormulaTokenOperation operationType="3" id="0:2384"/>
+    <FormulaTokenValue operationValue="4" id="0:2385"/>
+    <FormulaTokenParenthesisClose id="0:2386"/>
+    <FormulaTokenParenthesisClose id="0:2387"/>
+    <FormulaTokenOperation operationType="2" id="0:2388"/>
+    <FormulaTokenValue operationValue="0" id="0:2390">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2389"/>
     </FormulaTokenValue>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 3" id="0:3297">
-    <FormulaTokenFunction functionType="0" id="0:3298"/>
-    <FormulaTokenValue operationValue="1" id="0:3299"/>
-    <FormulaTokenArgumentSeparator id="0:3300"/>
-    <FormulaTokenFunction functionType="1" id="0:3301"/>
-    <FormulaTokenValue operationValue="0" id="0:3302"/>
-    <FormulaTokenArgumentSeparator id="0:3303"/>
-    <FormulaTokenParenthesisOpen id="0:3304"/>
-    <FormulaTokenInput id="0:3305"/>
-    <FormulaTokenOperation operationType="1" id="0:3306"/>
-    <FormulaTokenValue operationValue="8" id="0:3307"/>
-    <FormulaTokenParenthesisClose id="0:3308"/>
-    <FormulaTokenOperation operationType="3" id="0:3309"/>
-    <FormulaTokenValue operationValue="4" id="0:3310"/>
-    <FormulaTokenParenthesisClose id="0:3311"/>
-    <FormulaTokenParenthesisClose id="0:3312"/>
-    <FormulaTokenOperation operationType="2" id="0:3313"/>
-    <FormulaTokenValue operationValue="0" id="0:3315">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3314"/>
+  <DataConverterFormula name="Weeks Panel 3" id="0:2428">
+    <FormulaTokenFunction functionType="0" id="0:2429"/>
+    <FormulaTokenValue operationValue="1" id="0:2430"/>
+    <FormulaTokenArgumentSeparator id="0:2431"/>
+    <FormulaTokenFunction functionType="1" id="0:2432"/>
+    <FormulaTokenValue operationValue="0" id="0:2433"/>
+    <FormulaTokenArgumentSeparator id="0:2434"/>
+    <FormulaTokenParenthesisOpen id="0:2435"/>
+    <FormulaTokenInput id="0:2436"/>
+    <FormulaTokenOperation operationType="1" id="0:2437"/>
+    <FormulaTokenValue operationValue="8" id="0:2438"/>
+    <FormulaTokenParenthesisClose id="0:2439"/>
+    <FormulaTokenOperation operationType="3" id="0:2440"/>
+    <FormulaTokenValue operationValue="4" id="0:2441"/>
+    <FormulaTokenParenthesisClose id="0:2442"/>
+    <FormulaTokenParenthesisClose id="0:2443"/>
+    <FormulaTokenOperation operationType="2" id="0:2444"/>
+    <FormulaTokenValue operationValue="0" id="0:2446">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2445"/>
     </FormulaTokenValue>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 4" id="0:3322">
-    <FormulaTokenFunction functionType="0" id="0:3323"/>
-    <FormulaTokenValue operationValue="1" id="0:3324"/>
-    <FormulaTokenArgumentSeparator id="0:3325"/>
-    <FormulaTokenFunction functionType="1" id="0:3326"/>
-    <FormulaTokenValue operationValue="0" id="0:3327"/>
-    <FormulaTokenArgumentSeparator id="0:3328"/>
-    <FormulaTokenParenthesisOpen id="0:3329"/>
+  <DataConverterFormula name="Weeks Panel 4" id="0:2484">
+    <FormulaTokenFunction functionType="0" id="0:2485"/>
+    <FormulaTokenValue operationValue="1" id="0:2486"/>
+    <FormulaTokenArgumentSeparator id="0:2487"/>
+    <FormulaTokenFunction functionType="1" id="0:2488"/>
+    <FormulaTokenValue operationValue="0" id="0:2489"/>
+    <FormulaTokenArgumentSeparator id="0:2490"/>
+    <FormulaTokenParenthesisOpen id="0:2491"/>
+    <FormulaTokenInput id="0:2492"/>
+    <FormulaTokenOperation operationType="1" id="0:2493"/>
+    <FormulaTokenValue operationValue="12" id="0:2494"/>
+    <FormulaTokenParenthesisClose id="0:2495"/>
+    <FormulaTokenOperation operationType="3" id="0:2496"/>
+    <FormulaTokenValue operationValue="4" id="0:2497"/>
+    <FormulaTokenParenthesisClose id="0:2498"/>
+    <FormulaTokenParenthesisClose id="0:2499"/>
+    <FormulaTokenOperation operationType="2" id="0:2500"/>
+    <FormulaTokenValue operationValue="0" id="0:2502">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2501"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 5" id="0:2540">
+    <FormulaTokenFunction functionType="0" id="0:2541"/>
+    <FormulaTokenValue operationValue="1" id="0:2542"/>
+    <FormulaTokenArgumentSeparator id="0:2543"/>
+    <FormulaTokenFunction functionType="1" id="0:2544"/>
+    <FormulaTokenValue operationValue="0" id="0:2545"/>
+    <FormulaTokenArgumentSeparator id="0:2546"/>
+    <FormulaTokenParenthesisOpen id="0:2547"/>
+    <FormulaTokenInput id="0:2548"/>
+    <FormulaTokenOperation operationType="1" id="0:2549"/>
+    <FormulaTokenValue operationValue="16" id="0:2550"/>
+    <FormulaTokenParenthesisClose id="0:2551"/>
+    <FormulaTokenOperation operationType="3" id="0:2552"/>
+    <FormulaTokenValue operationValue="4" id="0:2553"/>
+    <FormulaTokenParenthesisClose id="0:2554"/>
+    <FormulaTokenParenthesisClose id="0:2555"/>
+    <FormulaTokenOperation operationType="2" id="0:2556"/>
+    <FormulaTokenValue operationValue="0" id="0:2558">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2557"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 6" id="0:2596">
+    <FormulaTokenFunction functionType="0" id="0:2597"/>
+    <FormulaTokenValue operationValue="1" id="0:2598"/>
+    <FormulaTokenArgumentSeparator id="0:2599"/>
+    <FormulaTokenFunction functionType="1" id="0:2600"/>
+    <FormulaTokenValue operationValue="0" id="0:2601"/>
+    <FormulaTokenArgumentSeparator id="0:2602"/>
+    <FormulaTokenParenthesisOpen id="0:2603"/>
+    <FormulaTokenInput id="0:2604"/>
+    <FormulaTokenOperation operationType="1" id="0:2605"/>
+    <FormulaTokenValue operationValue="20" id="0:2606"/>
+    <FormulaTokenParenthesisClose id="0:2607"/>
+    <FormulaTokenOperation operationType="3" id="0:2608"/>
+    <FormulaTokenValue operationValue="4" id="0:2609"/>
+    <FormulaTokenParenthesisClose id="0:2610"/>
+    <FormulaTokenParenthesisClose id="0:2611"/>
+    <FormulaTokenOperation operationType="2" id="0:2612"/>
+    <FormulaTokenValue operationValue="0" id="0:2614">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2613"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 7" id="0:2652">
+    <FormulaTokenFunction functionType="0" id="0:2653"/>
+    <FormulaTokenValue operationValue="1" id="0:2654"/>
+    <FormulaTokenArgumentSeparator id="0:2655"/>
+    <FormulaTokenFunction functionType="1" id="0:2656"/>
+    <FormulaTokenValue operationValue="0" id="0:2657"/>
+    <FormulaTokenArgumentSeparator id="0:2658"/>
+    <FormulaTokenParenthesisOpen id="0:2659"/>
+    <FormulaTokenInput id="0:2660"/>
+    <FormulaTokenOperation operationType="1" id="0:2661"/>
+    <FormulaTokenValue operationValue="24" id="0:2662"/>
+    <FormulaTokenParenthesisClose id="0:2663"/>
+    <FormulaTokenOperation operationType="3" id="0:2664"/>
+    <FormulaTokenValue operationValue="4" id="0:2665"/>
+    <FormulaTokenParenthesisClose id="0:2666"/>
+    <FormulaTokenParenthesisClose id="0:2667"/>
+    <FormulaTokenOperation operationType="2" id="0:2668"/>
+    <FormulaTokenValue operationValue="0" id="0:2670">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2669"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 8" id="0:2708">
+    <FormulaTokenFunction functionType="0" id="0:2709"/>
+    <FormulaTokenValue operationValue="1" id="0:2710"/>
+    <FormulaTokenArgumentSeparator id="0:2711"/>
+    <FormulaTokenFunction functionType="1" id="0:2712"/>
+    <FormulaTokenValue operationValue="0" id="0:2713"/>
+    <FormulaTokenArgumentSeparator id="0:2714"/>
+    <FormulaTokenParenthesisOpen id="0:2715"/>
+    <FormulaTokenInput id="0:2716"/>
+    <FormulaTokenOperation operationType="1" id="0:2717"/>
+    <FormulaTokenValue operationValue="28" id="0:2718"/>
+    <FormulaTokenParenthesisClose id="0:2719"/>
+    <FormulaTokenOperation operationType="3" id="0:2720"/>
+    <FormulaTokenValue operationValue="4" id="0:2721"/>
+    <FormulaTokenParenthesisClose id="0:2722"/>
+    <FormulaTokenParenthesisClose id="0:2723"/>
+    <FormulaTokenOperation operationType="2" id="0:2724"/>
+    <FormulaTokenValue operationValue="0" id="0:2726">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2725"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 9" id="0:2764">
+    <FormulaTokenFunction functionType="0" id="0:2765"/>
+    <FormulaTokenValue operationValue="1" id="0:2766"/>
+    <FormulaTokenArgumentSeparator id="0:2767"/>
+    <FormulaTokenFunction functionType="1" id="0:2768"/>
+    <FormulaTokenValue operationValue="0" id="0:2769"/>
+    <FormulaTokenArgumentSeparator id="0:2770"/>
+    <FormulaTokenParenthesisOpen id="0:2771"/>
+    <FormulaTokenInput id="0:2772"/>
+    <FormulaTokenOperation operationType="1" id="0:2773"/>
+    <FormulaTokenValue operationValue="32" id="0:2774"/>
+    <FormulaTokenParenthesisClose id="0:2775"/>
+    <FormulaTokenOperation operationType="3" id="0:2776"/>
+    <FormulaTokenValue operationValue="4" id="0:2777"/>
+    <FormulaTokenParenthesisClose id="0:2778"/>
+    <FormulaTokenParenthesisClose id="0:2779"/>
+    <FormulaTokenOperation operationType="2" id="0:2780"/>
+    <FormulaTokenValue operationValue="0" id="0:2782">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2781"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 10" id="0:2820">
+    <FormulaTokenFunction functionType="0" id="0:2821"/>
+    <FormulaTokenValue operationValue="1" id="0:2822"/>
+    <FormulaTokenArgumentSeparator id="0:2823"/>
+    <FormulaTokenFunction functionType="1" id="0:2824"/>
+    <FormulaTokenValue operationValue="0" id="0:2825"/>
+    <FormulaTokenArgumentSeparator id="0:2826"/>
+    <FormulaTokenParenthesisOpen id="0:2827"/>
+    <FormulaTokenInput id="0:2828"/>
+    <FormulaTokenOperation operationType="1" id="0:2829"/>
+    <FormulaTokenValue operationValue="36" id="0:2830"/>
+    <FormulaTokenParenthesisClose id="0:2831"/>
+    <FormulaTokenOperation operationType="3" id="0:2832"/>
+    <FormulaTokenValue operationValue="4" id="0:2833"/>
+    <FormulaTokenParenthesisClose id="0:2834"/>
+    <FormulaTokenParenthesisClose id="0:2835"/>
+    <FormulaTokenOperation operationType="2" id="0:2836"/>
+    <FormulaTokenValue operationValue="0" id="0:2838">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2837"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 11" id="0:2876">
+    <FormulaTokenFunction functionType="0" id="0:2877"/>
+    <FormulaTokenValue operationValue="1" id="0:2878"/>
+    <FormulaTokenArgumentSeparator id="0:2879"/>
+    <FormulaTokenFunction functionType="1" id="0:2880"/>
+    <FormulaTokenValue operationValue="0" id="0:2881"/>
+    <FormulaTokenArgumentSeparator id="0:2882"/>
+    <FormulaTokenParenthesisOpen id="0:2883"/>
+    <FormulaTokenInput id="0:2884"/>
+    <FormulaTokenOperation operationType="1" id="0:2885"/>
+    <FormulaTokenValue operationValue="40" id="0:2886"/>
+    <FormulaTokenParenthesisClose id="0:2887"/>
+    <FormulaTokenOperation operationType="3" id="0:2888"/>
+    <FormulaTokenValue operationValue="4" id="0:2889"/>
+    <FormulaTokenParenthesisClose id="0:2890"/>
+    <FormulaTokenParenthesisClose id="0:2891"/>
+    <FormulaTokenOperation operationType="2" id="0:2892"/>
+    <FormulaTokenValue operationValue="0" id="0:2894">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2893"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 12" id="0:2932">
+    <FormulaTokenFunction functionType="0" id="0:2933"/>
+    <FormulaTokenValue operationValue="1" id="0:2934"/>
+    <FormulaTokenArgumentSeparator id="0:2935"/>
+    <FormulaTokenFunction functionType="1" id="0:2936"/>
+    <FormulaTokenValue operationValue="0" id="0:2937"/>
+    <FormulaTokenArgumentSeparator id="0:2938"/>
+    <FormulaTokenParenthesisOpen id="0:2939"/>
+    <FormulaTokenInput id="0:2940"/>
+    <FormulaTokenOperation operationType="1" id="0:2941"/>
+    <FormulaTokenValue operationValue="44" id="0:2942"/>
+    <FormulaTokenParenthesisClose id="0:2943"/>
+    <FormulaTokenOperation operationType="3" id="0:2944"/>
+    <FormulaTokenValue operationValue="4" id="0:2945"/>
+    <FormulaTokenParenthesisClose id="0:2946"/>
+    <FormulaTokenParenthesisClose id="0:2947"/>
+    <FormulaTokenOperation operationType="2" id="0:2948"/>
+    <FormulaTokenValue operationValue="0" id="0:2950">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:2949"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Weeks Panel 13" id="0:2988">
+    <FormulaTokenFunction functionType="0" id="0:2989"/>
+    <FormulaTokenValue operationValue="1" id="0:2990"/>
+    <FormulaTokenArgumentSeparator id="0:2991"/>
+    <FormulaTokenFunction functionType="1" id="0:2992"/>
+    <FormulaTokenValue operationValue="0" id="0:2993"/>
+    <FormulaTokenArgumentSeparator id="0:2994"/>
+    <FormulaTokenParenthesisOpen id="0:2995"/>
+    <FormulaTokenInput id="0:2996"/>
+    <FormulaTokenOperation operationType="1" id="0:2997"/>
+    <FormulaTokenValue operationValue="48" id="0:2998"/>
+    <FormulaTokenParenthesisClose id="0:2999"/>
+    <FormulaTokenOperation operationType="3" id="0:3000"/>
+    <FormulaTokenValue operationValue="4" id="0:3001"/>
+    <FormulaTokenParenthesisClose id="0:3002"/>
+    <FormulaTokenParenthesisClose id="0:3003"/>
+    <FormulaTokenOperation operationType="2" id="0:3004"/>
+    <FormulaTokenValue operationValue="0" id="0:3006">
+      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3005"/>
+    </FormulaTokenValue>
+  </DataConverterFormula>
+  <DataConverterFormula name="Partner &gt;= 1" id="0:3183">
+    <FormulaTokenFunction functionType="0" id="0:3184"/>
+    <FormulaTokenValue operationValue="1" id="0:3185"/>
+    <FormulaTokenArgumentSeparator id="0:3186"/>
+    <FormulaTokenFunction functionType="1" id="0:3187"/>
+    <FormulaTokenValue operationValue="0" id="0:3188"/>
+    <FormulaTokenArgumentSeparator id="0:3189"/>
+    <FormulaTokenInput id="0:3190"/>
+    <FormulaTokenOperation operationType="1" id="0:3191"/>
+    <FormulaTokenValue operationValue="0" id="0:3192"/>
+    <FormulaTokenParenthesisClose id="0:3193"/>
+    <FormulaTokenParenthesisClose id="0:3194"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Partner &gt;= 2" id="0:3203">
+    <FormulaTokenFunction functionType="0" id="0:3204"/>
+    <FormulaTokenValue operationValue="1" id="0:3205"/>
+    <FormulaTokenArgumentSeparator id="0:3206"/>
+    <FormulaTokenFunction functionType="1" id="0:3207"/>
+    <FormulaTokenValue operationValue="0" id="0:3208"/>
+    <FormulaTokenArgumentSeparator id="0:3209"/>
+    <FormulaTokenInput id="0:3210"/>
+    <FormulaTokenOperation operationType="1" id="0:3211"/>
+    <FormulaTokenValue operationValue="1" id="0:3212"/>
+    <FormulaTokenParenthesisClose id="0:3213"/>
+    <FormulaTokenParenthesisClose id="0:3214"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Partner &gt;= 3" id="0:3263">
+    <FormulaTokenFunction functionType="0" id="0:3264"/>
+    <FormulaTokenValue operationValue="1" id="0:3265"/>
+    <FormulaTokenArgumentSeparator id="0:3266"/>
+    <FormulaTokenFunction functionType="1" id="0:3267"/>
+    <FormulaTokenValue operationValue="0" id="0:3268"/>
+    <FormulaTokenArgumentSeparator id="0:3269"/>
+    <FormulaTokenInput id="0:3270"/>
+    <FormulaTokenOperation operationType="1" id="0:3271"/>
+    <FormulaTokenValue operationValue="2" id="0:3272"/>
+    <FormulaTokenParenthesisClose id="0:3273"/>
+    <FormulaTokenParenthesisClose id="0:3274"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Partner &gt;= 4" id="0:3323">
+    <FormulaTokenFunction functionType="0" id="0:3324"/>
+    <FormulaTokenValue operationValue="1" id="0:3325"/>
+    <FormulaTokenArgumentSeparator id="0:3326"/>
+    <FormulaTokenFunction functionType="1" id="0:3327"/>
+    <FormulaTokenValue operationValue="0" id="0:3328"/>
+    <FormulaTokenArgumentSeparator id="0:3329"/>
     <FormulaTokenInput id="0:3330"/>
     <FormulaTokenOperation operationType="1" id="0:3331"/>
-    <FormulaTokenValue operationValue="12" id="0:3332"/>
+    <FormulaTokenValue operationValue="3" id="0:3332"/>
     <FormulaTokenParenthesisClose id="0:3333"/>
-    <FormulaTokenOperation operationType="3" id="0:3334"/>
-    <FormulaTokenValue operationValue="4" id="0:3335"/>
-    <FormulaTokenParenthesisClose id="0:3336"/>
-    <FormulaTokenParenthesisClose id="0:3337"/>
-    <FormulaTokenOperation operationType="2" id="0:3338"/>
-    <FormulaTokenValue operationValue="0" id="0:3340">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3339"/>
-    </FormulaTokenValue>
+    <FormulaTokenParenthesisClose id="0:3334"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 5" id="0:3347">
-    <FormulaTokenFunction functionType="0" id="0:3348"/>
-    <FormulaTokenValue operationValue="1" id="0:3349"/>
-    <FormulaTokenArgumentSeparator id="0:3350"/>
-    <FormulaTokenFunction functionType="1" id="0:3351"/>
-    <FormulaTokenValue operationValue="0" id="0:3352"/>
-    <FormulaTokenArgumentSeparator id="0:3353"/>
-    <FormulaTokenParenthesisOpen id="0:3354"/>
-    <FormulaTokenInput id="0:3355"/>
-    <FormulaTokenOperation operationType="1" id="0:3356"/>
-    <FormulaTokenValue operationValue="16" id="0:3357"/>
-    <FormulaTokenParenthesisClose id="0:3358"/>
-    <FormulaTokenOperation operationType="3" id="0:3359"/>
-    <FormulaTokenValue operationValue="4" id="0:3360"/>
-    <FormulaTokenParenthesisClose id="0:3361"/>
-    <FormulaTokenParenthesisClose id="0:3362"/>
-    <FormulaTokenOperation operationType="2" id="0:3363"/>
-    <FormulaTokenValue operationValue="0" id="0:3365">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3364"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 5" id="0:3383">
+    <FormulaTokenFunction functionType="0" id="0:3384"/>
+    <FormulaTokenValue operationValue="1" id="0:3385"/>
+    <FormulaTokenArgumentSeparator id="0:3386"/>
+    <FormulaTokenFunction functionType="1" id="0:3387"/>
+    <FormulaTokenValue operationValue="0" id="0:3388"/>
+    <FormulaTokenArgumentSeparator id="0:3389"/>
+    <FormulaTokenInput id="0:3390"/>
+    <FormulaTokenOperation operationType="1" id="0:3391"/>
+    <FormulaTokenValue operationValue="4" id="0:3392"/>
+    <FormulaTokenParenthesisClose id="0:3393"/>
+    <FormulaTokenParenthesisClose id="0:3394"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 6" id="0:3372">
-    <FormulaTokenFunction functionType="0" id="0:3373"/>
-    <FormulaTokenValue operationValue="1" id="0:3374"/>
-    <FormulaTokenArgumentSeparator id="0:3375"/>
-    <FormulaTokenFunction functionType="1" id="0:3376"/>
-    <FormulaTokenValue operationValue="0" id="0:3377"/>
-    <FormulaTokenArgumentSeparator id="0:3378"/>
-    <FormulaTokenParenthesisOpen id="0:3379"/>
-    <FormulaTokenInput id="0:3380"/>
-    <FormulaTokenOperation operationType="1" id="0:3381"/>
-    <FormulaTokenValue operationValue="20" id="0:3382"/>
-    <FormulaTokenParenthesisClose id="0:3383"/>
-    <FormulaTokenOperation operationType="3" id="0:3384"/>
-    <FormulaTokenValue operationValue="4" id="0:3385"/>
-    <FormulaTokenParenthesisClose id="0:3386"/>
-    <FormulaTokenParenthesisClose id="0:3387"/>
-    <FormulaTokenOperation operationType="2" id="0:3388"/>
-    <FormulaTokenValue operationValue="0" id="0:3390">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3389"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 6" id="0:3443">
+    <FormulaTokenFunction functionType="0" id="0:3444"/>
+    <FormulaTokenValue operationValue="1" id="0:3445"/>
+    <FormulaTokenArgumentSeparator id="0:3446"/>
+    <FormulaTokenFunction functionType="1" id="0:3447"/>
+    <FormulaTokenValue operationValue="0" id="0:3448"/>
+    <FormulaTokenArgumentSeparator id="0:3449"/>
+    <FormulaTokenInput id="0:3450"/>
+    <FormulaTokenOperation operationType="1" id="0:3451"/>
+    <FormulaTokenValue operationValue="5" id="0:3452"/>
+    <FormulaTokenParenthesisClose id="0:3453"/>
+    <FormulaTokenParenthesisClose id="0:3454"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 7" id="0:3397">
-    <FormulaTokenFunction functionType="0" id="0:3398"/>
-    <FormulaTokenValue operationValue="1" id="0:3399"/>
-    <FormulaTokenArgumentSeparator id="0:3400"/>
-    <FormulaTokenFunction functionType="1" id="0:3401"/>
-    <FormulaTokenValue operationValue="0" id="0:3402"/>
-    <FormulaTokenArgumentSeparator id="0:3403"/>
-    <FormulaTokenParenthesisOpen id="0:3404"/>
-    <FormulaTokenInput id="0:3405"/>
-    <FormulaTokenOperation operationType="1" id="0:3406"/>
-    <FormulaTokenValue operationValue="24" id="0:3407"/>
-    <FormulaTokenParenthesisClose id="0:3408"/>
-    <FormulaTokenOperation operationType="3" id="0:3409"/>
-    <FormulaTokenValue operationValue="4" id="0:3410"/>
-    <FormulaTokenParenthesisClose id="0:3411"/>
-    <FormulaTokenParenthesisClose id="0:3412"/>
-    <FormulaTokenOperation operationType="2" id="0:3413"/>
-    <FormulaTokenValue operationValue="0" id="0:3415">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3414"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 7" id="0:3503">
+    <FormulaTokenFunction functionType="0" id="0:3504"/>
+    <FormulaTokenValue operationValue="1" id="0:3505"/>
+    <FormulaTokenArgumentSeparator id="0:3506"/>
+    <FormulaTokenFunction functionType="1" id="0:3507"/>
+    <FormulaTokenValue operationValue="0" id="0:3508"/>
+    <FormulaTokenArgumentSeparator id="0:3509"/>
+    <FormulaTokenInput id="0:3510"/>
+    <FormulaTokenOperation operationType="1" id="0:3511"/>
+    <FormulaTokenValue operationValue="6" id="0:3512"/>
+    <FormulaTokenParenthesisClose id="0:3513"/>
+    <FormulaTokenParenthesisClose id="0:3514"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 8" id="0:3422">
-    <FormulaTokenFunction functionType="0" id="0:3423"/>
-    <FormulaTokenValue operationValue="1" id="0:3424"/>
-    <FormulaTokenArgumentSeparator id="0:3425"/>
-    <FormulaTokenFunction functionType="1" id="0:3426"/>
-    <FormulaTokenValue operationValue="0" id="0:3427"/>
-    <FormulaTokenArgumentSeparator id="0:3428"/>
-    <FormulaTokenParenthesisOpen id="0:3429"/>
-    <FormulaTokenInput id="0:3430"/>
-    <FormulaTokenOperation operationType="1" id="0:3431"/>
-    <FormulaTokenValue operationValue="28" id="0:3432"/>
-    <FormulaTokenParenthesisClose id="0:3433"/>
-    <FormulaTokenOperation operationType="3" id="0:3434"/>
-    <FormulaTokenValue operationValue="4" id="0:3435"/>
-    <FormulaTokenParenthesisClose id="0:3436"/>
-    <FormulaTokenParenthesisClose id="0:3437"/>
-    <FormulaTokenOperation operationType="2" id="0:3438"/>
-    <FormulaTokenValue operationValue="0" id="0:3440">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3439"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 8" id="0:3563">
+    <FormulaTokenFunction functionType="0" id="0:3564"/>
+    <FormulaTokenValue operationValue="1" id="0:3565"/>
+    <FormulaTokenArgumentSeparator id="0:3566"/>
+    <FormulaTokenFunction functionType="1" id="0:3567"/>
+    <FormulaTokenValue operationValue="0" id="0:3568"/>
+    <FormulaTokenArgumentSeparator id="0:3569"/>
+    <FormulaTokenInput id="0:3570"/>
+    <FormulaTokenOperation operationType="1" id="0:3571"/>
+    <FormulaTokenValue operationValue="7" id="0:3572"/>
+    <FormulaTokenParenthesisClose id="0:3573"/>
+    <FormulaTokenParenthesisClose id="0:3574"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 9" id="0:3447">
-    <FormulaTokenFunction functionType="0" id="0:3448"/>
-    <FormulaTokenValue operationValue="1" id="0:3449"/>
-    <FormulaTokenArgumentSeparator id="0:3450"/>
-    <FormulaTokenFunction functionType="1" id="0:3451"/>
-    <FormulaTokenValue operationValue="0" id="0:3452"/>
-    <FormulaTokenArgumentSeparator id="0:3453"/>
-    <FormulaTokenParenthesisOpen id="0:3454"/>
-    <FormulaTokenInput id="0:3455"/>
-    <FormulaTokenOperation operationType="1" id="0:3456"/>
-    <FormulaTokenValue operationValue="32" id="0:3457"/>
-    <FormulaTokenParenthesisClose id="0:3458"/>
-    <FormulaTokenOperation operationType="3" id="0:3459"/>
-    <FormulaTokenValue operationValue="4" id="0:3460"/>
-    <FormulaTokenParenthesisClose id="0:3461"/>
-    <FormulaTokenParenthesisClose id="0:3462"/>
-    <FormulaTokenOperation operationType="2" id="0:3463"/>
-    <FormulaTokenValue operationValue="0" id="0:3465">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3464"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 9" id="0:3623">
+    <FormulaTokenFunction functionType="0" id="0:3624"/>
+    <FormulaTokenValue operationValue="1" id="0:3625"/>
+    <FormulaTokenArgumentSeparator id="0:3626"/>
+    <FormulaTokenFunction functionType="1" id="0:3627"/>
+    <FormulaTokenValue operationValue="0" id="0:3628"/>
+    <FormulaTokenArgumentSeparator id="0:3629"/>
+    <FormulaTokenInput id="0:3630"/>
+    <FormulaTokenOperation operationType="1" id="0:3631"/>
+    <FormulaTokenValue operationValue="8" id="0:3632"/>
+    <FormulaTokenParenthesisClose id="0:3633"/>
+    <FormulaTokenParenthesisClose id="0:3634"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 10" id="0:3472">
-    <FormulaTokenFunction functionType="0" id="0:3473"/>
-    <FormulaTokenValue operationValue="1" id="0:3474"/>
-    <FormulaTokenArgumentSeparator id="0:3475"/>
-    <FormulaTokenFunction functionType="1" id="0:3476"/>
-    <FormulaTokenValue operationValue="0" id="0:3477"/>
-    <FormulaTokenArgumentSeparator id="0:3478"/>
-    <FormulaTokenParenthesisOpen id="0:3479"/>
-    <FormulaTokenInput id="0:3480"/>
-    <FormulaTokenOperation operationType="1" id="0:3481"/>
-    <FormulaTokenValue operationValue="36" id="0:3482"/>
-    <FormulaTokenParenthesisClose id="0:3483"/>
-    <FormulaTokenOperation operationType="3" id="0:3484"/>
-    <FormulaTokenValue operationValue="4" id="0:3485"/>
-    <FormulaTokenParenthesisClose id="0:3486"/>
-    <FormulaTokenParenthesisClose id="0:3487"/>
-    <FormulaTokenOperation operationType="2" id="0:3488"/>
-    <FormulaTokenValue operationValue="0" id="0:3490">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3489"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 10" id="0:3683">
+    <FormulaTokenFunction functionType="0" id="0:3684"/>
+    <FormulaTokenValue operationValue="1" id="0:3685"/>
+    <FormulaTokenArgumentSeparator id="0:3686"/>
+    <FormulaTokenFunction functionType="1" id="0:3687"/>
+    <FormulaTokenValue operationValue="0" id="0:3688"/>
+    <FormulaTokenArgumentSeparator id="0:3689"/>
+    <FormulaTokenInput id="0:3690"/>
+    <FormulaTokenOperation operationType="1" id="0:3691"/>
+    <FormulaTokenValue operationValue="9" id="0:3692"/>
+    <FormulaTokenParenthesisClose id="0:3693"/>
+    <FormulaTokenParenthesisClose id="0:3694"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 11" id="0:3497">
-    <FormulaTokenFunction functionType="0" id="0:3498"/>
-    <FormulaTokenValue operationValue="1" id="0:3499"/>
-    <FormulaTokenArgumentSeparator id="0:3500"/>
-    <FormulaTokenFunction functionType="1" id="0:3501"/>
-    <FormulaTokenValue operationValue="0" id="0:3502"/>
-    <FormulaTokenArgumentSeparator id="0:3503"/>
-    <FormulaTokenParenthesisOpen id="0:3504"/>
-    <FormulaTokenInput id="0:3505"/>
-    <FormulaTokenOperation operationType="1" id="0:3506"/>
-    <FormulaTokenValue operationValue="40" id="0:3507"/>
-    <FormulaTokenParenthesisClose id="0:3508"/>
-    <FormulaTokenOperation operationType="3" id="0:3509"/>
-    <FormulaTokenValue operationValue="4" id="0:3510"/>
-    <FormulaTokenParenthesisClose id="0:3511"/>
-    <FormulaTokenParenthesisClose id="0:3512"/>
-    <FormulaTokenOperation operationType="2" id="0:3513"/>
-    <FormulaTokenValue operationValue="0" id="0:3515">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3514"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 11" id="0:3743">
+    <FormulaTokenFunction functionType="0" id="0:3744"/>
+    <FormulaTokenValue operationValue="1" id="0:3745"/>
+    <FormulaTokenArgumentSeparator id="0:3746"/>
+    <FormulaTokenFunction functionType="1" id="0:3747"/>
+    <FormulaTokenValue operationValue="0" id="0:3748"/>
+    <FormulaTokenArgumentSeparator id="0:3749"/>
+    <FormulaTokenInput id="0:3750"/>
+    <FormulaTokenOperation operationType="1" id="0:3751"/>
+    <FormulaTokenValue operationValue="10" id="0:3752"/>
+    <FormulaTokenParenthesisClose id="0:3753"/>
+    <FormulaTokenParenthesisClose id="0:3754"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 12" id="0:3522">
-    <FormulaTokenFunction functionType="0" id="0:3523"/>
-    <FormulaTokenValue operationValue="1" id="0:3524"/>
-    <FormulaTokenArgumentSeparator id="0:3525"/>
-    <FormulaTokenFunction functionType="1" id="0:3526"/>
-    <FormulaTokenValue operationValue="0" id="0:3527"/>
-    <FormulaTokenArgumentSeparator id="0:3528"/>
-    <FormulaTokenParenthesisOpen id="0:3529"/>
-    <FormulaTokenInput id="0:3530"/>
-    <FormulaTokenOperation operationType="1" id="0:3531"/>
-    <FormulaTokenValue operationValue="44" id="0:3532"/>
-    <FormulaTokenParenthesisClose id="0:3533"/>
-    <FormulaTokenOperation operationType="3" id="0:3534"/>
-    <FormulaTokenValue operationValue="4" id="0:3535"/>
-    <FormulaTokenParenthesisClose id="0:3536"/>
-    <FormulaTokenParenthesisClose id="0:3537"/>
-    <FormulaTokenOperation operationType="2" id="0:3538"/>
-    <FormulaTokenValue operationValue="0" id="0:3540">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3539"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Partner &gt;= 12" id="0:3803">
+    <FormulaTokenFunction functionType="0" id="0:3804"/>
+    <FormulaTokenValue operationValue="1" id="0:3805"/>
+    <FormulaTokenArgumentSeparator id="0:3806"/>
+    <FormulaTokenFunction functionType="1" id="0:3807"/>
+    <FormulaTokenValue operationValue="0" id="0:3808"/>
+    <FormulaTokenArgumentSeparator id="0:3809"/>
+    <FormulaTokenInput id="0:3810"/>
+    <FormulaTokenOperation operationType="1" id="0:3811"/>
+    <FormulaTokenValue operationValue="11" id="0:3812"/>
+    <FormulaTokenParenthesisClose id="0:3813"/>
+    <FormulaTokenParenthesisClose id="0:3814"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Weeks Panel 13" id="0:3547">
-    <FormulaTokenFunction functionType="0" id="0:3548"/>
-    <FormulaTokenValue operationValue="1" id="0:3549"/>
-    <FormulaTokenArgumentSeparator id="0:3550"/>
-    <FormulaTokenFunction functionType="1" id="0:3551"/>
-    <FormulaTokenValue operationValue="0" id="0:3552"/>
-    <FormulaTokenArgumentSeparator id="0:3553"/>
-    <FormulaTokenParenthesisOpen id="0:3554"/>
-    <FormulaTokenInput id="0:3555"/>
-    <FormulaTokenOperation operationType="1" id="0:3556"/>
-    <FormulaTokenValue operationValue="48" id="0:3557"/>
-    <FormulaTokenParenthesisClose id="0:3558"/>
-    <FormulaTokenOperation operationType="3" id="0:3559"/>
-    <FormulaTokenValue operationValue="4" id="0:3560"/>
-    <FormulaTokenParenthesisClose id="0:3561"/>
-    <FormulaTokenParenthesisClose id="0:3562"/>
-    <FormulaTokenOperation operationType="2" id="0:3563"/>
-    <FormulaTokenValue operationValue="0" id="0:3565">
-      <DataBindContext sourcePathIds="0:90000-0:90088" propertyKey="777" id="0:3564"/>
-    </FormulaTokenValue>
+  <DataConverterFormula name="Persona is 0" id="0:4907">
+    <FormulaTokenFunction functionType="1" id="0:4908"/>
+    <FormulaTokenValue operationValue="0" id="0:4909"/>
+    <FormulaTokenArgumentSeparator id="0:4910"/>
+    <FormulaTokenValue operationValue="1" id="0:4911"/>
+    <FormulaTokenOperation operationType="1" id="0:4912"/>
+    <FormulaTokenParenthesisOpen id="0:4913"/>
+    <FormulaTokenInput id="0:4914"/>
+    <FormulaTokenOperation operationType="1" id="0:4915"/>
+    <FormulaTokenValue operationValue="0" id="0:4916"/>
+    <FormulaTokenParenthesisClose id="0:4917"/>
+    <FormulaTokenOperation operationType="2" id="0:4918"/>
+    <FormulaTokenParenthesisOpen id="0:4919"/>
+    <FormulaTokenInput id="0:4920"/>
+    <FormulaTokenOperation operationType="1" id="0:4921"/>
+    <FormulaTokenValue operationValue="0" id="0:4922"/>
+    <FormulaTokenParenthesisClose id="0:4923"/>
+    <FormulaTokenParenthesisClose id="0:4924"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 1" id="0:3707">
-    <FormulaTokenFunction functionType="0" id="0:3708"/>
-    <FormulaTokenValue operationValue="1" id="0:3709"/>
-    <FormulaTokenArgumentSeparator id="0:3710"/>
-    <FormulaTokenFunction functionType="1" id="0:3711"/>
-    <FormulaTokenValue operationValue="0" id="0:3712"/>
-    <FormulaTokenArgumentSeparator id="0:3713"/>
-    <FormulaTokenInput id="0:3714"/>
-    <FormulaTokenOperation operationType="1" id="0:3715"/>
-    <FormulaTokenValue operationValue="0" id="0:3716"/>
-    <FormulaTokenParenthesisClose id="0:3717"/>
-    <FormulaTokenParenthesisClose id="0:3718"/>
+  <DataConverterFormula name="Persona is 1" id="0:4933">
+    <FormulaTokenFunction functionType="1" id="0:4934"/>
+    <FormulaTokenValue operationValue="0" id="0:4935"/>
+    <FormulaTokenArgumentSeparator id="0:4936"/>
+    <FormulaTokenValue operationValue="1" id="0:4937"/>
+    <FormulaTokenOperation operationType="1" id="0:4938"/>
+    <FormulaTokenParenthesisOpen id="0:4939"/>
+    <FormulaTokenInput id="0:4940"/>
+    <FormulaTokenOperation operationType="1" id="0:4941"/>
+    <FormulaTokenValue operationValue="1" id="0:4942"/>
+    <FormulaTokenParenthesisClose id="0:4943"/>
+    <FormulaTokenOperation operationType="2" id="0:4944"/>
+    <FormulaTokenParenthesisOpen id="0:4945"/>
+    <FormulaTokenInput id="0:4946"/>
+    <FormulaTokenOperation operationType="1" id="0:4947"/>
+    <FormulaTokenValue operationValue="1" id="0:4948"/>
+    <FormulaTokenParenthesisClose id="0:4949"/>
+    <FormulaTokenParenthesisClose id="0:4950"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 2" id="0:3727">
-    <FormulaTokenFunction functionType="0" id="0:3728"/>
-    <FormulaTokenValue operationValue="1" id="0:3729"/>
-    <FormulaTokenArgumentSeparator id="0:3730"/>
-    <FormulaTokenFunction functionType="1" id="0:3731"/>
-    <FormulaTokenValue operationValue="0" id="0:3732"/>
-    <FormulaTokenArgumentSeparator id="0:3733"/>
-    <FormulaTokenInput id="0:3734"/>
-    <FormulaTokenOperation operationType="1" id="0:3735"/>
-    <FormulaTokenValue operationValue="1" id="0:3736"/>
-    <FormulaTokenParenthesisClose id="0:3737"/>
-    <FormulaTokenParenthesisClose id="0:3738"/>
+  <DataConverterFormula name="Persona is 2" id="0:4959">
+    <FormulaTokenFunction functionType="1" id="0:4960"/>
+    <FormulaTokenValue operationValue="0" id="0:4961"/>
+    <FormulaTokenArgumentSeparator id="0:4962"/>
+    <FormulaTokenValue operationValue="1" id="0:4963"/>
+    <FormulaTokenOperation operationType="1" id="0:4964"/>
+    <FormulaTokenParenthesisOpen id="0:4965"/>
+    <FormulaTokenInput id="0:4966"/>
+    <FormulaTokenOperation operationType="1" id="0:4967"/>
+    <FormulaTokenValue operationValue="2" id="0:4968"/>
+    <FormulaTokenParenthesisClose id="0:4969"/>
+    <FormulaTokenOperation operationType="2" id="0:4970"/>
+    <FormulaTokenParenthesisOpen id="0:4971"/>
+    <FormulaTokenInput id="0:4972"/>
+    <FormulaTokenOperation operationType="1" id="0:4973"/>
+    <FormulaTokenValue operationValue="2" id="0:4974"/>
+    <FormulaTokenParenthesisClose id="0:4975"/>
+    <FormulaTokenParenthesisClose id="0:4976"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 3" id="0:3787">
-    <FormulaTokenFunction functionType="0" id="0:3788"/>
-    <FormulaTokenValue operationValue="1" id="0:3789"/>
-    <FormulaTokenArgumentSeparator id="0:3790"/>
-    <FormulaTokenFunction functionType="1" id="0:3791"/>
-    <FormulaTokenValue operationValue="0" id="0:3792"/>
-    <FormulaTokenArgumentSeparator id="0:3793"/>
-    <FormulaTokenInput id="0:3794"/>
-    <FormulaTokenOperation operationType="1" id="0:3795"/>
-    <FormulaTokenValue operationValue="2" id="0:3796"/>
-    <FormulaTokenParenthesisClose id="0:3797"/>
-    <FormulaTokenParenthesisClose id="0:3798"/>
+  <DataConverterFormula name="Persona is 3" id="0:4985">
+    <FormulaTokenFunction functionType="1" id="0:4986"/>
+    <FormulaTokenValue operationValue="0" id="0:4987"/>
+    <FormulaTokenArgumentSeparator id="0:4988"/>
+    <FormulaTokenValue operationValue="1" id="0:4989"/>
+    <FormulaTokenOperation operationType="1" id="0:4990"/>
+    <FormulaTokenParenthesisOpen id="0:4991"/>
+    <FormulaTokenInput id="0:4992"/>
+    <FormulaTokenOperation operationType="1" id="0:4993"/>
+    <FormulaTokenValue operationValue="3" id="0:4994"/>
+    <FormulaTokenParenthesisClose id="0:4995"/>
+    <FormulaTokenOperation operationType="2" id="0:4996"/>
+    <FormulaTokenParenthesisOpen id="0:4997"/>
+    <FormulaTokenInput id="0:4998"/>
+    <FormulaTokenOperation operationType="1" id="0:4999"/>
+    <FormulaTokenValue operationValue="3" id="0:5000"/>
+    <FormulaTokenParenthesisClose id="0:5001"/>
+    <FormulaTokenParenthesisClose id="0:5002"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 4" id="0:3847">
-    <FormulaTokenFunction functionType="0" id="0:3848"/>
-    <FormulaTokenValue operationValue="1" id="0:3849"/>
-    <FormulaTokenArgumentSeparator id="0:3850"/>
-    <FormulaTokenFunction functionType="1" id="0:3851"/>
-    <FormulaTokenValue operationValue="0" id="0:3852"/>
-    <FormulaTokenArgumentSeparator id="0:3853"/>
-    <FormulaTokenInput id="0:3854"/>
-    <FormulaTokenOperation operationType="1" id="0:3855"/>
-    <FormulaTokenValue operationValue="3" id="0:3856"/>
-    <FormulaTokenParenthesisClose id="0:3857"/>
-    <FormulaTokenParenthesisClose id="0:3858"/>
+  <DataConverterRangeMapper minInput="0" maxInput="1" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 1 Fill" id="0:5146"/>
+  <DataConverterFormula name="Segment 1 hidden" id="0:5149">
+    <FormulaTokenFunction functionType="0" id="0:5150"/>
+    <FormulaTokenValue operationValue="1" id="0:5151"/>
+    <FormulaTokenArgumentSeparator id="0:5152"/>
+    <FormulaTokenFunction functionType="1" id="0:5153"/>
+    <FormulaTokenValue operationValue="0" id="0:5154"/>
+    <FormulaTokenArgumentSeparator id="0:5155"/>
+    <FormulaTokenValue operationValue="1" id="0:5156"/>
+    <FormulaTokenOperation operationType="1" id="0:5157"/>
+    <FormulaTokenInput id="0:5158"/>
+    <FormulaTokenParenthesisClose id="0:5159"/>
+    <FormulaTokenParenthesisClose id="0:5160"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 5" id="0:3907">
-    <FormulaTokenFunction functionType="0" id="0:3908"/>
-    <FormulaTokenValue operationValue="1" id="0:3909"/>
-    <FormulaTokenArgumentSeparator id="0:3910"/>
-    <FormulaTokenFunction functionType="1" id="0:3911"/>
-    <FormulaTokenValue operationValue="0" id="0:3912"/>
-    <FormulaTokenArgumentSeparator id="0:3913"/>
-    <FormulaTokenInput id="0:3914"/>
-    <FormulaTokenOperation operationType="1" id="0:3915"/>
-    <FormulaTokenValue operationValue="4" id="0:3916"/>
-    <FormulaTokenParenthesisClose id="0:3917"/>
-    <FormulaTokenParenthesisClose id="0:3918"/>
+  <DataConverterRangeMapper minInput="1" maxInput="2" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 2 Fill" id="0:5170"/>
+  <DataConverterFormula name="Segment 2 hidden" id="0:5173">
+    <FormulaTokenFunction functionType="0" id="0:5174"/>
+    <FormulaTokenValue operationValue="1" id="0:5175"/>
+    <FormulaTokenArgumentSeparator id="0:5176"/>
+    <FormulaTokenFunction functionType="1" id="0:5177"/>
+    <FormulaTokenValue operationValue="0" id="0:5178"/>
+    <FormulaTokenArgumentSeparator id="0:5179"/>
+    <FormulaTokenValue operationValue="2" id="0:5180"/>
+    <FormulaTokenOperation operationType="1" id="0:5181"/>
+    <FormulaTokenInput id="0:5182"/>
+    <FormulaTokenParenthesisClose id="0:5183"/>
+    <FormulaTokenParenthesisClose id="0:5184"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 6" id="0:3967">
-    <FormulaTokenFunction functionType="0" id="0:3968"/>
-    <FormulaTokenValue operationValue="1" id="0:3969"/>
-    <FormulaTokenArgumentSeparator id="0:3970"/>
-    <FormulaTokenFunction functionType="1" id="0:3971"/>
-    <FormulaTokenValue operationValue="0" id="0:3972"/>
-    <FormulaTokenArgumentSeparator id="0:3973"/>
-    <FormulaTokenInput id="0:3974"/>
-    <FormulaTokenOperation operationType="1" id="0:3975"/>
-    <FormulaTokenValue operationValue="5" id="0:3976"/>
-    <FormulaTokenParenthesisClose id="0:3977"/>
-    <FormulaTokenParenthesisClose id="0:3978"/>
+  <DataConverterRangeMapper minInput="2" maxInput="3" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 3 Fill" id="0:5194"/>
+  <DataConverterFormula name="Segment 3 hidden" id="0:5197">
+    <FormulaTokenFunction functionType="0" id="0:5198"/>
+    <FormulaTokenValue operationValue="1" id="0:5199"/>
+    <FormulaTokenArgumentSeparator id="0:5200"/>
+    <FormulaTokenFunction functionType="1" id="0:5201"/>
+    <FormulaTokenValue operationValue="0" id="0:5202"/>
+    <FormulaTokenArgumentSeparator id="0:5203"/>
+    <FormulaTokenValue operationValue="3" id="0:5204"/>
+    <FormulaTokenOperation operationType="1" id="0:5205"/>
+    <FormulaTokenInput id="0:5206"/>
+    <FormulaTokenParenthesisClose id="0:5207"/>
+    <FormulaTokenParenthesisClose id="0:5208"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 7" id="0:4027">
-    <FormulaTokenFunction functionType="0" id="0:4028"/>
-    <FormulaTokenValue operationValue="1" id="0:4029"/>
-    <FormulaTokenArgumentSeparator id="0:4030"/>
-    <FormulaTokenFunction functionType="1" id="0:4031"/>
-    <FormulaTokenValue operationValue="0" id="0:4032"/>
-    <FormulaTokenArgumentSeparator id="0:4033"/>
-    <FormulaTokenInput id="0:4034"/>
-    <FormulaTokenOperation operationType="1" id="0:4035"/>
-    <FormulaTokenValue operationValue="6" id="0:4036"/>
-    <FormulaTokenParenthesisClose id="0:4037"/>
-    <FormulaTokenParenthesisClose id="0:4038"/>
+  <DataConverterRangeMapper minInput="3" maxInput="4" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 4 Fill" id="0:5218"/>
+  <DataConverterFormula name="Segment 4 hidden" id="0:5221">
+    <FormulaTokenFunction functionType="0" id="0:5222"/>
+    <FormulaTokenValue operationValue="1" id="0:5223"/>
+    <FormulaTokenArgumentSeparator id="0:5224"/>
+    <FormulaTokenFunction functionType="1" id="0:5225"/>
+    <FormulaTokenValue operationValue="0" id="0:5226"/>
+    <FormulaTokenArgumentSeparator id="0:5227"/>
+    <FormulaTokenValue operationValue="4" id="0:5228"/>
+    <FormulaTokenOperation operationType="1" id="0:5229"/>
+    <FormulaTokenInput id="0:5230"/>
+    <FormulaTokenParenthesisClose id="0:5231"/>
+    <FormulaTokenParenthesisClose id="0:5232"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 8" id="0:4087">
-    <FormulaTokenFunction functionType="0" id="0:4088"/>
-    <FormulaTokenValue operationValue="1" id="0:4089"/>
-    <FormulaTokenArgumentSeparator id="0:4090"/>
-    <FormulaTokenFunction functionType="1" id="0:4091"/>
-    <FormulaTokenValue operationValue="0" id="0:4092"/>
-    <FormulaTokenArgumentSeparator id="0:4093"/>
-    <FormulaTokenInput id="0:4094"/>
-    <FormulaTokenOperation operationType="1" id="0:4095"/>
-    <FormulaTokenValue operationValue="7" id="0:4096"/>
-    <FormulaTokenParenthesisClose id="0:4097"/>
-    <FormulaTokenParenthesisClose id="0:4098"/>
+  <DataConverterRangeMapper minInput="4" maxInput="5" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 5 Fill" id="0:5242"/>
+  <DataConverterFormula name="Segment 5 hidden" id="0:5245">
+    <FormulaTokenFunction functionType="0" id="0:5246"/>
+    <FormulaTokenValue operationValue="1" id="0:5247"/>
+    <FormulaTokenArgumentSeparator id="0:5248"/>
+    <FormulaTokenFunction functionType="1" id="0:5249"/>
+    <FormulaTokenValue operationValue="0" id="0:5250"/>
+    <FormulaTokenArgumentSeparator id="0:5251"/>
+    <FormulaTokenValue operationValue="5" id="0:5252"/>
+    <FormulaTokenOperation operationType="1" id="0:5253"/>
+    <FormulaTokenInput id="0:5254"/>
+    <FormulaTokenParenthesisClose id="0:5255"/>
+    <FormulaTokenParenthesisClose id="0:5256"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 9" id="0:4147">
-    <FormulaTokenFunction functionType="0" id="0:4148"/>
-    <FormulaTokenValue operationValue="1" id="0:4149"/>
-    <FormulaTokenArgumentSeparator id="0:4150"/>
-    <FormulaTokenFunction functionType="1" id="0:4151"/>
-    <FormulaTokenValue operationValue="0" id="0:4152"/>
-    <FormulaTokenArgumentSeparator id="0:4153"/>
-    <FormulaTokenInput id="0:4154"/>
-    <FormulaTokenOperation operationType="1" id="0:4155"/>
-    <FormulaTokenValue operationValue="8" id="0:4156"/>
-    <FormulaTokenParenthesisClose id="0:4157"/>
-    <FormulaTokenParenthesisClose id="0:4158"/>
+  <DataConverterRangeMapper minInput="5" maxInput="6" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 6 Fill" id="0:5266"/>
+  <DataConverterFormula name="Segment 6 hidden" id="0:5269">
+    <FormulaTokenFunction functionType="0" id="0:5270"/>
+    <FormulaTokenValue operationValue="1" id="0:5271"/>
+    <FormulaTokenArgumentSeparator id="0:5272"/>
+    <FormulaTokenFunction functionType="1" id="0:5273"/>
+    <FormulaTokenValue operationValue="0" id="0:5274"/>
+    <FormulaTokenArgumentSeparator id="0:5275"/>
+    <FormulaTokenValue operationValue="6" id="0:5276"/>
+    <FormulaTokenOperation operationType="1" id="0:5277"/>
+    <FormulaTokenInput id="0:5278"/>
+    <FormulaTokenParenthesisClose id="0:5279"/>
+    <FormulaTokenParenthesisClose id="0:5280"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 10" id="0:4207">
-    <FormulaTokenFunction functionType="0" id="0:4208"/>
-    <FormulaTokenValue operationValue="1" id="0:4209"/>
-    <FormulaTokenArgumentSeparator id="0:4210"/>
-    <FormulaTokenFunction functionType="1" id="0:4211"/>
-    <FormulaTokenValue operationValue="0" id="0:4212"/>
-    <FormulaTokenArgumentSeparator id="0:4213"/>
-    <FormulaTokenInput id="0:4214"/>
-    <FormulaTokenOperation operationType="1" id="0:4215"/>
-    <FormulaTokenValue operationValue="9" id="0:4216"/>
-    <FormulaTokenParenthesisClose id="0:4217"/>
-    <FormulaTokenParenthesisClose id="0:4218"/>
+  <DataConverterRangeMapper minInput="6" maxInput="7" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 7 Fill" id="0:5290"/>
+  <DataConverterFormula name="Segment 7 hidden" id="0:5293">
+    <FormulaTokenFunction functionType="0" id="0:5294"/>
+    <FormulaTokenValue operationValue="1" id="0:5295"/>
+    <FormulaTokenArgumentSeparator id="0:5296"/>
+    <FormulaTokenFunction functionType="1" id="0:5297"/>
+    <FormulaTokenValue operationValue="0" id="0:5298"/>
+    <FormulaTokenArgumentSeparator id="0:5299"/>
+    <FormulaTokenValue operationValue="7" id="0:5300"/>
+    <FormulaTokenOperation operationType="1" id="0:5301"/>
+    <FormulaTokenInput id="0:5302"/>
+    <FormulaTokenParenthesisClose id="0:5303"/>
+    <FormulaTokenParenthesisClose id="0:5304"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 11" id="0:4267">
-    <FormulaTokenFunction functionType="0" id="0:4268"/>
-    <FormulaTokenValue operationValue="1" id="0:4269"/>
-    <FormulaTokenArgumentSeparator id="0:4270"/>
-    <FormulaTokenFunction functionType="1" id="0:4271"/>
-    <FormulaTokenValue operationValue="0" id="0:4272"/>
-    <FormulaTokenArgumentSeparator id="0:4273"/>
-    <FormulaTokenInput id="0:4274"/>
-    <FormulaTokenOperation operationType="1" id="0:4275"/>
-    <FormulaTokenValue operationValue="10" id="0:4276"/>
-    <FormulaTokenParenthesisClose id="0:4277"/>
-    <FormulaTokenParenthesisClose id="0:4278"/>
+  <DataConverterRangeMapper minInput="7" maxInput="8" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 8 Fill" id="0:5314"/>
+  <DataConverterFormula name="Segment 8 hidden" id="0:5317">
+    <FormulaTokenFunction functionType="0" id="0:5318"/>
+    <FormulaTokenValue operationValue="1" id="0:5319"/>
+    <FormulaTokenArgumentSeparator id="0:5320"/>
+    <FormulaTokenFunction functionType="1" id="0:5321"/>
+    <FormulaTokenValue operationValue="0" id="0:5322"/>
+    <FormulaTokenArgumentSeparator id="0:5323"/>
+    <FormulaTokenValue operationValue="8" id="0:5324"/>
+    <FormulaTokenOperation operationType="1" id="0:5325"/>
+    <FormulaTokenInput id="0:5326"/>
+    <FormulaTokenParenthesisClose id="0:5327"/>
+    <FormulaTokenParenthesisClose id="0:5328"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Partner &gt;= 12" id="0:4327">
-    <FormulaTokenFunction functionType="0" id="0:4328"/>
-    <FormulaTokenValue operationValue="1" id="0:4329"/>
-    <FormulaTokenArgumentSeparator id="0:4330"/>
-    <FormulaTokenFunction functionType="1" id="0:4331"/>
-    <FormulaTokenValue operationValue="0" id="0:4332"/>
-    <FormulaTokenArgumentSeparator id="0:4333"/>
-    <FormulaTokenInput id="0:4334"/>
-    <FormulaTokenOperation operationType="1" id="0:4335"/>
-    <FormulaTokenValue operationValue="11" id="0:4336"/>
-    <FormulaTokenParenthesisClose id="0:4337"/>
-    <FormulaTokenParenthesisClose id="0:4338"/>
+  <DataConverterRangeMapper minInput="8" maxInput="9" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 9 Fill" id="0:5338"/>
+  <DataConverterFormula name="Segment 9 hidden" id="0:5341">
+    <FormulaTokenFunction functionType="0" id="0:5342"/>
+    <FormulaTokenValue operationValue="1" id="0:5343"/>
+    <FormulaTokenArgumentSeparator id="0:5344"/>
+    <FormulaTokenFunction functionType="1" id="0:5345"/>
+    <FormulaTokenValue operationValue="0" id="0:5346"/>
+    <FormulaTokenArgumentSeparator id="0:5347"/>
+    <FormulaTokenValue operationValue="9" id="0:5348"/>
+    <FormulaTokenOperation operationType="1" id="0:5349"/>
+    <FormulaTokenInput id="0:5350"/>
+    <FormulaTokenParenthesisClose id="0:5351"/>
+    <FormulaTokenParenthesisClose id="0:5352"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Persona is 0" id="0:5503">
-    <FormulaTokenFunction functionType="1" id="0:5504"/>
-    <FormulaTokenValue operationValue="0" id="0:5505"/>
-    <FormulaTokenArgumentSeparator id="0:5506"/>
-    <FormulaTokenValue operationValue="1" id="0:5507"/>
-    <FormulaTokenOperation operationType="1" id="0:5508"/>
-    <FormulaTokenParenthesisOpen id="0:5509"/>
-    <FormulaTokenInput id="0:5510"/>
+  <DataConverterRangeMapper minInput="9" maxInput="10" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 10 Fill" id="0:5362"/>
+  <DataConverterFormula name="Segment 10 hidden" id="0:5365">
+    <FormulaTokenFunction functionType="0" id="0:5366"/>
+    <FormulaTokenValue operationValue="1" id="0:5367"/>
+    <FormulaTokenArgumentSeparator id="0:5368"/>
+    <FormulaTokenFunction functionType="1" id="0:5369"/>
+    <FormulaTokenValue operationValue="0" id="0:5370"/>
+    <FormulaTokenArgumentSeparator id="0:5371"/>
+    <FormulaTokenValue operationValue="10" id="0:5372"/>
+    <FormulaTokenOperation operationType="1" id="0:5373"/>
+    <FormulaTokenInput id="0:5374"/>
+    <FormulaTokenParenthesisClose id="0:5375"/>
+    <FormulaTokenParenthesisClose id="0:5376"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Focused is 1" id="0:5414">
+    <FormulaTokenFunction functionType="1" id="0:5415"/>
+    <FormulaTokenValue operationValue="0" id="0:5416"/>
+    <FormulaTokenArgumentSeparator id="0:5417"/>
+    <FormulaTokenValue operationValue="1" id="0:5418"/>
+    <FormulaTokenOperation operationType="1" id="0:5419"/>
+    <FormulaTokenParenthesisOpen id="0:5420"/>
+    <FormulaTokenInput id="0:5421"/>
+    <FormulaTokenOperation operationType="1" id="0:5422"/>
+    <FormulaTokenValue operationValue="1" id="0:5423"/>
+    <FormulaTokenParenthesisClose id="0:5424"/>
+    <FormulaTokenOperation operationType="2" id="0:5425"/>
+    <FormulaTokenParenthesisOpen id="0:5426"/>
+    <FormulaTokenInput id="0:5427"/>
+    <FormulaTokenOperation operationType="1" id="0:5428"/>
+    <FormulaTokenValue operationValue="1" id="0:5429"/>
+    <FormulaTokenParenthesisClose id="0:5430"/>
+    <FormulaTokenParenthesisClose id="0:5431"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Focused is 2" id="0:5461">
+    <FormulaTokenFunction functionType="1" id="0:5462"/>
+    <FormulaTokenValue operationValue="0" id="0:5463"/>
+    <FormulaTokenArgumentSeparator id="0:5464"/>
+    <FormulaTokenValue operationValue="1" id="0:5465"/>
+    <FormulaTokenOperation operationType="1" id="0:5466"/>
+    <FormulaTokenParenthesisOpen id="0:5467"/>
+    <FormulaTokenInput id="0:5468"/>
+    <FormulaTokenOperation operationType="1" id="0:5469"/>
+    <FormulaTokenValue operationValue="2" id="0:5470"/>
+    <FormulaTokenParenthesisClose id="0:5471"/>
+    <FormulaTokenOperation operationType="2" id="0:5472"/>
+    <FormulaTokenParenthesisOpen id="0:5473"/>
+    <FormulaTokenInput id="0:5474"/>
+    <FormulaTokenOperation operationType="1" id="0:5475"/>
+    <FormulaTokenValue operationValue="2" id="0:5476"/>
+    <FormulaTokenParenthesisClose id="0:5477"/>
+    <FormulaTokenParenthesisClose id="0:5478"/>
+  </DataConverterFormula>
+  <DataConverterFormula name="Focused is 3" id="0:5506">
+    <FormulaTokenFunction functionType="1" id="0:5507"/>
+    <FormulaTokenValue operationValue="0" id="0:5508"/>
+    <FormulaTokenArgumentSeparator id="0:5509"/>
+    <FormulaTokenValue operationValue="1" id="0:5510"/>
     <FormulaTokenOperation operationType="1" id="0:5511"/>
-    <FormulaTokenValue operationValue="0" id="0:5512"/>
-    <FormulaTokenParenthesisClose id="0:5513"/>
-    <FormulaTokenOperation operationType="2" id="0:5514"/>
-    <FormulaTokenParenthesisOpen id="0:5515"/>
-    <FormulaTokenInput id="0:5516"/>
-    <FormulaTokenOperation operationType="1" id="0:5517"/>
-    <FormulaTokenValue operationValue="0" id="0:5518"/>
-    <FormulaTokenParenthesisClose id="0:5519"/>
-    <FormulaTokenParenthesisClose id="0:5520"/>
+    <FormulaTokenParenthesisOpen id="0:5512"/>
+    <FormulaTokenInput id="0:5513"/>
+    <FormulaTokenOperation operationType="1" id="0:5514"/>
+    <FormulaTokenValue operationValue="3" id="0:5515"/>
+    <FormulaTokenParenthesisClose id="0:5516"/>
+    <FormulaTokenOperation operationType="2" id="0:5517"/>
+    <FormulaTokenParenthesisOpen id="0:5518"/>
+    <FormulaTokenInput id="0:5519"/>
+    <FormulaTokenOperation operationType="1" id="0:5520"/>
+    <FormulaTokenValue operationValue="3" id="0:5521"/>
+    <FormulaTokenParenthesisClose id="0:5522"/>
+    <FormulaTokenParenthesisClose id="0:5523"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Persona is 1" id="0:5529">
-    <FormulaTokenFunction functionType="1" id="0:5530"/>
-    <FormulaTokenValue operationValue="0" id="0:5531"/>
-    <FormulaTokenArgumentSeparator id="0:5532"/>
-    <FormulaTokenValue operationValue="1" id="0:5533"/>
-    <FormulaTokenOperation operationType="1" id="0:5534"/>
-    <FormulaTokenParenthesisOpen id="0:5535"/>
-    <FormulaTokenInput id="0:5536"/>
-    <FormulaTokenOperation operationType="1" id="0:5537"/>
-    <FormulaTokenValue operationValue="1" id="0:5538"/>
-    <FormulaTokenParenthesisClose id="0:5539"/>
-    <FormulaTokenOperation operationType="2" id="0:5540"/>
-    <FormulaTokenParenthesisOpen id="0:5541"/>
-    <FormulaTokenInput id="0:5542"/>
-    <FormulaTokenOperation operationType="1" id="0:5543"/>
-    <FormulaTokenValue operationValue="1" id="0:5544"/>
-    <FormulaTokenParenthesisClose id="0:5545"/>
-    <FormulaTokenParenthesisClose id="0:5546"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Persona is 2" id="0:5555">
+  <DataConverterFormula name="Focused is 4" id="0:5555">
     <FormulaTokenFunction functionType="1" id="0:5556"/>
     <FormulaTokenValue operationValue="0" id="0:5557"/>
     <FormulaTokenArgumentSeparator id="0:5558"/>
@@ -896,271 +1131,38 @@
     <FormulaTokenParenthesisOpen id="0:5561"/>
     <FormulaTokenInput id="0:5562"/>
     <FormulaTokenOperation operationType="1" id="0:5563"/>
-    <FormulaTokenValue operationValue="2" id="0:5564"/>
+    <FormulaTokenValue operationValue="4" id="0:5564"/>
     <FormulaTokenParenthesisClose id="0:5565"/>
     <FormulaTokenOperation operationType="2" id="0:5566"/>
     <FormulaTokenParenthesisOpen id="0:5567"/>
     <FormulaTokenInput id="0:5568"/>
     <FormulaTokenOperation operationType="1" id="0:5569"/>
-    <FormulaTokenValue operationValue="2" id="0:5570"/>
+    <FormulaTokenValue operationValue="4" id="0:5570"/>
     <FormulaTokenParenthesisClose id="0:5571"/>
     <FormulaTokenParenthesisClose id="0:5572"/>
   </DataConverterFormula>
-  <DataConverterFormula name="Persona is 3" id="0:5581">
-    <FormulaTokenFunction functionType="1" id="0:5582"/>
-    <FormulaTokenValue operationValue="0" id="0:5583"/>
-    <FormulaTokenArgumentSeparator id="0:5584"/>
-    <FormulaTokenValue operationValue="1" id="0:5585"/>
-    <FormulaTokenOperation operationType="1" id="0:5586"/>
-    <FormulaTokenParenthesisOpen id="0:5587"/>
-    <FormulaTokenInput id="0:5588"/>
-    <FormulaTokenOperation operationType="1" id="0:5589"/>
-    <FormulaTokenValue operationValue="3" id="0:5590"/>
-    <FormulaTokenParenthesisClose id="0:5591"/>
-    <FormulaTokenOperation operationType="2" id="0:5592"/>
-    <FormulaTokenParenthesisOpen id="0:5593"/>
-    <FormulaTokenInput id="0:5594"/>
-    <FormulaTokenOperation operationType="1" id="0:5595"/>
-    <FormulaTokenValue operationValue="3" id="0:5596"/>
-    <FormulaTokenParenthesisClose id="0:5597"/>
-    <FormulaTokenParenthesisClose id="0:5598"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="0" maxInput="1" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 1 Fill" id="0:5829"/>
-  <DataConverterFormula name="Segment 1 hidden" id="0:5832">
-    <FormulaTokenFunction functionType="0" id="0:5833"/>
-    <FormulaTokenValue operationValue="1" id="0:5834"/>
-    <FormulaTokenArgumentSeparator id="0:5835"/>
-    <FormulaTokenFunction functionType="1" id="0:5836"/>
-    <FormulaTokenValue operationValue="0" id="0:5837"/>
-    <FormulaTokenArgumentSeparator id="0:5838"/>
-    <FormulaTokenValue operationValue="1" id="0:5839"/>
-    <FormulaTokenOperation operationType="1" id="0:5840"/>
-    <FormulaTokenInput id="0:5841"/>
-    <FormulaTokenParenthesisClose id="0:5842"/>
-    <FormulaTokenParenthesisClose id="0:5843"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="1" maxInput="2" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 2 Fill" id="0:5853"/>
-  <DataConverterFormula name="Segment 2 hidden" id="0:5856">
-    <FormulaTokenFunction functionType="0" id="0:5857"/>
-    <FormulaTokenValue operationValue="1" id="0:5858"/>
-    <FormulaTokenArgumentSeparator id="0:5859"/>
-    <FormulaTokenFunction functionType="1" id="0:5860"/>
-    <FormulaTokenValue operationValue="0" id="0:5861"/>
-    <FormulaTokenArgumentSeparator id="0:5862"/>
-    <FormulaTokenValue operationValue="2" id="0:5863"/>
-    <FormulaTokenOperation operationType="1" id="0:5864"/>
-    <FormulaTokenInput id="0:5865"/>
-    <FormulaTokenParenthesisClose id="0:5866"/>
-    <FormulaTokenParenthesisClose id="0:5867"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="2" maxInput="3" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 3 Fill" id="0:5877"/>
-  <DataConverterFormula name="Segment 3 hidden" id="0:5880">
-    <FormulaTokenFunction functionType="0" id="0:5881"/>
-    <FormulaTokenValue operationValue="1" id="0:5882"/>
-    <FormulaTokenArgumentSeparator id="0:5883"/>
-    <FormulaTokenFunction functionType="1" id="0:5884"/>
-    <FormulaTokenValue operationValue="0" id="0:5885"/>
-    <FormulaTokenArgumentSeparator id="0:5886"/>
-    <FormulaTokenValue operationValue="3" id="0:5887"/>
-    <FormulaTokenOperation operationType="1" id="0:5888"/>
-    <FormulaTokenInput id="0:5889"/>
-    <FormulaTokenParenthesisClose id="0:5890"/>
-    <FormulaTokenParenthesisClose id="0:5891"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="3" maxInput="4" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 4 Fill" id="0:5901"/>
-  <DataConverterFormula name="Segment 4 hidden" id="0:5904">
-    <FormulaTokenFunction functionType="0" id="0:5905"/>
-    <FormulaTokenValue operationValue="1" id="0:5906"/>
-    <FormulaTokenArgumentSeparator id="0:5907"/>
-    <FormulaTokenFunction functionType="1" id="0:5908"/>
-    <FormulaTokenValue operationValue="0" id="0:5909"/>
-    <FormulaTokenArgumentSeparator id="0:5910"/>
-    <FormulaTokenValue operationValue="4" id="0:5911"/>
-    <FormulaTokenOperation operationType="1" id="0:5912"/>
-    <FormulaTokenInput id="0:5913"/>
-    <FormulaTokenParenthesisClose id="0:5914"/>
-    <FormulaTokenParenthesisClose id="0:5915"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="4" maxInput="5" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 5 Fill" id="0:5925"/>
-  <DataConverterFormula name="Segment 5 hidden" id="0:5928">
-    <FormulaTokenFunction functionType="0" id="0:5929"/>
-    <FormulaTokenValue operationValue="1" id="0:5930"/>
-    <FormulaTokenArgumentSeparator id="0:5931"/>
-    <FormulaTokenFunction functionType="1" id="0:5932"/>
-    <FormulaTokenValue operationValue="0" id="0:5933"/>
-    <FormulaTokenArgumentSeparator id="0:5934"/>
-    <FormulaTokenValue operationValue="5" id="0:5935"/>
-    <FormulaTokenOperation operationType="1" id="0:5936"/>
-    <FormulaTokenInput id="0:5937"/>
-    <FormulaTokenParenthesisClose id="0:5938"/>
-    <FormulaTokenParenthesisClose id="0:5939"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="5" maxInput="6" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 6 Fill" id="0:5949"/>
-  <DataConverterFormula name="Segment 6 hidden" id="0:5952">
-    <FormulaTokenFunction functionType="0" id="0:5953"/>
-    <FormulaTokenValue operationValue="1" id="0:5954"/>
-    <FormulaTokenArgumentSeparator id="0:5955"/>
-    <FormulaTokenFunction functionType="1" id="0:5956"/>
-    <FormulaTokenValue operationValue="0" id="0:5957"/>
-    <FormulaTokenArgumentSeparator id="0:5958"/>
-    <FormulaTokenValue operationValue="6" id="0:5959"/>
-    <FormulaTokenOperation operationType="1" id="0:5960"/>
-    <FormulaTokenInput id="0:5961"/>
-    <FormulaTokenParenthesisClose id="0:5962"/>
-    <FormulaTokenParenthesisClose id="0:5963"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="6" maxInput="7" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 7 Fill" id="0:5973"/>
-  <DataConverterFormula name="Segment 7 hidden" id="0:5976">
-    <FormulaTokenFunction functionType="0" id="0:5977"/>
-    <FormulaTokenValue operationValue="1" id="0:5978"/>
-    <FormulaTokenArgumentSeparator id="0:5979"/>
-    <FormulaTokenFunction functionType="1" id="0:5980"/>
-    <FormulaTokenValue operationValue="0" id="0:5981"/>
-    <FormulaTokenArgumentSeparator id="0:5982"/>
-    <FormulaTokenValue operationValue="7" id="0:5983"/>
-    <FormulaTokenOperation operationType="1" id="0:5984"/>
-    <FormulaTokenInput id="0:5985"/>
-    <FormulaTokenParenthesisClose id="0:5986"/>
-    <FormulaTokenParenthesisClose id="0:5987"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="7" maxInput="8" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 8 Fill" id="0:5997"/>
-  <DataConverterFormula name="Segment 8 hidden" id="0:6000">
-    <FormulaTokenFunction functionType="0" id="0:6001"/>
-    <FormulaTokenValue operationValue="1" id="0:6002"/>
-    <FormulaTokenArgumentSeparator id="0:6003"/>
-    <FormulaTokenFunction functionType="1" id="0:6004"/>
-    <FormulaTokenValue operationValue="0" id="0:6005"/>
-    <FormulaTokenArgumentSeparator id="0:6006"/>
-    <FormulaTokenValue operationValue="8" id="0:6007"/>
-    <FormulaTokenOperation operationType="1" id="0:6008"/>
-    <FormulaTokenInput id="0:6009"/>
-    <FormulaTokenParenthesisClose id="0:6010"/>
-    <FormulaTokenParenthesisClose id="0:6011"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="8" maxInput="9" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 9 Fill" id="0:6021"/>
-  <DataConverterFormula name="Segment 9 hidden" id="0:6024">
-    <FormulaTokenFunction functionType="0" id="0:6025"/>
-    <FormulaTokenValue operationValue="1" id="0:6026"/>
-    <FormulaTokenArgumentSeparator id="0:6027"/>
-    <FormulaTokenFunction functionType="1" id="0:6028"/>
-    <FormulaTokenValue operationValue="0" id="0:6029"/>
-    <FormulaTokenArgumentSeparator id="0:6030"/>
-    <FormulaTokenValue operationValue="9" id="0:6031"/>
-    <FormulaTokenOperation operationType="1" id="0:6032"/>
-    <FormulaTokenInput id="0:6033"/>
-    <FormulaTokenParenthesisClose id="0:6034"/>
-    <FormulaTokenParenthesisClose id="0:6035"/>
-  </DataConverterFormula>
-  <DataConverterRangeMapper minInput="9" maxInput="10" minOutput="0" maxOutput="1" clampLower="true" clampUpper="true" name="Segment 10 Fill" id="0:6045"/>
-  <DataConverterFormula name="Segment 10 hidden" id="0:6048">
-    <FormulaTokenFunction functionType="0" id="0:6049"/>
-    <FormulaTokenValue operationValue="1" id="0:6050"/>
-    <FormulaTokenArgumentSeparator id="0:6051"/>
-    <FormulaTokenFunction functionType="1" id="0:6052"/>
-    <FormulaTokenValue operationValue="0" id="0:6053"/>
-    <FormulaTokenArgumentSeparator id="0:6054"/>
-    <FormulaTokenValue operationValue="10" id="0:6055"/>
-    <FormulaTokenOperation operationType="1" id="0:6056"/>
-    <FormulaTokenInput id="0:6057"/>
-    <FormulaTokenParenthesisClose id="0:6058"/>
-    <FormulaTokenParenthesisClose id="0:6059"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Focused is 1" id="0:6097">
-    <FormulaTokenFunction functionType="1" id="0:6098"/>
-    <FormulaTokenValue operationValue="0" id="0:6099"/>
-    <FormulaTokenArgumentSeparator id="0:6100"/>
-    <FormulaTokenValue operationValue="1" id="0:6101"/>
-    <FormulaTokenOperation operationType="1" id="0:6102"/>
-    <FormulaTokenParenthesisOpen id="0:6103"/>
-    <FormulaTokenInput id="0:6104"/>
-    <FormulaTokenOperation operationType="1" id="0:6105"/>
-    <FormulaTokenValue operationValue="1" id="0:6106"/>
-    <FormulaTokenParenthesisClose id="0:6107"/>
-    <FormulaTokenOperation operationType="2" id="0:6108"/>
-    <FormulaTokenParenthesisOpen id="0:6109"/>
-    <FormulaTokenInput id="0:6110"/>
-    <FormulaTokenOperation operationType="1" id="0:6111"/>
-    <FormulaTokenValue operationValue="1" id="0:6112"/>
-    <FormulaTokenParenthesisClose id="0:6113"/>
-    <FormulaTokenParenthesisClose id="0:6114"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Focused is 2" id="0:6144">
-    <FormulaTokenFunction functionType="1" id="0:6145"/>
-    <FormulaTokenValue operationValue="0" id="0:6146"/>
-    <FormulaTokenArgumentSeparator id="0:6147"/>
-    <FormulaTokenValue operationValue="1" id="0:6148"/>
-    <FormulaTokenOperation operationType="1" id="0:6149"/>
-    <FormulaTokenParenthesisOpen id="0:6150"/>
-    <FormulaTokenInput id="0:6151"/>
-    <FormulaTokenOperation operationType="1" id="0:6152"/>
-    <FormulaTokenValue operationValue="2" id="0:6153"/>
-    <FormulaTokenParenthesisClose id="0:6154"/>
-    <FormulaTokenOperation operationType="2" id="0:6155"/>
-    <FormulaTokenParenthesisOpen id="0:6156"/>
-    <FormulaTokenInput id="0:6157"/>
-    <FormulaTokenOperation operationType="1" id="0:6158"/>
-    <FormulaTokenValue operationValue="2" id="0:6159"/>
-    <FormulaTokenParenthesisClose id="0:6160"/>
-    <FormulaTokenParenthesisClose id="0:6161"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Focused is 3" id="0:6189">
-    <FormulaTokenFunction functionType="1" id="0:6190"/>
-    <FormulaTokenValue operationValue="0" id="0:6191"/>
-    <FormulaTokenArgumentSeparator id="0:6192"/>
-    <FormulaTokenValue operationValue="1" id="0:6193"/>
-    <FormulaTokenOperation operationType="1" id="0:6194"/>
-    <FormulaTokenParenthesisOpen id="0:6195"/>
-    <FormulaTokenInput id="0:6196"/>
-    <FormulaTokenOperation operationType="1" id="0:6197"/>
-    <FormulaTokenValue operationValue="3" id="0:6198"/>
-    <FormulaTokenParenthesisClose id="0:6199"/>
-    <FormulaTokenOperation operationType="2" id="0:6200"/>
-    <FormulaTokenParenthesisOpen id="0:6201"/>
-    <FormulaTokenInput id="0:6202"/>
-    <FormulaTokenOperation operationType="1" id="0:6203"/>
-    <FormulaTokenValue operationValue="3" id="0:6204"/>
-    <FormulaTokenParenthesisClose id="0:6205"/>
-    <FormulaTokenParenthesisClose id="0:6206"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Focused is 4" id="0:6238">
-    <FormulaTokenFunction functionType="1" id="0:6239"/>
-    <FormulaTokenValue operationValue="0" id="0:6240"/>
-    <FormulaTokenArgumentSeparator id="0:6241"/>
-    <FormulaTokenValue operationValue="1" id="0:6242"/>
-    <FormulaTokenOperation operationType="1" id="0:6243"/>
-    <FormulaTokenParenthesisOpen id="0:6244"/>
-    <FormulaTokenInput id="0:6245"/>
-    <FormulaTokenOperation operationType="1" id="0:6246"/>
-    <FormulaTokenValue operationValue="4" id="0:6247"/>
-    <FormulaTokenParenthesisClose id="0:6248"/>
-    <FormulaTokenOperation operationType="2" id="0:6249"/>
-    <FormulaTokenParenthesisOpen id="0:6250"/>
-    <FormulaTokenInput id="0:6251"/>
-    <FormulaTokenOperation operationType="1" id="0:6252"/>
-    <FormulaTokenValue operationValue="4" id="0:6253"/>
-    <FormulaTokenParenthesisClose id="0:6254"/>
-    <FormulaTokenParenthesisClose id="0:6255"/>
-  </DataConverterFormula>
-  <DataConverterFormula name="Focused is 5" id="0:6284">
-    <FormulaTokenFunction functionType="1" id="0:6285"/>
-    <FormulaTokenValue operationValue="0" id="0:6286"/>
-    <FormulaTokenArgumentSeparator id="0:6287"/>
-    <FormulaTokenValue operationValue="1" id="0:6288"/>
-    <FormulaTokenOperation operationType="1" id="0:6289"/>
-    <FormulaTokenParenthesisOpen id="0:6290"/>
-    <FormulaTokenInput id="0:6291"/>
-    <FormulaTokenOperation operationType="1" id="0:6292"/>
-    <FormulaTokenValue operationValue="5" id="0:6293"/>
-    <FormulaTokenParenthesisClose id="0:6294"/>
-    <FormulaTokenOperation operationType="2" id="0:6295"/>
-    <FormulaTokenParenthesisOpen id="0:6296"/>
-    <FormulaTokenInput id="0:6297"/>
-    <FormulaTokenOperation operationType="1" id="0:6298"/>
-    <FormulaTokenValue operationValue="5" id="0:6299"/>
-    <FormulaTokenParenthesisClose id="0:6300"/>
-    <FormulaTokenParenthesisClose id="0:6301"/>
+  <DataConverterFormula name="Focused is 5" id="0:5601">
+    <FormulaTokenFunction functionType="1" id="0:5602"/>
+    <FormulaTokenValue operationValue="0" id="0:5603"/>
+    <FormulaTokenArgumentSeparator id="0:5604"/>
+    <FormulaTokenValue operationValue="1" id="0:5605"/>
+    <FormulaTokenOperation operationType="1" id="0:5606"/>
+    <FormulaTokenParenthesisOpen id="0:5607"/>
+    <FormulaTokenInput id="0:5608"/>
+    <FormulaTokenOperation operationType="1" id="0:5609"/>
+    <FormulaTokenValue operationValue="5" id="0:5610"/>
+    <FormulaTokenParenthesisClose id="0:5611"/>
+    <FormulaTokenOperation operationType="2" id="0:5612"/>
+    <FormulaTokenParenthesisOpen id="0:5613"/>
+    <FormulaTokenInput id="0:5614"/>
+    <FormulaTokenOperation operationType="1" id="0:5615"/>
+    <FormulaTokenValue operationValue="5" id="0:5616"/>
+    <FormulaTokenParenthesisClose id="0:5617"/>
+    <FormulaTokenParenthesisClose id="0:5618"/>
   </DataConverterFormula>
   <ScriptAsset file="director.luau" name="director" id="0:80"/>
+  <ScriptAsset file="hold3d.luau" name="hold3d" id="0:84"/>
+  <ScriptAsset file="chalk.luau" name="chalk" id="0:85"/>
   <FontAsset file="assets/fonts/BarlowCondensed-Black.ttf" name="Barlow Condensed Black" id="0:90"/>
   <FontAsset file="assets/fonts/BarlowCondensed-ExtraBold.ttf" name="Barlow Condensed ExtraBold" id="0:91"/>
   <FontAsset file="assets/fonts/IBMPlexMono-Regular.ttf" name="IBM Plex Mono Regular" id="0:92"/>

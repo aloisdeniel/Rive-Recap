@@ -25,6 +25,8 @@ def build(g):
 
     # background slab with a clay plinth sweep
     bg = shape("Card Body", CW / 2, CH / 2, rect(CW, CH, 24), fill("332D2A"))
+    edge = shape("Card Edge", CW / 2, CH / 2, rect(CW - 10, CH - 10, 19), stroke(PORC, 1.0, alpha=0.08))
+    rule = shape("Card Rule", 0, 0, poly([(24, 196), (CW - 24, 196)], closed=False), stroke(PORC, 1.0, alpha=0.14))
     sweep = S(shape("Clay Sweep", 270, 540, ellipse(420, 300), fill(CLAY, alpha=0.9)), scaleX=1.0, scaleY=1.0)
     sweep2 = shape("Ultramarine Sweep", -60, 520, ellipse(260, 210), fill(ULTRA, alpha=0.85))
     deco = node("Card Decor", 0, 0, E("ClippingShape", {"sourceId": bg.id, "name": "Clip"}), sweep2, sweep)
@@ -60,24 +62,25 @@ def build(g):
     persona.add(bind(g.p("_seg9"), 18, g.invert.id))
     S(persona, y=0.0)
 
-    # mini motif: a static vessel on a plinth
-    vp, _ = smooth_path(MF.profile_vertices("vessel"), closed=True, name="Silhouette")
-    vbody = shape("Mini Vessel", 0, 0, vp, fill(PORC))
-    from motif_build import RIBBON
-    rib, _ = smooth_path(smooth_vertices(RIBBON, tension=0.2),
-                         closed=True, name="Ribbon")
-    glaze = shape("Mini Glaze", 0, -250, rib, fill(ULTRA))
-    surf = node("Mini Surface", 0, 0, E("ClippingShape", {"sourceId": vbody.id, "name": "Clip"}), glaze,
-                shape("Mini Shade", -60, -125, ellipse(70, 320), fill(CHAR, alpha=0.25, feather=22)))
-    fpts, tpts = MF.plinth_points(240, 120, 6, 18)
+    # the collectible's piece: the same 3D vessel, static, on a small carved plinth under a spotlight
+    import v3d
+    piece = v3d.V3D(g, "Card Vessel 3D", v3d.look("vessel", body="EFE6D8", dip=0.16, flow=0.92, bandW=0.36,
+                                                   sway=0.42, drip=0.8, yaw=0.15, seed=1.0, tilt=0.22),
+                    keyed=False, frame=dict(halfW=150.0, top=-366.0, bottom=34.0, res=1.0, msaa=1.0))
+    spot = shape("Card Spotlight", 0, -120, ellipse(300, 300), fill("F2ECE2", alpha=0.10, feather=60))
+    fpts, tpts = MF.plinth_points(220, 120, 6, 18)
     mplinth = node("Mini Plinth", 0, 0, shape("Mini Plinth Top", 0, 0, poly(tpts), fill("4A403A")),
-                   shape("Mini Plinth Front", 0, 0, poly(fpts), fill("2A2523")))
-    mini = S(node("Mini Motif", 236, 176, surf, vbody, mplinth, scaleX=0.36, scaleY=0.36), y=176.0, opacity=1.0)
+                   shape("Mini Plinth Front", 0, 0, poly(fpts), fill("231F1D")),
+                   shape("Mini Plinth Edge", 0, 0, poly(fpts[:3], closed=False), stroke("FFFFFF", 2.0, alpha=0.12)))
+    mshadow = shape("Mini Shadow", 0, -6, ellipse(120, 18), fill("000000", alpha=0.35, feather=10))
+    piece_node = node("Mini Piece", 0, -9, piece.el)
+    mini = S(node("Mini Motif", 232, 172, spot, piece_node, mshadow, mplinth, scaleX=0.38, scaleY=0.38),
+             y=172.0, opacity=1.0)
 
     # stats: five existing UserRecap properties, no duplicated summary fields
-    sst = g.abs_style(top=222, left=24, right=24, flexDirectionValue="row", flexWrapValue="wrap",
+    sst = g.abs_style(top=210, left=24, right=24, flexDirectionValue="row", flexWrapValue="wrap",
                       layoutHeightScaleType="hug", gapHorizontal=16.0, gapHorizontalUnitsValue="points",
-                      gapVertical=8.0, gapVerticalUnitsValue="points", name="Stats Style")
+                      gapVertical=6.0, gapVerticalUnitsValue="points", name="Stats Style")
     sst.add(bind(g.p("_isEmpty"), 596))
     stats = g.box("Card Stats", sst, w=252, h=200)
     items = []
@@ -116,11 +119,11 @@ def build(g):
     per_st = g.sans_style(11, PORC, 500)
     child(child(per_st, "Fill"), "SolidColor").attrs["colorValue"] = argb(PORC, 0.6)
     period = g.text("Card Period", per_st, "January 1–December 31, 2026", prop="periodLabel", reveal=False,
-                    layout=False, x=24, y=414, width=252)
+                    layout=False, x=24, y=410, width=200)
     rules_st = g.abs_style(top=0, bottom=0, left=0, right=0, name="Rules Style")
     rules = g.box("Card Rules", rules_st, E("ScriptedLayout", {"scriptAssetId": g.card_script.id, "name": "Card Rules"}),
                   w=CW, h=CH)
-    ab.add(rules, word, year, name, persona, stats, empty, period, mini, deco, bg)
+    ab.add(rules, word, year, name, persona, stats, empty, period, mini, rule, edge, deco, bg)
 
     # assembly timeline (driven from the summary scene through a remap)
     a.k(word, "y", (0, 6.0, "hold"), (2, 6.0, "out"), (20, 18.0, "hold"))
@@ -130,7 +133,7 @@ def build(g):
         f0 = 20 + i * 5
         a.k(it, "y", (0, 22.0, "hold"), (f0, 22.0, "back"), (f0 + 16, 0.0, "hold"))
         a.k(it, "opacity", (0, 0.0, "hold"), (f0, 0.0, "out"), (f0 + 12, 1.0, "hold"))
-    a.k(mini, "y", (0, 120.0, "hold"), (24, 120.0, "back"), (50, 176.0, "hold"))
+    a.k(mini, "y", (0, 120.0, "hold"), (24, 120.0, "back"), (50, 172.0, "hold"))
     a.k(mini, "opacity", (0, 0.0, "hold"), (24, 0.0, "out"), (34, 1.0, "hold"))
     a.k(sweep, "scaleX", (0, 0.3, "hold"), (0, 0.3, "out"), (40, 1.0, "hold"))
     a.k(sweep, "scaleY", (0, 0.3, "hold"), (0, 0.3, "out"), (40, 1.0, "hold"))

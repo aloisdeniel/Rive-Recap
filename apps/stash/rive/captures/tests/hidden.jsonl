@@ -1,81 +1,8 @@
 {"schema": 1, "kind": "header", "artboard": "Recap", "stateMachine": "Recap", "intervalFrames": 1}
 {"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}
 {"frame": 1, "time": 0.0166666675, "values": [{"path": "_visibleCount", "value": 7}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 132, "time": 2.19999862, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
-{"frame": 133, "time": 2.21666527, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
-{"frame": 134, "time": 2.23333192, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
-{"frame": 135, "time": 2.24999857, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
-{"frame": 136, "time": 2.26666522, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
-{"frame": 137, "time": 2.28333187, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
-{"frame": 138, "time": 2.29999852, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
-{"frame": 139, "time": 2.31666517, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
-{"frame": 140, "time": 2.33333182, "values": [{"path": "screenProgress", "value": 0.021428572}]}
-{"frame": 141, "time": 2.34999847, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
-{"frame": 142, "time": 2.36666512, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
-{"frame": 143, "time": 2.38333178, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
-{"frame": 144, "time": 2.39999843, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
-{"frame": 145, "time": 2.41666508, "values": [{"path": "currentScreen", "value": 2}, {"path": "screenProgress", "value": 0}, {"path": "_visibleIndex", "value": 2}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 276, "time": 4.60000467, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
-{"frame": 277, "time": 4.61667156, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
-{"frame": 278, "time": 4.63333845, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
-{"frame": 279, "time": 4.65000534, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
-{"frame": 280, "time": 4.66667223, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
-{"frame": 281, "time": 4.68333912, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
-{"frame": 282, "time": 4.70000601, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
-{"frame": 283, "time": 4.7166729, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
-{"frame": 284, "time": 4.73333979, "values": [{"path": "screenProgress", "value": 0.021428572}]}
-{"frame": 285, "time": 4.75000668, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
-{"frame": 286, "time": 4.76667356, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
-{"frame": 287, "time": 4.78334045, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
-{"frame": 288, "time": 4.80000734, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
-{"frame": 289, "time": 4.81667423, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
-{"frame": 290, "time": 4.83334112, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
-{"frame": 291, "time": 4.85000801, "values": [{"path": "currentScreen", "value": 4}, {"path": "screenProgress", "value": 0}, {"path": "_visibleIndex", "value": 3}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 422, "time": 7.03337049, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
-{"frame": 423, "time": 7.05003738, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
-{"frame": 424, "time": 7.06670427, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
-{"frame": 425, "time": 7.08337116, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
-{"frame": 426, "time": 7.10003805, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
-{"frame": 427, "time": 7.11670494, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
-{"frame": 428, "time": 7.13337183, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
-{"frame": 429, "time": 7.15003872, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
-{"frame": 430, "time": 7.16670561, "values": [{"path": "screenProgress", "value": 0.021428572}]}
-{"frame": 431, "time": 7.1833725, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
-{"frame": 432, "time": 7.20003939, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
-{"frame": 433, "time": 7.21670628, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
-{"frame": 434, "time": 7.23337317, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
-{"frame": 435, "time": 7.25004005, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
-{"frame": 436, "time": 7.26670694, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
-{"frame": 437, "time": 7.28337383, "values": [{"path": "currentScreen", "value": 7}, {"path": "screenProgress", "value": 0}, {"path": "_visibleIndex", "value": 4}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 568, "time": 9.46669388, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
-{"frame": 569, "time": 9.48336029, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
-{"frame": 570, "time": 9.5000267, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
-{"frame": 571, "time": 9.51669312, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
-{"frame": 572, "time": 9.53335953, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
-{"frame": 573, "time": 9.55002594, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
-{"frame": 574, "time": 9.56669235, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
-{"frame": 575, "time": 9.58335876, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
-{"frame": 576, "time": 9.60002518, "values": [{"path": "screenProgress", "value": 0.021428572}]}
-{"frame": 577, "time": 9.61669159, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
-{"frame": 578, "time": 9.633358, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
-{"frame": 579, "time": 9.65002441, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
-{"frame": 580, "time": 9.66669083, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
-{"frame": 581, "time": 9.68335724, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
-{"frame": 582, "time": 9.70002365, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
-{"frame": 583, "time": 9.71669006, "values": [{"path": "currentScreen", "value": 4}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": -1}, {"path": "_visibleIndex", "value": 3}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 714, "time": 11.8999901, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
-{"frame": 715, "time": 11.9166565, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
-{"frame": 716, "time": 11.9333229, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
-{"frame": 717, "time": 11.9499893, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
-{"frame": 718, "time": 11.9666557, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
-{"frame": 719, "time": 11.9833221, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
-{"frame": 720, "time": 11.9999886, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
-{"frame": 721, "time": 12.016655, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
-{"frame": 722, "time": 12.0333214, "values": [{"path": "screenProgress", "value": 0.021428572}]}
-{"frame": 723, "time": 12.0499878, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
-{"frame": 724, "time": 12.0666542, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
-{"frame": 725, "time": 12.0833206, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
-{"frame": 726, "time": 12.099987, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
-{"frame": 727, "time": 12.1166534, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
-{"frame": 728, "time": 12.1333199, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
-{"frame": 728, "time": 12.1333199, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 4}, {"path": "screenProgress", "value": 0.0357142873}, {"path": "_navDir", "value": -1}, {"path": "_visibleCount", "value": 7}, {"path": "_visibleIndex", "value": 3}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}
+{"frame": 145, "time": 2.41666508, "values": [{"path": "currentScreen", "value": 2}, {"path": "_visibleIndex", "value": 2}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 291, "time": 4.85000801, "values": [{"path": "currentScreen", "value": 4}, {"path": "_visibleIndex", "value": 3}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 437, "time": 7.28337383, "values": [{"path": "currentScreen", "value": 7}, {"path": "_visibleIndex", "value": 4}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 583, "time": 9.71669006, "values": [{"path": "currentScreen", "value": 4}, {"path": "_navDir", "value": -1}, {"path": "_visibleIndex", "value": 3}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 728, "time": 12.1333199, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 4}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": -1}, {"path": "_visibleCount", "value": 7}, {"path": "_visibleIndex", "value": 3}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}

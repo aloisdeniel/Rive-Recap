@@ -42,13 +42,13 @@ def scene1():
         (204, 664, 132, 60, 0.62, LEAF_PALE, LEAF_DARK, "leaf", 8),
     ]
     for i, (x, y, L, Wd, r, c1, c2, kind, dl) in enumerate(specs):
-        n, p = leaf(f"Jungle {i}", x, y, L, Wd, rot=r, light=c1, dark=c2, kind=kind, rib_a=0.4)
+        n, p = leaf(f"Jungle {i}", x, y, L, Wd, rot=r, light=c1, dark=c2, kind=kind, rib_a=0.4, morph=True)
         jungle.append(n)
         sc.unfurl(p, 26 + dl, 58 + dl, rot=r, rot0=r * 0.2)
         sc.sway(p["node"], r, 0.03 + 0.01 * (i % 3), 300 + 30 * (i % 4), i * 40)
     # the bendable hero leaf (signature interaction) sits in its own bend wrapper
     bend_id = ID()
-    hl, hp = leaf("Hero leaf", 0, 0, 176, 168, rot=0.0, light=LEAF, dark=LEAF_DARK, kind="heart", rib_a=0.45)
+    hl, hp = leaf("Hero leaf", 0, 0, 176, 168, rot=0.0, light=LEAF, dark=LEAF_DARK, kind="heart", rib_a=0.45, morph=True)
     sc.unfurl(hp, 30, 64, rot=0.0, rot0=-0.5)
     sc.sway(hp["node"], 0.0, 0.035, 330, 120)
     hero_bend = node("Hero bend", hl, x=226, y=660, rot=0.78, id=bend_id)
@@ -56,27 +56,24 @@ def scene1():
     jungle.insert(3, hero_bend)
 
     # --- seed (motif): two paper shells hinged at the base
-    seed_id, ls_id, rs_id = ID(), ID(), ID()
-    shell_l = "M0 0 C-50 0 -66 -44 -64 -84 C-62 -126 -30 -154 0 -156 L-7 -122 L4 -92 L-5 -58 L3 -30 Z"
-    shell_r = "M0 0 C50 0 66 -44 64 -84 C62 -126 30 -154 0 -156 L-7 -122 L4 -92 L-5 -58 L3 -30 Z"
-    inner = shape("Seed inner", ellipse(104, 132), lin_grad([(0, col(CREAM_DARK)), (1, col("#B9A87A"))], 0, -60, 0, 60),
-                  y=-74)
+    seed_id = ID()
     stem_trim = ID()
     stem = line("Sprout", "M0 -24 C 8 -70 -10 -110 4 -168", LEAF, 6, trim_el=trim(0, 0, id=stem_trim))
     sc.key(stem_trim, "end", [(0, 0.0, "hold"), (16, 0.0, "outs"), (46, 1.0)])
-    shells = node("Seed", *stack(
-        inner, stem,
-        node("Shell L", poly("Shell L face", shell_l, CREAM), line("Shell L rim", shell_l, CREAM_DARK, 1.6, 0.9),
-             id=ls_id),
-        node("Shell R", poly("Shell R face", shell_r, CREAM_SHADE), line("Shell R rim", shell_r, CREAM_DARK, 1.6, 0.9),
-             id=rs_id),
-    ), x=195, y=716, id=seed_id)
+    # two real paper half-shells (scripts/paperleaf, shape = 1): closed, they meet as an almond; they squash
+    # (anticipation), crack along the seam and fall open, showing their darker inner faces
+    s3, si = leaf3d("Seed shells 3D", 0, 6, pair=1, shape=1, L=160, W=64, fold=0.0, cup=1.1, curl=0.25, wave=0.0,
+                    flip=1.45, spread=0.0, gap=0, veins=0.0, glow=0.25, fibre=0.8, ambient=0.66,
+                    front=CREAM, back="#E6D8B0", rim="#FFFDF2", glowColor="#F8EED0", seed=7,
+                    halfW=150, top=-210, bottom=40, res=2)
+    sc.live3d(si)
+    sc.k3(si, "flip", [(0, 1.45, "hold"), (12, 1.45, "back"), (40, 1.12)])
+    sc.k3(si, "spread", [(0, 0.0, "hold"), (12, 0.0, "back"), (42, 0.64)])
+    sc.k3(si, "gap", [(0, 0.0, "hold"), (12, 0.0, "outs"), (40, 6.0)])
+    sc.idle.key(si["spread"], "propertyValue", [(0, 0.64, "sine"), (180, 0.665, "sine"), (360, 0.64)])
+    shells = node("Seed", *stack(stem, s3), x=195, y=700, id=seed_id)
     sc.key(seed_id, "scaleY", [(0, 1.0, "hold"), (1, 1.0, "in"), (12, 0.88, "back"), (26, 1.0)])
     sc.key(seed_id, "scaleX", [(0, 1.0, "hold"), (1, 1.0, "in"), (12, 1.08, "back"), (26, 1.0)])
-    sc.key(ls_id, "rotation", [(0, 0.0, "hold"), (12, 0.0, "back"), (38, -0.66)])
-    sc.key(rs_id, "rotation", [(0, 0.0, "hold"), (14, 0.0, "back"), (40, 0.6)])
-    sc.sway(ls_id, -0.66, 0.02, 360, 0)
-    sc.sway(rs_id, 0.6, 0.02, 360, 180)
     seed_shadow = shadow("Seed shadow", 190, 30, 195, 722, 0.35, 12)
     sc.seed_id = seed_id
 
@@ -91,7 +88,7 @@ def scene1():
     wordmark = text("Wordmark", ["Sprig"], font="fr", size=96, color=CREAM, wght=620, soft=100, wonk=1, x=195, y=402,
                     ox=0.5, oy=0.5, id=wm_id, modifiers=[wm_mod])
     reveal_keys(sc.ef, wm_rid, 40, 80, "out")
-    wm_leaf, wm_lp = leaf("Wordmark leaf", 286, 352, 34, 22, rot=0.7, light=LEAF, dark=LEAF_DARK, rib_a=0.5)
+    wm_leaf, wm_lp = leaf("Wordmark leaf", 286, 352, 34, 22, rot=0.7, light=LEAF, dark=LEAF_DARK, rib_a=0.5, morph=True)
     sc.unfurl(wm_lp, 70, 92, rot=0.7)
 
     # --- copy
@@ -102,15 +99,15 @@ def scene1():
              lp=lp(), id=name_id, overflow="ellipsis"),
         text("Headline", [("Your 2026 on Sprig", P("introHeadline"))], font="fr", size=38, color=CREAM, wght=560,
              soft=60, lh=40, align="center", lp=lp(), modifiers=[rg]),
-        text("Support", [("A year, uniquely yours.", P("introSupport"))], font="dm", size=16, color=CREAM, lh=22,
+        text("Support", [("A year, uniquely yours.", P("introSupport"))], font="dm", size=18, color=CREAM, lh=24,
              align="center", lp=lp(), op=0.82, id=sup_id),
     ], gap=10, align="topCenter", id=col_id)
     sc.key(name_id, "opacity", [(0, 0.0, "hold"), (52, 0.0, "outs"), (72, 1.0)])
     reveal_keys(sc.ef, rid, 58, 96)
     sc.key(sup_id, "opacity", [(0, 0.0, "hold"), (86, 0.0, "outs"), (108, 0.82)])
     period_id = ID()
-    period = text("Period", [("January 1–December 31, 2026", P("periodLabel"))], font="dm", size=13, color=CREAM,
-                  wght=500, ls=1.2, x=24, y=742, w=342, align="center", op=0.7, id=period_id)
+    period = text("Period", [("January 1–December 31, 2026", P("periodLabel"))], font="dm", size=14, color=CREAM,
+                  wght=500, ls=1.1, x=24, y=742, w=342, align="center", op=0.7, id=period_id)
     sc.key(period_id, "opacity", [(0, 0.0, "hold"), (96, 0.0, "outs"), (116, 0.7)])
 
     sc.key(glow_id, "scaleX", [(0, 0.2, "hold"), (8, 0.2, "outs"), (70, 1.0)])
@@ -155,14 +152,14 @@ def scene2():
     sc.settle.append((back_id, "x", -14.0))
 
     # carried motif: the opened seed from scene 1 settles at the vine's root
-    shell_l = "M0 0 C-50 0 -66 -44 -64 -84 C-62 -126 -30 -154 0 -156 L-7 -122 L4 -92 L-5 -58 L3 -30 Z"
-    shell_r = "M0 0 C50 0 66 -44 64 -84 C62 -126 30 -154 0 -156 L-7 -122 L4 -92 L-5 -58 L3 -30 Z"
     carry_id = ID()
-    seed = node("Carried seed",
-                node("Shell L", poly("Face", shell_l, CREAM), rot=-0.66),
-                node("Shell R", poly("Face", shell_r, CREAM_SHADE), rot=0.6),
-                shape("Inner", ellipse(104, 132), fill(col(CREAM_DARK)), y=-74),
-                x=92, y=744, sx=0.5, sy=0.5, id=carry_id)
+    c3, ci = leaf3d("Carried seed 3D", 0, 6, pair=1, shape=1, L=160, W=64, fold=0.0, cup=1.1, curl=0.25, wave=0.0,
+                    flip=1.12, spread=0.64, gap=6, veins=0.0, glow=0.25, fibre=0.8, ambient=0.66,
+                    front=CREAM, back="#E6D8B0", rim="#FFFDF2", glowColor="#F8EED0", seed=7,
+                    halfW=150, top=-210, bottom=40, res=2)
+    sc.live3d(ci)
+    sc.k3(ci, "spread", [(0, 0.64, "hold"), (2, 0.64, "fold"), (42, 0.72)])
+    seed = node("Carried seed", c3, x=92, y=744, sx=0.5, sy=0.5, id=carry_id)
     sc.key(carry_id, "x", [(0, 195, "hold"), (2, 195, "fold"), (42, 92)])
     sc.key(carry_id, "y", [(0, 716, "hold"), (2, 716, "fold"), (42, 744)])
     sc.key(carry_id, "scaleX", [(0, 1.0, "hold"), (2, 1.0, "fold"), (42, 0.5)])
@@ -183,7 +180,7 @@ def scene2():
         L = 44 + 18 * ((i * 7) % 3)
         rot = ang + math.pi / 2 + side * 0.95
         c1, c2 = [(LEAF, LEAF_DARK), (LEAF_PALE, LEAF), (LEAF_DARK, LEAF_DEEP)][i % 3]
-        n, p = leaf(f"Vine leaf {i}", px, py, L, L * 0.62, rot=rot, light=c1, dark=c2, rib_a=0.4)
+        n, p = leaf(f"Vine leaf {i}", px, py, L, L * 0.62, rot=rot, light=c1, dark=c2, rib_a=0.4, morph=True)
         leaves.append(n)
         t0 = 12 + f * 72
         sc.unfurl(p, t0 + 4, t0 + 28, rot=rot, rot0=rot - side * 0.8)
@@ -221,7 +218,7 @@ def plant_tuft(i, s=1.0):
         [(-4, 0, 60, 16, -0.15), (4, 0, 56, 16, 0.2), (0, 0, 66, 14, 0.02), (-2, 0, 40, 16, -0.6)],
         [(0, 0, 30, 30, -0.9), (0, 0, 34, 28, 0.9), (0, 0, 38, 28, 0.0)],
     ][i % 4]
-    cols = [(LEAF, LEAF_DARK), (LEAF_PALE, LEAF), (LEAF_DARK, LEAF_DEEP), (FOREST_PALE, FOREST_SOFT)]
+    cols = [(LEAF, LEAF_DARK), (LEAF_PALE, LEAF), (LEAF_DARK, LEAF_DEEP), (LEAF_PALE, LEAF_DARK)]
     for j, spec in enumerate(kinds):
         x, y, L, Wd, r = spec[:5]
         kind = spec[5] if len(spec) > 5 else "leaf"
@@ -234,10 +231,10 @@ def plant_tuft(i, s=1.0):
 def scene3():
     sc = Scene(3, FOREST_DEEP)
     layers = []
-    specs = [  # y0, colour, shade
-        (560, CREAM_DARK, "#C4B68A"),
-        (628, CREAM_SHADE, CREAM_DARK),
-        (708, CREAM, CREAM_SHADE),
+    specs = [  # y0, colour, shade: three sheets of green paper, lightest at the back (aerial depth)
+        (556, "#4E8A69", FOREST_PALE),
+        (626, FOREST_PALE, FOREST_SOFT),
+        (704, FOREST_SOFT, FOREST_MID),
     ]
     for i, (y0, c, s) in enumerate(specs):
         lid = ID()
@@ -247,7 +244,7 @@ def scene3():
         lyr = node(f"Paper layer {i}", *stack(
                    poly("Shadow", d, "#05130E", a=0.35, y=-8, feather=14),
                    poly("Paper", d, c),
-                   line("Edge light", d.split(" L420")[0], "#FFFFFF", 1.5, 0.5)),
+                   line("Edge light", d.split(" L420")[0], LEAF_PALE, 1.6, 0.55)),
                    id=lid)
         layers.append(lyr)
         sc.key(lid, "y", [(0, 160 + 60 * i, "hold"), (2 + i * 6, 160 + 60 * i, "out"), (40 + i * 6, 0)])
@@ -256,12 +253,12 @@ def scene3():
     spots = [(70, 556, 0.62), (150, 548, 0.6), (240, 552, 0.62), (322, 545, 0.6),
              (104, 628, 0.8), (205, 622, 0.82), (300, 630, 0.78),
              (138, 712, 1.0), (262, 706, 1.02)]
-    body = [(APRICOT, APRICOT_DARK, APRICOT_PALE), (LEAF, LEAF_DARK, LEAF_PALE), (CREAM, CREAM_DARK, "#FFFFFF"),
-            (FOREST_PALE, FOREST_SOFT, LEAF_PALE)]
+    body = [(APRICOT, APRICOT_DARK, APRICOT_PALE), (CREAM, CREAM_DARK, "#FFFFFF"), (APRICOT_PALE, "#E9B48F", "#FFF1E4"),
+            (CREAM_SHADE, CREAM_DARK, "#FFFFFF")]
     for i, (x, y, s) in enumerate(spots):
         pid = ID()
         b, sh, rim = body[i % 4]
-        pt = pot(f"Pot {i}", x, y, 56, 46, b, sh, rim, plant=plant_tuft(i), s=s, id=pid)
+        pt = pot(f"Pot {i}", x, y, 60, 50, b, sh, rim, plant=plant_tuft(i, 1.15), s=s, id=pid)
         pots.append(pt)
         t0 = 18 + i * 5
         sc.key(pid, "x", [(0, 195, "hold"), (t0, 195, "back"), (t0 + 30, x)])
@@ -286,73 +283,101 @@ def scene3():
 
 
 # ===================================================================== 4  New leaves
+def fern(name, x, y, L, rot, n=7, c1=LEAF_DARK, c2=LEAF_DEEP, s=1.0):
+    """A frond: a curved stem with paired leaflets shrinking toward the tip."""
+    kids = [line("Stem", f"M0 0 C {L*0.1:.1f} {-L*0.35:.1f} {L*0.05:.1f} {-L*0.7:.1f} {L*0.18:.1f} {-L:.1f}", c2, 2.2)]
+    for i in range(n):
+        f = (i + 1) / (n + 1)
+        (px, py), ang = point_at(f"M0 0 C {L*0.1:.1f} {-L*0.35:.1f} {L*0.05:.1f} {-L*0.7:.1f} {L*0.18:.1f} {-L:.1f}", f)
+        ll = L * 0.32 * (1 - f * 0.65)
+        for sd in (-1, 1):
+            kids.append(leaf(f"{name} leaflet {i}{'LR'[sd > 0]}", px, py, ll, ll * 0.36, rot=ang + math.pi / 2 + sd * 1.05,
+                             light=c1, dark=c2, rib=None)[0])
+    return node(name, *kids, x=x, y=y, rot=rot, sx=s, sy=s)
+
+
 def scene4():
     sc = Scene(4, CREAM, light=True)
-    sun_id = ID()
-    sun = shape("Sun", ellipse(300, 300), rad_grad([(0, col(APRICOT_PALE, 0.95)), (0.7, col(APRICOT_PALE, 0.5)),
-                                                   (1, col(APRICOT_PALE, 0))], 0, 0, 150), x=195, y=520, id=sun_id)
-    sc.pop(sun_id, 6, 50, 0.3, 1.0, "outs")
-    canopy = []
+    # --- the sunrise inside the opened leaves
+    sun_id, disc_id = ID(), ID()
+    sun = shape("Sun glow", ellipse(420, 420), rad_grad([(0, col(APRICOT_PALE, 0.95)), (0.45, col(APRICOT_PALE, 0.55)),
+                                                       (1, col(APRICOT_PALE, 0))], 0, 0, 210), x=195, y=560, id=sun_id)
+    disc = shape("Sun", ellipse(140, 140), fill(col("#FBE3C8")), x=195, y=548, id=disc_id)
+    sc.pop(sun_id, 6, 60, 0.3, 1.0, "outs")
+    sc.pop(disc_id, 20, 62, 0.0, 1.0, "outs")
+    sc.idle.key(sun_id, "scaleX", [(0, 1.0, "sine"), (180, 1.04, "sine"), (360, 1.0)])
+    sc.idle.key(sun_id, "scaleY", [(0, 1.0, "sine"), (180, 1.04, "sine"), (360, 1.0)])
+    # --- the jungle diorama the leaves open around: misty back strap leaves, ferns, big hearts, bright front
+    back, mid, front = [], [], []
+    for i, (x, y, L, Wd, r) in enumerate([(128, 756, 230, 46, -0.42), (176, 760, 270, 40, -0.14), (226, 760, 262, 42, 0.2),
+                                           (268, 756, 214, 46, 0.46)]):
+        n, p = leaf(f"Mist strap {i}", x, y, L, Wd, rot=r, light="#CFE3AE", dark="#B8D394", rib=None, morph=True)
+        back.append(n)
+        sc.unfurl(p, 30 + i * 4, 70 + i * 4, rot=r, rot0=r * 0.3)
+        sc.sway(p["node"], r, 0.018, 420, i * 70)
+    for i, (x, y, L, r, c1, c2) in enumerate([(118, 770, 220, -0.55, LEAF_DARK, LEAF_DEEP), (276, 770, 210, 0.55, LEAF, LEAF_DARK),
+                                               (160, 772, 160, -0.18, FOREST_PALE, FOREST_SOFT)]):
+        fid = ID()
+        fr = fern(f"Fern {i}", x, y, L, r, c1=c1, c2=c2)
+        fr.attrs["id"] = fid
+        mid.append(fr)
+        sc.key(fid, "scaleY", [(0, 0.0, "hold"), (34 + i * 6, 0.0, "backs"), (74 + i * 6, 1.0)])
+        sc.key(fid, "scaleX", [(0, 0.6, "hold"), (34 + i * 6, 0.6, "backs"), (74 + i * 6, 1.0)])
+        sc.sway(fid, r, 0.025, 380, i * 90)
     for i, (x, y, L, Wd, r, c1, c2, kind) in enumerate([
-        (150, 760, 170, 70, -0.55, FOREST_SOFT, FOREST_MID, "leaf"),
-        (240, 760, 170, 70, 0.55, FOREST_SOFT, FOREST_MID, "leaf"),
-        (175, 770, 150, 120, -0.25, LEAF_DARK, LEAF_DEEP, "heart"),
-        (215, 770, 140, 110, 0.3, LEAF, LEAF_DARK, "heart"),
-        (195, 776, 150, 44, 0.02, LEAF_PALE, LEAF, "leaf"),
-        (160, 774, 110, 60, -1.0, APRICOT, APRICOT_DARK, "leaf"),
-        (232, 774, 120, 56, 1.05, FOREST_PALE, FOREST_SOFT, "leaf"),
+        (136, 744, 140, 128, -0.62, FOREST_SOFT, FOREST_MID, "heart"),
+        (256, 740, 132, 120, 0.66, FOREST_PALE, FOREST_SOFT, "heart"),
+        (178, 760, 120, 104, -0.22, LEAF_DARK, LEAF_DEEP, "heart"),
+        (218, 760, 112, 98, 0.3, LEAF, LEAF_DARK, "heart"),
+        (156, 772, 112, 48, -1.0, APRICOT, APRICOT_DARK, "leaf"),
+        (238, 772, 118, 46, 0.95, APRICOT_DARK, "#C97B4C", "leaf"),
+        (196, 776, 140, 42, 0.04, LEAF_PALE, LEAF, "leaf"),
     ]):
-        n, p = leaf(f"Canopy {i}", x, y, L, Wd, rot=r, light=c1, dark=c2, kind=kind, rib_a=0.4)
-        canopy.append(n)
-        sc.unfurl(p, 24 + i * 5, 54 + i * 5, rot=r)
+        n, p = leaf(f"Canopy {i}", x, y, L, Wd, rot=r, light=c1, dark=c2, kind=kind, rib_a=0.4, morph=True)
+        front.append(n)
+        sc.unfurl(p, 40 + i * 6, 76 + i * 6, rot=r)
         sc.sway(p["node"], r, 0.03, 320 + 25 * i, i * 45)
-    outer_l = "M0 0 C -130 -30 -222 -200 -196 -390 C -176 -530 -76 -608 0 -640 C -38 -470 -42 -230 0 0 Z"
-    inner_l = "M0 0 C -40 -230 -38 -470 0 -640 C -34 -560 -62 -470 -68 -330 C -74 -190 -40 -60 0 0 Z"
-    veins_l = ["M-10 -120 C -60 -140 -110 -170 -150 -210", "M-16 -260 C -70 -290 -120 -320 -160 -370",
-               "M-20 -400 C -60 -430 -100 -470 -128 -510"]
-
-    def mirror(d):
-        return re.sub(r"(-?\d+\.?\d*)\s+(-?\d+\.?\d*)",
-                      lambda m: f"{-float(m.group(1)):g} {m.group(2)}", d)
-    halves = {}
-    for side, sgn in (("L", 1), ("R", -1)):
-        hid = ID()
-        o = outer_l if side == "L" else mirror(outer_l)
-        inn = inner_l if side == "L" else mirror(inner_l)
-        veins = [line(f"Vein {j}", v if side == "L" else mirror(v), CREAM, 2.2, 0.3) for j, v in enumerate(veins_l)]
-        face = LEAF_DARK if side == "L" else LEAF_DEEP
-        halves[side] = node(f"Giant leaf {side}", *stack(
-            poly("Drop shadow", o, "#3A3A1A", a=0.25, x=sgn * 10, y=8, feather=18),
-            poly("Outer", o, face), *veins,
-            poly("Inner fold", inn, CREAM_SHADE),
-            line("Fold crease", "M0 0 C -38 -230 -36 -470 0 -640" if side == "L" else "M0 0 C 38 -230 36 -470 0 -640",
-                 "#FFFFFF", 1.6, 0.6)), x=195, y=800, sx=0.92, sy=0.86, id=hid)
-        closed, opened = (0.34, -0.44) if side == "L" else (-0.34, 0.44)
-        sc.key(hid, "rotation", [(0, closed, "hold"), (1, closed, "antic"), (12, closed + 0.04 * sgn, "back"),
-                                 (52, opened)])
-        sc.sway(hid, opened, 0.012, 360, 0 if side == "L" else 180)
-    hero, unit, copy = metric_text(sc, dict(x=24, y=410, w=342, size=118, align="center", color=FOREST), (32, 112),
-                                   326, "center", unit_kw=dict(x=24, y=532, w=342, align="center"))
-    plate_id = ID()
-    plate = shape("Number plate", ellipse(250, 210), fill(col(CREAM, 0.55), feather=26), x=195, y=486, id=plate_id)
-    sc.pop(plate_id, 20, 50, 0.4, 1.0, "outs")
+    # --- the hero: one enormous folded paper leaf pair (real 3D, scripts/paperleaf) opening around it all.
+    # Closed it is a tall paper bud; it shivers (anticipation), then the halves fall open and roll their inner
+    # cream faces toward us, tips curling over, exactly the concept's cradle.
+    g3, gi = leaf3d("Giant leaves 3D", 195, 812, pair=1, L=440, W=138, shape=0, fold=0.3, cup=0.55, curl=0.0,
+                    tipCurl=0.5, twist=0.4, wave=0.6, gap=8, spread=0.0, flip=-0.2, pitch=0.0, persp=1500,
+                    front="#7FA850", back="#F2EBD3", glowColor="#E6F2B8", rim="#FFFBEA", glow=0.6, veins=0.9,
+                    ambient=0.5, shadow=0.2, shadowX=0, shadowY=16, shadowBlur=30, seed=4,
+                    halfW=275, top=-530, bottom=20, res=1.6)
+    sc.live3d(gi)
+    # closed: a tall paper bud. It shivers (anticipation), then falls open, twisting its cream inner faces out
+    sc.k3(gi, "spread", [(0, 0.0, "hold"), (16, 0.0, "io"), (21, -0.018, "io"), (26, 0.022, "antic"), (32, 0.0, "backs"),
+                         (88, 0.47)])
+    sc.k3(gi, "gap", [(0, 8, "hold"), (32, 8, "outs"), (84, 76)])
+    sc.k3(gi, "flip", [(0, -0.2, "hold"), (32, -0.2, "outs"), (88, -0.42)])
+    sc.k3(gi, "twist", [(0, 0.4, "hold"), (36, 0.4, "backs"), (96, 2.0)])
+    sc.k3(gi, "curl", [(0, 0.0, "hold"), (36, 0.0, "outs"), (92, -0.12)])
+    sc.k3(gi, "tipCurl", [(0, 0.5, "hold"), (40, 0.5, "backs"), (104, 0.9)])
+    sc.idle.key(gi["spread"], "propertyValue", [(0, 0.47, "sine"), (180, 0.482, "sine"), (360, 0.47)])
+    sc.idle.key(gi["twist"], "propertyValue", [(0, 2.0, "sine"), (180, 2.06, "sine"), (360, 2.0)])
+    sc.settle.append((gi["spread"], "propertyValue", -0.08))
+    hero, unit, copy = metric_text(sc, dict(x=24, y=100, w=342, size=124, align="center", color=FOREST), (32, 268),
+                                   326, "center", unit_kw=dict(x=24, y=230, w=342, align="center"))
     flutter = []
-    for i, (x, y, r) in enumerate([(70, 790, 0.8), (320, 800, -0.6), (110, 818, 1.6), (280, 822, 2.2)]):
-        n, p = leaf(f"Fallen leaf {i}", x, y, 26, 14, rot=r, light=LEAF_DARK, dark=LEAF_DEEP, rib=None)
+    for i, (x, y, r) in enumerate([(60, 806, 0.8), (330, 812, -0.6), (98, 830, 1.6), (296, 834, 2.2)]):
+        n, p = leaf(f"Fallen leaf {i}", x, y, 24, 13, rot=r, light=LEAF_DARK, dark=LEAF_DEEP, rib=None)
         flutter.append(n)
-        sc.key(p["node"], "y", [(0, y - 300, "hold"), (30 + i * 8, y - 300, "outs"), (84 + i * 8, y)])
-        sc.key(p["node"], "rotation", [(0, r - 3, "hold"), (30 + i * 8, r - 3, "outs"), (84 + i * 8, r)])
-    content = stack(bg_rect(CREAM), sun, canopy, plate, hero, unit, halves["L"], halves["R"], flutter, copy)
+        sc.key(p["node"], "y", [(0, y - 320, "hold"), (40 + i * 8, y - 320, "outs"), (96 + i * 8, y)])
+        sc.key(p["node"], "x", [(0, x + 40, "hold"), (40 + i * 8, x + 40, "sine"), (68 + i * 8, x - 24, "sine"),
+                                (96 + i * 8, x)])
+        sc.key(p["node"], "rotation", [(0, r - 3, "hold"), (40 + i * 8, r - 3, "outs"), (96 + i * 8, r)])
+    ground = shape("Ground shadow", ellipse(420, 90), fill(col("#B7A77A", 0.3), feather=26), x=195, y=800)
+    content = stack(bg_rect(CREAM), sun, disc, back, g3, mid, ground, front, flutter, hero, unit, copy)
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
-    sc.giant = (halves["L"].id, halves["R"].id)
     return sc, root
 
 
 # ===================================================================== 5  Cuttings rooted
 def scene5():
     sc = Scene(5, FOREST)
-    JX, JY = 214, 676   # jar centre
+    JX, JY = 214, 650   # jar centre (clear of the controls)
     jar_id = ID()
     water_id = ID()
     roots = []
@@ -373,7 +398,7 @@ def scene5():
         tx, ty = sx + lean * 80, -196
         for j, (L, r) in enumerate([(54, lean - 0.7), (60, lean + 0.65), (44, lean - 0.1)]):
             n, p = leaf(f"Cutting {i}.{j}", tx, ty + 6 * j, L, L * 0.6, rot=r,
-                        light=[LEAF, LEAF_PALE, LEAF_DARK][(i + j) % 3], dark=[LEAF_DARK, LEAF, LEAF_DEEP][(i + j) % 3])
+                        light=[LEAF, LEAF_PALE, LEAF_DARK][(i + j) % 3], dark=[LEAF_DARK, LEAF, LEAF_DEEP][(i + j) % 3], morph=True)
             tops.append(n)
             sc.unfurl(p, 30 + i * 6 + j * 4, 58 + i * 6 + j * 4, rot=r)
             sc.sway(p["node"], r, 0.04, 300, (i * 3 + j) * 37)
@@ -456,7 +481,7 @@ def scene6():
     sprigs = []
     for i, f in enumerate([0.1, 0.3, 0.5, 0.7, 0.9]):
         (px, py), ang = point_at(VINE6, f)
-        n, p = leaf(f"Streak leaf {i}", px, py, 30, 18, rot=ang - 1.2, light=LEAF, dark=LEAF_DEEP, rib_a=0.4)
+        n, p = leaf(f"Streak leaf {i}", px, py, 30, 18, rot=ang - 1.2, light=LEAF, dark=LEAF_DEEP, rib_a=0.4, morph=True)
         sprigs.append(n)
         sc.unfurl(p, 40 + i * 9, 62 + i * 9, rot=ang - 1.2)
         sc.sway(p["node"], ang - 1.2, 0.06, 240, i * 40)
@@ -509,32 +534,45 @@ def scene7():
         line("Frame", arch, CREAM_DARK, 8),
         shape("Sill", rect(180, 16, 4), fill(col(CREAM_DARK)), y=6),
         shape("Sill shadow", rect(180, 10, 4), fill(col("#000000", 0.08), feather=8), y=20),
-    ), x=296, y=596, id=win_id)
+    ), x=292, y=636, sx=0.9, sy=0.9, id=win_id)
     sc.key(win_id, "opacity", [(0, 0.0, "hold"), (8, 0.0, "outs"), (36, 1.0)])
-    sc.key(win_id, "y", [(0, 640, "hold"), (8, 640, "outs"), (40, 596)])
+    sc.key(win_id, "y", [(0, 680, "hold"), (8, 680, "outs"), (40, 636)])
     lh_id, rh_id = ID(), ID()
     lhand = hand("Giving hand", 1, (APRICOT, APRICOT_DARK, CREAM_SHADE), lh_id)
     rhand = hand("Receiving hand", -1, (LEAF, LEAF_DARK, CREAM_SHADE), rh_id)
-    lh_x, lh_y, rh_x, rh_y = 60, 690, 330, 650
-    sc.key(lh_id, "x", [(0, -180, "hold"), (2, -180, "out"), (34, lh_x)])
-    sc.key(lh_id, "y", [(0, lh_y, "hold")])
-    sc.key(rh_id, "x", [(0, 580, "hold"), (12, 580, "out"), (44, rh_x)])
-    sc.key(rh_id, "y", [(0, rh_y, "hold")])
-    sc.key(lh_id, "rotation", [(0, 0.0, "hold"), (52, 0.0, "io"), (64, -0.12, "back"), (84, 0.0)])
-    sc.key(rh_id, "rotation", [(0, 0.0, "hold"), (78, 0.0, "back"), (90, 0.1, "io"), (104, 0.0)])
-    sc.sway(lh_id, 0.0, 0.02, 360, 0)
-    sc.sway(rh_id, 0.0, 0.02, 360, 180)
+    # two big paper hands reach up from the bottom corners toward each other (palms up)
+    HS, HR = 1.38, 0.34
+    lh_x, lh_y, rh_x, rh_y = 30, 734, 362, 706
+    for hid, hx, hy, r, sgn, d0 in ((lh_id, lh_x, lh_y, -HR, 1, 2), (rh_id, rh_x, rh_y, HR, -1, 12)):
+        sc.key(hid, "scaleX", [(0, HS, "hold")])
+        sc.key(hid, "scaleY", [(0, HS, "hold")])
+        sc.key(hid, "x", [(0, hx - sgn * 220, "hold"), (d0, hx - sgn * 220, "out"), (d0 + 34, hx)])
+        sc.key(hid, "y", [(0, hy + 120, "hold"), (d0, hy + 120, "out"), (d0 + 34, hy)])
+    sc.key(lh_id, "rotation", [(0, -HR + 0.3, "hold"), (2, -HR + 0.3, "out"), (36, -HR, "io"), (52, -HR, "io"),
+                               (62, -HR - 0.14, "back"), (84, -HR)])
+    sc.key(rh_id, "rotation", [(0, HR - 0.3, "hold"), (12, HR - 0.3, "out"), (46, HR, "back"), (78, HR, "back"),
+                               (90, HR + 0.1, "io"), (104, HR)])
+    sc.sway(lh_id, -HR, 0.02, 360, 0)
+    sc.sway(rh_id, HR, 0.02, 360, 180)
+
+    def palm(hx, hy, r, sgn):
+        lx, ly = 58 * sgn, -26
+        c, s_ = math.cos(r), math.sin(r)
+        return hx + HS * (lx * c - ly * s_), hy + HS * (lx * s_ + ly * c)
     cut_id = ID()
     cutting = pot("Shared cutting", 0, 0, 40, 32, APRICOT_DARK, "#C9784A", APRICOT_PALE, plant=node("Cutting plant",
                   *[leaf(f"Cut leaf {j}", 0, 0, L, L * 0.6, rot=r, light=LEAF, dark=LEAF_DARK)[0]
-                    for j, (L, r) in enumerate([(40, -0.5), (46, 0.45), (52, 0.0)])]), id=cut_id)
-    # arc: giving palm -> over -> receiving palm (synchronised with the count)
-    p0 = (lh_x + 70, lh_y - 44)
-    p2 = (rh_x - 70, rh_y - 44)
-    arc = [(0, p0), (54, p0), (66, ((p0[0] + p2[0]) / 2 - 20, p0[1] - 90)), (80, (p2[0] - 6, p2[1] - 50)), (90, p2)]
-    sc.key(cut_id, "x", [(0, p0[0] - 272, "hold"), (2, p0[0] - 272, "out"), (34, p0[0], "hold")] +
+                    for j, (L, r) in enumerate([(40, -0.5), (46, 0.45), (52, 0.0)])]), s=1.3, id=cut_id)
+    # arc: giving palm -> over -> receiving palm (synchronised with the count); the pot stands on the palm
+    pl, pr = palm(lh_x, lh_y, -HR, 1), palm(rh_x, rh_y, HR, -1)
+    p0 = (pl[0], pl[1] - 32 * 1.3)
+    p2 = (pr[0], pr[1] - 32 * 1.3)
+    arc = [(0, p0), (54, p0), (66, ((p0[0] + p2[0]) / 2 - 10, min(p0[1], p2[1]) - 110)), (80, (p2[0] - 6, p2[1] - 40)),
+           (90, p2)]
+    sc.key(cut_id, "x", [(0, p0[0] - 220, "hold"), (2, p0[0] - 220, "out"), (36, p0[0], "hold")] +
            [(f, p[0], "sine") for f, p in arc[1:]])
-    sc.key(cut_id, "y", [(0, p0[1], "hold"), (54, p0[1], "out")] + [(f, p[1], "sine" if f < 80 else "back") for f, p in arc[2:]])
+    sc.key(cut_id, "y", [(0, p0[1] + 120, "hold"), (2, p0[1] + 120, "out"), (36, p0[1], "hold"), (54, p0[1], "out")] +
+           [(f, p[1], "sine" if f < 80 else "back") for f, p in arc[2:]])
     sc.key(cut_id, "rotation", [(0, 0.0, "hold"), (54, 0.0, "io"), (68, 0.25, "io"), (90, 0.0)])
     trail_trim = ID()
     trail = line("Green trail", f"M{p0[0]} {p0[1]-10} C {p0[0]+30} {p0[1]-110} {p2[0]-40} {p2[1]-120} {p2[0]} {p2[1]-30}",
@@ -542,15 +580,15 @@ def scene7():
     sc.key(trail_trim, "end", [(0, 0.0, "hold"), (56, 0.0, "io"), (88, 1.0)])
     sc.key(trail_trim, "start", [(0, 0.0, "hold"), (76, 0.0, "io"), (104, 1.0)])
     sparks = []
-    for i, (x, y) in enumerate([(212, 520), (250, 540), (178, 548)]):
+    for i, (x, y) in enumerate([(200, 500), (244, 522), (166, 530)]):
         sid = ID()
         sparks.append(shape(f"Spark {i}", E("Star", width=14.0, height=14.0, points=4, innerRadius=0.35, name="Star"),
                             fill(col(APRICOT)), x=x, y=y, sx=0.0, sy=0.0, id=sid))
         sc.key(sid, "scaleX", [(0, 0.0, "hold"), (86 + i * 4, 0.0, "back"), (98 + i * 4, 1.0)])
         sc.key(sid, "scaleY", [(0, 0.0, "hold"), (86 + i * 4, 0.0, "back"), (98 + i * 4, 1.0)])
         sc.idle.key(sid, "rotation", [(0, 0.0, "lin"), (360, 6.2831855)])
-    hero, unit, copy = metric_text(sc, dict(x=30, y=100, w=330, size=124, align="left", color=FOREST), (30, 290), 330,
-                                   "left", unit_kw=dict(x=34, y=232, w=330, align="left"))
+    hero, unit, copy = metric_text(sc, dict(x=30, y=96, w=330, size=124, align="left", color=FOREST), (30, 268), 330,
+                                   "left", unit_kw=dict(x=34, y=226, w=330, align="left"))
     content = stack(bg_rect(CREAM),
                     shape("Floor", rect(W + 40, 160), fill(col(CREAM_SHADE)), x=195, y=800),
                     window, trail, rhand, lhand, cutting, sparks, hero, unit, copy)
@@ -563,7 +601,7 @@ def scene7():
 def scene8():
     sc = Scene(8, FOREST)
     k = 8
-    CX, CY, R = 195, 596, 128
+    CX, CY, R = 195, 624, 114
     src = P(METRIC[k])
     ring_trim = ID()
     arc_conv = count_chain(k, [f_div_clamp(12)], "arc")

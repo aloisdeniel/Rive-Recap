@@ -57,6 +57,8 @@ class El:
         if tag == "TextModifierRange":
             for p, d in (("modifyFrom", 0.0), ("modifyTo", 1.0), ("falloffFrom", 0.0), ("falloffTo", 1.0), ("offset", 0.0)):
                 REST[(oid, p)] = float(attrs.get(p, d))
+        if tag == "ScriptInputNumber":
+            REST[(oid, "propertyValue")] = float(attrs.get("propertyValue", 0.0))
         if tag == "DashPath":
             REST[(oid, "offset")] = float(attrs.get("offset", 0.0))
 

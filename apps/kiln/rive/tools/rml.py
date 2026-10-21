@@ -301,6 +301,8 @@ def keyframe(kind: str, frame: int, value, ease: str | None):
 
 
 COLOR_PROPS = {"colorValue"}
+# objects whose `propertyValue` is a colour (ScriptInputColor): keyed with KeyFrameColor
+COLOR_OBJS: set[str] = set()
 
 
 class Anim:
@@ -342,7 +344,8 @@ class Anim:
         for oid, props in by_obj.items():
             ko = E("KeyedObject", {"objectId": oid})
             for prop, kfs in props:
-                kind = "color" if prop in COLOR_PROPS else ("bool" if prop in ("isVisible",) else "double")
+                kind = "color" if (prop in COLOR_PROPS or (prop == "propertyValue" and oid in COLOR_OBJS)) else (
+                    "bool" if prop in ("isVisible", "canFocus") else "double")
                 kp = E("KeyedProperty", {"property": prop})
                 seen = {}
                 for (f, v, ease) in sorted(kfs, key=lambda t: t[0]):

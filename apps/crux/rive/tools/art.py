@@ -226,3 +226,86 @@ def wordmark_artboard():
 
 def wordmark_asset():
     return E("ComponentAsset", artboardId=WORDMARK_AB, name="Wordmark")
+
+
+# --------------------------------------------------------------- GPU 3D holds + chalk (improvement pass)
+HOLD3D_ASSET = "0:84"
+CHALK_ASSET = "0:85"
+KIND3D = {"jug": 0, "pyramid": 1, "sloper": 2, "pinch": 3, "crimp": 4, "stone": 5, "tri": 6, "volume": 6}
+SIZE3D = {"jug": 0.86, "pyramid": 0.92, "sloper": 0.86, "pinch": 0.86, "crimp": 0.84, "stone": 0.9, "tri": 1.0}
+LIVE = {}          # scene k -> [live input ids]; build_stage keys them per entrance
+
+
+def script_assets():
+    return [E("ScriptAsset", file="hold3d.luau", name="hold3d", id=HOLD3D_ASSET),
+            E("ScriptAsset", file="chalk.luau", name="chalk", id=CHALK_ASSET)]
+
+
+def _num(name, v):
+    return E("ScriptInputNumber", propertyValue=v, name=name)
+
+
+def hold3d_drawable(name, kind, color, size, scene=None, roll=0.0, bolt=0.13, speck=0.5, sway=0.0,
+                    extent=1.7, trail=None, live=None):
+    """A ScriptedDrawable running hold3d.luau. Returns (drawable, inputs-by-name)."""
+    d = E("ScriptedDrawable", scriptAssetId=HOLD3D_ASSET, name=name)
+    ins = {}
+
+    def add(el):
+        d.add(el)
+        ins[el.a["name"]] = el
+        return el
+    add(_num("size", round(size, 1)))
+    add(_num("kind", KIND3D.get(kind, 0)))
+    add(E("ScriptInputColor", propertyValue=color, name="color"))
+    add(_num("yaw", 0.0))
+    add(_num("pitch", 0.0))
+    add(_num("roll", round(roll, 4)))
+    add(_num("bolt", bolt))
+    add(_num("speck", speck))
+    add(_num("sway", sway))
+    add(_num("extent", extent))
+    add(_num("live", 1.0 if live is None else live))
+    add(E("ScriptInputBoolean", propertyValue=False, name="still", kids=[bind(model.path("reducedMotion"), 245)]))
+    add(E("ScriptInputBoolean", propertyValue=False, name="paused", kids=[bind(model.path("isPaused"), 245)]))
+    if trail:
+        for k, v in trail.items():
+            add(_num(k, v))
+    if scene is not None:
+        LIVE.setdefault(scene, []).append(ins["live"].id)
+        ins["live"].a["propertyValue"] = 0.0
+    return d, ins
+
+
+class Hold3:
+    """Drop-in for Hold with a real 3D body: outer (entrance-keyed) -> idle -> [ring?, 3D]."""
+
+    def __init__(self, name, kind, color, s, x, y, rot=0.0, seed=1, ring=False, outline=CHALK, scene=None,
+                 sway=0.06, speck=0.4, bolt=None):
+        size = s * SIZE3D.get(kind, 0.9)
+        if bolt is None:
+            bolt = 0.0 if ring else 0.13
+        self.drawable, self.ins = hold3d_drawable(name + " 3D", kind, color, size, scene=scene, roll=rot,
+                                                  bolt=bolt, speck=speck, sway=sway)
+        kids = []
+        if ring:
+            kids.append(shape("Route Dot", [ellipse(15)], [fill(CHALK), stroke(COAL, 3.5)], x=round(s * 0.04, 1), y=0))
+        kids.append(self.drawable)
+        self.art = kids
+        self.idle = N(name + " Idle", kids)
+        self.outer = N(name, [self.idle], x=x, y=y, rotation=rot)
+        self.x, self.y, self.rot, self.s = x, y, rot, s
+        self.id = self.outer.id
+        self.yaw = self.ins["yaw"].id
+        self.pitch = self.ins["pitch"].id
+
+
+def chalk_drawable():
+    d = E("ScriptedDrawable", scriptAssetId=CHALK_ASSET, name="Chalk Burst")
+    ins = {}
+    for nm, v in (("amount", 0.0), ("clear", 0.0), ("originX", 195.0), ("originY", 500.0), ("drift", 0.0),
+                  ("seed", 1.0), ("direction", 1.0), ("width", 390.0), ("height", 844.0)):
+        el = _num(nm, v)
+        d.add(el)
+        ins[nm] = el.id
+    return d, ins

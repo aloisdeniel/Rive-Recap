@@ -137,6 +137,10 @@ FONT_HAND = '0:503'
 SCRIPT_DIRECTOR = '0:511'
 SCRIPT_FORMAT = '0:512'
 SCRIPT_AUDIT = '0:513'
+SCRIPT_RISO = '0:514'
+SCRIPT_STEAM = '0:515'
+SCRIPT_CLOTH = '0:516'
+SCRIPT_LETTERS = '0:517'
 CONV_FORMAT = '0:521'
 CONV_INT = '0:522'
 
@@ -149,6 +153,10 @@ def assets():
         E('ScriptAsset', file='scripts/director.luau', name='director', id=SCRIPT_DIRECTOR),
         E('ScriptAsset', file='scripts/formatCount.luau', name='formatCount', id=SCRIPT_FORMAT),
         E('ScriptAsset', file='scripts/eventAudit.luau', name='eventAudit', id=SCRIPT_AUDIT),
+        E('ScriptAsset', file='scripts/riso.luau', name='riso', id=SCRIPT_RISO),
+        E('ScriptAsset', file='scripts/steam.luau', name='steam', id=SCRIPT_STEAM),
+        E('ScriptAsset', file='scripts/cloth.luau', name='cloth', id=SCRIPT_CLOTH),
+        E('ScriptAsset', file='scripts/letters.luau', name='letters', id=SCRIPT_LETTERS),
         E('ScriptedDataConverter', scriptAssetId=SCRIPT_FORMAT, name='Format count (locale)', id=CONV_FORMAT),
         E('DataConverterToString', decimals=0, round=True, name='Integer', id=CONV_INT),
     ]

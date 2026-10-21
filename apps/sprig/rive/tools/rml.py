@@ -214,10 +214,12 @@ def _ang(a, b):
     return math.atan2(b[1] - a[1], b[0] - a[0]), math.hypot(b[0] - a[0], b[1] - a[1])
 
 
-def path_el(d, name="Path", id=None, closed=None):
+def contour_params(d, closed=None):
+    """Per-contour vertex parameters (x, y, inRotation, inDistance, outRotation, outDistance) or
+    (x, y) for straight vertices, plus closed/clockwise flags. Shared by path_el and the morph keys."""
     cs = parse_d(d)
     out = []
-    for ci, c in enumerate(cs):
+    for c in cs:
         pts = [c["start"]]
         hin = [None]
         hout = []
@@ -240,7 +242,7 @@ def path_el(d, name="Path", id=None, closed=None):
         verts = []
         for p, hi, ho in zip(pts, hin, hout):
             if hi is None and ho is None:
-                verts.append(E("StraightVertex", x=float(p[0]), y=float(p[1])))
+                verts.append({"x": float(p[0]), "y": float(p[1])})
             else:
                 ia, idist = _ang(p, hi) if hi else (0.0, 0.0)
                 oa, odist = _ang(p, ho) if ho else (0.0, 0.0)
@@ -248,10 +250,25 @@ def path_el(d, name="Path", id=None, closed=None):
                     ia = oa + math.pi
                 if ho is None:
                     oa = ia + math.pi
-                verts.append(E("CubicDetachedVertex", x=float(p[0]), y=float(p[1]),
-                               inRotation=float(ia), inDistance=float(idist),
-                               outRotation=float(oa), outDistance=float(odist)))
-        out.append(E("PointsPath", *verts, isClosed=bool(is_closed), isClockwise=bool(area > 0),
+                verts.append({"x": float(p[0]), "y": float(p[1]), "inRotation": float(ia), "inDistance": float(idist),
+                              "outRotation": float(oa), "outDistance": float(odist)})
+        out.append((verts, bool(is_closed), bool(area > 0)))
+    return out
+
+
+def path_el(d, name="Path", id=None, closed=None, vids=None):
+    """PointsPath elements for d. If vids is a list, the first contour's vertex ids are appended to it
+    (so the vertices can be keyed: real shape deformation)."""
+    out = []
+    for ci, (verts, is_closed, cw) in enumerate(contour_params(d, closed)):
+        vs = []
+        for vp in verts:
+            vid = ID() if (vids is not None and ci == 0) else None
+            if vid:
+                vids.append(vid)
+            tag = "CubicDetachedVertex" if "inRotation" in vp else "StraightVertex"
+            vs.append(E(tag, id=vid, **vp))
+        out.append(E("PointsPath", *vs, isClosed=is_closed, isClockwise=cw,
                      name=name if ci == 0 else f"{name} {ci}", id=id if ci == 0 else None))
     return out
 
@@ -306,26 +323,52 @@ def rib_d(L, bend=0.0):
 
 
 def leaf(name, x, y, L, W, rot=0.0, light=LEAF, dark=LEAF_DARK, rib=CREAM, rib_a=0.35, bend=0.0,
-         kind="leaf", s=1.0, op=None, ids=None):
+         kind="leaf", s=1.0, op=None, ids=None, morph=False):
     """Folded-paper leaf: two halves (light/dark) hinged on the midrib.
 
     Returns (node_el, parts) where parts holds ids for animation:
-      parts['node'], parts['left'], parts['right']
-    The halves are shapes at the midrib, so keying scaleX opens/closes the fold.
+      parts['node'], parts['left'], parts['right'], parts['rib_trim']
+    The halves are shapes at the midrib, so keying scaleX opens/closes the fold. With morph=True the
+    halves' vertices get ids and parts['morph'] lists (vertex id, {stage: params}) for a real unfurl:
+    stage 'curl' (a tight fiddlehead rolled to one side), 'half' (opening) and 'open' (the authored leaf).
     """
     nid = ID(); lid = ID(); rid = ID()
-    if kind == "heart":
-        ld, rd = heart_half_d(L, W, -1), heart_half_d(L, W, 1)
-    else:
-        ld, rd = leaf_half_d(L, W, -1, bend), leaf_half_d(L, W, 1, bend)
+
+    def halves(LL, WW, bb):
+        if kind == "heart":
+            return heart_half_d(LL, WW, -1), heart_half_d(LL, WW, 1)
+        return leaf_half_d(LL, WW, -1, bb), leaf_half_d(LL, WW, 1, bb)
+    ld, rd = halves(L, W, bend)
     kids = []
+    rib_trim = None
     if rib:
+        rib_trim = ID() if morph else None
         kids.append(shape(f"{name} rib", *path_el(rib_d(L, bend if kind != 'heart' else 0), closed=False),
-                          stroke(col(rib, rib_a), max(0.8, W * 0.035)), id=ID()))
-    kids.append(shape(f"{name} R", *path_el(rd), fill(col(dark)), id=rid))
-    kids.append(shape(f"{name} L", *path_el(ld), fill(col(light)), id=lid))
+                          stroke(col(rib, rib_a), max(0.8, W * 0.035),
+                                 trim=trim(0, 1, id=rib_trim) if morph else None), id=ID()))
+    lv, rv = ([], []) if morph else (None, None)
+    kids.append(shape(f"{name} R", *path_el(rd, vids=rv), fill(col(dark)), id=rid))
+    kids.append(shape(f"{name} L", *path_el(ld, vids=lv), fill(col(light)), id=lid))
     n = node(name, *kids, x=x, y=y, rot=rot, sx=s if s != 1 else None, sy=s if s != 1 else None, op=op, id=nid)
-    return n, {"node": nid, "left": lid, "right": rid}
+    parts = {"node": nid, "left": lid, "right": rid, "rib_trim": rib_trim}
+    if morph:
+        curl_side = 1 if (sum(map(ord, name)) % 2) else -1   # deterministic per leaf
+        stages = {"curl": halves(L * 0.4, W * 0.16, curl_side * L * 0.3),
+                  "half": halves(L * 0.78, W * 0.5, curl_side * L * 0.1 + bend * 0.5),
+                  "open": (ld, rd)}
+        mv = []
+        for side, vids in ((0, lv), (1, rv)):
+            per = {st: contour_params(dd[side])[0][0] for st, dd in stages.items()}
+            for i, vid in enumerate(vids):
+                prm = {st: dict(per[st][i]) for st in stages}
+                for st in ("curl", "half"):   # unwrap angles so they interpolate the short way
+                    for key in ("inRotation", "outRotation"):
+                        if key in prm[st]:
+                            d0 = prm[st][key] - prm["open"][key]
+                            prm[st][key] -= round(d0 / (2 * math.pi)) * 2 * math.pi
+                mv.append((vid, prm))
+        parts["morph"] = mv
+    return n, parts
 
 # ---------------------------------------------------------------- animation
 

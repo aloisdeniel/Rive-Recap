@@ -111,7 +111,7 @@ def build_pot(x_stage):
         a.ms(stew, 'opacity', [(0, 0.0, 'hold'), (200, 0.0, 'lin'), (320, 1.0)])
         return a
 
-    pop1 = pop_anim('Lid pop (invitation)', 120, 1200)
+    pop1 = pop_anim('Lid pop (invitation)', 92, 1200)
     open2 = Anim('Lid off (meals)', ms2f(500))
     open2.ms(lid, 'rotation', [(0, 0.0, 'backin'), (420, -0.5)])
     open2.ms(lid, 'y', [(0, -28.0, 'soft'), (420, -28 - 70.0)])
@@ -162,6 +162,8 @@ def build_pot(x_stage):
             if dst is not src:
                 src.add(trans(dst, [cond_num(cs, k)], duration=0 if src is s_rest else 250))
         if src is not s_rest:
+            # reduced motion cuts; otherwise the lid settles back on
+            src.add(trans(s_rest, [cond_num(cs, 1, 'notEqual'), cond_num(cs, 2, 'notEqual'), cond_num(cs, 9, 'notEqual'), cond_bool(rm, True)]))
             src.add(trans(s_rest, [cond_num(cs, 1, 'notEqual'), cond_num(cs, 2, 'notEqual'), cond_num(cs, 9, 'notEqual')], duration=320, ease='inout'))
     l_lid = layer('Lid', s_rest, [s_rest, s_p1, s_o2, s_p9, s_aj])
 
@@ -174,9 +176,22 @@ def build_pot(x_stage):
     s_wobrm.add(trans(s_still, [], exit_pct=100))
     l_wob = layer('Tap wobble', s_still, [s_still, s_wob, s_wobrm])
 
-    sm = E('StateMachine', [l_simmer, l_lid, l_wob], name='Pot machine')
+    # anticipation for the signature handoff: the pot squats, then puffs up as the steam leaves it
+    puff = Anim('Handoff puff', ms2f(380))
+    puff.ms(body, 'scaleY', [(0, 1.0, 'out'), (90, 0.9, 'back'), (210, 1.08, 'inout'), (380, 1.0)])
+    puff.ms(body, 'scaleX', [(0, 1.0, 'out'), (90, 1.08, 'back'), (210, 0.95, 'inout'), (380, 1.0)])
+    calm = Anim('No puff', 1)
+    s_calm = astate(calm, 0, 0)
+    s_puff = astate(puff, 260, 0)
+    for src in (s_calm, s_puff):
+        src.add(trans(s_puff, [cond_trig(P('handoffForward')), cond_bool(rm, False)]),
+                trans(s_puff, [cond_trig(P('handoffBack')), cond_bool(rm, False)]))
+    s_puff.add(trans(s_calm, [], exit_pct=100))
+    l_puff = layer('Handoff puff', s_calm, [s_calm, s_puff])
+
+    sm = E('StateMachine', [l_simmer, l_lid, l_puff, l_wob], name='Pot machine')
     ab.attrs['defaultStateMachineId'] = sm.id
     ab.add(sm)
-    for a in (idle, rest, pop1, open2, pop9, ajar_rm, wob, wob_rm, still):
+    for a in (idle, rest, pop1, open2, pop9, ajar_rm, wob, wob_rm, still, puff, calm):
         ab.add(a.build())
     return ab, sm

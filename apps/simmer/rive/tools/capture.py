@@ -40,7 +40,7 @@ def variant(fixture, name):
     os.makedirs(out)
     subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), f'--first={fixture}', f'--out={out}'], check=True, capture_output=True)
     shutil.copy(os.path.join(ROOT, 'rive.yaml'), out)
-    shutil.copytree(os.path.join(ROOT, 'scripts'), os.path.join(out, 'scripts'))
+    shutil.copytree(os.path.join(ROOT, 'scripts'), os.path.join(out, 'scripts'))   # scripts + shaders
     os.symlink(os.path.join(ROOT, 'assets'), os.path.join(out, 'assets'))
     return out
 
@@ -76,10 +76,13 @@ def transitions():
     for k in (3, 7, 10):
         shot(f'{CAP}/transitions/back-{k:02d}-to-{k - 1:02d}-400ms.png', f'--data=currentScreen={k}', f'--advance={SETTLED}',
              '--pointer=click@50,792', f'--advance=400ms')
-    # filmstrip of the 2 -> 3 handoff every 100 ms
+    # filmstrip of the 2 -> 3 handoff every 100 ms (steam veil, then the simulated tablecloth)
     for ms in range(0, 900, 100):
         shot(f'{CAP}/transitions/filmstrip-2-to-3/{ms:03d}ms.png', '--data=currentScreen=2', f'--advance={SETTLED}',
              '--pointer=click@259,792', f'--advance={max(ms, 16)}ms')
+    # filmstrip of the opening: steam condensing into the wordmark
+    for ms in range(300, 2100, 200):
+        shot(f'{CAP}/transitions/filmstrip-intro-steam-lettering/{ms:04d}ms.png', f'--advance={ms}ms')
     # the pot tap delight (distinct hit region; must not navigate)
     shot(f'{CAP}/transitions/pot-tap-250ms.png', '--data=currentScreen=2', f'--advance={SETTLED}', '--pointer=click@195,680', '--advance=250ms')
 
@@ -102,6 +105,13 @@ def hidden():
     shot(f'{CAP}/hidden/hide-4-and-7-scene-5.png', '--data=showScreen4=false', '--data=showScreen7=false', '--data=currentScreen=5', f'--advance={SETTLED}')
     shot(f'{CAP}/hidden/hide-4-next-from-3-lands-on-5.png', '--data=showScreen4=false', '--data=currentScreen=3', f'--advance={SETTLED}',
          '--pointer=click@259,792', f'--advance={SETTLED}')
+
+
+def sizes():
+    for vp in ('320x568', '430x932', '1280x800'):
+        shot(f'{CAP}/sizes/scene-02-{vp}-contain.png', f'--viewport={vp}', '--fit=contain', '--data=currentScreen=2', f'--advance={SETTLED}')
+        shot(f'{CAP}/sizes/handoff-2-to-3-{vp}-contain.png', f'--viewport={vp}', '--fit=contain', '--data=currentScreen=2',
+             f'--advance={SETTLED}', '--key=right', '--advance=480ms')
 
 
 def dump(name, *args, project=ROOT):
@@ -152,7 +162,7 @@ def checks():
         print(f'{k:45s} {json.dumps(v["values"])}  events={v["events"]}')
 
 
-GROUPS = dict(scenes=scenes, personas=personas, reduced=reduced, transitions=transitions, fixtures=fixtures, hidden=hidden, checks=checks)
+GROUPS = dict(scenes=scenes, personas=personas, reduced=reduced, transitions=transitions, fixtures=fixtures, hidden=hidden, sizes=sizes, checks=checks)
 
 if __name__ == '__main__':
     todo = sys.argv[1:] or list(GROUPS)

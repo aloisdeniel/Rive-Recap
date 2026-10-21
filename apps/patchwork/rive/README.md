@@ -9,6 +9,142 @@ that guides every hand-off. All user data comes from one view model,
 > Fictional dataset (January 1–December 31, 2026). Nothing here is measured
 > real activity.
 
+## Improvement pass (October 2026)
+
+The first version worked but read as "solid". This pass keeps the `UserRecap`
+contract, events, fixtures, reduced motion, hidden-scene skipping and the
+390 × 844 artboard unchanged, and raises the craft.
+
+**Critique before changes (what was weak)**
+
+* The signature fold was a flat terracotta rectangle animated with `scaleX`, so
+  it played as a wipe with five pale squares on it. The needle was barely
+  visible. The opaque panel also hid the camera pull-back, so the "larger
+  quilt" showed only as 7 px slivers.
+* There was no material: every surface was a flat fill, while the art target is
+  woven, felted and quilted cloth.
+* Scene 2 put a sparse diamond on empty oat (the target is a full-bleed star
+  block). Scene 4's ribbons were plain stroke bands, and their own running
+  stitch was hidden because the ribbon paint drew over it. Scene 9's disc was
+  flat navy. Scene 6's motifs were tiny on two large blobs.
+* 9 → 10 hard-cut from oat to indigo.
+* Scene 7's grey light-spill wedge sat under the support copy and muddied it.
+* The support line sat at five different heights across the scenes.
+* Replay had no icon (Continue has an arrow), which was inconsistent.
+
+**What changed**
+
+| Area | Before | After |
+|---|---|---|
+| Signature fold | 2D `scaleX` panel + small vector needle | a **3D quilt sheet rendered on the GPU** that unrolls over the scene from the right, holds a beat, then lifts at its free corner and rolls away to the left, showing its **gingham lining**. A needle rides the roll's crest pulling a running stitch, and the roll casts a soft shadow on the scene beneath. Back navigation uses a mirrored rose/teal quilt (lands from the left, leaves rightward) |
+| Camera pull-back | 0.86, backdrop barely visible | 0.82, the scene **clipped to a patch with a stitched indigo binding and a feathered shadow**, set in a diamond-in-square quilt of half-square triangles (the same piecing as the sheet). Clip and backdrop are only on during hand-offs |
+| Material | flat fills | a procedural **woven-cotton texture** (plain weave, slubbed threads, felted mottling, soft edge shade) generated once on the GPU and multiplied over everything at low strength |
+| Scene 2 | small star block on oat | a full-bleed **quilt field** of 42 half-square triangles that assembles in a radial wave out from the block, with bound top/bottom edges; the star's pieces get cream outlines so they pop |
+| Scene 4 | plain ribbons | ribbons **pieced from alternating patches** (a dashed second paint), with their running stitch now visible on top |
+| Scene 6 | small motifs | bolder mug/book motifs and six appliqué patches that pop in after the seam is sewn |
+| Scene 7 | grey spill wedge under the copy | a gradient spill that fades out before the copy |
+| Scene 9 | flat navy disc | a **quilted medallion rendered on the GPU** (16-wedge Dresden-plate piecing with the outer ring offset, a hub, loft-shaded puffs, sunk seams, running stitches, woven texture, a rolled binding). Its light sweeps from low right over the top during each persona reveal, then rests. A faint keyline keeps Builder's oat accent ring readable on oat |
+| 9 → 10 | colour cut | the indigo persona disc **blooms to fill the screen** and becomes the summary ground; the chrome turns light-on-dark only once the bloom is behind it; the card body fades and stitches up around the carried emblem (the same quilted medallion, shrunk into the card) |
+| Copy | support lines at five different heights | one baseline (top at 686; the plated scenes 4/5 centre at 704) |
+| Controls | Replay was text only | **Share** gets a tray-and-arrow icon. **Replay** gets a clockwise arc open at the top, with the arrowhead computed from geometry: it sits on the arc's end and points along the arc's tangent |
+
+**3D / shader techniques used**
+
+* `scripts/cloth.luau` + `shaders/cloth.wgsl` (ScriptedDrawable): a
+  45 × 97-vertex grid curled in the vertex shader over a moving cylinder (in a
+  mirrored local frame for the leftward moves). The part past half a turn lies
+  flipped with a travelling ripple, under a pinhole perspective camera. The
+  fragment shader computes the curl angle per pixel and procedurally pieces the
+  quilt front (diamond-in-square half-square triangles, appliqué hearts,
+  sewn-on buttons, seam stitches, binding). It takes a **normal from the
+  quilted loft** (finite differences of a seam-distance height field),
+  combines it with the curl frame, adds woven thread, seam occlusion, cloth
+  sheen and inner-roll occlusion, and casts a shadow from the hovering part
+  onto the flat part. A second pipeline casts the roll's shadow onto the scene
+  underneath. Rendering uses a depth buffer and 2× MSAA at 2 px per point. The
+  Handoff timelines key the script inputs `fold` (0..1 lands, 1..2 leaves),
+  `dir` and `cam` (the camera scale, so the sheet always fits the patch). The
+  state machine, the tap queue and the events are untouched.
+* `scripts/weave.luau` + `shaders/weave.wgsl` (ScriptedLayout): a
+  fragment-only texture rendered once per size at the presenting pixel density
+  and drawn in `multiply`.
+* `scripts/medallion.luau` + `shaders/medallion.wgsl` (ScriptedDrawable ×2):
+  a fragment-only lit cushion, re-rendered only while its keyed `light` input
+  moves, so a settled medallion costs one image draw.
+* Not used: imported meshes and bones (the cloth is a procedural grid), and
+  textures (everything is procedural). The thanks corner-lift stays a vector
+  flap, because a 3D curl at that size would not read better.
+
+**Reduced motion, pause and fallbacks.** Reduced-motion hand-offs key
+`fold = 0`, so the sheet is never drawn and the 150 ms oat veil remains. The
+reduced persona states key the medallion's `light` straight to 1, so it is
+static. The weave texture is static. Without shader support, the fold draws a
+flat 2D panel that folds toward its edge, the medallion falls back to the
+vector disc beneath it, and the weave is skipped.
+
+**Gotchas met (recorded for the next pass)**
+
+* A `ScriptedLayout` in a `LayoutComponent` placed under a plain `Node`
+  **does not sort with its sibling drawables**. Only the first such layout
+  among the App's children kept its place. The cloth drew underneath the World
+  (invisible) or covered the chrome, depending on order. The cloth is
+  therefore a `ScriptedDrawable` at the artboard origin, and only the weave is a
+  layout (as App's first child, it draws on top).
+* `advance` is not relied on for the cloth: everything it needs is read in
+  `draw` from the keyed inputs.
+* The idle hand-off timeline keys `fold = 0` every frame, so a static input
+  value is no use for testing. Probe with a temporary `print` in `draw`.
+* The roll's large radius means the sheet visually covers the patch at about
+  half its pose range. Progress is eased out (`1 − (1 − t)^1.8`) so the visible
+  edge travels evenly.
+* Within one shape, the paint declared later draws on top. The scene 4
+  ribbon's stitch had been drawn under the ribbon since the first pass.
+
+**Behaviour checks.** `tools/check.sh` (new) codifies the "Verification
+performed" table as 15 headless assertions. All 15 pass, before and after this
+pass. No check was changed. The hand-off is now 22 + 28 frames (was 18 + 26),
+which is still within every check's timing.
+
+**New compromises**
+
+* **Web needs a signed build.** The `.riv` now contains three scripts and three
+  shaders, so an unsigned local build is rejected by web runtimes. Ship
+  `rive apps/patchwork/rive --publish` (not run here). Native runtimes with
+  scripting run the local build.
+* A `ScriptedDrawable` receives no pixel density, so the cloth renders at a
+  fixed 2 px per point (supersampled on @1x captures, slightly soft on @3x
+  phones) and the medallion likewise. The weave is a layout and renders at the
+  device density.
+* GPU memory: the cloth's surfaces (colour, 2× MSAA colour and depth at
+  780 × 1688) are about 26 MB. They are allocated on the first fold, not at
+  load, and then kept.
+* The share card's medallion is the 290-pt render scaled to 0.3, so its fine
+  stitches minify with bilinear filtering only.
+* The flat-sheet beat mid-hand-off (about 8 frames) is deliberate: it is the
+  moment the pull-back shows the scene as one patch of the larger quilt.
+* Headless `--bench` measures CPU-side recording, not GPU time. Per fold frame
+  the GPU draws one 2× MSAA pass of about 4.4 k vertices plus a full-canvas
+  shadow pass; idle frames draw one cached weave image (plus the cached
+  medallion on scenes 9 and 10).
+
+**Performance** (Apple M5 Pro, Rive CLI 1.6.0, headless `--bench` at 390 × 844 @1x,
+CPU-side render recording, not GPU time. Before and after were run interleaved,
+three rounds each, while other renders were loading the machine, so read the
+ranges, not single numbers.)
+
+| Metric | Before (first pass) | After |
+|---|---|---|
+| `patchwork-recap.riv` | 368,150 bytes (134,505 gzipped) | **639,722 bytes (199,608 gzipped)**. The object count rose only 18 % (18,301 → 21,578); most of the growth is the three compiled scripts and three shaders |
+| `--bench=600` (intro, idle) render p50 | 0.36–0.42 ms | **0.30–0.32 ms** (mean 0.45–0.61, p95 0.70–1.96) |
+| `--bench=1200`, `autoAdvanceSeconds=3` (scenes + folds) render p50 | 0.34–0.35 ms | **0.26–0.29 ms** (mean 0.40–0.52, p95 0.78–1.13) |
+| First-frame spike (one-time: shader pipelines, weave texture) | max ≈ 9 ms | max 9–95 ms on the first frame only; the cloth surfaces are allocated on the first fold |
+| Advance mean | 0.03–0.04 ms | 0.06–0.09 ms |
+| wasm memory over 1,200 frames | +0 pages | +0 pages |
+| Quiet-machine reference (earlier, unloaded) | 600: mean 0.211 ms; 1200: mean 0.187 ms | 600: mean 0.267 ms; 1200: mean 0.179 ms |
+
+The walkthrough `video.webm` grew from 2.7 MB to 9.0 MB at the same encoder
+settings, because the woven texture is fine detail that VP9 has to keep.
+
 ## What is where
 
 | Path | What |
@@ -16,10 +152,14 @@ that guides every hand-off. All user data comes from one view model,
 | `scene.rml` | **The editable source.** One artboard (`Patchwork Recap`, 390 × 844), one state machine (`Recap`), the `UserRecap` view model, converters, fonts. |
 | `../tools/gen_scene.py`, `../tools/art.py`, `../tools/rml.py` | Generator that writes `scene.rml` (keeps ~600 repetitive state-machine nodes consistent). Small tweaks can be made directly in `scene.rml`; larger ones in the generator, then `python3 apps/patchwork/tools/gen_scene.py`. |
 | `assets/fonts/` | Bree Serif, Atkinson Hyperlegible Regular/Bold + their OFL licence texts. |
-| `build/patchwork-recap.riv` | Runtime export (unsigned local build, no scripts inside). |
+| `scripts/cloth.luau` + `shaders/cloth.wgsl` | The signature fold: a GPU-rendered 3D quilt sheet (see "Improvement pass"). |
+| `scripts/weave.luau` + `shaders/weave.wgsl` | Woven-cotton ground texture multiplied over the whole recap. |
+| `scripts/medallion.luau` + `shaders/medallion.wgsl` | The quilted, lit persona medallion (scene 9 and the card). |
+| `build/patchwork-recap.riv` | Runtime export (unsigned local build; **contains scripts**, so web hosts need a signed `--publish` build). |
 | `build/patchwork-recap.rev` | Editor export — see "Exports" for its status. |
-| `captures/` | Headless review captures (scenes, personas, transitions, fixtures, reduced motion, states, viewports) and `captures/motion-preview.mp4`. |
+| `captures/` | Headless review captures (scenes, personas, transitions, fixtures, reduced motion, states, viewports) and `captures/motion-preview.mp4` (an H.264 transcode of `../video.webm`, the full walkthrough rendered by `scripts/render-video.py`). |
 | `../fixtures/` | `zero-user.json` / `extreme.json` host fixtures plus `.args` files that replay them through `rive --data`. The supplied `../sample-data.json` is the authored default instance. |
+| `../tools/check.sh` | The behaviour checks below, as 15 headless assertions (exit code = failures). |
 | `../tools/capture_all.sh`, `shoot.sh`, `probe.sh` | Regenerate captures; drive taps headlessly; dump the live view-model values. |
 
 ## Preview
@@ -28,6 +168,7 @@ that guides every hand-off. All user data comes from one view model,
 rive apps/patchwork/rive                 # live previewer (window, rebuilds on save)
 rive apps/patchwork/rive --verify        # compile check
 rive inspect apps/patchwork/rive --summary
+apps/patchwork/tools/check.sh            # behaviour checks (15 assertions, headless)
 apps/patchwork/tools/capture_all.sh      # every PNG in captures/ (headless)
 apps/patchwork/tools/probe.sh --advance=120s   # full auto-advance run, prints key view-model values
 ```
@@ -42,8 +183,9 @@ centred) and paint the letterbox with oat `#F5EBDD`** — see Limitations.
 ## Exports
 
 * `.riv`: `rive apps/patchwork/rive --once`, copied to `build/patchwork-recap.riv`.
-  The file contains **no Luau scripts**, so the unsigned local build is not
-  rejected by web runtimes (that restriction only applies to scripted files).
+  Since the improvement pass the file **contains three Luau scripts and three
+  WGSL shaders**, so web runtimes reject the unsigned local build: ship a signed
+  `rive apps/patchwork/rive --publish` build to web hosts (not done here).
 * `.rev`: `rive apps/patchwork/rive --once --rev=build/patchwork-recap.rev`
   needs `rive login`. See the status line at the end of this file.
 
@@ -197,14 +339,18 @@ Input map (artboard coordinates):
 
 ## Motion design
 
-**Signature transition — "running stitch fold".** A needle runs down the
-leading edge of a full-bleed appliquéd fabric panel that hinges in from the
-right (forward, terracotta) and stitches a running seam as it travels; under
-cover the scene switches, the camera has pulled back to 0.86 so the larger
-backdrop quilt shows at the edges as the panel folds away to the left and the
-camera settles to 1.0 (≈ 18 + 26 frames = 730 ms). Reverse navigation uses a
-rose panel hinged from the left and folding away to the right — a mirrored,
-differently coloured fold, not the same animation played backwards.
+**Signature transition — "quilt fold".** On navigation the camera pulls back
+to 0.82 and the scene becomes one patch, with a stitched indigo binding, set in a
+larger diamond-in-square quilt. A real 3D quilt sheet, rendered on the GPU,
+unrolls over the patch from the right while a needle rides the crest of the roll
+and pulls a running stitch behind it. Under cover the scene switches. After a
+short beat the sheet lifts at its free corner (anticipation), rolls up from the
+right and leaves past the left edge, showing its gingham lining. It casts a soft
+shadow onto the new scene as the camera pushes back in (22 + 28 frames ≈ 833 ms).
+Reverse navigation uses a differently pieced rose/teal quilt, mirrored: it lands
+from the left and rolls away to the right. Rapid taps keep the sheet flat while
+the queued commits run. Reduced motion keeps the 150 ms oat veil and never draws
+the sheet.
 
 **Signature interaction.** Tap a quilt patch (scene 1, top-right; summary card
 corner) to lift its corner on a hinged diagonal and reveal a tiny
@@ -216,20 +362,20 @@ corner) to lift its corner on a hinged diagonal and reveal a tiny
 | # | Scene | Anticipation | Hero sequence | Idle |
 |---|---|---|---|---|
 | 1 | Invitation | Name tag lifts and swings in | Nine patches fly in from scattered positions and settle into a quilt; a running thread draws around it; the wordmark banner unfolds across the middle row | banner sway |
-| 2 | Hours | Centre card squashes | Four triangles unfold on hinges around the embroidered numeral, corner patches spin in | triangles breathe, motifs sway |
+| 2 | Hours | Centre card squashes | A full-bleed field of 42 half-square triangles flips in as a wave rippling out from the block; four triangles unfold on hinges around the embroidered numeral; corner patches spin in | triangles breathe, motifs sway |
 | 3 | Projects | Numeral leans back | Twelve patches rise and land one by one with a squash, then the grid seams are sewn | grid sways |
-| 4 | Community days | Calendar lifts before it drops | Calendar swings down, five fabric strips unroll from it, days are marked | calendar sway, clouds drift, sun turns |
+| 4 | Community days | Calendar lifts before it drops | Calendar swings down, five pieced patchwork ribbons unroll from it with their stitch following, days are marked | calendar sway, clouds drift, sun turns |
 | 5 | Garden | Soil dips | Cloth soil layers rise, a stitched sprout grows, leaves unfold, a bloom opens | leaves sway |
-| 6 | Repairs | Two fabric shapes pull apart | They snap together, a zig-zag seam is sewn and cross-stitches pop down the join; darning weave fills the numeral disc | shapes breathe |
+| 6 | Repairs | Two fabric shapes pull apart | They snap together, a zig-zag seam is sewn and cross-stitches pop down the join, appliqué patches pop on; darning weave fills the numeral disc | shapes breathe |
 | 7 | Welcome | Doors shiver | Two cloth arches swing open into a lit doorway, a mat unrolls, neighbours walk in | light spill breathes, stars twinkle |
 | 8 | Active months | Numeral squashes | Ten seasonal patches pop along a path while one thread loops through them | running-stitch dash crawls |
-| 9 | Persona | Scene 8's ten patches converge and spin into the disc | Persona-specific emblem reveal (four choreographies), then title and line | — |
-| 10 | Summary | Persona emblem flies from scene 9's disc into its card slot | Card border is sewn, five stat patches drop into place and count up together | — |
+| 9 | Persona | Scene 8's ten patches converge and spin into the disc | The quilted medallion pops in and its light sweeps round it while the persona-specific emblem is revealed (four choreographies), then the title and line | — |
+| 10 | Summary | Scene 9's indigo disc blooms to fill the screen | The persona emblem flies from the disc into its card slot while the card body stitches up around it; the border is sewn, five stat patches drop into place and count up together | — |
 
 Hero sequences: scenes 1, 4, 9 (plus 2, 6, 7). Continuity transitions that
 carry an object: **8 → 9** (the ten seasonal patches and thread continue into
-the persona disc) and **9 → 10** (the emblem shrinks into the share card), plus
-the global guide needle that threads every fold. Custom cubic eases are named
+the persona disc) and **9 → 10** (the disc blooms into the summary ground and the
+emblem shrinks into the share card), plus the guide needle that rides every fold. Custom cubic eases are named
 in `tools/rml.py` (`cloth`, `back`, `antic`, `thread`, …).
 
 **Reduced motion:** every scene has a generated reduced variant that sets all
@@ -264,9 +410,9 @@ same family names through its asset loader.
 | Event payload with the scene index | Supported (custom properties on `Event`) | Ten same-named `screenChanged` events with literal `index`. |
 | Locale-aware number formatting | No formatter converter | In-file digit-group tiers + host-provided separator; pluralisation by host. |
 | Formula converters reading other properties | Tokens bound to *host-written* booleans did not re-evaluate when only those inputs changed (observed with `--data`) | Derived state moved into state-machine layers (`Activity`), which read live values. |
-| Keyed deformation of cloth / real page-curl folds | No mesh authored (images only) and no 3D | Folds are hinged scale on pivot nodes + gradient fold shadows; the corner lift is a mirrored triangle flap. |
+| Keyed deformation of cloth / real page-curl folds | Supported through scripted GPU rendering | The fold is a GPU-curled 3D quilt (`scripts/cloth.luau`). The thanks corner lift is still a vector triangle flap. |
 | Camera pull-back revealing a larger quilt | No camera object | A `World camera` node scaled about the centre over a backdrop quilt. |
-| Raster grain | Avoided | Texture comes from vector quilting lines and stitches only. |
+| Raster grain | Restrained, procedural | A woven-cotton texture is generated once on the GPU and multiplied over everything at low strength. It never carries text or a scene. |
 | Responsive reflow to 320 × 568 / 430 × 932 | Hand-composed 390 × 844 art; layout reflow of illustrated scenes is not practical | Fixed artboard, host `Fit.contain` with oat letterbox; validated at 320 × 568, 430 × 932 and a 1280 × 800 desktop (captures/viewports). |
 | Sound | Not used | Silent; `soundEnabled` reserved. |
 | Visible focus | Supported (focus/blur listeners) | Focus ring bound to `_focusIndex`; pointer clicks do not focus (`canTouch=false`). |
@@ -296,7 +442,7 @@ Run from `apps/patchwork/rive` with `tools/probe.sh` (dumps the live
 | Thanks patch tap | flap lifts, `currentScreen` unchanged |
 | Runtime data (`--data=volunteerHours=512`, `autoAdvanceSeconds=3/20`) | numerals and dwell change accordingly (captures/fixtures) |
 
-## Measurements
+## Measurements (first pass, before the improvement pass)
 
 Measured on the authoring machine (Apple M5 Pro, macOS, Rive CLI 1.6.0
 native runtime, headless `--bench`, 390 × 844 @1x). **No phone was available**,
@@ -308,12 +454,14 @@ so treat these as relative numbers, not device frame rates.
 | Objects | 1 artboard, 49 timelines, 1 state machine with 10 layers |
 | Idle scene, 600 frames | advance mean 0.039 ms (p95 0.16), render mean 0.28 ms (p95 0.38) |
 | Auto-advancing through scenes + fold hand-offs (3 s dwell), 1,200 frames | advance mean 0.10 ms (p95 0.17, max 24 ms on first text shaping), render mean 0.43 ms (p95 0.49, max 21.5 ms) |
-| Memory | no wasm growth over 1,200 frames (no scripts) |
+| Memory | no wasm growth over 1,200 frames |
 
 Budget notes: inactive scenes are collapsed by a `Solo` (not drawn, not
 hit-tested); decorative counts are fixed (12 patches, 10 months, 21 days) and
-never one object per raw count; no masks/clips are used; only the fold shadow
-uses a gradient; no feathering.
+never one object per raw count. Since the improvement pass, one rectangular clip
+(the scene patch) and the backdrop quilt are switched on only during hand-offs,
+and one feathered shadow sits under the patch binding (only visible during
+hand-offs).
 
 ## Remaining limitations (honest list)
 
@@ -329,7 +477,13 @@ uses a gradient; no feathering.
 * Right-to-left layouts were not built or verified (no RTL target locale in the brief's fixture).
 * Frame-rate numbers come from the CLI's headless `--bench` on the authoring
   Mac, not from a phone.
-* The motion preview video is assembled from headless captures at a reduced
-  frame rate; review exact timing in the live previewer.
+* The motion preview (`captures/motion-preview.mp4`, `../video.webm`) is 30 fps
+  headless renders; review exact timing in the live previewer.
+* Pluralisation is still the host's job (units are bound strings), and the
+  layout still scales rather than reflows. The improvement pass did not change
+  either.
+* The scripted 3D and shaders were only verified in the native CLI runtime
+  (headless). A signed web build, and GPU frame times on a phone, are
+  unverified.
 * Copy hard-coded in the file: only the wordmark "Patchwork" (brand) — all
   other text is bound.

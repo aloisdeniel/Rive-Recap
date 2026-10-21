@@ -15,7 +15,7 @@ import sys
 RIVE = os.environ.get("RIVE", os.path.expanduser("~/.rive/bin/rive"))
 OUT = "captures/tests"
 os.makedirs(OUT, exist_ok=True)
-FILTER = "currentScreen,_evt*,_finished,isPaused,_frozen,_holding,screenProgress,_visibleCount,_visibleIndex,_navDir,_focus,personaName,_personaSlot,totalSaved,deposits"
+FILTER = "currentScreen,_evt*,_heard*,_coinNudge,_finished,isPaused,_frozen,_holding,screenProgress,_visibleCount,_visibleIndex,_navDir,_focus,personaName,_personaSlot,totalSaved,deposits"
 
 
 def run(name, args):
@@ -132,6 +132,23 @@ zero = ["--data=" + a for a in ["showScreen2=false", "showScreen3=false", "showS
 ev, st = run("zero_user", zero + [T, "--key=right", "--advance=2.4s"])
 check("no eligible stats: intro -> summary, 2 segments", screens(ev)[-1] == "currentScreen=10" and st.get("_visibleCount") == 2,
       str(screens(ev)))
+
+# 16. the signature tap toy (on the motif) nudges its coin and never navigates
+ev, st = run("toy_tap", [T, "--pointer=click@307,662", "--advance=1s"])
+check("tapping the motif's coin fires _coinNudge and does not navigate",
+      count(ev, "_coinNudge") == 1 and st.get("currentScreen") == 1, f'{count(ev, "_coinNudge")} {screens(ev)}')
+
+# 17. the real Rive events, heard by the EventProbe harness artboard (it nests the
+#     Recap and listens to the events its state machine reports)
+probe = ["--artboard=EventProbe"]
+ev, st = run("events_autoplay", probe + ["--data=autoAdvanceSeconds=3", "--advance=70s"])
+check("screenChanged heard as a Rive event once per scene (10)", count(ev, "_heardScreenChanged") == 10,
+      str(count(ev, "_heardScreenChanged")))
+check("recapFinished heard as a Rive event exactly once", count(ev, "_heardRecapFinished") == 1,
+      str(count(ev, "_heardRecapFinished")))
+ev, st = run("events_share", probe + ["--data=currentScreen=10", "--advance=3s", "--pointer=click@280,792", "--advance=10"])
+check("shareTapped heard as a Rive event exactly once", count(ev, "_heardShareTapped") == 1,
+      str(count(ev, "_heardShareTapped")))
 
 open(f"{OUT}/behaviour.txt", "w").write("\n".join(results) + "\n")
 print("\n".join(results))

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Re-render every app's video (apps/<app>/video.webm), then the merged
-# showcase (apps/showcase.webm).
+# showcase (apps/showcase.webm), plus git-ignored MP4 copies of each.
 #
 #   scripts/render-all.sh [app ...]       # default: every app with a rive/ project
 #
@@ -28,6 +28,9 @@ done
 
 # shellcheck disable=SC2086
 "$here/merge-videos.py" ${MERGE_ARGS:-}
+
+# MP4 copies for platforms without WebM support (git-ignored).
+"$here/export-mp4.sh"
 
 if [ "${#failed[@]}" -gt 0 ]; then
   echo "failed: ${failed[*]}" >&2

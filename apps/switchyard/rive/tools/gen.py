@@ -43,12 +43,18 @@ ADDITIONS = {
     "_personaInk": ("Color", WHITE),
     "_activeRoute": ("Number", 0),
     "_focusIndex": ("Number", -1),
+    "_focusVisible": ("Number", 0),
     "_nextTapped": ("Trigger", None),
     "_prevTapped": ("Trigger", None),
     "_pauseTapped": ("Trigger", None),
     "_replayTapped": ("Trigger", None),
     "_replay": ("Trigger", None),
 }
+# Idle-loop playheads (-1..1), one per scene, written by the sequencer and read by a
+# Joystick per scene: they only advance while that scene is current, settled, not
+# paused and not in reduced motion, so pause truly freezes decorative motion.
+for _n in range(1, 11):
+    ADDITIONS[f"_idle{_n}"] = ("Number", -1)
 
 
 def vm_type(name, value):
@@ -115,10 +121,14 @@ def bind(name, key, conv=None, **kw):
 # ======================================================================
 # Assets and converters
 # ======================================================================
-FONT_DISPLAY = E("FontAsset", file="assets/fonts/ArchivoBlack-Switchyard-Subset.ttf", name="Archivo Black")
-FONT_TEXT = E("FontAsset", file="assets/fonts/Inter-Switchyard-Subset.ttf", name="Inter")
+FONT_DISPLAY = E("FontAsset", file="assets/fonts/ArchivoBlack-Regular.ttf", name="Archivo Black")
+FONT_COND = E("FontAsset", file="assets/fonts/ArchivoCondensedBlack-Switchyard.ttf", name="Archivo Condensed Black")
+FONT_TEXT = E("FontAsset", file="assets/fonts/Inter-Switchyard.ttf", name="Inter")
 SCRIPT_FMT = E("ScriptAsset", file="scripts/formatCount.luau", name="formatCount")
 SCRIPT_SEQ = E("ScriptAsset", file="scripts/sequencer.luau", name="sequencer")
+SCRIPT_P3 = E("ScriptAsset", file="scripts/poster3d.luau", name="poster3d")
+SCRIPT_FLAP = E("ScriptAsset", file="scripts/flapboard.luau", name="flapboard")
+SCRIPT_PAPER = E("ScriptAsset", file="scripts/paper.luau", name="paper")
 
 CONV_FMT = E("ScriptedDataConverter", scriptAssetId=SCRIPT_FMT.id, name="Format count (locale grouping)")
 CONV_YEAR = E("DataConverterToString", decimals=0, round=True, name="Year to text")
@@ -174,12 +184,12 @@ def ramp_conv(lo, hi, out_lo, out_hi, name):
 def text(x, y, w, runs, size, color=BLACK, display=False, weight=400, align="left", h=None,
          overflow=None, sizing=None, lh=None, ls=None, name="Text", ink=None, ox=None, oy=None, valign=None,
          wrap=None, **extra):
-    font = FONT_DISPLAY if display else FONT_TEXT
+    font = FONT_COND if display == "cond" else (FONT_DISPLAY if display else FONT_TEXT)
     sc = solid(color)
     if ink:
         sc.add(bind(ink, 37))
     st = E("TextStylePaint", E("Fill", sc, name="Fill"), fontSize=size, fontAssetId=font.id,
-           familyName="Archivo Black" if display else "Inter",
+           familyName=font.attrs["name"],
            styleName="Regular" if (display or weight == 400) else {500: "Medium", 600: "SemiBold", 700: "Bold"}[weight],
            lineHeight=lh, letterSpacing=ls, name="Style")
     if not display:
@@ -226,7 +236,13 @@ def key_reveal(anim, rng, f0, f1, ease=EIO):
 # ======================================================================
 RING_D = 32.0
 FULL = 1900.0
-Q = (195.0, 720.0)        # where the route dot departs from (bottom of the story window)
+IDLE_FRAMES = 480        # every idle loop is 8 s long (sequencer.luau IDLE_SECONDS)
+Q = (195.0, 724.0)        # where the route dot departs from (bottom of the story window)
+CENTER = (195.0, 411.0)   # centre of the story window (outgoing scenes recede toward it)
+# Interchange roundel bands, inner to outer: the next scene shows through the
+# centre; each band rides just outside the clip edge as the roundel expands.
+BANDS = ((BLUE, 14.0, 7.0), (YEL, 14.0, 21.0), (RED, 14.0, 35.0), (BLACK, 6.0, 45.0))
+EXPAND = (0.6, 0.0, 0.16, 1.0)   # slow start, very fast middle, long settle: a "breath"
 
 
 class Scene:
@@ -240,12 +256,18 @@ class Scene:
         if bg_bind:
             bgr.children[1].children[0].add(bind(bg_bind, 37))
         self.bg = bgr
+        # depth shade: darkens the scene as it recedes behind the next one
+        self.shade = rect(0, 0, W, H, BLACK, name="Depth shade", opacity=0.0)
+        # camera: the incoming scene is pushed through its interchange ring
+        self.camera = node("Camera", self.shade, self.content, bgr)
         self.root = node(f"Scene {n}", E("ClippingShape", sourceId=self.disc.id, name="Interchange clip"),
-                         self.content, bgr, opacity=1.0 if n == 1 else 0.0)
+                         self.camera, opacity=1.0 if n == 1 else 0.0)
         self.anims = {}
         self.extra_rest = []        # (obj, prop, value) forced into Hidden/Settled
         self.hidden_only = []       # (obj, prop, value) only in Hidden
         self.sems = []              # SemanticData hidden while the scene is offscreen
+        self.trail = None
+        scene_trail(self)
 
     def anim(self, name, dur, loop="oneShot"):
         a = Anim(f"S{self.n} {name}", dur, loop)
@@ -259,11 +281,18 @@ class Scene:
 SCENES = {}
 
 # ---------------- motif (persistent object carried between scenes)
-MOTIF_RING_PATH = E("Ellipse", width=RING_D, height=RING_D, name="Ring")
-MOTIF_RING = E("Shape", MOTIF_RING_PATH, stroke(BLACK, 6.0, "Ring stroke"), x=195.0, y=400.0, name="Interchange ring")
-MOTIF_DOT = circle(Q[0], Q[1], 18.0, RED, name="Route dot", line=BLACK, lw=3.5)
-MOTIF_TRAIL, MOTIF_TRAIL_TRIM = route([Q, Q], RED, 6, name="Dot trail")
-MOTIF = node("Motif (persistent route dot + interchange ring)", MOTIF_DOT, MOTIF_RING, MOTIF_TRAIL, opacity=0.0)
+MOTIF_DOT_CORE = circle(0.0, 0.0, 24.0, RED, name="Dot", line=BLACK, lw=4.0)
+MOTIF_DOT = node("Route dot", MOTIF_DOT_CORE, x=Q[0], y=Q[1])
+MOTIF_RINGS = []          # (shape, ellipse, offset)
+for _c, _t, _off in BANDS:
+    _el = E("Ellipse", width=0.0, height=0.0, name="Band")
+    _sh = E("Shape", _el, stroke(_c, _t, "Band stroke", "butt"), x=195.0, y=400.0, name="Roundel band")
+    MOTIF_RINGS.append((_sh, _el, _off))
+MOTIF_ROUNDEL = node("Interchange roundel", *[r[0] for r in reversed(MOTIF_RINGS)], x=0.0, y=0.0)
+MOTIF_TRAILS = node("Dot trails")
+MOTIF = node("Motif (persistent route dot + interchange roundel)", MOTIF_DOT, MOTIF_ROUNDEL, MOTIF_TRAILS,
+             opacity=0.0)
+TRAILS = []               # (scene, shape, trim)
 
 
 def dot_path(p_from, p_to):
@@ -276,68 +305,124 @@ def dot_path(p_from, p_to):
     return [p_from, (x0, ymid), p_to]
 
 
+def scene_trail(sc):
+    if sc.trail is None:
+        shp, tr = route(dot_path(Q, sc.P), RED, 10, name=f"Trail to scene {sc.n}", radius=18)
+        shp.attrs["opacity"] = 0.0
+        tr.attrs["end"] = 0.0
+        MOTIF_TRAILS.add(shp)
+        sc.trail = (shp, tr)
+        TRAILS.append((sc, shp, tr))
+    return sc.trail
+
+
 def key_along(anim, obj, pts, f0, f1, ease=None):
     """Key obj.x/.y through a polyline, timing proportional to distance."""
     fr = vertex_fractions(pts)
     for i, (p, u) in enumerate(zip(pts, fr)):
         f = round(f0 + (f1 - f0) * u)
-        e = "lin" if i < len(pts) - 1 else "lin"
+        e = "lin"
         if i == 0 and ease:
             e = ease
         anim.key(obj, "x", (f, float(p[0]), e))
         anim.key(obj, "y", (f, float(p[1]), e))
 
 
-def motif_enter(sc, a, ring_at=12, expand=(12, 42), extra_orbit=None):
-    """Signature transition: a route dot runs into an interchange ring which
-    expands to become the next scene."""
+def scale_about(a, obj, p, frames):
+    """Key obj scale around point p (obj is an untransformed full-artboard node)."""
+    for prop in ("scaleX", "scaleY"):
+        a.key(obj, prop, *frames)
+    a.key(obj, "x", *[(f, p[0] * (1 - v), e) for f, v, e in frames])
+    a.key(obj, "y", *[(f, p[1] * (1 - v), e) for f, v, e in frames])
+
+
+# forward roundel timing (frames @60fps)
+DOT_GO, DOT_IN = 4, 17            # dot leaves after a dip, arrives at the ring
+POP0, SQZ0, EXP0, EXP1 = 9, 17, 23, 53
+
+
+def motif_enter(sc, a):
+    """Signature transition. A route dot dips, then runs a schematic route (its
+    trail drawing behind it) into the next scene's interchange; a red/yellow/blue
+    roundel pops around it (the next scene already showing through its centre),
+    squeezes in anticipation and breathes out to become the whole screen, its
+    colour bands riding the clip edge. The incoming camera is pushed through the
+    ring and settles (follow-through)."""
     Px, Py = sc.P
     pts = dot_path(Q, sc.P)
     a.key(MOTIF, "opacity", (0, 1.0, "hold"))
-    a.key(MOTIF_DOT, "opacity", (0, 1.0, "hold"), (expand[0] + 2, 1.0, "lin"), (expand[0] + 6, 0.0, "hold"))
-    key_along(a, MOTIF_DOT, pts, 0, ring_at, ease=SOFT)
-    a.key(MOTIF_RING, "x", (0, float(Px), "hold"))
-    a.key(MOTIF_RING, "y", (0, float(Py), "hold"))
-    a.key(MOTIF_RING, "opacity", (0, 1.0, "hold"), (expand[1] - 10, 1.0, "lin"), (expand[1], 0.0, "hold"))
-    a.key(MOTIF_RING_PATH, "width", (0, 0.0, POP), (6, RING_D + 6, SOFT), (expand[0], RING_D - 6, EIO),
-          (expand[1], FULL, "hold"))
-    a.key(MOTIF_RING_PATH, "height", (0, 0.0, POP), (6, RING_D + 6, SOFT), (expand[0], RING_D - 6, EIO),
-          (expand[1], FULL, "hold"))
-    # trail: the route draws behind the dot then retracts into the ring
-    a.key(MOTIF_TRAIL, "opacity", (0, 1.0, "hold"), (expand[0] + 4, 0.0, "hold"))
-    for i, p in enumerate([Q, sc.P]):
-        pass
-    a.key(sc.disc_path, "width", (0, 0.0, "hold"), (expand[0], 0.0, EIO), (expand[1], FULL, "hold"))
-    a.key(sc.disc_path, "height", (0, 0.0, "hold"), (expand[0], 0.0, EIO), (expand[1], FULL, "hold"))
-
-
-def motif_exit_back(sc, a, dur=40):
-    """Reverse transition: the scene collapses back into its interchange ring and
-    the dot departs downward, revealing the previous scene underneath."""
-    Px, Py = sc.P
-    a.key(MOTIF, "opacity", (0, 1.0, "hold"), (dur, 0.0, "hold"))
-    a.key(MOTIF_RING, "x", (0, float(Px), "hold"))
-    a.key(MOTIF_RING, "y", (0, float(Py), "hold"))
-    a.key(MOTIF_RING, "opacity", (0, 1.0, "hold"), (dur - 6, 1.0, "lin"), (dur, 0.0, "hold"))
+    shp, tr = scene_trail(sc)
+    a.key(shp, "opacity", (0, 1.0, "hold"), (EXP0 + 2, 1.0, "lin"), (EXP0 + 6, 0.0, "hold"))
+    a.key(tr, "end", (0, 0.0, "hold"), (DOT_GO, 0.0, (0.5, 0.0, 0.6, 1.0)), (DOT_IN, 1.0, "hold"))
+    a.key(tr, "start", (0, 0.0, "hold"), (DOT_GO + 6, 0.0, (0.5, 0.0, 0.5, 1.0)), (DOT_IN + 6, 1.0, "hold"))
+    # dot: anticipation dip, run, dive into the ring
+    a.key(MOTIF_DOT, "opacity", (0, 1.0, "hold"), (DOT_IN + 4, 1.0, "lin"), (DOT_IN + 7, 0.0, "hold"))
+    a.key(MOTIF_DOT, "x", (0, Q[0], "hold"))
+    a.key(MOTIF_DOT, "y", (0, Q[1], (0.3, 0.0, 0.7, 1.0)), (DOT_GO, Q[1] + 10, "lin"))
+    key_along(a, MOTIF_DOT, pts, DOT_GO, DOT_IN, ease=(0.5, 0.0, 0.6, 1.0))
+    for prop in ("scaleX", "scaleY"):
+        a.key(MOTIF_DOT, prop, (0, 1.0, "hold"), (DOT_GO - 2, 1.0, "lin"), (DOT_GO, 0.86, (0.3, 0.0, 0.3, 1.0)),
+              (DOT_GO + 5, 1.15, "lin"), (DOT_IN, 1.0, EIO), (DOT_IN + 6, 0.35, "hold"))
+    # roundel: bands pop in (inner first), squeeze, then breathe out to full screen
+    for i, (shp_r, el, off) in enumerate(MOTIF_RINGS):
+        a.key(shp_r, "x", (0, float(Px), "hold"))
+        a.key(shp_r, "y", (0, float(Py), "hold"))
+        p0 = POP0 + i * 2
+        lag = i * 1.0
+        d_rest = RING_D + 2 * off
+        for prop in ("width", "height"):
+            a.key(el, prop, (0, 0.0, "hold"), (p0, 0.0, POP), (p0 + 8, d_rest, "lin"),
+                  (SQZ0 + 1, d_rest, EIO), (EXP0 + lag, d_rest * 0.8, EXPAND), (EXP1 + lag, FULL + 2 * off, "hold"))
+        a.key(shp_r, "opacity", (0, 1.0, "hold"), (EXP1 + lag, 1.0, "lin"), (EXP1 + lag + 1, 0.0, "hold"))
+    # the clip: the next scene shows through the roundel's centre, then becomes the screen
     for prop in ("width", "height"):
-        a.key(MOTIF_RING_PATH, prop, (0, FULL, (0.5, 0.0, 0.3, 1.0)), (24, RING_D, POP), (30, RING_D + 6, SOFT),
-              (dur, 0.0, "hold"))
-        a.key(sc.disc_path, prop, (0, FULL, (0.5, 0.0, 0.3, 1.0)), (24, 0.0, "hold"))
-    a.key(MOTIF_DOT, "opacity", (0, 0.0, "hold"), (24, 1.0, "lin"), (dur, 0.0, "hold"))
+        a.key(sc.disc_path, prop, (0, 0.0, "hold"), (POP0, 0.0, POP), (POP0 + 8, RING_D, "lin"),
+              (SQZ0 + 1, RING_D, EIO), (EXP0, RING_D * 0.8, EXPAND), (EXP1, FULL, "hold"))
+    # follow-through: the incoming camera is pushed through the ring
+    scale_about(a, sc.camera, sc.P, [(0, 1.14, "hold"), (EXP0, 1.14, (0.2, 0.0, 0.1, 1.0)), (EXP1 + 22, 1.0, "hold")])
+
+
+def motif_exit_back(sc, a, dur=44):
+    """Reverse transition: the scene breathes back into its interchange roundel
+    (bands contracting outside the shrinking clip), the roundel closes and the
+    dot drops back down its route, revealing the previous scene underneath."""
+    Px, Py = sc.P
     pts = list(reversed(dot_path(Q, sc.P)))
-    key_along(a, MOTIF_DOT, pts, 24, dur, ease=EI)
-    a.key(MOTIF_TRAIL, "opacity", (0, 0.0, "hold"))
+    a.key(MOTIF, "opacity", (0, 1.0, "hold"), (dur, 0.0, "hold"))
+    C0, C1, CL = 0, 24, 32        # contract, closed, roundel gone
+    for i, (shp_r, el, off) in enumerate(MOTIF_RINGS):
+        a.key(shp_r, "x", (0, float(Px), "hold"))
+        a.key(shp_r, "y", (0, float(Py), "hold"))
+        lag = (len(MOTIF_RINGS) - 1 - i) * 1.0
+        d_rest = RING_D + 2 * off
+        for prop in ("width", "height"):
+            a.key(el, prop, (0, FULL + 2 * off, "hold"), (C0 + lag, FULL + 2 * off, (0.75, 0.0, 0.4, 1.0)),
+                  (C1 + lag, d_rest, POP), (CL - 4 + i, d_rest * 1.08, EI), (CL + i, 0.0, "hold"))
+        a.key(shp_r, "opacity", (0, 1.0, "hold"), (CL + i, 1.0, "lin"), (CL + i + 1, 0.0, "hold"))
+    for prop in ("width", "height"):
+        a.key(sc.disc_path, prop, (0, FULL, (0.75, 0.0, 0.4, 1.0)), (C1, RING_D, "lin"), (CL - 4, RING_D, EI),
+              (CL - 1, 0.0, "hold"))
+    a.key(MOTIF_DOT, "opacity", (0, 0.0, "hold"), (C1, 0.0, "lin"), (C1 + 3, 1.0, "hold"), (dur - 2, 1.0, "lin"),
+          (dur, 0.0, "hold"))
+    for prop in ("scaleX", "scaleY"):
+        a.key(MOTIF_DOT, prop, (0, 0.35, "hold"), (C1, 0.35, POP), (C1 + 8, 1.0, "hold"))
+    a.key(MOTIF_DOT, "x", (0, float(Px), "hold"))
+    a.key(MOTIF_DOT, "y", (0, float(Py), "hold"))
+    key_along(a, MOTIF_DOT, pts, C1 + 4, dur, ease=EI)
+    # the leaving scene's camera pulls back as it closes
+    scale_about(a, sc.camera, sc.P, [(0, 1.0, (0.6, 0.0, 0.8, 0.4)), (C1, 1.12, "hold")])
 
 
-def content_exit_fwd(sc, a, dur=44):
-    a.key(sc.content, "y", (0, 0.0, EIO), (dur, -28.0, "hold"))
-    a.key(sc.content, "opacity", (0, 1.0, "hold"), (24, 1.0, SOFT), (dur, 0.0, "hold"))
-    a.key(MOTIF_TRAIL, "opacity", (0, 0.0, "hold"))
+def content_exit_fwd(sc, a, dur=50):
+    """The outgoing scene recedes (scale toward the window centre) and darkens."""
+    scale_about(a, sc.content, CENTER, [(0, 1.0, (0.5, 0.0, 0.3, 1.0)), (dur, 0.9, "hold")])
+    a.key(sc.shade, "opacity", (0, 0.0, (0.4, 0.0, 0.4, 1.0)), (dur, 0.42, "hold"))
 
 
-def content_enter_back(sc, a, dur=48):
-    a.key(sc.content, "x", (0, -36.0, EO), (dur, 0.0, "hold"))
-    a.key(sc.content, "opacity", (0, 0.35, EO), (30, 1.0, "hold"))
+def content_enter_back(sc, a, dur=50):
+    """Going back, the previous scene comes forward again from where it receded."""
+    scale_about(a, sc.content, CENTER, [(0, 0.9, "hold"), (8, 0.9, (0.2, 0.0, 0.2, 1.0)), (dur, 1.0, "hold")])
+    a.key(sc.shade, "opacity", (0, 0.42, "hold"), (6, 0.42, (0.3, 0.0, 0.3, 1.0)), (dur - 10, 0.0, "hold"))
 
 
 # ======================================================================
@@ -353,11 +438,20 @@ def wordmark(x, y, size=19, name="Wordmark"):
                 x=float(x), y=float(y))
 
 
-YEAR_TEXT = text(366, 22, None, [("2026", "year", CONV_YEAR)], 15, BLACK, weight=600, ox=1.0, name="Year")
+YEAR_TEXT = text(366, 22, None, [("2026", "year", CONV_YEAR)], 15, BLACK, weight=700, ox=1.0, name="Year")
+
+
+def perforation(y, name):
+    """Ticket perforation: a fine dashed tear line with a half-punched notch at each edge."""
+    return node(name,
+                route([(14, y), (W - 14, y)], INK60, 1.5, name="Tear line", trim=False, dash=[3, 4], cap="butt")[0],
+                circle(0.0, float(y), 14.0, BLACK, name="Notch L"), circle(float(W), float(y), 14.0, BLACK, name="Notch R"))
+
+
 HEADER = node("Header ticket band",
               wordmark(26, 32),
               YEAR_TEXT,
-              route([(0, 81), (W, 81)], BLACK, 2, name="Perforation", trim=False, dash=[5, 5], cap="butt")[0],
+              perforation(81, "Perforation"),
               rect(0, 0, W, 82, WHITE, name="Band"))
 
 BUTTONS = {}
@@ -376,7 +470,11 @@ def vm_num_write(name, v):
              E("BindablePropertyNumber", bind(name, 636, direction=True), propertyValue=float(v)))
 
 
-def button(key, cx, w, h, bg, label_prop, ink, action, outline=None, icon=None, label=True, semantic_prop=None):
+FOCUS_RINGS = []
+
+
+def button(key, cx, w, h, bg, label_prop, ink, action, outline=None, icon=None, label=True, semantic_prop=None,
+           icon_left=False):
     shape = rect(0, 0, w, h, bg, r=h / 2, name=f"{key} hit + plate", ox=0.5, oy=0.5,
                  line=outline, lw=2.5 if outline else 0)
     focus = E("FocusData", name="Focus")
@@ -389,12 +487,19 @@ def button(key, cx, w, h, bg, label_prop, ink, action, outline=None, icon=None, 
                         cornerRadiusTL=(h + 10) / 2, name="Path"), stroke(BLUE, 3.0, "Focus ring"),
              name="Focus ring", opacity=0.0)
     ring.add(bind("_focusIndex", 18, eq_conv(FOCUS_INDEX[key])))
-    kids = [ring]
+    # like :focus-visible - only after the keyboard moved focus (Tab), hidden again on pointer input
+    ring_vis = node("Focus visible", ring)
+    ring_vis.add(bind("_focusVisible", 18))
+    kids = [ring_vis]
     if icon:
         kids.append(icon)
     if label:
-        pad = 22 if icon else 18
-        lt = text(-w / 2 + pad, 0, w - (64 if icon else 2 * pad), [(SAMPLE[label_prop], label_prop)], 17, ink,
+        if icon_left:
+            lx, lw_ = -w / 2 + 44, w - 44 - 16
+        else:
+            pad = 22 if icon else 18
+            lx, lw_ = -w / 2 + pad, w - (64 if icon else 2 * pad)
+        lt = text(lx, 0, lw_, [(SAMPLE[label_prop], label_prop)], 17, ink,
                   weight=600, h=24, oy=0.5, valign="middle", overflow="ellipsis", wrap="noWrap",
                   align="left", name=f"{key} label")
         kids.append(lt)
@@ -413,6 +518,33 @@ def button(key, cx, w, h, bg, label_prop, ink, action, outline=None, icon=None, 
     LISTENERS.append(E("StateMachineListener", E("ListenerInputType", listenerTypeValue="blur"),
                        vm_num_write("_focusIndex", -1), targetId=shape.id, name=f"{key} blur"))
     return n
+
+
+def replay_icon(color, cx=0.0, cy=0.0, r=8.0, t=2.6):
+    """Counter-clockwise replay arrow, built from geometry: an open arc whose
+    arrowhead sits exactly on the arc's end and points along its tangent."""
+    a0, a1 = math.radians(215), math.radians(-62)          # screen angles (y down); decreasing = ccw
+    n_ = 22
+    pts = [(cx + r * math.cos(a0 + (a1 - a0) * k / n_), cy + r * math.sin(a0 + (a1 - a0) * k / n_))
+           for k in range(n_ + 1)]
+    ex, ey = pts[-1]
+    tx, ty = math.sin(a1), -math.cos(a1)                   # tangent for decreasing angle
+    nx, ny = -ty, tx
+    hl, hw = 6.4, 4.6
+    tip = (ex + tx * hl * 0.62, ey + ty * hl * 0.62)
+    b1 = (ex - tx * hl * 0.38 + nx * hw, ey - ty * hl * 0.38 + ny * hw)
+    b2 = (ex - tx * hl * 0.38 - nx * hw, ey - ty * hl * 0.38 - ny * hw)
+    arc = route(pts[:-1], color, t, name="Arc", radius=0, trim=False, cap="round")[0]
+    head = path_shape([tip, b1, b2], color, name="Arrowhead")
+    return node("Replay icon", head, arc)
+
+
+def share_icon(color):
+    """Share glyph: an open tray with an arrow leaving it."""
+    tray = route([(-7, -1), (-7, 8), (7, 8), (7, -1)], color, 2.6, name="Tray", radius=0, trim=False)[0]
+    shaft = route([(0, 3), (0, -10)], color, 2.6, name="Shaft", radius=0, trim=False)[0]
+    head = route([(-5, -5), (0, -10), (5, -5)], color, 2.6, name="Head", radius=0, trim=False)[0]
+    return node("Share icon", head, shaft, tray)
 
 
 def chevron(pts, color, t=3.2, name="Icon"):
@@ -442,16 +574,17 @@ BTN_PAUSE = button("pause", 114, 52, 52, WHITE, "pauseLabel", BLACK, [vm_trigger
 BTN_CONT = button("continue", 259, 214, 56, BLACK, "continueLabel", WHITE, [vm_trigger_write("_nextTapped")],
                   icon=node("Arrow", chevron([(70, 0), (88, 0)], WHITE, 2.6, "Shaft"),
                             chevron([(81, -7), (88, 0), (81, 7)], WHITE, 2.6, "Head")))
-BTN_SHARE = button("share", 1207, 110, 56, RED, "shareLabel", WHITE, [E("ListenerFireEvent", eventId=SHARE_EVENT.id)])
-BTN_REPLAY = button("replay", 1318, 96, 56, WHITE, "replayLabel", BLACK, [vm_trigger_write("_replayTapped")],
-                    outline=BLACK)
+BTN_SHARE = button("share", 1158, 136, 56, RED, "shareLabel", WHITE, [E("ListenerFireEvent", eventId=SHARE_EVENT.id)],
+                   icon=node("Share glyph", share_icon(WHITE), x=-40.0, y=1.0), icon_left=True)
+BTN_REPLAY = button("replay", 1303, 126, 56, WHITE, "replayLabel", BLACK, [vm_trigger_write("_replayTapped")],
+                    outline=BLACK, icon=node("Replay glyph", replay_icon(BLACK), x=-36.0, y=0.0), icon_left=True)
 # Dock focus: summary-only buttons start unfocusable (keyed by the Dock layer)
 BUTTONS["share"][2].attrs["canFocus"] = False
 BUTTONS["replay"][2].attrs["canFocus"] = False
 
 DOCK = node("Dock ticket band",
             BTN_PREV, BTN_PAUSE, BTN_CONT, BTN_SHARE, BTN_REPLAY,
-            route([(0, 741), (W, 741)], BLACK, 2, name="Perforation", trim=False, dash=[5, 5], cap="butt")[0],
+            perforation(741, "Perforation"),
             rect(0, 740, W, 104, WHITE, name="Band"))
 
 # ======================================================================
@@ -519,11 +652,17 @@ def layer(name, entry_to, states, ex=0):
     return l
 
 
+MOTIF_OBJS = {MOTIF, MOTIF_DOT, MOTIF_DOT_CORE, MOTIF_ROUNDEL} | {r[0] for r in MOTIF_RINGS} | \
+    {r[1] for r in MOTIF_RINGS} | {t[2] for t in TRAILS}
+
+
 def collect_rest(sc):
     rest = {}
-    for a in sc.anims.values():
+    for name, a in sc.anims.items():
+        if name == "Idle":
+            continue
         for (obj, prop) in a.order:
-            if obj in (MOTIF, MOTIF_DOT, MOTIF_RING, MOTIF_RING_PATH, MOTIF_TRAIL, MOTIF_TRAIL_TRIM):
+            if obj in MOTIF_OBJS:
                 continue
             if obj is sc.root:
                 continue
@@ -531,6 +670,9 @@ def collect_rest(sc):
     for obj, prop, v in sc.extra_rest:
         rest[(obj, prop)] = v
     return rest
+
+
+JOYSTICKS = []
 
 
 def scene_layer(sc):
@@ -554,19 +696,39 @@ def scene_layer(sc):
                 a.hold(sem, "isHidden", True)
     settled.hold(sc.root, "opacity", 1.0)
     settled.hold(MOTIF, "opacity", 0.0)
+    for inp in getattr(sc, "live_inputs", []):
+        hidden.hold(inp, "propertyValue", 0.0)
+        settled.hold(inp, "propertyValue", 1.0)
+        for name, a in sc.anims.items():
+            if name != "Idle":
+                a.hold(inp, "propertyValue", 1.0)
+    trail = sc.trail[0]
     for name, a in sc.anims.items():
         if name != "Idle":
             a.hold(sc.root, "opacity", 1.0)
+        if name.startswith("Exit") or name == "EnterBack":
+            a.hold(trail, "opacity", 0.0)
     for name in ("EnterBack", "ExitFwd"):
         a = sc.anims[name]
         for prop in ("width", "height"):
             if not a.has(sc.disc_path, prop):
                 a.hold(sc.disc_path, prop, FULL)
 
-    cs_is = c_num("currentScreen", "equal", n)
-    rm_off, rm_on = c_bool("reducedMotion", False), c_bool("reducedMotion", True)
-    paused, playing = c_bool("isPaused", True), c_bool("isPaused", False)
-    fwd, back = c_num("_navDir", "greaterThan", 0), c_num("_navDir", "lessThan", 0)
+    # Idle loop: not a state. A Joystick scrubs it from _idleN, which only the
+    # sequencer advances (current scene, settled, playing, full motion), so pause
+    # freezes it mid-motion and reduced motion keeps it at frame 0 (the rest pose).
+    idle = sc.anims["Idle"]
+    assert idle.dur == IDLE_FRAMES, (n, idle.dur)
+    for (obj, prop) in idle.order:
+        for name, a in sc.anims.items():
+            if name != "Idle" and a.has(obj, prop):
+                raise SystemExit(f"S{n}: idle key {obj.attrs.get('name')}.{prop} also keyed by {name}")
+        if (obj, prop) in rest:
+            raise SystemExit(f"S{n}: idle key {obj.attrs.get('name')}.{prop} has a rest hold")
+    if idle not in ANIMS:
+        ANIMS.append(idle)
+    JOYSTICKS.append(E("Joystick", bind(f"_idle{n}", 299), x=-1.0, y=0.0, xId=idle.build().id,
+                       name=f"Scene {n} idle playhead"))
 
     S_H = state(hidden, 160, 0)
     enters = []
@@ -576,8 +738,7 @@ def scene_layer(sc):
     else:
         enters.append((state(sc.anims["EnterFwd"], 420, -200), None))
     S_EB = state(sc.anims["EnterBack"], 420, 220)
-    S_I = state(sc.anims["Idle"], 700, 0)
-    S_S = state(settled, 700, 260)
+    S_S = state(settled, 700, 0)
     S_XF = state(sc.anims["ExitFwd"], 980, -160)
     S_XB = state(sc.anims["ExitBack"], 980, 160)
 
@@ -592,19 +753,14 @@ def scene_layer(sc):
     S_H.add(go(S_EB, c_num("currentScreen", "equal", n), c_num("_navDir", "lessThan", 0), c_bool("reducedMotion", False)))
     S_H.add(go(S_S, c_num("currentScreen", "equal", n), c_bool("reducedMotion", True), dur=220))
 
-    live = [st for st, _ in enters] + [S_EB, S_I, S_S]
+    live = [st for st, _ in enters] + [S_EB, S_S]
     for st in live:
         st.add(go(S_XF, c_num("currentScreen", "greaterThan", n), c_bool("reducedMotion", False), dur=90))
         st.add(go(S_XB, c_num("currentScreen", "lessThan", n), c_bool("reducedMotion", False), dur=90))
         st.add(go(S_H, c_num("currentScreen", "notEqual", n), c_bool("reducedMotion", True), dur=220))
     for st in [s for s, _ in enters] + [S_EB]:
-        st.add(go(S_I, c_bool("isPaused", False), c_bool("reducedMotion", False), exit_pct=100))
-        st.add(go(S_S, c_bool("isPaused", True), exit_pct=100))
         st.add(go(S_S, c_bool("reducedMotion", True), dur=220))
-    S_I.add(go(S_S, c_bool("isPaused", True), dur=320))
-    S_I.add(go(S_S, c_bool("reducedMotion", True), dur=220))
-    S_S.add(go(S_I, c_num("currentScreen", "equal", n), c_bool("isPaused", False), c_bool("reducedMotion", False),
-               dur=320))
+        st.add(go(S_S, exit_pct=100))
     for st in (S_XF, S_XB):
         st.add(go(S_H, exit_pct=100))
         for est, p in enters:
@@ -612,7 +768,7 @@ def scene_layer(sc):
         st.add(go(S_EB, c_num("currentScreen", "equal", n), c_num("_navDir", "lessThan", 0),
                   c_bool("reducedMotion", False), dur=120))
         st.add(go(S_S, c_num("currentScreen", "equal", n), c_bool("reducedMotion", True), dur=220))
-    states = [S_H] + [s for s, _ in enters] + [S_EB, S_I, S_S, S_XF, S_XB]
+    states = [S_H] + [s for s, _ in enters] + [S_EB, S_S, S_XF, S_XB]
     return layer(f"Scene {n}", S_H, states)
 
 
@@ -651,9 +807,13 @@ layer("Events: recapFinished latch", F_WAIT, [F_WAIT, F_SETTLING, F_DONE])
 cont, share, replay = BUTTONS["continue"], BUTTONS["share"], BUTTONS["replay"]
 DOCK_N = Anim("Dock normal", 1)
 DOCK_S = Anim("Dock summary", 24)
-for a, (cx, sx, rx), foc in ((DOCK_N, (259, 1207, 1318), (True, False, False)),
-                             (DOCK_S, (-1000, 207, 318), (False, True, True))):
+pause_b = BUTTONS["pause"]
+for a, (cx, sx, rx, px), foc in ((DOCK_N, (259, 1158, 1303, 114), (True, False, False)),
+                                 (DOCK_S, (-1000, 158, 303, -1000), (False, True, True))):
     a.hold(cont[0], "x", float(cx))
+    a.hold(pause_b[0], "x", float(px))
+    a.key(pause_b[2], "canFocus", (0, foc[0], "hold"))
+    a.key(SEMS["pause"], "isHidden", (0, not foc[0], "hold"))
     a.hold(share[0], "x", float(sx))
     a.hold(replay[0], "x", float(rx))
     a.key(cont[2], "canFocus", (0, foc[0], "hold"))
@@ -700,12 +860,15 @@ def key_listener(name, keys, *actions, mods=0):
 
 KEYROOT = node("Recap", KEYROOT_FOCUS, HEADER, DOCK, MOTIF,
                *[SCENES[n].root for n in range(10, 0, -1)],
+               rect(0, 0, W, H, WHITE, name="Paper (under every scene)"),
                node("Clip sources", *[SCENES[n].disc for n in range(1, 11)]))
 for l in [key_listener("Key next", ["right"], vm_trigger_write("_nextTapped")),
           key_listener("Key previous", ["left"], vm_trigger_write("_prevTapped")),
           key_listener("Key pause", ["space"], vm_trigger_write("_pauseTapped")),
-          key_listener("Key tab", ["tab"], E("FocusActionTraversal", traversalKind="next")),
-          key_listener("Key shift-tab", ["tab"], E("FocusActionTraversal", traversalKind="previous"), mods=1)]:
+          key_listener("Key tab", ["tab"], E("FocusActionTraversal", traversalKind="next"),
+                       vm_num_write("_focusVisible", 1)),
+          key_listener("Key shift-tab", ["tab"], E("FocusActionTraversal", traversalKind="previous"),
+                       vm_num_write("_focusVisible", 1), mods=1)]:
     l.attrs["targetId"] = KEYROOT.id
     LISTENERS.append(l)
 
@@ -716,18 +879,26 @@ ROOT_STYLE = E("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeight
                widthUnitsValue="auto", heightUnitsValue="auto", name="Style")
 SEQ = E("ScriptedLayout", E("FocusData", canFocus=False, name="No focus"), scriptAssetId=SCRIPT_SEQ.id,
         name="Sequencer (gestures, timer, progress)")
+PAPER_STYLE = E("LayoutComponentStyle", positionTypeValue="absolute", positionLeft=0.0, positionTop=0.0,
+                 positionLeftUnitsValue="points", positionTopUnitsValue="points", name="Style")
+PAPER = E("LayoutComponent", PAPER_STYLE,
+          E("ScriptedLayout", E("ScriptInputNumber", propertyValue=0.62, name="strength"),
+            scriptAssetId=SCRIPT_PAPER.id, name="Print stock (paper shader)"),
+          width=float(W), height=float(H), styleId=PAPER_STYLE.id, name="Print layer")
 ARTBOARD = E("Artboard",
              ART_STYLE,
+             PAPER,
              E("LayoutComponent", ROOT_STYLE, SEQ, width=float(W), height=float(H), styleId=ROOT_STYLE.id,
                name="Sequencer layer"),
              KEYROOT,
              SHARE_EVENT, EV_SCREEN, EV_FINISHED,
+             *JOYSTICKS,
              SM,
              *[a.build() for a in ANIMS],
              defaultStateMachineId=SM.id, viewModelId=VM.id, viewModelInstanceId=INST_FIXTURE.id,
-             styleId=ART_STYLE.id, width=float(W), height=float(H), clip=True, name="Switchyard Recap")
+             styleId=ART_STYLE.id, width=float(W), height=float(H), clip=True, name="Switchyard Recap", id="0:900")
 
-doc = E("Rive", ARTBOARD, FONT_DISPLAY, FONT_TEXT, SCRIPT_FMT, SCRIPT_SEQ, *ROOTS, VM, version=1, kind="fragment")
+doc = E("Rive", ARTBOARD, FONT_DISPLAY, FONT_COND, FONT_TEXT, SCRIPT_FMT, SCRIPT_SEQ, SCRIPT_P3, SCRIPT_FLAP, SCRIPT_PAPER, *ROOTS, VM, version=1, kind="fragment")
 out = os.path.join(ROOT, "scene.rml")
 with open(out, "w") as f:
     f.write("<!-- GENERATED by tools/gen.py - edit the generator, or edit here and stop regenerating. -->\n")

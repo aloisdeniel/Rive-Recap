@@ -36,12 +36,17 @@ for k in 0 1 2 3; do
 done
 shot $OUT/personas/persona-unknown-index-7-falls-back-to-0.png --data=personaIndex=7 $(taps 8) --advance=220
 
-# 3) transitions: intermediate frames
-for f in 6 12 18 24 32; do shot $OUT/transitions/forward-1to2-f$(printf %02d $f).png --advance=200 --pointer=click@300,420 --advance=$f; done
-for f in 6 12 18 26 34; do shot $OUT/transitions/reverse-3to2-f$(printf %02d $f).png $(taps 2) --advance=100 --pointer=click@60,420 --advance=$f; done
-for f in 4 14 26 40 60; do shot $OUT/transitions/carry-8to9-f$(printf %02d $f).png $(taps 7) --advance=100 --pointer=click@300,420 --advance=$f; done
-for f in 4 14 30 52 80; do shot $OUT/transitions/carry-9to10-f$(printf %02d $f).png $(taps 8) --advance=100 --pointer=click@300,420 --advance=$f; done
-for f in 20 40 60 90; do shot $OUT/transitions/entrance-s3-f$(printf %02d $f).png $(taps 1) --pointer=click@300,420 --advance=$f; done
+# 3) transitions: intermediate frames (stale frames are cleared first; timings changed in the improvement pass)
+rm -f $OUT/transitions/*.png
+# signature quilt fold: the sheet lands (0-22), pull-back beat, folds away (22-50)
+for f in 06 10 16 24 32 38 44; do shot $OUT/transitions/forward-1to2-f$f.png --advance=200 --pointer=click@300,420 --advance=$((10#$f)); done
+for f in 06 10 24 32 38; do shot $OUT/transitions/reverse-3to2-f$f.png $(taps 2) --advance=100 --pointer=click@60,420 --advance=$((10#$f)); done
+for f in 04 14 26 40 60; do shot $OUT/transitions/carry-8to9-f$f.png $(taps 7) --advance=100 --pointer=click@300,420 --advance=$((10#$f)); done
+# 9 -> 10: the persona disc blooms into the summary ground, the emblem flies into the card
+for f in 04 10 16 30 52 80; do shot $OUT/transitions/carry-9to10-f$f.png $(taps 8) --advance=100 --pointer=click@300,420 --advance=$((10#$f)); done
+for f in 20 40 60 90; do shot $OUT/transitions/entrance-s2-f$f.png --advance=200 --pointer=click@300,420 --advance=$((50 + 10#$f)); done
+# persona medallion: the light sweeps round the quilted cushion during the reveal
+for f in 30 70 110; do shot $OUT/transitions/persona-medallion-light-f$f.png $(taps 7) --advance=100 --pointer=click@300,420 --advance=$((10#$f)); done
 
 # 4) reduced motion
 shot $OUT/reduced-motion/rm-02-hours-settled.png --data=reducedMotion=true $(taps 1) --advance=30

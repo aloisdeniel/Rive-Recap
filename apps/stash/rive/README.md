@@ -8,6 +8,203 @@ reveal and the share card. The brief is [`../PROMPT.md`](../PROMPT.md).
 The dataset is the brief's **fictional** full-year 2026 fixture; nothing here
 is measured user activity.
 
+## Improvement pass (3D, shaders, motion, consistency)
+
+### Critique of the first pass
+
+* **Flat hero material.** Coins, the brief's hero material, were flat
+  discs that read as stickers. The scene-2 jar was mostly empty, dull grey
+  glass, far from the concept's overflowing mint jar.
+* **The signature transition was tiny.** A 30 pt coin and a small spring sat
+  in the bottom-right corner while a flat panel wiped up. It read as a slide.
+* **Inconsistent type and alignment.** Headlines were left-aligned in scenes
+  1, 2, 5, 6 and 7 and centred elsewhere; hero values alternated left, centre
+  and right. Support lines floated at a different height in every scene.
+  Headlines that needed a third line shrank.
+* **Overlaps.**
+  * The corner "pachinko board" toy collided with the machine's plinth in
+    scenes 1, 2 and 9.
+  * The motif jar sat behind the footer buttons in scenes 6 and 8.
+  * Scenes 3–5 parked a 0.3× machine at the bottom as clutter.
+  * The extreme fixture pushed long units and supports into the art.
+* **Orphans.** "A little year. A lot of / you." on the summary, a lone
+  "rhythm." in scene 5, and "…a place to / grow." for Roundup Ranger.
+* **Money flicker.** Values flickered into cents while counting
+  (€568.25, €1,208.37), contradicting the formatter's own rule.
+* **Replay icon.** Its arrowhead sat at the arc's start, pointing nowhere.
+* **Progress segments** were 6 pt hairlines in one colour, unlike the
+  concept's chunky accent pills.
+* **Reduced motion.** Idle loops (twinkles, rays) kept running.
+* **Events** were verified only through mirror counter triggers.
+
+### What changed
+
+1. **Real 3D coins everywhere** (`scripts/coin3d.luau` + `.wgsl`).
+   * **Geometry.** A lathed coin: flat face, raised rim, rounded reeded edge,
+     mirrored back. It is built in the vertex shader from a shared (u, s) grid
+     of 5.8k vertices.
+   * **Embossed icons.** The face carries a star, house, graduation cap or palm
+     from 2D signed distance fields, as bevel normals with an engraved edge line.
+   * **Material.** Cel-softened gold reflects a small procedural studio, with a
+     specular glint. An inverted-hull ink outline matches the art direction's
+     chunky outline.
+   * **Keyable pose.** `yaw`, `pitch` and `roll` are `ScriptInputNumber`s that
+     the timelines key:
+     * drop coins tumble;
+     * the pachinko coin's roll is keyed from the distance it travels;
+     * goal tokens flip two or three turns into the tray;
+     * the merged roundup coin spins faster with each arrival, then brakes face-on.
+   * **The `Coin` component is now this coin**, so all 60 placed coins share one
+     material: the pile, persona spiral, share card and spills.
+2. **A glass jar for the motif** (`scripts/jar3d.*`).
+   * **Two layers.** The far wall (with a caustic band near the floor) draws
+     behind the coin pile; the near wall draws in front. The near wall is clear
+     face-on, thick and tinted at grazing angles, and carries two tall softbox
+     streaks, a thin rim streak and a curved shoulder glint.
+   * **No depth buffer, no `discard`.** Each layer returns transparent for the
+     faces it does not own.
+   * **Exact outline.** The profile matches the vector outline, which
+     `tools/gen.py` traces from the same function.
+   * **Fuller pile.** A bounded pile of 36 3D coins replaced the flat gold
+     slab. The jar now visibly fills in scene 2 and stays full, and a glint
+     sweeps the glass once it has filled.
+3. **Signature transition rebuilt around chrome springs** (`scripts/spring3d.*`).
+   * **The springs.** Two helix tubes are wound in the vertex shader from a
+     keyed `height`, so they compress with round wire and twist as they close.
+     Chrome reflects a cream sky, a sharp horizon and a grape floor, with an
+     ink hull.
+   * **The forward sequence:**
+     * the next scene's panel rests on their launch bar at the bottom of the screen;
+     * a 3D coin rolls off a rail onto the right spring (f24);
+     * the bar and the panel dip under the impact while the outgoing scene dips
+       in sympathy;
+     * the springs fire (f29); the panel lands with overshoot at f48 while the
+       coin is flung out of the top, spinning.
+   * **After the launch** the springs recoil and drop out of view by f44.
+   * **Back navigation** is the reverse story: the dropping panel lands on the
+     springs, compresses them, and the coin is thrown back up the rail.
+   * **Draw order.** The springs draw *behind* the motif machine, which stands
+     on the bar; the coin draws in front.
+4. **An arcade screen** (`scripts/crt.*`): a fragment-only CRT pass over
+   scene 6's month windows.
+   * Phosphor bloom spills from each window by how lit it is, computed from
+     the same `activeMonths × _count6` as the vector windows.
+   * Fine scanlines, a slow refresh band, a curved-glass sheen and a vignette.
+   * The output is premultiplied with the glow in rgb and only the darkening in
+     alpha, so it composites additively over the vector board.
+5. **One copy system.**
+   * Every metric scene stacks a centred headline, hero, unit and support
+     line on the same grid (`copy_block`).
+   * Headlines sit in a **three-line, bottom-anchored slot**, so a third line
+     grows upward at full size; only a fourth line shrinks.
+   * Units fit to one line; measures were chosen against orphans.
+6. **Recompositions.**
+   * Scene 3: a pachinko board feeds the machine's lid.
+   * Scene 4: feeder chutes, plus one token launched from the machine.
+   * Scene 8: the machine launches the jars onto the shelf, bumping its lid once per jar.
+   * Scenes 2 and 4: the chute was moved clear of two-line copy.
+   * The machine's poses now keep it whole above the footer in every scene.
+7. **The signature interaction moved into the motif.**
+   * The tap toy is the coin waiting at the mouth of the machine's coin path,
+     present in scenes 1–9.
+   * Tapping it sends it spinning up the tube into the lid, and a fresh coin
+     pops back.
+   * The director hit-tests it from the generated `motifpose.luau`, with a hit
+     region of at least 46 pt, and never navigates on it.
+   * The cluttering corner board is gone.
+8. **Fixes.**
+   * Money counts in whole units until it settles: €148 → €148.50 at the end,
+     never €568.25 mid-count.
+   * The replay glyph is rebuilt from geometry: a clockwise arc open at the
+     top, its arrowhead on the arc's end along the tangent.
+   * Progress pills are 8 pt; finished segments are mint on dark scenes and
+     grape on light ones.
+   * Idle loops rest under reduced motion.
+9. **Events, verified as events.**
+   * `screenChanged` carries an `index` payload bound to `currentScreen`.
+   * A harness artboard, `EventProbe`, nests `Recap` and *hears* the three
+     real Rive events, so the counts are observed headlessly.
+   * The `Recap` artboard is now `isComponent` so it can be nested; it is
+     still the file's main artboard.
+
+### 3D / shader techniques used, and where they were not
+
+* **Used:**
+  * scripted GPU canvases with WGSL;
+  * vertex-shader geometry from uniforms: a lathe for the coin and jar, a helix
+    tube for the springs;
+  * an inverted-hull outline pass with a depth buffer;
+  * 4× MSAA on coins and springs where the GPU offers it;
+  * premultiplied alpha blending for the glass;
+  * a fragment-only fullscreen triangle for the CRT;
+  * procedural materials only (no textures, no blobs).
+
+  Every piece renders in the headless `--screenshot` path, so the video and
+  captures show it.
+* **Not used:**
+  * 3D for the plinth, tray, ticket, shelf, jars, persona blocks and share card.
+    They read better as the art direction's chunky vector, and keep text and
+    bindings native.
+  * A full-screen background shader for the dark scenes. It added cost on every
+    frame without beating the flat grape.
+  * Arcade flashing of any kind: the CRT band is slow and dim.
+
+### Fallbacks and reduced motion
+
+* **Without GPU scripting** (`context:shader` returns nil):
+  * coins draw as flat vector discs scaled by their pose;
+  * the jar draws a tinted vector silhouette;
+  * the springs draw ink-and-steel zigzags;
+  * the CRT adds nothing.
+
+  The story, bindings and controls are unchanged.
+* **Reduced motion:** 3D inputs are held at their final values, the handoff
+  never plays, and idle loops rest. Coins, the CRT band and the toy are
+  therefore still.
+* **Pause, hold and sharing:** the same rest pose applies, plus 200 ms blends.
+
+### New compromises
+
+* **GPU is required for the captured look.** Unsigned local builds already
+  need `--publish` for web, and the 3D now depends on it too.
+* **Memory.** About 80 small GPU canvases (78 coins, most about 150 px
+  square at 2 px per pt), two jar layers (about 370 × 450 px), two springs
+  (about 180 × 960 px each) and one CRT canvas (about 390 × 296 px).
+  * Static coins render exactly once.
+  * Animated pieces re-render only while their pose changes.
+* **Resolution.** Pieces are rendered at 2 px per pt, so they are slightly
+  softer than vector on 3× screens.
+* **Light under rotation.** Light is fixed relative to each piece, so a
+  2D-rotated pile coin rotates its highlight. Hero coins use the keyed `roll`
+  instead, which keeps the light top-left.
+* **Longer handoff.** The forward handoff is ~0.8 s (panel lands at f48),
+  longer than the first pass's 0.6 s. Count-up windows and the settle time
+  (2.5 s) moved with it.
+* **The springs sit near the controls.** They rise behind the footer; for
+  ~0.5 s their coils show either side of the Continue button.
+* **`EventProbe` ships in the file.** It is 24 objects and never instantiated
+  by a host.
+
+### Performance
+
+Apple M5 Pro, CLI 1.6.0, headless @1x. Render figures are CPU-side submission,
+not device GPU time. The "this pass" runs were taken while other projects were
+rendering on the same machine, so they overstate the cost somewhat. Scene 6
+alone (CRT live): render mean 0.56 ms, p95 1.27 ms.
+
+Render submission is about 4× the first pass, because of the GPU passes and
+their image draws. Each script's `draw` also builds a pose-key string per frame.
+It stays far under a 16.7 ms frame except for single first-draw frames.
+
+| | First pass | This pass |
+|---|---|---|
+| `.riv` (`--once`) | 1,183,175 B | 1,459,124 B (+276 KB: 4 scripts, 4 shaders, the pile coins and timelines) |
+| `--bench=600` (intro) advance mean / p95 | 0.023 / 0.097 ms | 0.058 / 0.158 ms |
+| `--bench=600` render mean / p95 / max | 0.116 / 0.142 / 0.675 ms | 0.468 / 1.127 / 7.8 ms (first-frame GPU setup and the one-time pile render) |
+| `--bench=1500 --data=autoAdvanceSeconds=3` advance mean / p95 | 0.030 / 0.088 ms | 0.097 / 0.265 ms |
+| `--bench=1500 …` render mean / p95 / max | 0.133 / 0.178 / 0.607 ms | 0.693 / 1.812 / 19.6 ms (worst frame: a scene's first draw of its 3D pieces) |
+| wasm memory growth | +0 | +0 |
+
 ## Preview
 
 ```bash
@@ -21,13 +218,14 @@ rive . --data=personaIndex=2 --data=reducedMotion=true   # any UserRecap field
 
 In the window: click/tap the right two-thirds to advance, the left third to go
 back, press-and-hold to pause; Left/Right/Space/Tab/Enter on the keyboard; tap
-the little pachinko board (bottom-left) to nudge its coin.
+the gold coin waiting at the mouth of the machine's coin path to send it up the
+tube into the lid.
 
 Builds:
 
 | Output | Command | Status |
 |---|---|---|
-| `build/stash-recap.riv` (also `export/stash-recap.riv`) | `rive . --once` | **built**, 1.18 MB, unsigned |
+| `build/stash-recap.riv` (also `export/stash-recap.riv`, an identical copy) | `rive . --once` | **built**, 1.46 MB (1,459,124 B), unsigned |
 | `build/stash-recap.rev` | `rive . --once --rev=build/stash-recap.rev` | **not produced** — the CLI requires `rive login` (“Not logged in. Run: rive login”). Run that command after logging in. |
 | signed `.riv` for shipping | `rive . --publish` | needs `rive login` (see *Limitations*: scripts) |
 
@@ -37,17 +235,22 @@ Builds:
 |---|---|
 | `a_data.rml` | `UserRecap` view model (+ `ZeroUser`, `Extreme` fixture instances), converters, font and script assets |
 | `b_recap.rml` | `Recap` artboard: chrome, stage, ten scenes, motif, overlays, the `Recap` state machine and its 116 timelines |
-| `c_components.rml` | `Coin` and `ShareCard` component artboards + their `ComponentAsset`s |
+| `c_components.rml` | `Coin`, `ShareCard` and `EventProbe` (test harness) artboards + their `ComponentAsset`s |
+| `scripts/coin3d.luau` + `.wgsl` | the 3D gold coin (every coin and goal token in the file) |
+| `scripts/jar3d.luau` + `.wgsl` | the motif's glass jar walls (back and front layer) |
+| `scripts/spring3d.luau` + `.wgsl` | the chrome coil springs of the signature transition |
+| `scripts/crt.luau` + `.wgsl` | the arcade-screen (CRT) pass over scene 6's month windows |
+| `motifpose.luau` | generated module: motif pose per scene + toy position (the director's toy hit test) |
 | `scripts/director.luau` | sequencing director (ScriptedLayout, draws nothing) |
 | `scripts/progress.luau` | progress segments (ScriptedLayout, data-driven drawing) |
 | `numfmt.luau`, `scripts/fmt_*.luau` | locale formatter module + four ScriptedDataConverters |
 | `scripts/b2*.luau` | boolean → opacity converters (privacy, empty state, pause icon) |
 | `tools/gen.py`, `tools/rml.py` | generator for the three `.rml` files (see note) |
-| `tools/behaviour.py` | 25 headless behaviour checks → `captures/tests/behaviour.txt` |
-| `tools/capture.py`, `tools/motion_preview.py`, `tools/grid.sh` | review captures and the MP4 |
+| `tools/behaviour.py` | 29 headless behaviour checks → `captures/tests/behaviour.txt` |
+| `tools/capture.py`, `tools/motion_preview.py`, `tools/grid.sh` | review captures (incl. `captures/gpu/` 2× close-ups) and an optional autoplay MP4 |
 | `fixtures/*.json` | `sample` (identical to `../sample-data.json`), `zero-user`, `extreme-long-copy` |
 | `assets/fonts/` | Rubik + Nunito Sans variable fonts and their OFL texts |
-| `captures/` | settled scenes, personas, reduced motion, fixtures, transitions, viewports, share, interaction, motion MP4 |
+| `captures/` | settled scenes, personas, reduced motion, fixtures, transitions, viewports, share, interaction, GPU close-ups, walkthrough MP4 |
 
 The `.rml` files are ordinary, editable RML. They are emitted by
 `python3 tools/gen.py` because the recap repeats a lot of structure (ten scene
@@ -65,9 +268,10 @@ Recap artboard (bound to UserRecap/Default)
 ├─ Footer: story       layout row: previous · continue
 ├─ Footer: summary     layout row: replay · share   (swapped by the Footer mode layer)
 └─ Stage               x/y/scale bound to _stageX/_stageY/_stageScale (fit 390×844)
-   ├─ Coin toy         signature interaction, own hit region
-   ├─ Handoff          coin + spring overlay (signature transition)
-   ├─ Toy machine      the persistent motif (pose per scene)
+   ├─ Handoff: coin    the 3D coin of the signature transition (above the machine)
+   ├─ Toy machine      the persistent motif (pose per scene): 3D glass jar, 3D coin
+   │                   pile, coin path with the tap-toy coin (signature interaction)
+   ├─ Handoff: springs launch bar on two 3D chrome springs (below the machine)
    └─ Scene 10 … Scene 1   each: content group + full-bleed panel with an ink lip
 ```
 
@@ -83,13 +287,16 @@ Recap artboard (bound to UserRecap/Default)
   previous one (a different, deliberately reversed design).
 * `Motif` — ten poses of the toy machine; every pose→pose transition is a 760 ms
   eased blend (0 ms in reduced motion). This is continuity transition #1.
-* `Handoff` — forward: a coin rolls off a rail, lands on a spring, the spring
-  compresses and fires as the next panel rises (signature transition,
-  continuity #2). Back: the spring stretches and yanks the current panel down
-  while the coin is thrown back up the rail. A/B states let it retrigger.
+* `Handoff` — forward: a 3D coin rolls off a rail and lands on the right of two
+  chrome springs; the next scene's panel rests on their launch bar, dips with
+  the impact, and the springs fire it into view while the coin is flung out the
+  top (signature transition, continuity #2). Back: the current panel drops onto
+  the springs, compresses them, and the coin is thrown back up the rail. A/B
+  states let it retrigger.
 * `Persona reveal` — four distinct reveal timelines (+ four static
   reduced-motion poses), chosen by `_personaSlot`.
-* `Footer mode`, `Coin toy`.
+* `Footer mode`, `Coin toy` (idle wobble ⇄ still under pause / reduced motion;
+  nudge, or a calm opacity-only nudge under reduced motion).
 
 **The director** (Luau) owns what markup cannot express compactly and writes
 results back into the *same* UserRecap instance: the derived visible-scene
@@ -149,8 +356,9 @@ where noted). Types are native Rive view-model types.
 | `_navDir`, `_visibleCount`, `_visibleIndex`, `_canGoBack`, `_canGoNext`, `_isSummary`, `_emptyState`, `_personaKnown`, `_personaSlot`, `_frozen`, `_holding`, `_finished`, `_pauseButtonLabel`, `_focus` | various | director / SM | derived sequencing state — read-only for hosts |
 | `_chromeColor`, `_chromeOnColor` | Color | director | header/footer ink, eased between cream (dark scenes) and ink (light scenes) |
 | `_stageX`, `_stageY`, `_stageScale`, `_viewW`, `_viewH`, `_chromeInset` | Number | director | responsive fit |
-| `_handoffFwd`, `_handoffBack`, `_coinNudge` | Trigger | director / toy | drive the overlay layers |
-| `_evtScreenChanged`, `_evtRecapFinished`, `_evtShareTapped` | Trigger | state machine | verification mirrors of the three events (the CLI cannot observe Rive events) |
+| `_handoffFwd`, `_handoffBack`, `_coinNudge` | Trigger | director | drive the handoff and coin-toy layers (the director hit-tests the toy coin) |
+| `_evtScreenChanged`, `_evtRecapFinished`, `_evtShareTapped` | Trigger | state machine | mirrors fired beside each event, kept for the existing checks |
+| `_heardScreenChanged`, `_heardRecapFinished`, `_heardShareTapped` | Trigger | `EventProbe` | pulsed by a harness artboard whose listeners *hear the real Rive events* reported by the nested Recap (verification only; hosts ignore them) |
 
 No per-screen copy of any statistic exists: every hero value, odometer,
 token/jar/window count, share tile and accessible value binds the global
@@ -160,9 +368,15 @@ property directly (through converters).
 
 | Event | Fired by | Payload |
 |---|---|---|
-| `screenChanged` | the Enter state of each scene (forward, back or reduced), once per actual change, plus once for the initial scene | none — **read `currentScreen`** when it arrives (Rive events can carry custom properties, but a bound payload was not needed and was not verified, so the documented integration is “event + read the model”) |
+| `screenChanged` | the Enter state of each scene (forward, back or reduced), once per actual change, plus once for the initial scene | custom property **`index`** (Number) bound to `currentScreen`, the canonical 1-based id; reading `currentScreen` on arrival is equivalent |
 | `recapFinished` | the summary's first settle (`_finished` latch); not again until `replay` | none |
 | `shareTapped` | the Share button (click, Enter, screen-reader tap) | none — the host captures and opens the share sheet |
+
+The three events are verified *as Rive events*: the `EventProbe` artboard nests
+`Recap` (same instance) and its event listeners pulse `_heard*`; checks 26–29 of
+`tools/behaviour.py` count them (10 `screenChanged` in a full run, 1
+`recapFinished`, 1 `shareTapped`). `EventProbe` is a test harness, not part of
+the experience; hosts never instantiate it.
 
 ### Formatting (in-file adapter)
 
@@ -212,29 +426,34 @@ summary's persona chip.
 
 ## Motion design
 
-Material: chunky ink-outlined toy-bank parts, bevelled coins (a reusable `Coin`
-component), mechanical odometer windows, starbursts. Every scene follows the
+Material: chunky ink-outlined toy-bank parts, real 3D minted gold coins (a
+reusable `Coin` component and keyable `coin3d` drawables), a lathed glass jar,
+chrome springs, mechanical odometer windows, an arcade CRT board, starbursts.
+Every scene follows the
 score: anticipation (panel push / lift), hero reveal with a count-up timed to
 its illustration (`COUNT` windows in the director), headline word cascade and
 support resolve, then a restrained idle loop (paused by `_frozen`).
 
 | Scene | Hero sequence |
 |---|---|
-| 1 Invitation | machine drops in with squash, the wordmark rises through the jar label (clip), a coin rides the path into the lid; odometer rolls to the year |
-| 2 EUR saved | seven coins slide down a chute into the lid slot and fall into the glass; the coin pile rises through a clip mask, synced to the count |
-| 3 Deposits | odometer board rolls (ones digit continuous, higher digits tick); a coin takes a zigzag track into the machine |
-| 4 Goals | up to three tokens arc in and snap into the tray with squash + click flash (shown = min(goals, 3)) |
-| 5 Roundups | eight small coins spiral in and merge into one large coin with a flash |
-| 6 Active months | twelve windows light in a loose, non-calendar order (lit = activeMonths) |
+| 1 Invitation | machine drops in with squash, the wordmark rises through the jar label (clip), a 3D coin spins up the path into the lid, a fresh tap-toy coin pops into the path's mouth; odometer rolls to the year |
+| 2 EUR saved | seven 3D coins tumble out of a chute into the glass; the 3D coin pile rises through the jar clip, synced to the count; the jar overflows (coins drop round the base) and a glint sweeps the glass |
+| 3 Deposits | odometer board rolls (ones digit continuous, higher digits tick); a 3D coin rolls every rail of a pachinko board (roll keyed from the distance travelled) and drops into the machine's lid |
+| 4 Goals | three 3D goal tokens (house, cap, palm) flip in, two from feeder chutes and one launched from the machine, and snap into the tray with squash + click flash (shown = min(goals, 3)) |
+| 5 Roundups | eight coins spiral in; each arrival spins the growing 3D coin faster; it brakes and settles face-on catching the light |
+| 6 Active months | twelve windows light in a loose, non-calendar order (lit = activeMonths); a CRT pass blooms from each lit window |
 | 7 Goal funded | the lid pops and a ticket rises out of the slot through a clip mask |
-| 8 Goal jars | up to six jars fan out onto a shelf from below |
+| 8 Goal jars | the machine launches up to six jars from its lid, one bump per jar, onto a shelf |
 | 9 Persona | the machine rattles, its lid pops, the spotlight opens, then one of four emblem choreographies |
 | 10 Summary | the share card flips in; its tiles stamp in via a nested timeline (`NestedRemapAnimation`) |
 
 Reduced motion: every scene uses a static final pose (all keyed values at
-their end) with a short sequential opacity change (out 100 ms, in 170 ms), no
-handoff overlay, no motif travel (0 ms pose blends), counts at their final
-value immediately.
+their end, including every 3D yaw/pitch/roll) with a short sequential opacity
+change (out 100 ms, in 170 ms), no handoff overlay (no springs, no flying
+coin), no motif travel (0 ms pose blends), counts at their final value
+immediately, and idle loops parked in their rest pose (new: before this pass
+they kept running): coins do not turn, the CRT refresh band stays off, the toy
+coin is still. A toy tap under reduced motion is an opacity blink.
 
 ## Accessibility
 
@@ -255,33 +474,36 @@ value immediately.
 
 * `rive . --verify` — 0 errors, 0 warnings. `rive inspect . --summary` —
   `problems: []`.
-* `python3 tools/behaviour.py` — 25/25 pass (`captures/tests/behaviour.txt`):
+* `python3 tools/behaviour.py` — 29/29 pass (`captures/tests/behaviour.txt`):
   tap zones, rapid taps (5 taps → scene 6, one `screenChanged` per scene),
   hold/release (no nav on release), pause/resume, keyboard, hidden scenes 3/5/6
   skipped both ways with 7 segments, full auto-advance 1→10 with exactly one
   `recapFinished` and no loop, auto-advance off, unsafe duration clamp,
   backgrounded freeze, replay resets latch, share fires once, buttons, persona
   remap + invalid fallback, negative/non-integer sanitising, zero user
-  (intro → summary, 2 segments).
+  (intro → summary, 2 segments), the motif's tap toy (nudges, never navigates),
+  and the real `screenChanged` ×10 / `recapFinished` ×1 / `shareTapped` ×1
+  heard through `EventProbe`.
 * Runtime data updates: `captures/interaction/runtime-update-*.png` (deposits
   96 → 4,321 and `locale=de-DE` → `4.321`).
 * Captures: `captures/settled` (10 scenes + sheets), `personas` (settled +
   mid-reveal for all four), `reduced-motion`, `fixtures/zero-user`,
-  `fixtures/extreme-long-copy`, `transitions` (forward f20/f30 and back f14 for
+  `fixtures/extreme-long-copy`, `transitions` (forward f26/f34 and back f24 for
   every adjacent pair + a 6-frame strip of the signature handoff),
   `viewports` (320×568, 430×932, 1440×900), `share` (private default, name +
   values, standalone `ShareCard`, zero user), `interaction` (coin toy, focus
-  ring, paused), `motion/autoplay-full-run.mp4` (15 fps, real timing, full
-  auto-advanced run with 3 s dwell).
+  ring, paused), `gpu` (2× close-ups: jar and pile, merged coin, goal tokens,
+  arcade board, springs firing), `motion/walkthrough.mp4` (the walkthrough,
+  `../video.webm`, transcoded: 30 fps, Right pressed every 3.5 s).
 
 ### Measurements (Apple M5 Pro, macOS 26.6, CLI 1.6.0, headless @1x)
 
 | | |
 |---|---|
-| `.riv` size | 1,183,175 B (≈ 930 KB of it is the two variable fonts, embedded) |
-| objects | Recap 19.8k (state machine + keyframes dominate), Coin 43, ShareCard 465 |
-| `rive . --bench=3200` (full auto-run) | advance mean 0.033 ms (p95 0.098), render mean 0.170 ms (p95 0.243, one 24.7 ms outlier at load) |
-| bounded pools | ≤ 8 moving coins per scene, 12 windows, 6 jars, 3 tokens; one clip per mask; offscreen scenes sit in `Hidden` (no loops) |
+| `.riv` size | 1,459,124 B (≈ 930 KB of it is the two variable fonts, embedded); first pass 1,183,175 B |
+| objects | Recap 22.7k (state machine + keyframes dominate), Coin 22, ShareCard 465, EventProbe 24 |
+| bench | see *Improvement pass → Performance* |
+| bounded pools | ≤ 8 moving coins per scene, 36 static pile coins (each rendered once), 12 windows, 6 jars, 3 tokens; one clip per mask; offscreen scenes sit in `Hidden` (no loops) |
 
 These are CLI headless numbers, not an on-device frame-rate measurement — no
 physical test device was available; measure on target hardware before
@@ -293,14 +515,15 @@ shipping.
 |---|---|
 | “global” view model | `UserRecap` is one instance bound at the root and inherited by every nested component (`Coin`, `ShareCard`). Rive's `viewModelType="global"` was not used: `--data` cannot reach a global (no headless proof of runtime updates) and runtime support for host-bound globals varies. Functionally it is the single shared instance. |
 | Locale/currency formatting | in-file Luau converters (Rive has no grouping/ICU converter) |
-| Event payloads | events carry no payload; hosts read `currentScreen` |
+| Event payloads | `screenChanged` carries `index` (bound to `currentScreen`); the other two need none |
 | Derived persona binding | director script mapping (atomic), switchable off for host-localized strings |
 | Visible-scene list / skip logic / timers / hold-to-pause | director script; the state machine still owns all scene, motif, handoff, persona and footer sequencing and every event |
 | Progress segments | scripted drawing (segment count is data) |
-| Keyed deformation / bones | squash-and-stretch via keyed scale on grouped parts; no meshes |
+| Keyed deformation / bones | squash-and-stretch via keyed scale on grouped parts; real deformation where it matters is done on the GPU (springs compress by keyed height, coins turn by keyed yaw/pitch/roll) |
 | Path-following coin | keyed x/y along authored rail vertices (no follow-path constraint) |
 | Freezing decorative motion on pause | idle loops cross-fade (200 ms) to their rest pose; entrance animations already in flight finish |
-| Raster grain | not used (pure vector) |
+| Raster grain | not used; the only non-vector pixels are the scripted GPU renders (coins, glass, springs, CRT), all procedural |
+| “do not require a real 3D renderer” | the 3D pieces enhance but are not required: without GPU scripting each script draws a flat vector stand-in, and nothing in the story depends on them |
 | `.rev` export | blocked on login (see Builds) |
 
 ## Remaining limitations (honest list)
@@ -312,13 +535,19 @@ shipping.
 * `.rev` not produced (not logged in), so “opens in the Rive Editor” is
   unverified. RML carries `familyName`/`styleName`, state positions and
   artboard positions for a clean editor import.
-* Event delivery verified only through the mirror triggers (the CLI does not
-  surface Rive events); verify `screenChanged`/`recapFinished`/`shareTapped`
-  in the host.
-* Long headlines (+40 %) shrink the headline only (`fitFontSize` in a two-line
-  slot) rather than reflowing the scene; the hero value also uses
-  `fitFontSize`. Names truncate with an ellipsis.
+* Events are verified headlessly as real Rive events (through `EventProbe`),
+  but the `index` payload's value is not observable from the CLI; check it in
+  the host.
+* Headlines get three full-size lines (bottom-anchored slot); a fourth line
+  shrinks the headline (`fitFontSize`). Long unit labels fit to one line; the
+  hero value also uses `fitFontSize`. Names truncate with an ellipsis.
+* The 3D pieces and the CRT pass need GPU scripting; elsewhere they fall back
+  to flat vector stand-ins (see *Improvement pass*).
 * RTL locales and right-to-left layout were not implemented or tested.
+* With the extreme fixture's two-line support, scene 2's last line touches the
+  top of the coin chute. Sample-length copy clears it by 20 pt.
+* The incoming panel and the outgoing scene share hues on 1→2 (both grape), so
+  that handoff reads mostly through the springs and the coin.
 * Odometers show `+` in every window for values ≥ 10,000 (deliberately not
   modulo); the hero text carries the real value.
 * Header/footer colour eases between cream and ink during a transition, so for

@@ -18,6 +18,10 @@ apps/simmer/rive/
   scripts/director.luau     sequencing + input + derived-data adapter (runs inside the file)
   scripts/formatCount.luau  locale-aware count formatter (scripted data converter)
   scripts/eventAudit.luau   logs host events as they fire (verification aid)
+  scripts/steam.luau/.wgsl  signature steam veil (GPU shader)            } improvement pass,
+  scripts/cloth.luau/.wgsl  simulated 3D tablecloth pull (GPU mesh)      } see "Improvement
+  scripts/letters.luau/.wgsl steam condensing into the wordmark (scene 1) } pass" below
+  scripts/riso.luau/.wgsl   risograph paper + ink-starvation stock       }
   fixtures/*.json           fixture, new-user (zero), extreme / long-copy
   assets/fonts/             Bricolage Grotesque, Source Sans 3, Caveat (+ OFL texts)
   tools/build.py            generator that writes data/ and scenes/ (see "Editing")
@@ -197,9 +201,11 @@ Hand edits to the `.rml` are overwritten on the next generation.
 ## Verification
 
 * `rive . --verify` → 0 errors, 0 warnings; `rive inspect . --summary` → 0 problems.
-* `captures/motion/handoff-2-to-3-30fps.gif` (one handoff, frame-exact) and
-  `captures/motion/full-auto-advance-4fps.gif` (the whole recap auto-advancing
-  with a 3 s dwell) are rendered from headless frames by `tools/motion_preview.py`.
+* `captures/motion/*.webm` (30 fps, frame-exact headless renders, encoded with
+  ffmpeg by `tools/motion_preview.py`): the forward handoff 2→3, the mirrored
+  back handoff 5→4, the scene-1 steam lettering and the 8→9 persona reveal.
+  The full walkthrough is `apps/simmer/video.webm`
+  (`scripts/render-video.py simmer` from the repo root).
 * `python3 tools/capture.py` writes:
   `captures/settled/` (all ten scenes), `captures/personas/` (each persona +
   a mid-reveal frame + unknown index), `captures/reduced-motion/`,
@@ -215,24 +221,25 @@ Hand edits to the `.rml` are overwritten on the next generation.
 |---|---|
 | Persistent motif | The pot is one component (`Pot motif`) placed once at the root; a `Motif pose` layer carries it between scenes with a 720 ms eased move/scale/tilt (lid pops on 1 and 9, comes off for 2, closes elsewhere). |
 | Continuity transitions (≥2 carrying an object) | pot → shrinks into the bottom of the cookbook (2→3), → tilts and pours orzo into the bowl (5→6), → becomes the centre of the table (6→7), → rattles and dissolves into the persona emblem (8→9), → flies into the share card's emblem slot (9→10). |
-| Signature handoff | Every navigation fires `handoffForward` / `handoffBack`: a cream steam ribbon with a tomato ink thread draws across the screen while its loop vertices morph, followed by a checked tablecloth pulled across the bottom with a rippling hem; tomato, garlic, basil and lemon riding on it are flung up and land rearranged. Back navigation plays the mirrored version, and each scene has distinct forward (lift up-left) and back (sink down-right) exits. |
-| Hero sequences | 1 lid pop → vegetables thrown out in arcs, wordmark rising out of steam; 2 three timed waves of cutouts dropping into the pot + splash + leaves leaping back out; 3 four cookbook pages flipping over the spine; 4 four arrangements spiralling in around a plate while sauce draws a spiral; 5 jars hopping onto uneven shelves with squash and stretch; 6 bowl spins and throws out a scalloped medallion + ribbon banner; 7 place settings expand outward round a gingham table; 8 a steam stitch loops through a loose calendar, days popping as it passes; 9 per-persona reveal; 10 share card slides in and assembles stamp by stamp. |
+| Signature handoff | Every navigation fires `handoffForward` / `handoffBack`. The pot squats and puffs (anticipation); a steam ribbon with a tomato ink thread leaves the pot, curls once through the layout and billows into a risograph-printed veil that hides the cut (GPU shader), then evaporates through a halftone dot screen while its swirl keeps turning. As it clears, a simulated gingham tablecloth is pulled across the bottom of the stage (tug back, pull, billow, yank) and throws the tomato, garlic, basil and lemon riding on it. Back navigation mirrors both. See "Improvement pass". |
+| Hero sequences | 1 lid pop → vegetables thrown out in arcs, the pot's steam condenses into the wordmark and evaporates into ink; 2 three timed waves of cutouts dropping into the pot + splash + the whole stew bursting back out and hanging in the steam; 3 four cookbook pages flipping over the spine; 4 four arrangements spiralling in around a plate while sauce draws a spiral; 5 jars hopping onto uneven shelves with squash and stretch; 6 bowl spins and throws out a scalloped medallion + ribbon banner; 7 place settings expand outward round a gingham table; 8 a steam stitch loops through a loose calendar, days popping as it passes; 9 per-persona reveal with eight ingredients thrown into orbit; 10 share card slides in and assembles stamp by stamp. |
 | Count-up | 200–1200 ms window: the director's eased `countProgress` drives a formula per scene, so digits count from 0 to the bound value in sync with the hero motion and never show the placeholder. |
 | Signature interaction | Tap the pot (opaque hit region, also a semantics button "Stir the pot"): lid wobble, squash, six ingredients flourish out and fall. |
-| Reduced motion | `reducedMotion=true`: scenes cut to their settled composition with a 220 ms opacity fade, motif poses jump, no handoff, count shows the final value at once, persona emblem static. |
+| Reduced motion | `reducedMotion=true`: scenes cut to their settled composition with a 220 ms opacity fade, motif poses jump, the lid cuts, no handoff (no steam, no cloth), the wordmark is already set, count shows the final value at once, persona emblem static. |
 | Pause | `motionFrozen` (pause after the entrance settles) is bound to `isPaused` of every nested artboard, so decorative loops freeze in place and resume from the same frame; the dwell timer stops; navigating while paused still works. |
 
 ## Unsupported techniques and substitutions
 
 * **Steam ribbon morphing into lettering.** Rive cannot morph a path into glyph
-  outlines. Substitute: the steam stroke trims up into the wordmark while the
-  wordmark's glyphs rise out of it with a text-modifier reveal.
-* **Cloth simulation / keyed deformation of the tablecloth.** No mesh deform on
-  vector art here; the ripple is keyed vertex animation of the hem (and the
-  clip path), with the gingham clipped to it.
-* **Raster grain.** Not used. Risograph texture comes from offset ink layers
-  (25 % aubergine copies offset 3–6 pt under every cutout) and sparse vector
-  specks.
+  outlines, so this is done on the GPU instead (`scripts/letters.*`): the
+  wordmark is rendered from a vector artboard into a texture and the steam
+  shader condenses into it. Without GPU scripting the wordmark simply fades in.
+* **Cloth.** A real position-based simulation in Luau drawn as a lit 3D mesh
+  (`scripts/cloth.*`); without GPU scripting the same simulation is drawn as
+  flat vector quads.
+* **Raster grain.** Procedural only (`scripts/riso.*`, rendered once per size);
+  no bitmap ships. Without GPU scripting the offset ink layers and specks
+  still carry the risograph look.
 * **Event payloads.** Not used (see contract); hosts read `UserRecap`.
 * **Responsive layout.** The master is a fixed 390 × 844 artboard with
   absolute-positioned art (clipped). Hosts should use `Fit.contain` and fill
@@ -252,6 +259,9 @@ Hand edits to the `.rml` are overwritten on the next generation.
 
 ## Measurements
 
+These are the first-pass figures; the improvement pass's numbers are in its
+own section at the end.
+
 * `build/simmer-recap.riv`: **1,749,061 bytes**, of which ~1.46 MB are the three
   embedded variable fonts (Bricolage 408 KB, Source Sans 3 646 KB, Caveat
   404 KB). Subsetting them would bring the file under ~400 KB.
@@ -263,7 +273,9 @@ Hand edits to the `.rml` are overwritten on the next generation.
   (S9 with four persona emblems is the heaviest), pot 1.3k, share card 0.9k.
   Particles are bounded pools (≤ 34 orzo grains, 6 flourish pieces, 7 pour
   grains); nothing scales with raw counts. Offscreen scenes sit in a static
-  1-frame `Off` state, so their loops do not run.
+  1-frame `Off` state, so their loops do not run. (Improvement pass: root 4.0k,
+  S9 3.5k, S2 2.2k; the GPU pieces are four scripts, not objects. The cloth
+  is one bounded 30 × 13 particle grid, and the riders are four.)
 
 ## Status and honest limitations
 
@@ -281,3 +293,203 @@ Hand edits to the `.rml` are overwritten on the next generation.
 * The previewer's live window was not opened by this agent (headless captures
   only); interaction was verified with synthesised pointer/key input and data
   dumps (`captures/checks/report.json`).
+
+## Improvement pass
+
+### Critique of the first pass
+
+* **The signature handoff was the weakest moment.** It used the same vector
+  ribbon on every cut, and the outgoing scene sat almost unchanged under it.
+  Mid-cut, the incoming hero number ("0", then counting) landed on top of the
+  old copy (1→2 showed "0" over "Your 2026 on Simmer"; 4→5 showed "14" and
+  "0" side by side). Every exit was the same lift-and-fade.
+* **The tablecloth was a flat gingham rectangle** wiping along the bottom over
+  the controls. Its "ripple" was three keyed hem vertices, and the riders were
+  flung up into the header.
+* **The steam never became lettering.** The wordmark rose out of a trimmed
+  stroke.
+* **Flat colour fields.** There was no printed surface, although the brief is
+  risograph.
+* **Composition:**
+  * Scene 1 crowded the period ticket, wordmark, swash and popped lid together.
+  * Scene 2 repeated scene 1's pot with a near-empty band above it and a weak
+    payoff (three hovering leaves, against the concept's burst of
+    ingredients). Its napkin ran into the Previous button.
+  * Scene 9's emblem was small inside a large dashed circle, leaving a dead
+    band under the title (the concept fills it with a dancing pot and
+    swirling ingredients).
+  * Scene 4 was sparse and small. Its pot overlapped the "new favourite" note.
+  * Scene 8's steam stitch was too faint to read.
+  * On the share card, the stamp crowded the last tile.
+* **Inconsistency:** Share had an icon and Replay did not. The replay arrowhead
+  check from the other demos did not apply, because there was no icon.
+* **Reduced motion:** after scenes 1, 2 and 9, the lid still eased back on for
+  320 ms.
+
+### What changed
+
+1. **Steam veil, the signature cut (GPU shader, `scripts/steam.*`).** The pot
+   squats and puffs (anticipation). A steam ribbon then leaves the pot from
+   where it stood, with a tomato ink thread along its spine. It rises, curls
+   once through the layout, and its spine points billow as they age, until
+   the veil hides the cut at about 300 ms.
+   * It is printed like a riso: paper-white cumulus lobes lit from their own
+     relief, a cream mid tone, the shadow side as a 45° tomato halftone, and
+     an aubergine ink layer offset under it (the same misregistration every
+     cutout has).
+   * It clears through the dot screen: the fringe breaks into dots that shrink
+     away while the swirl keeps turning, uncovering the next layout.
+   * Back navigation mirrors it.
+   * Rapid navigation continues from the veil instead of popping.
+   * The new hero number now arrives behind the veil and is revealed counting,
+     so there is no old/new overlap.
+2. **A simulated tablecloth pull (3D GPU mesh, `scripts/cloth.*`).** The cloth
+   is 30 × 13 particles with structural, shear and bend constraints
+   (position-based Verlet), gravity, drag and table friction.
+   * Two "hands" pull the leading edge along a keyed path: a tug back, a pull
+     in, a slow billowing pass, then the yank. The cloth bunches, lifts and
+     folds for real.
+   * The simulation runs in the hands' accelerating frame, and every particle
+     is tethered to them, so a whip-fast pull never stretches the weave.
+   * It is drawn as a lit, depth-tested mesh (4× MSAA) at the presenting pixel
+     density, with a cast shadow on the table.
+   * The material is woven gingham with darker crossings, a tomato hem with a
+     stitch line, and a paler underside where a fold turns over. Light is
+     posterised, with the shadow printed as an aubergine halftone.
+   * Tomato, garlic, basil and lemon (small vector artboards) ride the cloth.
+     When the yank comes, each is thrown with the cloth's velocity plus a hop
+     and spin, and tumbles out of frame.
+   * The pull follows the steam, as the brief orders it. The pot rides over it.
+3. **Steam that becomes the wordmark (GPU, `scripts/letters.*`).** The
+   "Simmer" lettering is rendered from a vector artboard into a texture, and
+   the shader uses it as the target.
+   * The plume off the popped lid is drawn into the real glyphs: a blur and a
+     noise warp that both relax to zero.
+   * The steam letters then lift and evaporate through the dot screen,
+     uncovering the inked vector wordmark printed underneath.
+   * This replaces the substitute from the first pass.
+4. **Risograph stock (GPU, `scripts/riso.*`).** Two static layers are rendered
+   once per size and laid over everything:
+   * a paper layer (multiply): tooth, pulp fibres, mottling and inclusions;
+   * an ink-starvation layer (screen): clustered pin-holes that show only on
+     inked areas, so tomato numbers and aubergine buttons read as printed
+     while the paper stays clean.
+5. **Composition:**
+   * Scene 1: ticket, wordmark and swash raised, and a lower lid pop.
+   * Scene 2: the whole stew bursts back out and hangs in the steam (carrot,
+     mushroom, onion, basil, tomato, garlic, peas, as in the concept). The
+     napkin now sits clear of the controls.
+   * Scene 4: a larger plate and arrangements, with butter swooshes trailing
+     each arrangement as it spirals in, and the notes moved clear of the pot.
+   * Scene 8: the stitch is now the ribbon's cream steam with a tomato thread.
+   * Scene 9: the emblem is 1.2× larger and raised 40 pt, with eight
+     ingredients thrown into a slow orbit (the motif's persona pose follows).
+   * Scene 10: the stamp sits clear of the tiles.
+6. **Replay icon.** A counter-clockwise arc open on the right, built from
+   geometry. The arrowhead sits on the arc's end and points along its tangent
+   (checked at 4×). Share and Replay now both carry icons.
+7. **Reduced motion.** The lid now cuts instead of easing.
+
+### 3D and shader techniques: what is used, and where they are not
+
+* **Used:**
+  * GPU canvases with WGSL.
+  * A dynamic vertex buffer: CPU-simulated cloth, normals per frame, a 32-byte
+    interleaved layout.
+  * A depth buffer, 4× MSAA resolve, and two pipelines over one bind group
+    layout (cast shadow plus cloth).
+  * Fragment-only full-screen passes for the steam, the lettering and the
+    stock.
+  * A Rive 2D canvas used as a texture: the wordmark artboard is sampled by the
+    lettering shader.
+  * Script-hosted artboard instances for the riders.
+  * No `discard` anywhere. No per-frame allocations: buffers, canvases and
+    views are created once.
+* **Not used: a 3D pot.** A lathed, lit pot was considered and rejected. The
+  pot is a flat character with a face and a keyed lid, and the concept art is
+  flat illustration, so a shaded 3D pot would break the risograph art
+  direction and the character's expressions. Depth comes from the cloth, the
+  steam's relief and the print texture instead.
+
+### Fallbacks, reduced motion, pause
+
+* **No shader support:**
+  * The steam draws as a thick cream vector stroke along the same spine.
+  * The cloth runs the same simulation, drawn as flat vector quads.
+  * The lettering draws nothing, and the wordmark fades in.
+  * The riso stock is skipped.
+* **Reduced motion:** the handoff states never play (progress stays 0, so
+  nothing is drawn). The reduced scene-1 entrance holds the lettering's
+  progress at 1, so it is already set.
+* **Pause** (`motionFrozen`): the steam's flow clock and the cloth simulation
+  hold, and the lettering follows its paused scene timeline. Navigating while
+  paused still plays the handoff, as before.
+
+### New compromises
+
+* **Constants that must stay in step.**
+  * The steam origin per scene (`ORIGIN` in `steam.luau`) mirrors the motif
+    poses in `tools/main_board.py`. It has to be kept in step by hand.
+  * Likewise the lettering region (`letters.luau`) mirrors scene 1's wordmark
+    position.
+* **Rapid navigation restarts the cloth.** A handoff that restarts during the
+  pull resets the cloth off screen; it is at most 0.5 s of cloth.
+* **Overlay roots are absolutely positioned.** The two full-stage overlay
+  layouts (cloth, stock) and the Director root are now absolutely positioned
+  (`overlay_style`). The artboard is a flex row: in the first attempt the new
+  layouts were laid out beside the Director, which shifted its hit area by
+  260 pt and broke tap navigation. The checks caught it.
+* **Rendering resolution:**
+  * The steam renders at 1 px per point (soft by nature, with a coarse dot
+    screen).
+  * The lettering renders at 2 px per point.
+  * The cloth renders at the presenting density, capped at 2×.
+  * The stock renders at the presenting density.
+* **Headless captures are @1x.**
+* **GPU memory:**
+  * steam: 1.3 MB;
+  * lettering: 2 × 2.2 MB;
+  * cloth canvas: 0.75 MB at 1× (3 MB at 2×), plus 4× MSAA colour and depth
+    (about 6 MB at 1×);
+  * stock: 2 × 1.3 MB at 1× (× scale²).
+* **Web needs a signed build.** These are four more unsigned scripts and four
+  shaders. WebGPU validation was not exercised; the native preview was.
+
+### Checks
+
+`python3 tools/capture.py checks` gives 20/20 results identical to the
+pre-pass `captures/checks/report.json`: same values and same events for tap,
+back, rapid ×6, hold/release, pause/resume, keys, Tab/Enter, auto-advance to
+the summary, clamping, share, replay, hidden scenes, the pot tap, the negative
+clamp and the unknown persona. No check was changed. `rive . --verify` gives
+0 errors and 0 warnings; `rive inspect . --summary` reports 0 problems.
+
+### Performance
+
+`rive . --bench`, Apple M5 Pro, headless at @1x. Render times are CPU-side
+submission, not GPU time.
+
+| | Before | After |
+|---|---|---|
+| `build/simmer-recap.riv` | 1,749,061 B | 1,978,084 B (+229 KB: four scripts and shaders, four rider artboards, the wordmark mask, the scene 2/4/9 additions; fonts are still ~1.46 MB of it) |
+| `--bench=600` from boot (includes one handoff at 9.1 s): advance mean / p95 | 0.030 / 0.072 ms | 0.08 / 0.92 ms |
+| same run: render submission mean / p95 | 0.173 / 0.158 ms | 0.15 / 0.24–0.28 ms |
+| `--bench=1200`, `autoAdvanceSeconds=3` (three handoffs): advance mean / p95 / max | — | 0.144 / 0.98 / 1.51 ms |
+| same run: render mean / p95 | — | 0.157 / 0.343 ms |
+| scene 1 only (`--bench=150`, the lettering shader live): advance / render p95 | — | 0.038 / 0.148 ms |
+| wasm memory growth | +0 | +0 |
+| walkthrough `video.webm` | 3.8 MB | 10.1 MB (the grain and halftone carry real detail at the same CRF) |
+
+Where the time goes:
+* The advance p95 during a handoff is the Luau cloth solver: one substep of
+  six iterations over 2,127 constraints plus the tethers, for about 0.5 s per
+  cut. It was 3 ms at 2 × 10 iterations and was tuned down until the folds
+  stopped changing visibly.
+* GPU work exists only while it is visible:
+  * the steam: one full-screen pass per frame for about 0.7 s;
+  * the cloth: one 806-triangle mesh twice (shadow and body), 4× MSAA, for
+    about 0.5 s;
+  * the lettering: one pass during scene 1's first 1.6 s;
+  * the stock: two passes once per resize, then two image draws per frame.
+* Idle frames do no GPU passes beyond the stock composite. On-device GPU time
+  was not measured (CLI figures, M5 Pro, @1x).

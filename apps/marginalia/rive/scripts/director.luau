@@ -13,6 +13,7 @@
 --   * maps personaIndex -> personaName / personaDescription / personaColor
 --   * fires the internal triggers the Recap state machine turns into the
 --     public events screenChanged / shareTapped / recapFinished
+--   (the page turn itself is drawn by scripts/pagestage.luau)
 --   * draws the progress segments (one per eligible scene)
 --   * writes pointer parallax for the paper theater
 
@@ -107,7 +108,7 @@ local STR_NAMES = {
 }
 local TRIG_NAMES = {
     '_cmdPrev', '_cmdNext', '_cmdPrimary', '_cmdSecondary', '_cmdPause',
-    '_turnFwd', '_turnBack', '_evtScreen', '_evtShare', '_evtFinished',
+    '_evtScreen', '_evtShare', '_evtFinished',
 }
 
 -- ------------------------------------------------------------ helpers
@@ -297,13 +298,7 @@ local function go(self: Director, k: number, dir: number)
     self.sinceEntry = 0
     self.dwell = 0
     self.countForward = dir > 0 and not rm
-    if not rm then
-        if dir > 0 then
-            fire(self, '_turnFwd')
-        else
-            fire(self, '_turnBack')
-        end
-    end
+    -- (the Page Stage script watches currentScreen + _navDir and turns the page)
     fire(self, '_evtScreen')
 end
 

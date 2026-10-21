@@ -125,6 +125,63 @@ def smooth_path(points, closed=True, tension=1.0, id=None, vert_ids=None, cw=Tru
     return E("PointsPath", {"isClosed": closed, "isClockwise": cw, "name": "Path", "id": id}, verts)
 
 
+def cubic_attrs(points, closed=True, tension=1.0):
+    """Vertex attributes for an all-cubic path, so two paths with the same vertex count can be morphed by
+    keying every vertex. points: (x, y) smooth, or (x, y, 'c', d) for a sharp corner with handles of length d
+    pointing at the neighbours."""
+    n = len(points)
+    out = []
+    for i, p in enumerate(points):
+        prv = points[(i - 1) % n] if (closed or i > 0) else p
+        nxt = points[(i + 1) % n] if (closed or i < n - 1) else p
+        if len(p) > 2 and p[2] == "c":
+            d = p[3] if len(p) > 3 else 4
+            ai = math.atan2(prv[1] - p[1], prv[0] - p[0])
+            ao = math.atan2(nxt[1] - p[1], nxt[0] - p[0])
+            di = min(d, math.hypot(prv[0] - p[0], prv[1] - p[1]) / 3)
+            do = min(d, math.hypot(nxt[0] - p[0], nxt[1] - p[1]) / 3)
+            out.append({"x": p[0], "y": p[1], "inRotation": ai, "inDistance": di, "outRotation": ao, "outDistance": do})
+            continue
+        tx = (nxt[0] - prv[0]) / 2 * tension
+        ty = (nxt[1] - prv[1]) / 2 * tension
+        d = math.hypot(tx, ty) / 3
+        ang = math.atan2(ty, tx)
+        out.append({"x": p[0], "y": p[1], "inRotation": ang + math.pi, "inDistance": d, "outRotation": ang,
+                    "outDistance": d})
+    return out
+
+
+def cubic_path(points, vert_ids, closed=True, cw=True, id=None, tension=1.0):
+    verts = []
+    for vid, a in zip(vert_ids, cubic_attrs(points, closed, tension)):
+        verts.append(E("CubicDetachedVertex", {k: round(v, 4) for k, v in a.items()} | {"id": vid}))
+    return E("PointsPath", {"isClosed": closed, "isClockwise": cw, "name": "Path", "id": id}, verts)
+
+
+def _unwrap(a, ref):
+    while a - ref > math.pi:
+        a -= 2 * math.pi
+    while ref - a > math.pi:
+        a += 2 * math.pi
+    return a
+
+
+def key_morph(anim, vert_ids, keys, base, closed=True, tension=1.0):
+    """True path morph: keys = [(frame, points, ease)], every vertex's position and handles are keyed.
+    base = rest points (angles are unwrapped against it so handles never spin)."""
+    ref = cubic_attrs(base, closed, tension)
+    per = [(f, cubic_attrs(pts, closed, tension), e) for f, pts, e in keys]
+    for i, vid in enumerate(vert_ids):
+        for prop in ("x", "y", "inRotation", "inDistance", "outRotation", "outDistance"):
+            ks = []
+            for f, attrs, e in per:
+                v = attrs[i][prop]
+                if "Rotation" in prop:
+                    v = _unwrap(v, ref[i][prop])
+                ks.append((f, round(v, 4), e))
+            anim.k(vid, prop, ks)
+
+
 def node(name, children, id=None, x=None, y=None, sx=None, sy=None, rot=None, op=None, binds=None,
          extra=None):
     a = {"x": x, "y": y, "scaleX": sx, "scaleY": sy, "rotation": rot, "opacity": op, "name": name, "id": id}
@@ -148,12 +205,14 @@ TAG_OPSZ = 0x6F70737A
 
 
 def tstyle(sid, font, size, color, wght=None, wdth=None, opsz=None, cid=None, cbinds=None,
-           lh=None, ls=None, family=None, style=None, size_binds=None):
+           lh=None, ls=None, family=None, style=None, size_binds=None, axis_ids=None):
+    """axis_ids: optional dict {'wght': id, 'wdth': id} so a timeline can key the axis value."""
+    axis_ids = axis_ids or {}
     kids = [fill(color, cid=cid, binds=cbinds)]
     if wght:
-        kids.append(E("TextStyleAxis", {"tag": TAG_WGHT, "axisValue": wght, "name": "wght"}))
+        kids.append(E("TextStyleAxis", {"tag": TAG_WGHT, "axisValue": wght, "name": "wght", "id": axis_ids.get("wght")}))
     if wdth:
-        kids.append(E("TextStyleAxis", {"tag": TAG_WDTH, "axisValue": wdth, "name": "wdth"}))
+        kids.append(E("TextStyleAxis", {"tag": TAG_WDTH, "axisValue": wdth, "name": "wdth", "id": axis_ids.get("wdth")}))
     if opsz:
         kids.append(E("TextStyleAxis", {"tag": TAG_OPSZ, "axisValue": opsz, "name": "opsz"}))
     return E("TextStylePaint", {"fontSize": size, "fontAssetId": font, "lineHeight": lh, "letterSpacing": ls,

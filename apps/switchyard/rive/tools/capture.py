@@ -2,7 +2,7 @@
 """Regenerates the review captures under captures/.
 
   python3 tools/capture.py            # stills (settled, personas, RM, fixtures, transitions, viewports)
-  python3 tools/capture.py --motion   # also the full auto-advance motion preview (GIF, ~6 min)
+  python3 tools/capture.py --motion   # also an auto-advance GIF (slow; ../video.webm is the walkthrough)
 
 Needs Pillow only for the contact sheets / GIF (falls back to stills if missing).
 """
@@ -83,14 +83,14 @@ def stills():
     # transitions: forward handoff (two intermediate frames each) + reverse collapse
     for n in range(1, 10):
         frames = []
-        for f in (8, 20, 32):
+        for f in (14, 26, 40):
             p = out("transitions", f"fwd_{n:02d}to{n + 1:02d}_f{f:02d}.png")
             shot(p, *adv(150), *click(*NEXT), *adv(f), data=[f"currentScreen={n}"])
             frames.append(p)
         sheet(frames, out("transitions", f"_fwd_{n:02d}to{n + 1:02d}.png"), 0.5)
     for n in (3, 6, 10):
         frames = []
-        for f in (8, 18, 28):
+        for f in (10, 22, 34):
             p = out("transitions", f"back_{n:02d}to{n - 1:02d}_f{f:02d}.png")
             shot(p, *adv(150), *click(*PREV), *adv(f), data=[f"currentScreen={n}"])
             frames.append(p)
@@ -98,6 +98,19 @@ def stills():
     for f in (20, 60, 110):
         shot(out("transitions", f"route_chip_B12_f{f:03d}.png"), *adv(150), *click(146, 488), *adv(f),
              data=["currentScreen=4"])
+
+    # GPU pieces mid-move: the intro camera dive, the tram braking, the flap board rolling
+    for f in (40, 60, 80):
+        shot(out("gpu", f"intro_world_dive_f{f:03d}.png"), *adv(f), data=["currentScreen=1"])
+    for f in (40, 60, 80):
+        shot(out("gpu", f"tram_arrival_f{f:03d}.png"), *adv(f), data=["currentScreen=2"])
+    for f in (50, 70, 90):
+        shot(out("gpu", f"flapboard_roll_f{f:03d}.png"), *adv(f), data=["currentScreen=8"])
+    # true pause: two frames 2.5 s apart while paused are identical (idle loops frozen mid-motion)
+    shot(out("gpu", "pause_freeze_a.png"), *adv(300), "--key=space", *adv(1), data=["currentScreen=6",
+                                                                                 "autoAdvanceEnabled=false"])
+    shot(out("gpu", "pause_freeze_b.png"), *adv(300), "--key=space", *adv(150), data=["currentScreen=6",
+                                                                                   "autoAdvanceEnabled=false"])
 
     for vp in ("320x568", "430x932", "1280x800"):
         rive([f"--screenshot={out('viewports', f'contain_{vp}.png')}", "--data=currentScreen=4", "--advance=240",

@@ -4,7 +4,8 @@ from rml import (E, nid, Anim, cond_num, cond_bool, cond_trigger, write_num, wri
 from art import BASE
 import stage
 from stage import (CARRIER, ROPE, CLOUD, HERO_DRIVER, CARRIER_POSE, CONTINUITY, IN_DUR, rope_bow,
-                   STAGE_AB, STAGE_SM, W, H)
+                   STAGE_AB, STAGE_SM, W, H, CHALK_IN, CARRIER_YAW, CARRIER_PITCH, ENTRY_YAW)
+from art import LIVE
 import model
 from model import path
 
@@ -12,6 +13,49 @@ SCENES = stage.all_scenes()
 BY_K = {s.k: s for s in SCENES}
 
 ANIMS = []
+YAW_OUT = 6.2832     # a full turn: the carrier spins once as it is yanked and lands face-on
+TILT = {"back": 0.0, "mid": 0.035, "front": 0.07, "text": 0.02}   # camera swing per parallax layer
+
+
+def chalk_burst(a, k, x, y, direction, dur):
+    """Exit: the chalk shader blooms from the yank point and occludes the cut."""
+    c = CHALK_IN
+    a.k(c["originX"], 243, 0, float(x))
+    a.k(c["originY"], 243, 0, float(y))
+    a.k(c["seed"], 243, 0, round(1.7 + k * 1.37, 3))
+    a.k(c["direction"], 243, 0, float(direction))
+    a.k(c["clear"], 243, 0, 0.0)
+    a.k(c["amount"], 243, 0, 0.0)
+    a.k(c["amount"], 243, 8, 0.0, "out")
+    a.k(c["amount"], 243, 14, 0.16, "inout")
+    a.k(c["amount"], 243, dur - 3, 0.58)
+    a.k(c["drift"], 243, 0, 0.0, "in")
+    a.k(c["drift"], 243, dur, 150.0)
+
+
+def chalk_clear(a):
+    """Entrance: the cloud keeps drifting and thins out from its edges."""
+    c = CHALK_IN
+    a.k(c["amount"], 243, 0, 0.58)
+    a.k(c["amount"], 243, 26, 0.58)
+    a.k(c["amount"], 243, 27, 0.0)
+    a.k(c["clear"], 243, 0, 0.0, "outq")
+    a.k(c["clear"], 243, 26, 1.5)
+    a.k(c["drift"], 243, 0, 150.0, "out")
+    a.k(c["drift"], 243, 26, 280.0)
+
+
+def chalk_off(a):
+    a.hold(CHALK_IN["amount"], 243, 0.0)
+    a.hold(CHALK_IN["clear"], 243, 0.0)
+
+
+def live_keys(a, sc):
+    for o in SCENES:
+        for lid in LIVE.get(o.k, []):
+            a.hold(lid, 243, 1.0 if o is sc else 0.0)
+
+
 LAYERS = [("back", 150, 24, "out"), ("mid", 240, 26, "out"), ("front", 360, 30, "back"), ("text", 200, 22, "out")]
 
 
@@ -37,8 +81,11 @@ def build_in(sc, v, mode):
     for o in SCENES:
         a.hold(o.root.id, "opacity", 1.0 if o is sc else 0.0)
     sign = 1 if mode == "F" else -1
+    live_keys(a, sc)
     for attr, off, f1, ease in LAYERS:
         a.tw(getattr(sc, attr).id, "y", 0, f1, sign * off, 0.0, ease)
+        a.tw(getattr(sc, attr).id, "rotation", 0, f1 + 6, -sign * TILT[attr], 0.0, "back")
+    stage.ENTRY_YAW[0] = 0.0
     # carrier hand-off
     px, py, ps, pr = CARRIER_POSE[sc.k]
     if mode == "F" and (sc.k - 1) in CONTINUITY:
@@ -49,6 +96,13 @@ def build_in(sc, v, mode):
     if sc.carrier_hook:
         sc.carrier_hook(a, sx, sy, ss, sr)
     else:
+        # the hold keeps turning from the yank and lands square on the wall
+        a.k(CARRIER_PITCH, 243, 0, 0.0)
+        t0_, t1_ = getattr(sc, "carrier_t", (0, 26))
+        a.k(CARRIER_YAW, 243, 0, 0.0)
+        a.k(CARRIER_YAW, 243, t0_, 0.0, "inout")
+        a.k(CARRIER_YAW, 243, (t0_ + t1_) // 2 + 2, -0.55 * sign, "inout")
+        a.k(CARRIER_YAW, 243, t1_ + 10, 0.0)
         t0, t1 = getattr(sc, "carrier_t", (0, 26))
         carrier_set(a, 0, sx, sy, ss, sr)
         a.k(CARRIER.id, "x", t0, sx, "inout")
@@ -57,10 +111,8 @@ def build_in(sc, v, mode):
         a.k(CARRIER.id, "scaleX", t0, ss, "out")
         a.k(CARRIER.id, "scaleY", t0, ss, "out")
         carrier_set(a, t1, px, py, ps, pr)
-    # chalk occluder clears, rope releases
-    a.tw(CLOUD.id, "opacity", 0, 18, 1.0, 0.0, "inq")
-    a.tw(CLOUD.id, "scaleX", 0, 20, 1.0, 1.7, "out")
-    a.tw(CLOUD.id, "scaleY", 0, 20, 1.0, 1.7, "out")
+    # chalk occluder thins out, rope releases
+    chalk_clear(a)
     a.tw(ROPE.id, "opacity", 0, 12, 1.0, 0.0, "linear")
     a.tw(rope_bow.id, "x", 0, 14, 0.0, 60.0, "out")
     # hero count driver (bound to UserRecap.heroProgress)
@@ -76,11 +128,14 @@ def build_reduced(sc, v, full):
     for (obj, prop), (val, kind) in full.final_values().items():
         a.hold(obj, prop, val, kind=kind)
     a.tw(sc.root.id, "opacity", 0, 12, 0.0, 1.0, "linear")
-    a.hold(CLOUD.id, "opacity", 0.0)
+    chalk_off(a)
     a.hold(ROPE.id, "opacity", 0.0)
     a.hold(HERO_DRIVER.id, 243, 1.0)
+    a.hold(CARRIER_YAW, 243, 0.0)
+    a.hold(CARRIER_PITCH, 243, 0.0)
     for attr, *_ in LAYERS:
         a.hold(getattr(sc, attr).id, "y", 0.0)
+        a.hold(getattr(sc, attr).id, "rotation", 0.0)
     return a
 
 
@@ -90,7 +145,7 @@ def build_exit(sc, mode):
     if mode == "R":
         a = Anim(f"Scene {k} Out Reduced", 10)
         a.tw(sc.root.id, "opacity", 0, 9, 1.0, 0.0, "linear")
-        a.hold(CLOUD.id, "opacity", 0.0)
+        chalk_off(a)
         a.hold(ROPE.id, "opacity", 0.0)
         a.hold(HERO_DRIVER.id, 243, 1.0)
         a.tw(CARRIER.id, "scaleX", 0, 9, ps, 0.0, "linear")
@@ -106,10 +161,21 @@ def build_exit(sc, mode):
             a.k(lid, "y", 0, 0.0, "out")
             a.k(lid, "y", 8, ants[attr], "in")
             a.k(lid, "y", 34, dests[attr])
+            a.k(lid, "rotation", 0, 0.0, "out")
+            a.k(lid, "rotation", 8, -TILT[attr] * 0.3, "in")
+            a.k(lid, "rotation", 34, TILT[attr])
         a.k(ROPE.id, "opacity", 0, 0.0, "linear")
         a.k(ROPE.id, "opacity", 5, 1.0)
         a.k(rope_bow.id, "x", 0, 60.0, "snap")
         a.k(rope_bow.id, "x", 9, 0.0)
+        # the hold twists against the load, then spins as it is ripped upward
+        a.k(CARRIER_PITCH, 243, 0, 0.0, "out")
+        a.k(CARRIER_PITCH, 243, 8, 0.5, "in")
+        a.k(CARRIER_PITCH, 243, 34, 0.0)
+        a.k(CARRIER_YAW, 243, 0, 0.0, "out")
+        a.k(CARRIER_YAW, 243, 8, -0.35, "in")
+        a.k(CARRIER_YAW, 243, 34, YAW_OUT)
+        chalk_burst(a, k, px, py, 1, 38)
         carrier_set(a, 0, px, py, ps, pr)
         a.k(CARRIER.id, "y", 0, py, "out")
         a.k(CARRIER.id, "y", 8, py + 12, "in")
@@ -135,6 +201,13 @@ def build_exit(sc, mode):
             a.k(lid, "y", 0, 0.0, "out")
             a.k(lid, "y", 7, -12.0, "in")
             a.k(lid, "y", 36, dests[attr])
+            a.k(lid, "rotation", 0, 0.0, "in")
+            a.k(lid, "rotation", 36, -TILT[attr])
+        a.k(CARRIER_PITCH, 243, 0, 0.0, "in")
+        a.k(CARRIER_PITCH, 243, 36, -0.6)
+        a.k(CARRIER_YAW, 243, 0, 0.0, "in")
+        a.k(CARRIER_YAW, 243, 36, -YAW_OUT)
+        chalk_burst(a, k, px, py, -1, 40)
         a.k(ROPE.id, "opacity", 0, 0.0, "linear")
         a.k(ROPE.id, "opacity", 5, 1.0)
         a.k(rope_bow.id, "x", 0, 0.0, "out")
@@ -149,15 +222,6 @@ def build_exit(sc, mode):
         a.k(sc.root.id, "opacity", 39, 1.0)
         a.k(sc.root.id, "opacity", 40, 0.0)
         dur = 40
-    a.k(CLOUD.id, "opacity", 0, 0.0)
-    a.k(CLOUD.id, "opacity", 12, 0.0, "out")
-    a.k(CLOUD.id, "opacity", 28, 1.0)
-    a.k(CLOUD.id, "scaleX", 0, 0.35)
-    a.k(CLOUD.id, "scaleX", 12, 0.35, "back")
-    a.k(CLOUD.id, "scaleX", 30, 1.0)
-    a.k(CLOUD.id, "scaleY", 0, 0.35)
-    a.k(CLOUD.id, "scaleY", 12, 0.35, "back")
-    a.k(CLOUD.id, "scaleY", 30, 1.0)
     a.hold(HERO_DRIVER.id, 243, 1.0)
     return a
 
@@ -295,15 +359,19 @@ def build():
     s1 = BY_K[1]
     g_rest = Anim("Grab Rest", 1)
     g_rest.hold(s1.grab_squash.id, "scaleX", 1.0).hold(s1.grab_squash.id, "scaleY", 1.0)
+    g_rest.hold(s1.grab_pitch, 243, 0.0)
     g_press = Anim("Grab Press", 10)
     g_press.tw(s1.grab_squash.id, "scaleX", 0, 8, 1.0, 1.16, "out")
     g_press.tw(s1.grab_squash.id, "scaleY", 0, 8, 1.0, 0.8, "out")
+    g_press.tw(s1.grab_pitch, 243, 0, 8, 0.0, 0.55, "out")      # the 3D hold pivots under load
     g_reb = Anim("Grab Rebound", 40)
     g_reb.hold(s1.grab_hold.id, "x", 0.0).hold(s1.grab_hold.id, "y", 0.0)
     for f, sx, sy, e in [(0, 1.16, 0.8, "out"), (8, 0.86, 1.18, "inout"), (18, 1.07, 0.94, "inout"),
                          (28, 0.97, 1.03, "inout"), (40, 1.0, 1.0, "hold")]:
         g_reb.k(s1.grab_squash.id, "scaleX", f, sx, e)
         g_reb.k(s1.grab_squash.id, "scaleY", f, sy, e)
+    for f, p_, e in [(0, 0.55, "out"), (9, -0.32, "inout"), (19, 0.16, "inout"), (29, -0.06, "inout"), (40, 0.0, "hold")]:
+        g_reb.k(s1.grab_pitch, 243, f, p_, e)
     ANIMS.extend([g_rest, g_press, g_reb])
     gl = E("StateMachineLayer", name="Grab Hold")
     gl.add(E("AnyState", x=-200, y=-200), E("ExitState", x=-200, y=-300))

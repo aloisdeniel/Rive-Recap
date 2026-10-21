@@ -1,19 +1,29 @@
 #!/usr/bin/env bash
-# Regenerates every capture under captures/. Requires the rive CLI.
+# Regenerates every capture under captures/ (stale PNGs are removed first). Requires the rive CLI.
+# Scenes are reached by clicking Continue (tools/goto.sh); transition frames count from the last click.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+RIVE=${RIVE:-$HOME/.rive/bin/rive}
 C=captures; mkdir -p "$C"
+rm -f "$C"/*.png
 tools/capture.sh "$C" >/dev/null
-P=(personaName personaDescription personaColor)
+# personas (copy written with --data, as the host adapter would)
 tools/goto.sh 9 "$C/persona-0-canopy-keeper.png" 260 --data=personaIndex=0
 tools/goto.sh 9 "$C/persona-1-propagation-pro.png" 260 --data=personaIndex=1 "--data=personaName=Propagation Pro" "--data=personaDescription=You saw a new beginning in every cutting." --data=personaColor=FFA8CC72
 tools/goto.sh 9 "$C/persona-2-patient-grower.png" 300 --data=personaIndex=2 "--data=personaName=Patient Grower" "--data=personaDescription=You gave growth the time it needed." --data=personaColor=FFF3AD7D
 tools/goto.sh 9 "$C/persona-3-windowsill-wanderer.png" 260 --data=personaIndex=3 "--data=personaName=Windowsill Wanderer" "--data=personaDescription=You found possibility in every sunny corner." --data=personaColor=FF173E32
-for f in 4 14 24 34; do tools/goto.sh 2 "$C/transition-1to2-f$f.png" $f; done
-for f in 10 24; do tools/goto.sh 6 "$C/transition-5to6-f$f.png" $f; done
-# reverse (back) transition 3 -> 2
-for f in 8 20 32; do ~/.rive/bin/rive . --screenshot="$C/transition-back-3to2-f$f.png" --advance=30 --pointer=click@195,790 --advance=40 --pointer=click@195,790 --advance=150 --pointer=click@48,790 --advance=$f >/dev/null 2>&1; done
-# reduced motion: entrance and transition become short fades, numbers final immediately
+# signature transition: frame vine + leaf iris + 3D paper leaf across the camera
+for f in 8 16 24 34; do tools/goto.sh 2 "$C/transition-1to2-f$f.png" $f; done
+for f in 12 24; do tools/goto.sh 5 "$C/transition-4to5-f$f.png" $f; done
+# reverse: the frame unweaves into the vine tip, the leaf sweeps back inner face first, the mask folds left
+for f in 6 20 34; do "$RIVE" . --screenshot="$C/transition-back-4to3-f$f.png" --advance=30 --pointer=click@195,790 --advance=40 --pointer=click@195,790 --advance=40 --pointer=click@195,790 --advance=200 --pointer=click@48,790 --advance=$f >/dev/null 2>&1; done
+# 3D hero moments mid-motion
+"$RIVE" . --screenshot="$C/scene1-seed-closed-f8.png" --advance=8 >/dev/null 2>&1
+tools/goto.sh 4 "$C/scene4-paper-bud-f30.png" 30
+tools/goto.sh 4 "$C/scene4-opening-f60.png" 60
+tools/goto.sh 9 "$C/scene9-seed-cradle-f30.png" 30
+tools/goto.sh 2 "$C/scene2-unfurl-f50.png" 50
+# reduced motion: short opacity fades, numbers final at once, no wipe / 3D sweep / idle motion
 tools/goto.sh 2 "$C/reduced-motion-scene2-f6.png" 6 --data=reducedMotion=true
 tools/goto.sh 4 "$C/reduced-motion-scene4.png" 40 --data=reducedMotion=true
 # zero / new user: intro -> welcoming summary, no persona
@@ -33,9 +43,9 @@ tools/goto.sh 10 "$C/extreme-summary.png" 200 "${X[@]}"
 # hidden scenes: 3,4,7 hidden -> 7 segments
 tools/goto.sh 3 "$C/hidden-3-4-7-nav.png" 170 --data=showScreen3=false --data=showScreen4=false --data=showScreen7=false
 # paused state
-~/.rive/bin/rive . --screenshot="$C/paused-scene1.png" --advance=300 --pointer=click@342,790 --advance=200 >/dev/null 2>&1
+"$RIVE" . --screenshot="$C/paused-scene1.png" --advance=300 --pointer=click@342,790 --advance=200 >/dev/null 2>&1
 # responsive checks (fixed 390x844 artboard, host fit = contain)
-~/.rive/bin/rive . --screenshot="$C/viewport-320x568-contain.png" --viewport=320x568 --fit=contain --advance=170 >/dev/null 2>&1
-~/.rive/bin/rive . --screenshot="$C/viewport-430x932-contain.png" --viewport=430x932 --fit=contain --advance=170 >/dev/null 2>&1
-~/.rive/bin/rive . --screenshot="$C/viewport-desktop-1280x800-contain.png" --viewport=1280x800 --fit=contain --advance=170 >/dev/null 2>&1
+"$RIVE" . --screenshot="$C/viewport-320x568-contain.png" --viewport=320x568 --fit=contain --advance=170 >/dev/null 2>&1
+"$RIVE" . --screenshot="$C/viewport-430x932-contain.png" --viewport=430x932 --fit=contain --advance=170 >/dev/null 2>&1
+"$RIVE" . --screenshot="$C/viewport-desktop-1280x800-contain.png" --viewport=1280x800 --fit=contain --advance=170 >/dev/null 2>&1
 echo done

@@ -7,7 +7,7 @@ PASS  Keyboard Right/Left/Space: screens [1, 2, 3, 2], paused=True
 PASS  Keyboard Tab moves focus, Enter activates focused control: focus index after 2x Tab = 2, screens [1], paused=True
 PASS  Hidden scenes skipped forward and back: screens [1, 2, 5, 2]
 PASS  New user: intro -> summary: screens [1, 10]
-PASS  Auto-advance 1..10, recapFinished once, no loop: screens [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], latch set at frames [3738]
+PASS  Auto-advance 1..10, recapFinished once, no loop: screens [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], latch set at frames [3747]
 PASS  autoAdvanceEnabled=false never advances: screens [1]
 PASS  Dwell clamped to >= 4 s: scene 2 entered at frame 413 (entrance 130f + clamped dwell 240f)
 PASS  Replay returns to scene 1 and clears latch: final screen 1, latch False
@@ -18,8 +18,8 @@ PASS  personaIndex=3 -> name/colour: personaName='Brave Improviser' personaColor
 PASS  personaIndex=9 -> name/colour: personaName='Conversation Starter' personaColor=FFC7B7F2
 PASS  personaIndex=-2 -> name/colour: personaName='Conversation Starter' personaColor=FFC7B7F2
 PASS  Mouth tap (scene 3) does not trigger navigation: screens [1, 2, 3]
-PASS  Mouth tap changes the picture (elastic squash): rest 01322267 vs tapped 26176342
-PASS  Bound hero number follows UserRecap.conversations: 204 render e1a3baee vs 98,765 render 811f33f0
+PASS  Mouth tap changes the picture (elastic squash): rest f120a6d6 vs tapped 3a2dddd3
+PASS  Bound hero number follows UserRecap.conversations: 204 render d7700db3 vs 98,765 render 454d3ddf
 PASS  event 'screenChanged' exported: found in .riv bytes
 PASS  event 'shareTapped' exported: found in .riv bytes
 PASS  event 'recapFinished' exported: found in .riv bytes

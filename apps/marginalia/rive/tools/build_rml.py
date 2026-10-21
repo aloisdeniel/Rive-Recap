@@ -124,8 +124,7 @@ for name, kind, dv in [
     ("_navDir", "number", 1), ("_parallaxX", "number", 0), ("_parallaxY", "number", 0),
     ("_personaRow", "number", 0), ("_motionPaused", "bool", False), ("_hasStats", "bool", True),
     ("_cmdPrev", "trigger", None), ("_cmdNext", "trigger", None), ("_cmdPrimary", "trigger", None),
-    ("_cmdSecondary", "trigger", None), ("_cmdPause", "trigger", None), ("_turnFwd", "trigger", None),
-    ("_turnBack", "trigger", None), ("_evtScreen", "trigger", None), ("_evtShare", "trigger", None),
+    ("_cmdSecondary", "trigger", None), ("_cmdPause", "trigger", None), ("_evtScreen", "trigger", None), ("_evtShare", "trigger", None),
     ("_evtFinished", "trigger", None), ("_focus", "number", 0),
     ("_dbgScreenEvents", "number", 0), ("_dbgShareEvents", "number", 0), ("_dbgFinishedEvents", "number", 0),
 ]:
@@ -162,6 +161,7 @@ art.plx = plx
 
 # ---------------------------------------------------------------- scenes
 EXIT_MS = 650
+TURN_HOLD_MS = 1200   # > the Page Stage script's 840 ms turn
 
 
 class Scene:
@@ -177,11 +177,6 @@ class Scene:
         self.enter_ms = 1800
         self.extra_hidden: list[tuple] = []
         self.content = N("Node", x=0, y=0, name="Content")
-        self.shade = shape("Turn Shade", rect(SW + 40, SH + 240, x=SW / 2, y=SH / 2),
-                           fill(INK, 1.0), opacity=0)
-        self.edge = shape("Turn Edge Light", rect(26, SH + 240, x=SW - 13, y=SH / 2),
-                          fill(paint=lin(-13, 0, 13, 0, [(0, PAPER, 0), (1, "FFFFFF", 0.9)])),
-                          opacity=0)
         self.paper = shape("Paper", rect(SW + 40, SH + 240, x=SW / 2, y=SH / 2), fill(PARCH))
         self.group = N("Node", x=0, y=0, opacity=0, name=f"Scene {n} - {title}").ensure()
 
@@ -194,7 +189,7 @@ class Scene:
 
     def build_group(self) -> N:
         # first child draws on top
-        self.group.add(self.edge, self.shade, self.content, self.paper)
+        self.group.add(self.content, self.paper)
         return self.group
 
     def anims(self) -> dict[str, Anim]:
@@ -209,9 +204,8 @@ class Scene:
             for obj, prop, t0, t1, v0, v1, ease, kind in self.tweens:
                 a.set(obj, prop, v0, kind)
 
-        def base(a: Anim, op=1.0, sx=1.0, shade=0.0, edge=0.0):
-            a.set(g, "opacity", op).set(g, "scaleX", sx)
-            a.set(self.shade, "opacity", shade).set(self.edge, "opacity", edge)
+        def base(a: Anim, op=1.0):
+            a.set(g, "opacity", op)
 
         h = Anim(f"S{n} Hidden", 17)
         base(h, op=0)
@@ -232,10 +226,10 @@ class Scene:
                 e.tw(obj, prop, t0, t1, v0, v1, ease, kind)
         A["enter"] = e
 
-        eb = Anim(f"S{n} Enter Back", EXIT_MS)
-        eb.set(g, "opacity", 1).tw(g, "scaleX", 0, EXIT_MS, 0.0, 1.0, "inout")
-        eb.tw(self.shade, "opacity", 0, EXIT_MS, 0.4, 0.0, "inout")
-        eb.k(self.edge, "opacity", 0, 0.9, "linear").k(self.edge, "opacity", EXIT_MS, 0.0)
+        # back navigation: the page arrives settled; the Page Stage script lands
+        # it as a live-textured 3D leaf over the page it covers
+        eb = Anim(f"S{n} Enter Back", 200)
+        base(eb)
         settled(eb)
         A["enterBack"] = eb
 
@@ -252,18 +246,15 @@ class Scene:
                 idle.k(obj, prop, ms, val, ease)
         A["idle"] = idle
 
-        xf = Anim(f"S{n} Exit", EXIT_MS)
-        xf.tw(g, "scaleX", 0, EXIT_MS, 1.0, 0.0, "inout")
-        xf.tw(self.shade, "opacity", 0, EXIT_MS, 0.0, 0.42, "in")
-        xf.k(self.edge, "opacity", 0, 0.0, "out").k(self.edge, "opacity", 160, 0.95, "linear") \
-          .k(self.edge, "opacity", EXIT_MS, 0.6)
-        xf.k(g, "opacity", 0, 1.0, "hold").k(g, "opacity", EXIT_MS, 0.0, "hold")
+        # leaving: the page stays fully drawn (its idle pose frozen) for as long
+        # as the Page Stage script needs it - as the turning 3D leaf (forward)
+        # or as the page the previous one lands on (back) - then hides.
+        xf = Anim(f"S{n} Exit", TURN_HOLD_MS)
+        base(xf, op=1)
         A["exit"] = xf
 
-        xb = Anim(f"S{n} Exit Back", EXIT_MS)
-        xb.set(g, "scaleX", 1)
-        xb.tw(self.shade, "opacity", 0, EXIT_MS, 0.0, 0.3, "inout")
-        xb.k(g, "opacity", 0, 1.0, "hold").k(g, "opacity", EXIT_MS, 0.0, "hold")
+        xb = Anim(f"S{n} Exit Back", TURN_HOLD_MS)
+        base(xb, op=1)
         A["exitBack"] = xb
         return A
 
@@ -289,8 +280,8 @@ def scene_layer(sc: Scene, A: dict[str, Anim]) -> Layer:
     trans(entb, idle, exit_pct=100)
     # leave (from anywhere visible); a short mix hides mid-entrance pops
     for s in (ent, entb, idle):
-        trans(s, ex, cnum("currentScreen", "greaterThan", n), rm(False), ms=90)
-        trans(s, exb, cnum("currentScreen", "lessThan", n), rm(False), ms=90)
+        trans(s, ex, cnum("currentScreen", "greaterThan", n), rm(False))
+        trans(s, exb, cnum("currentScreen", "lessThan", n), rm(False))
         trans(s, hid, cnum("currentScreen", "notEqual", n), rm(True), ms=220, ease="soft")
         if s is not idle:
             trans(s, stat, here(), rm(True), ms=200)
@@ -299,8 +290,8 @@ def scene_layer(sc: Scene, A: dict[str, Anim]) -> Layer:
     trans(stat, idle, here(), rm(False), ms=200)
     # rapid return while still turning away
     for s in (ex, exb):
-        trans(s, entb, here(), cnum("_navDir", "lessThan", 0), rm(False), ms=120)
-        trans(s, ent, here(), cnum("_navDir", "greaterThan", 0), rm(False), ms=120)
+        trans(s, entb, here(), cnum("_navDir", "lessThan", 0), rm(False))
+        trans(s, ent, here(), cnum("_navDir", "greaterThan", 0), rm(False))
         trans(s, hid, exit_pct=100)
     return L
 
@@ -361,9 +352,7 @@ def build_scenes():
                SW=SW, SH=SH, conv=conv)
     extra_layers = []
     for sc, b in zip(SCENES, builders):
-        more = b(sc, ctx)
-        if more:
-            extra_layers.extend(more)
+        sc.extra = b(sc, ctx) or []
     return extra_layers
 
 
@@ -371,45 +360,59 @@ def build_scenes():
 def main():
     extra_layers = build_scenes()
 
-    # --- Scenes artboard
-    scenes_ab = N("Artboard", isComponent=True, viewModelId=V.el.id, viewModelInstanceId=V.inst.id,
-                  width=SW, height=SH, clip=False, x=RW + 120, y=0, name="Scenes").ensure()
-    scenes_sm = N("StateMachine", name="Scenes").ensure()
-    sc_style = N("LayoutComponentStyle", name="Scenes Style").ensure()
-    scenes_ab.attrs["styleId"] = sc_style.id
-    scenes_ab.add(sc_style)
-    scenes_ab.attrs["defaultStateMachineId"] = scenes_sm.id
-    persistent, pers_layers = art.persistent(ctx_global())
-    scenes_ab.add(scenes_sm)
-    scenes_ab.add(persistent)
-    for sc in SCENES:          # scene 1 first => drawn on top of later scenes
-        scenes_ab.add(sc.build_group())
-    scenes_ab.add(shape("Stage Paper", rect(SW + 400, SH + 400, x=SW / 2, y=SH / 2), fill(PARCH)))
-    anims: list[Anim] = []
-    layers: list[Layer] = []
-    for sc in SCENES:
+    # --- one artboard per page. The Page Stage script hosts them as separate
+    # instances, so the page that is leaving stays live and can be drawn on
+    # its own (as the turning 3D leaf) while the next page plays underneath.
+    page_abs = []
+    for i, sc in enumerate(SCENES):
+        ab = N("Artboard", isComponent=True, viewModelId=V.el.id, viewModelInstanceId=V.inst.id,
+               width=SW, height=SH, clip=False, x=RW + 120 + (i % 5) * (SW + 80),
+               y=(i // 5) * (SH + 120), name=f"Page {sc.n}").ensure()
+        sm = N("StateMachine", name=f"Page {sc.n}").ensure()
+        st = N("LayoutComponentStyle", name=f"Page {sc.n} Style").ensure()
+        ab.attrs.update(styleId=st.id, defaultStateMachineId=sm.id)
+        ab.add(st, sm, sc.build_group())
         A = sc.anims()
-        anims.extend(A.values())
-        layers.append(scene_layer(sc, A))
-    for L, AA in pers_layers + extra_layers:
-        layers.append(L)
-        anims.extend(AA)
-    for L in layers:
-        scenes_sm.add(L.build())
-    for a in anims:
-        scenes_ab.add(a.build())
+        sm.add(scene_layer(sc, A).build())
+        anims = list(A.values())
+        for L, AA in sc.extra:
+            sm.add(L.build())
+            anims.extend(AA)
+        for an in anims:
+            ab.add(an.build())
+        page_abs.append(ab)
+    persistent, pers_layers = art.persistent(ctx_global())
+
+    # --- Carry artboard: the objects carried *through* the cuts (bookmark
+    # ribbon, moon). Same coordinate space as Scenes; drawn above the turning
+    # leaf by the Page Stage script so they stay unbroken across every turn.
+    carry_ab = N("Artboard", isComponent=True, viewModelId=V.el.id, viewModelInstanceId=V.inst.id,
+                 width=SW, height=SH, clip=False, x=RW + 120, y=2 * (SH + 120), name="Carry").ensure()
+    carry_sm = N("StateMachine", name="Carry").ensure()
+    ca_style = N("LayoutComponentStyle", name="Carry Style").ensure()
+    carry_ab.attrs.update(styleId=ca_style.id, defaultStateMachineId=carry_sm.id)
+    carry_ab.add(ca_style, carry_sm, persistent)
+    for L, AA in pers_layers:
+        carry_sm.add(L.build())
+        for a in AA:
+            carry_ab.add(a.build())
+
+    cover_ab = art.cover_artboard(ctx_global())
+    cover_ab.attrs.update(x=RW + 120 + 2 * (SW + 80), y=2 * (SH + 120))
 
     # --- Share card artboard (host snapshot target)
     card_ab, card_sm_layers, card_anims = art.share_card_artboard(ctx_global())
-    card_ab.attrs.update(x=RW + 120 + SW + 120, y=0)
+    card_ab.attrs.update(x=RW + 120 + SW + 80, y=2 * (SH + 120))
 
     # --- Recap root
-    recap, recap_extra = build_root(scenes_ab)
+    recap, recap_extra = build_root(page_abs, carry_ab, cover_ab)
 
-    roots = [recap, scenes_ab, card_ab,
-             N("ComponentAsset", artboardId=scenes_ab.id, name="Scenes"),
+    roots = [recap, *page_abs, carry_ab, cover_ab, card_ab,
+             *[N("ComponentAsset", artboardId=ab.id, name=ab.attrs["name"]) for ab in page_abs],
+             N("ComponentAsset", artboardId=carry_ab.id, name="Carry"),
+             N("ComponentAsset", artboardId=cover_ab.id, name="Cover"),
              N("ComponentAsset", artboardId=card_ab.id, name="ShareCard"),
-             *FONTS, *recap_extra, *CONVERTERS, V.finish()]
+             *FONTS, *recap_extra, ctx_global()["moon_script"], *CONVERTERS, V.finish()]
     out = K.doc(*roots)
     os.makedirs(os.path.join(ROOT, "rml"), exist_ok=True)
     with open(os.path.join(ROOT, "rml", "recap.rml"), "w") as f:
@@ -423,7 +426,8 @@ _CTX = {}
 def ctx_global():
     if not _CTX:
         _CTX.update(V=V, serif=serif, italic=italic, sans=sans, DATA=DATA, SW=SW, SH=SH,
-                    conv=conv, SCENES=SCENES, EXIT_MS=EXIT_MS)
+                    conv=conv, SCENES=SCENES, EXIT_MS=EXIT_MS,
+                    moon_script=N("ScriptAsset", file="scripts/moon.luau", name="moon").ensure())
     return _CTX
 
 
@@ -456,7 +460,7 @@ def button(name, w, h, label_style=None, label=None, label_prop=None, icon=None,
     return lc
 
 
-def build_root(scenes_ab: N):
+def build_root(page_abs: list, carry_ab: N, cover_ab: N):
     style = N("LayoutComponentStyle", flexDirectionValue="column", name="Recap Style").ensure()
     sm = N("StateMachine", name="Recap").ensure()
     ab = N("Artboard", viewModelId=V.el.id, viewModelInstanceId=V.inst.id, width=RW, height=RH,
@@ -497,9 +501,15 @@ def build_root(scenes_ab: N):
     # stage
     s_st = N("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
              marginTop=HEADER_H, marginBottom=CONTROLS_H, name="Stage Style").ensure()
-    leaf = N("NestedArtboardLeaf", bind("_motionPaused", K.KEY["isPaused"]),
-             N("NestedStateMachine", animationId=scenes_ab.attrs["defaultStateMachineId"], name="Scenes SM"),
-             artboardId=scenes_ab.id, fit="contain", name="Scenes").ensure()
+    # The stage is drawn by the Page Stage script: it hosts the ten Page
+    # artboards and Carry (all bound to the same UserRecap instance),
+    # contain-fits them, and renders every page turn as a lit 3D paper curl.
+    pt_script = N("ScriptAsset", file="scripts/pagestage.luau", name="pagestage").ensure()
+    leaf = N("ScriptedLayout", *[N("ScriptInputArtboard", artboardId=ab.id, name=f"page{i + 1}")
+                                 for i, ab in enumerate(page_abs)],
+             N("ScriptInputArtboard", artboardId=carry_ab.id, name="carry"),
+             N("ScriptInputArtboard", artboardId=cover_ab.id, name="cover"),
+             scriptAssetId=pt_script.id, name="Page Stage").ensure()
     stage_sem = N("SemanticData", N("DataBindContext", sourcePathIds=V.path("a11yAnnouncement"), propertyKey=983),
                   role="text", isLiveRegion=True, label="", name="Scene Announcement")
     stage = N("LayoutComponent", s_st, stage_sem, leaf, width=RW, height=SH, styleId=s_st.id, name="Stage")
@@ -531,12 +541,21 @@ def build_root(scenes_ab: N):
                  x=24, y=24, name="Pause Icon").ensure()
     play_ic = N("Node", shape("Play", poly([(-4, -7), (7, 0), (-4, 7)]), fill(INK)), x=24, y=24, opacity=0,
                 name="Play Icon").ensure()
-    replay_ic = N("Node", shape("Arc", N("PointsPath", *[N("StraightVertex", x=7 * math.cos(a), y=7 * math.sin(a))
-                                                           for a in [i * 0.35 - 1.2 for i in range(15)]],
+    # replay: a clockwise arc open at the top, its arrowhead on the arc's end,
+    # aligned to the tangent there (tip ahead of the stroke, base centred on it)
+    rr, t0 = 7.0, -math.pi / 2 + 0.55
+    t1 = t0 + 2 * math.pi - 1.15
+    arc = [(rr * math.cos(t0 + (t1 - t0) * k / 16), rr * math.sin(t0 + (t1 - t0) * k / 16)) for k in range(17)]
+    ex, ey = rr * math.cos(t1), rr * math.sin(t1)
+    tx, ty = -math.sin(t1), math.cos(t1)          # travel direction (clockwise, y down)
+    nx, ny = math.cos(t1), math.sin(t1)           # outward normal
+    head = [(ex - tx * 0.4 + nx * 3.6, ey - ty * 0.4 + ny * 3.6), (ex + tx * 4.2, ey + ty * 4.2),
+            (ex - tx * 0.4 - nx * 3.6, ey - ty * 0.4 - ny * 3.6)]
+    replay_ic = N("Node", shape("Arc", N("PointsPath", *[N("StraightVertex", x=x, y=y) for x, y in arc],
                                          isClosed=False, name="Path"),
-                                stroke(INK, 1.8, cap="round")),
-                      shape("Head", poly([(5.5, -10.5), (2.0, -5.0), (8.5, -4.5)]), fill(INK)),
-                      x=24, y=24, opacity=0, name="Replay Icon").ensure()
+                                stroke(INK, 1.8, cap="round", join="round")),
+                  shape("Head", poly(head), fill(INK)),
+                  x=24, y=24, opacity=0, name="Replay Icon").ensure()
     secondary = button("Secondary", 48, 48, icon=[pause_ic, play_ic, replay_ic], a11y_prop="secondaryA11yLabel")
     sec_sem = [c for c in secondary.children if c.tag == "SemanticData"][0]
     c_st.attrs.update(widthUnitsValue="percent", layoutWidthScaleType="fixed")
@@ -551,6 +570,17 @@ def build_root(scenes_ab: N):
         b.add(ring)
         rings[nm] = ring_col
 
+    # paper: a procedural fibre grain + edge wear, multiplied over everything
+    paper_script = N("ScriptAsset", file="scripts/paper.luau", name="paper").ensure()
+    pp_st = N("LayoutComponentStyle", positionTypeValue="absolute", positionLeft=0,
+              positionLeftUnitsValue="points", positionTop=0, positionTopUnitsValue="points",
+              positionRight=0, positionRightUnitsValue="points", positionBottom=0,
+              positionBottomUnitsValue="points", layoutWidthScaleType="fixed",
+              layoutHeightScaleType="fixed", widthUnitsValue="percent", heightUnitsValue="percent",
+              name="Paper Style").ensure()
+    paper = N("LayoutComponent", pp_st, N("ScriptedLayout", scriptAssetId=paper_script.id, name="Paper Grain"),
+              width=100, height=100, styleId=pp_st.id, name="Paper Overlay")
+    ab.children.insert(ab.children.index(overlay) + 1, paper)
     ab.add(header, controls, stage)
     ab.add(N("Fill", solid(PARCH), name="Parchment"))
 
@@ -669,7 +699,7 @@ def build_root(scenes_ab: N):
                  targetId=ab.id, listenerTypeValue="event", eventId=ev.id, name=f"Count {ev.attrs['name']}"))
     for a in anims:
         ab.add(a.build())
-    return ab, [script]
+    return ab, [script, pt_script, paper_script]
 
 
 if __name__ == "__main__":

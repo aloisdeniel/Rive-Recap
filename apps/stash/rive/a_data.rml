@@ -10,6 +10,11 @@
 <ScriptAsset file="scripts/b2dim.luau" name="b2dim" id="0:4017"/>
 <ScriptAsset file="scripts/fmt_count_exact.luau" name="fmtCountExact" id="0:4018"/>
 <ScriptAsset file="scripts/fmt_money_exact.luau" name="fmtMoneyExact" id="0:4019"/>
+<ScriptAsset file="scripts/coin3d.luau" name="coin3d" id="0:4020"/>
+<ScriptAsset file="scripts/jar3d.luau" name="jar3d" id="0:4021"/>
+<ScriptAsset file="scripts/spring3d.luau" name="spring3d" id="0:4022"/>
+<ScriptAsset file="motifpose.luau" isModule="true" name="motifpose" id="0:4023"/>
+<ScriptAsset file="scripts/crt.luau" name="crt" id="0:4024"/>
 <FontAsset file="assets/fonts/Rubik-VF.ttf" name="Rubik" id="0:4001"/>
 <FontAsset file="assets/fonts/NunitoSans-VF.ttf" name="Nunito Sans" id="0:4002"/>
 <ViewModel defaultInstanceId="0:5001" name="UserRecap" id="0:5000">
@@ -118,16 +123,19 @@
 <ViewModelPropertyTrigger name="_evtScreenChanged" id="0:5104"/>
 <ViewModelPropertyTrigger name="_evtRecapFinished" id="0:5105"/>
 <ViewModelPropertyTrigger name="_evtShareTapped" id="0:5106"/>
-<ViewModelPropertyNumber name="_count1" id="0:5107"/>
-<ViewModelPropertyNumber name="_count2" id="0:5108"/>
-<ViewModelPropertyNumber name="_count3" id="0:5109"/>
-<ViewModelPropertyNumber name="_count4" id="0:5110"/>
-<ViewModelPropertyNumber name="_count5" id="0:5111"/>
-<ViewModelPropertyNumber name="_count6" id="0:5112"/>
-<ViewModelPropertyNumber name="_count7" id="0:5113"/>
-<ViewModelPropertyNumber name="_count8" id="0:5114"/>
-<ViewModelPropertyNumber name="_count9" id="0:5115"/>
-<ViewModelPropertyNumber name="_count10" id="0:5116"/>
+<ViewModelPropertyTrigger name="_heardScreenChanged" id="0:5107"/>
+<ViewModelPropertyTrigger name="_heardRecapFinished" id="0:5108"/>
+<ViewModelPropertyTrigger name="_heardShareTapped" id="0:5109"/>
+<ViewModelPropertyNumber name="_count1" id="0:5110"/>
+<ViewModelPropertyNumber name="_count2" id="0:5111"/>
+<ViewModelPropertyNumber name="_count3" id="0:5112"/>
+<ViewModelPropertyNumber name="_count4" id="0:5113"/>
+<ViewModelPropertyNumber name="_count5" id="0:5114"/>
+<ViewModelPropertyNumber name="_count6" id="0:5115"/>
+<ViewModelPropertyNumber name="_count7" id="0:5116"/>
+<ViewModelPropertyNumber name="_count8" id="0:5117"/>
+<ViewModelPropertyNumber name="_count9" id="0:5118"/>
+<ViewModelPropertyNumber name="_count10" id="0:5119"/>
 <ViewModelInstance exports="true" name="Default" id="0:5001">
 <ViewModelInstanceString propertyValue="Alex" viewModelPropertyId="0:5002"/>
 <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:5003"/>
@@ -234,9 +242,9 @@
 <ViewModelInstanceTrigger viewModelPropertyId="0:5104"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5105"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5106"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5107"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5108"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5109"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5107"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5108"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5109"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5110"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5111"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5112"/>
@@ -244,6 +252,9 @@
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5114"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5115"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5116"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5117"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5118"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5119"/>
 </ViewModelInstance>
 <ViewModelInstance exports="true" name="ZeroUser" id="0:5900">
 <ViewModelInstanceString propertyValue="Sam" viewModelPropertyId="0:5002"/>
@@ -351,9 +362,9 @@
 <ViewModelInstanceTrigger viewModelPropertyId="0:5104"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5105"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5106"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5107"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5108"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5109"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5107"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5108"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5109"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5110"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5111"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5112"/>
@@ -361,6 +372,9 @@
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5114"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5115"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5116"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5117"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5118"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5119"/>
 </ViewModelInstance>
 <ViewModelInstance exports="true" name="Extreme" id="0:5901">
 <ViewModelInstanceString propertyValue="Maximiliana Alexandrina Featherstonehaugh-Wolfeschlegel" viewModelPropertyId="0:5002"/>
@@ -468,9 +482,9 @@
 <ViewModelInstanceTrigger viewModelPropertyId="0:5104"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5105"/>
 <ViewModelInstanceTrigger viewModelPropertyId="0:5106"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5107"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5108"/>
-<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5109"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5107"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5108"/>
+<ViewModelInstanceTrigger viewModelPropertyId="0:5109"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5110"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5111"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5112"/>
@@ -478,6 +492,9 @@
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5114"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5115"/>
 <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5116"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5117"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5118"/>
+<ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:5119"/>
 </ViewModelInstance>
 </ViewModel>
 <ScriptedDataConverter scriptAssetId="0:4013" name="fmtCount" id="0:101"/>
@@ -491,13 +508,21 @@
 <DataConverterToString decimals="0" round="true" name="Whole number" id="0:109"/>
 <DataConverterFormula name="Jar fill" id="0:122">
 <FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="150"/>
+<FormulaTokenValue operationValue="176"/>
 <FormulaTokenOperation operationType="1"/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0.16"/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0.84"/>
 <FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="128"/>
+<FormulaTokenInput/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="176"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenOperation operationType="2"/>
 <FormulaTokenFunction functionType="0"/>
@@ -508,13 +533,13 @@
 <DataBindContext sourcePathIds="0:5000-0:5006" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="60"/>
+<FormulaTokenValue operationValue="400"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Year tally 0 roll" id="0:136">
+<DataConverterFormula name="Year tally 0 roll" id="0:164">
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenOperation operationType="1"/>
@@ -522,907 +547,6 @@
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Year tally 1 roll" id="0:165">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Year tally 2 roll" id="0:194">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="100"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Year tally 3 roll" id="0:223">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="1000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5107" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Saved tally 0 roll" id="0:252">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Saved tally 1 roll" id="0:281">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Saved tally 2 roll" id="0:310">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="100"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Saved tally 3 roll" id="0:339">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="1000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="34"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="countUp2" id="0:407">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5108" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero2" id="0:408">
-<DataConverterGroupItem converterId="0:407"/>
-<DataConverterGroupItem converterId="0:102"/>
-</DataConverterGroup>
-<DataConverterFormula name="countUp3" id="0:447">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero3" id="0:448">
-<DataConverterGroupItem converterId="0:447"/>
-<DataConverterGroupItem converterId="0:101"/>
-</DataConverterGroup>
-<DataConverterFormula name="Deposit tally 0 roll" id="0:454">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="60"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Deposit tally 1 roll" id="0:483">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="60"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Deposit tally 2 roll" id="0:512">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="100"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="60"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Deposit tally 3 roll" id="0:541">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="1000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="4"/>
-<FormulaTokenValue operationValue="10"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="0"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenValue operationValue="11"/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="4"/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5109" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="3"/>
-<FormulaTokenValue operationValue="10000"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="60"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="countUp4" id="0:593">
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
@@ -1430,57 +554,293 @@
 <DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero4" id="0:594">
-<DataConverterGroupItem converterId="0:593"/>
-<DataConverterGroupItem converterId="0:101"/>
-</DataConverterGroup>
-<DataConverterFormula name="Token 0 shown" id="0:605">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Token 1 shown" id="0:609">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Token 2 shown" id="0:613">
-<FormulaTokenFunction functionType="1"/>
+<DataConverterFormula name="Year tally 1 roll" id="0:193">
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="2"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="countUp5" id="0:633">
+<DataConverterFormula name="Year tally 2 roll" id="0:222">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="100"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Year tally 3 roll" id="0:251">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="1000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5110" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Saved tally 0 roll" id="0:280">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
@@ -1488,241 +848,338 @@
 <DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero5" id="0:634">
-<DataConverterGroupItem converterId="0:633"/>
-<DataConverterGroupItem converterId="0:102"/>
-</DataConverterGroup>
-<DataConverterFormula name="countUp6" id="0:676">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero6" id="0:677">
-<DataConverterGroupItem converterId="0:676"/>
-<DataConverterGroupItem converterId="0:101"/>
-</DataConverterGroup>
-<DataConverterFormula name="Month window 0 lit" id="0:683">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
 <FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="2"/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 1 lit" id="0:687">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
 <FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="6"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 2 lit" id="0:691">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 3 lit" id="0:695">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="9"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 4 lit" id="0:699">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="4"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 5 lit" id="0:703">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
 <FormulaTokenValue operationValue="11"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 6 lit" id="0:707">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="2"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
 <FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Month window 7 lit" id="0:711">
-<FormulaTokenFunction functionType="1"/>
+<DataConverterFormula name="Saved tally 1 roll" id="0:309">
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
 <FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="8"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 8 lit" id="0:715">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="5"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 9 lit" id="0:719">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenFunction functionType="0"/>
-<FormulaTokenValue operationValue="1"/>
-<FormulaTokenArgumentSeparator/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
+<FormulaTokenOperation operationType="3"/>
 <FormulaTokenValue operationValue="10"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
 <FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 10 lit" id="0:723">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Saved tally 2 roll" id="0:338">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="100"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Saved tally 3 roll" id="0:367">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="1000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="34"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="countUp2" id="0:535">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenInput/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5111" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero2" id="0:536">
+<DataConverterGroupItem converterId="0:535"/>
+<DataConverterGroupItem converterId="0:102"/>
+</DataConverterGroup>
+<DataConverterFormula name="countUp3" id="0:567">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero3" id="0:568">
+<DataConverterGroupItem converterId="0:567"/>
+<DataConverterGroupItem converterId="0:101"/>
+</DataConverterGroup>
+<DataConverterFormula name="Deposit tally 0 roll" id="0:577">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
@@ -1731,19 +1188,17 @@
 <DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
 <FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="3"/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterFormula name="Month window 11 lit" id="0:727">
-<FormulaTokenFunction functionType="1"/>
-<FormulaTokenValue operationValue="0"/>
-<FormulaTokenArgumentSeparator/>
 <FormulaTokenFunction functionType="0"/>
 <FormulaTokenValue operationValue="1"/>
 <FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
@@ -1752,13 +1207,267 @@
 <DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
-<FormulaTokenOperation operationType="1"/>
-<FormulaTokenValue operationValue="7"/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
 <FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="60"/>
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="countUp7" id="0:752">
+<DataConverterFormula name="Deposit tally 1 roll" id="0:606">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="60"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Deposit tally 2 roll" id="0:635">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="100"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="60"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Deposit tally 3 roll" id="0:664">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="1000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="4"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5112" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="3"/>
+<FormulaTokenValue operationValue="10000"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="60"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="countUp4" id="0:722">
 <FormulaTokenParenthesisOpen/>
 <FormulaTokenInput/>
 <FormulaTokenOperation operationType="2"/>
@@ -1767,24 +1476,11 @@
 </FormulaTokenValue>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterGroup name="hero7" id="0:753">
-<DataConverterGroupItem converterId="0:752"/>
-<DataConverterGroupItem converterId="0:102"/>
-</DataConverterGroup>
-<DataConverterFormula name="countUp8" id="0:780">
-<FormulaTokenParenthesisOpen/>
-<FormulaTokenInput/>
-<FormulaTokenOperation operationType="2"/>
-<FormulaTokenValue operationValue="0">
-<DataBindContext sourcePathIds="0:5000-0:5114" propertyKey="777"/>
-</FormulaTokenValue>
-<FormulaTokenParenthesisClose/>
-</DataConverterFormula>
-<DataConverterGroup name="hero8" id="0:781">
-<DataConverterGroupItem converterId="0:780"/>
+<DataConverterGroup name="hero4" id="0:723">
+<DataConverterGroupItem converterId="0:722"/>
 <DataConverterGroupItem converterId="0:101"/>
 </DataConverterGroup>
-<DataConverterFormula name="Jar 0 shown" id="0:788">
+<DataConverterFormula name="Token 0 shown" id="0:739">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1799,7 +1495,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Jar 1 shown" id="0:791">
+<DataConverterFormula name="Token 1 shown" id="0:753">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1814,7 +1510,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Jar 2 shown" id="0:794">
+<DataConverterFormula name="Token 2 shown" id="0:767">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1829,7 +1525,396 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Jar 3 shown" id="0:797">
+<DataConverterFormula name="countUp5" id="0:794">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5114" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenInput/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5114" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero5" id="0:795">
+<DataConverterGroupItem converterId="0:794"/>
+<DataConverterGroupItem converterId="0:102"/>
+</DataConverterGroup>
+<DataConverterFormula name="countUp6" id="0:846">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero6" id="0:847">
+<DataConverterGroupItem converterId="0:846"/>
+<DataConverterGroupItem converterId="0:101"/>
+</DataConverterGroup>
+<DataConverterFormula name="Month window 0 lit" id="0:856">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="2"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 1 lit" id="0:860">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="6"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 2 lit" id="0:864">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 3 lit" id="0:868">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="9"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 4 lit" id="0:872">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="4"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 5 lit" id="0:876">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="11"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 6 lit" id="0:880">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 7 lit" id="0:884">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="8"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 8 lit" id="0:888">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="5"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 9 lit" id="0:892">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="10"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 10 lit" id="0:896">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="3"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Month window 11 lit" id="0:900">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5115" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="7"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="countUp7" id="0:927">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5116" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="0"/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenInput/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenFunction functionType="4"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5116" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero7" id="0:928">
+<DataConverterGroupItem converterId="0:927"/>
+<DataConverterGroupItem converterId="0:102"/>
+</DataConverterGroup>
+<DataConverterFormula name="countUp8" id="0:952">
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="2"/>
+<FormulaTokenValue operationValue="0">
+<DataBindContext sourcePathIds="0:5000-0:5117" propertyKey="777"/>
+</FormulaTokenValue>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterGroup name="hero8" id="0:953">
+<DataConverterGroupItem converterId="0:952"/>
+<DataConverterGroupItem converterId="0:101"/>
+</DataConverterGroup>
+<DataConverterFormula name="Jar 0 shown" id="0:963">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Jar 1 shown" id="0:966">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Jar 2 shown" id="0:969">
+<FormulaTokenFunction functionType="1"/>
+<FormulaTokenValue operationValue="0"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenFunction functionType="0"/>
+<FormulaTokenValue operationValue="1"/>
+<FormulaTokenArgumentSeparator/>
+<FormulaTokenParenthesisOpen/>
+<FormulaTokenInput/>
+<FormulaTokenOperation operationType="1"/>
+<FormulaTokenValue operationValue="2"/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+<FormulaTokenParenthesisClose/>
+</DataConverterFormula>
+<DataConverterFormula name="Jar 3 shown" id="0:972">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1844,7 +1929,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Jar 4 shown" id="0:800">
+<DataConverterFormula name="Jar 4 shown" id="0:975">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1859,7 +1944,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Jar 5 shown" id="0:803">
+<DataConverterFormula name="Jar 5 shown" id="0:978">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1874,7 +1959,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Pause focus" id="0:934">
+<DataConverterFormula name="Pause focus" id="0:1149">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1897,7 +1982,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Previous button focus" id="0:948">
+<DataConverterFormula name="Previous button focus" id="0:1163">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1920,7 +2005,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Continue button focus" id="0:955">
+<DataConverterFormula name="Continue button focus" id="0:1170">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1943,7 +2028,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Replay button focus" id="0:963">
+<DataConverterFormula name="Replay button focus" id="0:1178">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>
@@ -1966,7 +2051,7 @@
 <FormulaTokenParenthesisClose/>
 <FormulaTokenParenthesisClose/>
 </DataConverterFormula>
-<DataConverterFormula name="Share button focus" id="0:971">
+<DataConverterFormula name="Share button focus" id="0:1186">
 <FormulaTokenFunction functionType="1"/>
 <FormulaTokenValue operationValue="0"/>
 <FormulaTokenArgumentSeparator/>

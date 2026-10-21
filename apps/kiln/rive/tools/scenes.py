@@ -34,6 +34,7 @@ class Scene:
         self.reveals: list[tuple[E, int, int]] = []   # (Text, start, duration)
         self.hooks: dict[str, list] = {k: [] for k in ("enterF", "enterB", "idle", "exitF", "exitB")}
         self.extra_roots: list[E] = []                # other things faded with the scene
+        self.live_inputs: list[E] = []                # script `live` inputs: 0 while the scene is hidden
         self.idle_frames = 240
 
     # copy box: an absolute column pinned under the header
@@ -74,6 +75,8 @@ def finalize_scene(g, sc: Scene):
     hidden = L.anim(f"S{n} Hidden", 1)
     for r in roots:
         hidden.k(r, "opacity", (0, 0.0, "hold"))
+    for inp in sc.live_inputs:
+        hidden.k(inp, "propertyValue", (0, 0.0, "hold"))
 
     enterF = L.anim(f"S{n} Enter", ENTER + 72 if n in (4, 5, 7) else ENTER)
     if sc.copy is not None:
@@ -90,8 +93,8 @@ def finalize_scene(g, sc: Scene):
         enterB.k(r, "opacity", (0, 0.0, "hold"), (4, 0.0, "out"), (30, 1.0, "hold"))
     if sc.copy is not None:
         # the outgoing copy clears first; the returning copy drops back in from above
-        enterB.k(sc.copy, "opacity", (0, 0.0, "hold"), (12, 0.0, "out"), (34, 1.0, "hold"))
-        enterB.k(sc.copy, "y", (0, -40.0, "hold"), (12, -40.0, "back"), (44, 0.0, "hold"))
+        enterB.k(sc.copy, "opacity", (0, 0.0, "hold"), (20, 0.0, "out"), (40, 1.0, "hold"))
+        enterB.k(sc.copy, "y", (0, -40.0, "hold"), (20, -40.0, "back"), (52, 0.0, "hold"))
     for fn in sc.hooks["enterB"]:
         fn(enterB)
 
@@ -108,8 +111,15 @@ def finalize_scene(g, sc: Scene):
     exitB = L.anim(f"S{n} Exit Back", EXIT)
     for a, d in ((exitF, -1), (exitB, 1)):
         if sc.copy is not None:
-            a.k(sc.copy, "y", (0, 0.0, "in"), (20 if d < 0 else 12, 46.0 * d, "hold"))
-            a.k(sc.copy, "opacity", (0, 1.0, "in"), (16 if d < 0 else 10, 0.0, "hold"))
+            # the copy rewinds: each line sweeps out glyph by glyph, top line first, while the
+            # column drifts away from the incoming scene; a short fade guarantees a clean end
+            a.k(sc.copy, "y", (0, 0.0, "in"), (24, 26.0 * d, "hold"))
+            a.k(sc.copy, "opacity", (0, 1.0, "hold"), (12, 1.0, "in"), (24, 0.0, "hold"))
+            order = sorted(sc.reveals, key=lambda r: r[1])
+            for j, (t, st0, du) in enumerate(order):
+                f0 = min(j * 3, 10)
+                a.k(t.range, "modifyFrom", (0, 1.0, "hold"), (f0, 1.0, "in"), (f0 + 14, -0.35, "hold"))
+                a.k(t.range, "falloffFrom", (0, 1.3, "hold"), (f0, 1.3, "in"), (f0 + 14, 0.0, "hold"))
         for r in (sc.front, sc.back, *sc.extra_roots):
             a.k(r, "opacity", (0, 1.0, "soft"), (22, 0.0, "hold"))
     for fn in sc.hooks["exitF"]:
@@ -144,12 +154,21 @@ def headline(sc, prop, literal, size=48, align="left", start=72):
     return sc.reveal(t, start, 30)
 
 
-def support(sc, prop, literal, size=16, align="left", start=86, alpha=0.86):
+def max_w(t, w):
+    """keep long localized copy clear of the hero art beside it"""
+    if w:
+        lp = child(t, "LayoutParticipant")
+        lp.attrs["maxWidth"] = float(w)
+        lp.attrs["maxWidthUnitsValue"] = "points"
+    return t
+
+
+def support(sc, prop, literal, size=16, align="left", start=86, alpha=0.86, width=None):
     g = sc.g
     st = g.sans_style(size, sc.ink, 500, lh=size * 1.4)
     child(child(st, "Fill"), "SolidColor").attrs["colorValue"] = argb(sc.ink, alpha)
     t = g.text(f"S{sc.n} Support", st, literal, prop=prop, align=align)
-    return sc.reveal(t, start, 24)
+    return sc.reveal(max_w(t, width), start, 24)
 
 
 def hero_number(sc, stat, literal, decimals=0, size=120, align="left", start=12, layout=True, x=0.0, y=0.0,
@@ -215,10 +234,10 @@ def scene1(g, sc):
         rings.append(r)
     dash_path = child(child(rings[2], "Stroke"), "DashPath")
     S(dash_path, offset=0.0)
-    hint_st = g.sans_style(12, CHAR, 600, spacing=0.8)
-    child(child(hint_st, "Fill"), "SolidColor").attrs["colorValue"] = argb(CHAR, 0.55)
+    hint_st = g.sans_style(11, CHAR, 700, spacing=1.6)
+    child(child(hint_st, "Fill"), "SolidColor").attrs["colorValue"] = argb(CHAR, 0.5)
     hint = g.text("Turntable Hint", hint_st, "Drag to turn", prop="turntableHint", reveal=False, layout=False,
-                  x=195, y=470, origin=(0.5, 0.5))
+                  x=195, y=452, origin=(0.5, 0.5))
     S(hint, opacity=1.0)
     sc.front.add(hint)
     sc.back.add(reveal_node, disc, *rings)
@@ -250,8 +269,8 @@ def scene1(g, sc):
 def scene2(g, sc):
     head = headline(sc, "screen2Headline", "You gave ideas a shape.", size=48)
     num = hero_number(sc, "piecesMade", "0")
-    un = unit(sc, "screen2Unit", "pieces made")
-    sup = support(sc, "screen2Support", "A year worked by hand.")
+    un = max_w(unit(sc, "screen2Unit", "pieces made"), 230)
+    sup = support(sc, "screen2Support", "A year worked by hand.", width=205)
     sc.copy_box(head, num, un, sc.spacer(4), sup, gap=4)
 
     rock = S(shape("Rock", 0, 0,
@@ -363,8 +382,9 @@ def tile(i, cx, cy):
         geo = lambda: ellipse(TILE, TILE)  # noqa: E731
     else:
         geo = lambda: rect(TILE, TILE, 9)  # noqa: E731
-    body = shape(f"Tile {i} Body", 0, 0, geo(), fill("F4EEE5"), stroke("D9CEBF", 1.0))
-    shadow = shape(f"Tile {i} Shadow", 3, 6, geo(), fill(CHAR, alpha=0.18, feather=8))
+    body = shape(f"Tile {i} Body", 0, 0, geo(), fill("F4EEE5"), stroke("E2D8CA", 1.0))
+    side = shape(f"Tile {i} Edge", 0, 4.5, geo(), fill("D2C5B3"))
+    shadow = shape(f"Tile {i} Shadow", 4, 10, geo(), fill(CHAR, alpha=0.2, feather=10))
     half = TILE / 2
     glazes = {
         0: [poly([(-half, -half), (12, -half), (2, -8), (-14, 6), (-half, 14)], radius=8)],
@@ -393,10 +413,15 @@ def tile(i, cx, cy):
         for geo_el in gl_children:
             if geo_el.tag == "Rectangle":
                 geo_el.attrs["y"] = float(-half + (0 if kind != 1 else half - 4)) if geo_el.attrs.get("originY") == 0.0 else geo_el.attrs.get("y", 0.0)
-    gshape = shape(f"Tile {i} Glaze", 0, half, *gl_children, fill(ULTRA if kind != 4 else "2C3D93"))
+    gshape = shape(f"Tile {i} Glaze", 0, half, *gl_children, fill(ULTRA if kind != 4 else "2C3D93"),
+                   stroke("1F2C7A", 1.2, alpha=0.5))
     gnode = S(node(f"Tile {i} Glaze Flow", 0, -half, gshape), scaleY=1.0)
-    clip = node(f"Tile {i} Surface", 0, 0, E("ClippingShape", {"sourceId": body.id, "name": "Clip"}), gnode)
-    t = S(node(f"Tile {i}", cx, cy, clip, body, shadow), scaleX=1.0, scaleY=1.0, opacity=1.0, y=float(cy))
+    # wet-glaze gloss: a soft window reflection that only lands on the glaze
+    gloss = node(f"Tile {i} Gloss", 0, 0, E("ClippingShape", {"sourceId": gshape.id, "name": "Clip"}),
+                 shape(f"Tile {i} Shine", -12, -18, ellipse(34, 13), fill("FFFFFF", alpha=0.42, feather=5)),
+                 shape(f"Tile {i} Rim Light", 14, 22, ellipse(40, 8), fill("8EA0EE", alpha=0.35, feather=6)))
+    clip = node(f"Tile {i} Surface", 0, 0, E("ClippingShape", {"sourceId": body.id, "name": "Clip"}), gloss, gnode)
+    t = S(node(f"Tile {i}", cx, cy, clip, body, side, shadow), scaleX=1.0, scaleY=1.0, opacity=1.0, y=float(cy))
     return t, gnode
 
 
@@ -404,7 +429,7 @@ def scene4(g, sc):
     head = headline(sc, "screen4Headline", "Curiosity, fired.", size=48)
     num = hero_number(sc, "glazeTests", "0")
     un = unit(sc, "screen4Unit", "glaze tests")
-    sup = support(sc, "screen4Support", "Small experiments. Unexpected color.")
+    sup = support(sc, "screen4Support", "Small experiments. Unexpected color.", width=172)
     sc.copy_box(head, num, un, sc.spacer(4), sup, right=150, gap=4)
 
     tiles = []
@@ -421,7 +446,7 @@ def scene4(g, sc):
     settle(tr, "start", 1.0, set_attr=True)
     settle(tr, "end", 1.0)
     sp = E("PointsPath", {"isClosed": False, "name": "Stream"})
-    for (x, y, r_, d) in smooth_vertices([(232, 150), (214, 176), (206, 210)], closed=False, tension=0.25):
+    for (x, y, r_, d) in smooth_vertices([(238, 150), (216, 178), (206, 210)], closed=False, tension=0.25):
         sp.add(E("CubicMirroredVertex", {"x": float(x), "y": float(y), "rotation": float(r_), "distance": float(d)}))
     stream_stroke = stroke(ULTRA, 9.0)
     stream_stroke.add(tr)
@@ -480,13 +505,27 @@ def scene5(g, sc):
         c = solid("2A2422", name="Band")
         settle(c, "colorValue", argb(COOL[i]), set_attr=False)
         c.attrs["colorValue"] = argb(COOL[i])
-        b = shape(f"Band {i}", 195, 150 + i * 58, rect(300, 56, 0), E("Fill", {"name": "Fill"}, c))
+        b = shape(f"Band {i}", 195, 150 + i * 58, rect(300, 58.5, 0), E("Fill", {"name": "Fill"}, c))
         bands.append(c)
         bands_shape = b
         bands.append(b)
     band_colors = bands[0::2]
     band_shapes = bands[1::2]
-    band_clip = node("Kiln Chamber", 0, 0, E("ClippingShape", {"sourceId": arch.id, "name": "Clip"}), *band_shapes)
+    # the chamber itself is a WGSL shader (scripts/kiln.wgsl); the vector bands under it are the
+    # fallback for runtimes without GPU scripting
+    fire = E("ScriptInputNumber", {"propertyValue": 2.0, "name": "fire"})
+    settle(fire, "propertyValue", 2.0)
+    live = E("ScriptInputNumber", {"propertyValue": 1.0, "name": "live"})
+    settle(live, "propertyValue", 1.0)
+    chamber = E("ScriptedDrawable", {"x": 45.0, "y": 112.0, "scriptAssetId": g.kiln_script.id, "name": "Kiln Fire"},
+                fire, live,
+                E("ScriptInputBoolean", {"propertyValue": False, "name": "still"}, bind(g.p("_frozen"), 245)),
+                E("ScriptInputNumber", {"propertyValue": 300.0, "name": "w"}),
+                E("ScriptInputNumber", {"propertyValue": 380.0, "name": "h"}),
+                E("ScriptInputNumber", {"propertyValue": 1.5, "name": "res"}))
+    sc.live_inputs.append(live)
+    band_clip = node("Kiln Chamber", 0, 0, E("ClippingShape", {"sourceId": arch.id, "name": "Clip"}), chamber,
+                     *band_shapes)
     glow = S(shape("Heat Glow", 195, 250, ellipse(360, 420), fill("F08A3C", alpha=0.9, feather=60)), opacity=0.25)
     rim = shape("Arch Rim", 195, 112, arch_geo(), stroke(PORC, 1.5, alpha=0.16))
     sc.front.add(rim)
@@ -498,6 +537,8 @@ def scene5(g, sc):
             a.k(c, "colorValue", (0, "2A2422", "hold"), (10 + j * 6, "2A2422", "lin"), (46 + j * 6, GLOW[i], "lin"),
                 (96 + i * 8, GLOW[i], "lin"), (150 + i * 8, COOL[i], "hold"))
         a.k(glow, "opacity", (0, 0.0, "hold"), (10, 0.0, "out"), (56, 0.9, "lin"), (100, 0.9, "soft"), (170, 0.25, "hold"))
+        a.k(fire, "propertyValue", (0, 0.0, "hold"), (8, 0.0, "in"), (78, 1.0, "soft"), (108, 1.0, "inout"),
+            (176, 2.0, "hold"))
     sc.on("enterF", enter)
 
     def idle(a):
@@ -513,7 +554,7 @@ SHARDS = [
     ([(-22, -26), (30, -8), (6, 26)], (420, 120), -1.4, (240, 420), "A9614A"),
     ([(-34, -10), (18, -30), (30, 18), (-8, 24)], (-60, 330), 2.1, (110, 430), "B86E52"),
     ([(-20, -20), (24, -16), (20, 22), (-24, 14)], (430, 300), -2.4, (282, 432), "D19378"),
-    ([(-26, -12), (28, -20), (12, 24)], (190, -80), 1.2, (196, 352), "A55C45"),
+    ([(-26, -12), (28, -20), (12, 24)], (190, -80), 1.2, (196, 300), "A55C45"),
     ([(-18, -24), (20, -20), (26, 16), (-20, 20)], (40, 520), -0.7, (128, 444), "C98468"),
     ([(-24, -14), (26, -22), (18, 20), (-14, 18)], (360, 520), 0.5, (262, 446), "B26A4F"),
 ]
@@ -529,8 +570,8 @@ def scene6(g, sc):
     shards = []
     for i, (pts, start, rot, end, col) in enumerate(SHARDS):
         sh = shape(f"Shard {i}", 0, 0, poly(pts, radius=3), fill(col), stroke("8E4A35", 1.0, alpha=0.5))
-        nd = S(node(f"Shard {i} Pivot", end[0], end[1], sh), x=float(end[0]), y=float(end[1]), rotation=rot * 0.15,
-               scaleX=0.42, scaleY=0.42)
+        nd = S(node(f"Shard {i} Pivot", end[0], end[1], sh), x=float(end[0]), y=float(end[1]), rotation=rot * 0.1,
+               scaleX=0.0, scaleY=0.0)
         nd.start = start
         nd.rot = rot
         shards.append(nd)
@@ -542,12 +583,13 @@ def scene6(g, sc):
         for i, nd in enumerate(shards):
             sx, sy = nd.start
             ex, ey = nd.attrs["x"], nd.attrs["y"]
-            f0 = 6 + i * 5
-            a.k(nd, "x", (0, sx, "hold"), (f0, sx, "in"), (f0 + 50, 195.0, "back"), (f0 + 76, ex, "hold"))
-            a.k(nd, "y", (0, sy, "hold"), (f0, sy, "in"), (f0 + 50, 400.0, "back"), (f0 + 76, ey, "hold"))
-            a.k(nd, "rotation", (0, nd.rot, "hold"), (f0, nd.rot, "soft"), (f0 + 76, nd.rot * 0.15, "hold"))
-            a.k(nd, "scaleX", (0, 1.0, "hold"), (f0, 1.0, "in"), (f0 + 50, 0.15, "back"), (f0 + 76, 0.42, "hold"))
-            a.k(nd, "scaleY", (0, 1.0, "hold"), (f0, 1.0, "in"), (f0 + 50, 0.15, "back"), (f0 + 76, 0.42, "hold"))
+            f0 = 4 + i * 6
+            # fly in tumbling, hang for a beat at the edge of the mound, then merge into it
+            a.k(nd, "x", (0, sx, "hold"), (f0, sx, "out"), (f0 + 38, ex, "in"), (f0 + 58, 195.0, "hold"))
+            a.k(nd, "y", (0, sy, "hold"), (f0, sy, "out"), (f0 + 38, ey, "in"), (f0 + 58, 392.0, "hold"))
+            a.k(nd, "rotation", (0, nd.rot, "hold"), (f0, nd.rot, "out"), (f0 + 58, nd.rot * 0.1, "hold"))
+            a.k(nd, "scaleX", (0, 1.0, "hold"), (f0, 1.0, "out"), (f0 + 38, 0.7, "in"), (f0 + 58, 0.0, "hold"))
+            a.k(nd, "scaleY", (0, 1.0, "hold"), (f0, 1.0, "out"), (f0 + 38, 0.7, "in"), (f0 + 58, 0.0, "hold"))
         a.k(halo, "scaleX", (0, 0.4, "hold"), (40, 0.4, "out"), (110, 1.0, "hold"))
         a.k(halo, "scaleY", (0, 0.4, "hold"), (40, 0.4, "out"), (110, 1.0, "hold"))
     sc.on("enterF", enter)
@@ -696,62 +738,79 @@ def scene9(g, sc):
 
 
 def build_persona_layer(g):
+    """Four emblems, each a real 3D piece with its own staging. All stand on the
+    scene-9 plinth (base at y=373 in art-stage units)."""
+    from v3d import V3D, look
     L = Layer("Persona")
-    em = []
-    # 0 Form Finder -- an asymmetric vessel drawn as a single leaning gesture
+    BASE_Y = 373.0
+
+    def piece(name, lk, x=0.0, y=0.0, turn=True, **node_kw):
+        v = V3D(g, name, lk, turn=turn)
+        settle(v.inputs["live"], "propertyValue", 0.0)
+        v.inputs["live"].attrs["propertyValue"] = 0.0
+        nd = node(f"{name} Pivot", x, y, v.el, **node_kw)
+        return v, nd
+
+    # 0 Form Finder -- the asymmetric vessel: sketched as one stroke, then it turns into porcelain
     p0, _ = smooth_path(MF.profile_vertices("idea"), closed=True, name="Profile")
     tr0 = E("TrimPath", {"start": 0.0, "end": 1.0, "name": "Trim"})
     settle(tr0, "end", 1.0)
-    s0 = stroke(PORC, 2.4)
+    s0 = stroke(PORC, 2.0)
     s0.add(tr0)
-    f0c = solid(PORC, alpha=0.92)
-    settle(f0c, "colorValue", argb(PORC, 0.92), set_attr=False)
-    ff = shape("Form Finder Vessel", 0, 0, p0, s0, E("Fill", {"name": "Fill"}, f0c))
+    sketch = S(shape("Form Finder Sketch", 0, 0, p0, s0), opacity=0.35)
     p0e, _ = smooth_path(MF.profile_vertices("vase"), closed=True, name="Echo")
-    echo = S(shape("Form Finder Echo", 18, 0, p0e, stroke(CLAY, 1.6, alpha=0.8)), rotation=0.14, opacity=1.0)
-    e0 = S(node("Emblem Form Finder", 195, 388, ff, echo, scaleX=1.0, scaleY=1.0), rotation=-0.06, opacity=1.0, y=388.0)
-    e0.trim, e0.fillc, e0.echo = tr0, f0c, echo
+    echo = S(shape("Form Finder Echo", 26, 0, p0e, stroke(CLAY, 1.6, alpha=0.8)), rotation=0.14, opacity=1.0)
+    v0, n0 = piece("Form Finder 3D", look("idea", body="F4EFE8", rings=1.3, speck=0.45, sheen=0.1, seed=11.0))
+    S(n0, y=0.0, opacity=1.0)
+    e0 = S(node("Emblem Form Finder", 195, BASE_Y, echo, sketch, n0), rotation=0.0, opacity=1.0, y=BASE_Y)
+    e0.trim, e0.sketch, e0.echo, e0.v, e0.piece = tr0, sketch, echo, [v0], n0
 
-    # 1 Glaze Alchemist -- a glazed test tile cradling a cobalt sphere, droplets in orbit
-    tile_ = shape("Alchemist Tile", 0, 0, rect(124, 124, 16), fill("EFE7DC"), stroke("D2C6B6", 1.2))
-    pool = shape("Alchemist Glaze", 30, 34, ellipse(170, 120), fill(ULTRA))
-    pool_clip = node("Alchemist Glaze Clip", 0, 0, E("ClippingShape", {"sourceId": tile_.id, "name": "Clip"}), pool)
-    tile_n = S(node("Alchemist Tile Pivot", 0, 30, pool_clip, tile_, rotation=0.785), rotation=0.785, scaleX=1.0, scaleY=1.0)
-    sphere = S(shape("Alchemist Sphere", 0, -40, ellipse(84, 84), fill("2B3C95"),
-                     ), y=-40.0, scaleX=1.0, scaleY=1.0)
-    shine = shape("Sphere Shine", -14, -56, ellipse(22, 14), fill("FFFFFF", alpha=0.55, feather=4))
-    drops = [shape(f"Droplet {i}", math.cos(i * 2.1) * 96, math.sin(i * 2.1) * 40, ellipse(10 + i * 2, 10 + i * 2), fill(ULTRA))
-             for i in range(4)]
-    orbit = S(node("Droplet Orbit", 0, -40, *drops), rotation=0.0, scaleX=1.0, scaleY=1.0)
-    e1 = S(node("Emblem Glaze Alchemist", 195, 270, orbit, shine, sphere, tile_n, scaleX=1.2, scaleY=1.2), opacity=1.0, y=270.0)
-    e1.tile, e1.sphere, e1.orbit = tile_n, sphere, orbit
+    # 1 Glaze Alchemist -- a cobalt-lined shell, a glossy cobalt orb levitating above it, droplets in orbit
+    v1b, n1b = piece("Alchemist Shell 3D", look("shell", body="F2ECE2", dip=0.22, drip=1.0, inner=1.0, tilt=0.62,
+                                                 roll=-0.32, seed=12.0, turnGain=0.6), rotation=-0.32)
+    S(n1b, scaleX=1.0, scaleY=1.0, rotation=-0.32)
+    v1o, n1o = piece("Alchemist Orb 3D", look("orb", body="2B3C95", cap=1.0, sphere=1.0, dip=1.0, drip=0.0, gloss=1.35,
+                                               seed=13.0, rings=0.0), y=-118.0)
+    S(n1o, y=-118.0, scaleX=1.0, scaleY=1.0)
+    glow1 = S(shape("Orb Glow", 0, -170, ellipse(220, 220), fill("4C63D2", alpha=0.35, feather=48)), opacity=1.0)
+    drops = []
+    for i in range(5):
+        a_ = i * 2 * math.pi / 5 + 0.4
+        r_ = 6 + (i % 3) * 3
+        d = shape(f"Droplet {i}", math.cos(a_) * 118, math.sin(a_) * 34, ellipse(r_ + 3, (r_ + 3) * 1.15),
+                  fill("3F55C4"), stroke("A9B6F5", 1.0, alpha=0.7))
+        d.add(shape(f"Droplet {i} Shine", -1.5, -2.0, ellipse(r_ * 0.45, r_ * 0.35), fill("FFFFFF", alpha=0.75)))
+        drops.append(d)
+    orbit = S(node("Droplet Orbit", 0, -176, *drops), rotation=0.0, scaleX=1.0, scaleY=1.0)
+    e1 = S(node("Emblem Glaze Alchemist", 195, BASE_Y, orbit, n1o, n1b, glow1), opacity=1.0, y=BASE_Y)
+    e1.shell, e1.orb, e1.orbit, e1.glow, e1.v = n1b, n1o, orbit, glow1, [v1b, v1o]
 
-    # 2 Wheel Regular -- a bowl on the turning wheel, rings of rhythm
-    disc = S(shape("Wheel Disc", 0, 40, ellipse(250, 250), fill(PORC)), scaleX=1.0, scaleY=1.0)
-    head = shape("Wheel Head", 0, 60, ellipse(200, 44), fill("C9BDAE"), stroke(CHAR, 1.4, alpha=0.4))
-    bp, _ = smooth_path(MF.profile_vertices("bowl"), closed=True, name="Bowl")
-    bowl = S(shape("Wheel Bowl", 0, 60, bp, fill(CHAR)), scaleX=0.9, scaleY=0.9, y=60.0)
-    ripples = [S(shape(f"Ripple {i}", 0, 60, ellipse(210 + i * 40, 48 + i * 10), stroke(CHAR, 1.4, alpha=0.5)),
+    # 2 Wheel Regular -- a charcoal bowl spinning on the porcelain wheel, rings of rhythm
+    disc = S(shape("Wheel Disc", 0, -96, ellipse(250, 250), fill(PORC)), scaleX=1.0, scaleY=1.0)
+    head = shape("Wheel Head", 0, -10, ellipse(210, 46), fill("C9BDAE"), stroke(CHAR, 1.4, alpha=0.4))
+    v2, n2 = piece("Wheel Bowl 3D", look("bowl", body="3C3532", glaze="EDE6DA", dip=0.32, drip=0.9, inner=1.0,
+                                         gloss=0.4, tilt=0.42, rings=1.9, speck=0.3, turnGain=4.0, seed=14.0),
+                   y=-14.0)
+    S(n2, y=-14.0, scaleX=0.92, scaleY=0.92)
+    ripples = [S(shape(f"Ripple {i}", 0, -10, ellipse(230 + i * 40, 52 + i * 10), stroke(CHAR, 1.4, alpha=0.5)),
                  scaleX=1.0, scaleY=1.0, opacity=1.0) for i in range(3)]
     streak_tr = E("TrimPath", {"start": 0.0, "end": 0.18, "offset": 0.0, "name": "Trim"})
     settle(streak_tr, "offset", 0.0)
     st_s = stroke(CHAR, 2.0, alpha=0.6)
     st_s.add(streak_tr)
-    streak = shape("Spin Streak", 0, 60, ellipse(240, 58), st_s)
-    e2 = S(node("Emblem Wheel Regular", 195, 270, bowl, streak, head, *ripples, disc, scaleX=1.1, scaleY=1.1), opacity=1.0, y=270.0)
-    e2.disc, e2.bowl, e2.ripples, e2.streak = disc, bowl, ripples, streak_tr
+    streak = shape("Spin Streak", 0, -10, ellipse(250, 60), st_s)
+    e2 = S(node("Emblem Wheel Regular", 195, BASE_Y, n2, streak, head, *ripples, disc), opacity=1.0, y=BASE_Y)
+    e2.disc, e2.bowl, e2.ripples, e2.streak, e2.v = disc, n2, ripples, streak_tr, [v2]
 
-    # 3 Handbuilt Storyteller -- a pinched cup built coil by coil, fingerprints left in it
-    coils = []
-    for i in range(5):
-        w = 98 + i * 8 + (i % 2) * 4
-        c = S(shape(f"Coil {i}", 0, 70 - i * 30, rect(w, 30, 15), fill(mix(CLAY, "D9957A", i / 5)),
-                    stroke("8E4A35", 1.2, alpha=0.6)), y=float(70 - i * 30), opacity=1.0, rotation=(i - 2) * 0.03)
-        coils.append(c)
-    prints = [S(shape(f"Print {i}", x, y, ellipse(14, 10), fill("8E4A35", alpha=0.45)), scaleX=1.0, scaleY=1.0)
-              for i, (x, y) in enumerate([(-30, 40), (18, 12), (-8, -18), (34, -48), (-36, -50)])]
-    e3 = S(node("Emblem Handbuilt Storyteller", 195, 282, *prints, *reversed(coils), scaleX=1.2, scaleY=1.2), opacity=1.0, y=282.0, rotation=0.0)
-    e3.coils, e3.prints = coils, prints
+    # 3 Handbuilt Storyteller -- a coil pot that rises coil by coil, thumbprints pressed into its wall
+    lk3 = look("coilpot", body=CLAY, coils=1.0, prints=1.0, rings=0.0, speck=0.6, sheen=0.22, tilt=0.24,
+               turnGain=0.0, yaw=0.0, seed=15.0)
+    v3, n3 = piece("Coil Pot 3D", lk3, turn=False)
+    S(n3, scaleX=1.25, scaleY=1.25)
+    crumbs = [S(shape(f"Clay Crumb {i}", x, y, ellipse(w, w * 0.6), fill(mix(CLAY, "8E4A35", 0.3))), scaleX=1.0,
+                scaleY=1.0) for i, (x, y, w) in enumerate([(-92, -2, 9), (-74, 4, 6), (88, 2, 8), (104, -4, 5)])]
+    e3 = S(node("Emblem Handbuilt Storyteller", 195, BASE_Y, n3, *crumbs), opacity=1.0, y=BASE_Y, rotation=0.0)
+    e3.v, e3.pot, e3.crumbs, e3.lk = [v3], n3, crumbs, lk3
 
     root = S(node("Persona Emblems", 0, 0, e0, e1, e2, e3), opacity=1.0)
     g.persona_root = root
@@ -760,55 +819,94 @@ def build_persona_layer(g):
     def show_only(a, k, f=0):
         for j, e in enumerate(em):
             a.k(e, "opacity", (f, 1.0 if j == k else 0.0, "hold"))
+            for v in e.v:
+                a.k(v.inputs["live"], "propertyValue", (f, 1.0 if j == k else 0.0, "hold"))
 
     hidden = L.anim("Persona Hidden", 1)
     for e in em:
         hidden.k(e, "opacity", (0, 0.0, "hold"))
+        for v in e.v:
+            hidden.k(v.inputs["live"], "propertyValue", (0, 0.0, "hold"))
     enters, idles = [], []
     for k in range(4):
         a = L.anim(f"Persona {k} Reveal", 180)
         show_only(a, k)
         e = em[k]
         if k == 0:
-            a.k(e.trim, "end", (0, 0.0, "hold"), (60, 0.0, "heavy"), (120, 1.0, "hold"))
-            a.k(e.fillc, "colorValue", (0, argb(PORC, 0.0), "hold"), (100, argb(PORC, 0.0), "lin"), (140, argb(PORC, 0.92), "hold"))
-            a.k(e, "rotation", (0, 0.2, "hold"), (60, 0.2, "back"), (140, -0.06, "hold"))
+            a.k(e.trim, "end", (0, 0.0, "hold"), (40, 0.0, "heavy"), (104, 1.0, "hold"))
+            a.k(e.sketch, "opacity", (0, 1.0, "hold"), (110, 1.0, "soft"), (150, 0.35, "hold"))
+            a.k(e.piece, "opacity", (0, 0.0, "hold"), (86, 0.0, "out"), (130, 1.0, "hold"))
+            a.k(e.piece, "y", (0, 24.0, "hold"), (86, 24.0, "back"), (136, 0.0, "hold"))
+            a.k(e, "rotation", (0, 0.16, "hold"), (40, 0.16, "back"), (140, 0.0, "hold"))
             a.k(e.echo, "opacity", (0, 0.0, "hold"), (110, 0.0, "out"), (150, 1.0, "hold"))
+            e.v[0].key(a, 0, dict(yaw=-2.4), "hold")
+            e.v[0].key(a, 86, dict(yaw=-2.4), "out")
+            e.v[0].key(a, 170, dict(yaw=0.0), "hold")
         elif k == 1:
-            a.k(e.tile, "scaleX", (0, 0.0, "hold"), (64, 0.0, "back"), (100, 1.0, "hold"))
-            a.k(e.tile, "scaleY", (0, 0.0, "hold"), (64, 0.0, "back"), (100, 1.0, "hold"))
-            a.k(e.tile, "rotation", (0, -0.6, "hold"), (64, -0.6, "back"), (110, 0.785, "hold"))
-            a.k(e.sphere, "y", (0, -240.0, "hold"), (84, -240.0, "back"), (120, -40.0, "hold"))
-            a.k(e.orbit, "scaleX", (0, 0.0, "hold"), (110, 0.0, "back"), (150, 1.0, "hold"))
-            a.k(e.orbit, "scaleY", (0, 0.0, "hold"), (110, 0.0, "back"), (150, 1.0, "hold"))
+            a.k(e.shell, "scaleX", (0, 0.0, "hold"), (56, 0.0, "back"), (96, 1.0, "hold"))
+            a.k(e.shell, "scaleY", (0, 0.0, "hold"), (56, 0.0, "back"), (96, 1.0, "hold"))
+            a.k(e.shell, "rotation", (0, 0.6, "hold"), (56, 0.6, "back"), (104, -0.32, "hold"))
+            e.v[0].key(a, 0, dict(roll=0.6, dip=0.0, inner=0.0), "hold")
+            e.v[0].key(a, 56, dict(roll=0.6, dip=0.0, inner=0.0), "back")
+            e.v[0].key(a, 104, dict(roll=-0.32), "hold")
+            e.v[0].key(a, 96, dict(dip=0.0, inner=0.0), "heavy")
+            e.v[0].key(a, 150, dict(dip=0.22, inner=1.0), "hold")
+            # the travelling orb dips into the shell and this one swells out of the same spot:
+            # one glossy cobalt orb, handed over from the motif to the emblem, then it levitates
+            a.k(e.orb, "y", (0, -96.0, "hold"), (76, -96.0, "out"), (128, -118.0, "hold"))
+            a.k(e.orb, "scaleY", (0, 0.0, "hold"), (74, 0.0, "back"), (96, 1.12, "inout"), (112, 0.94, "soft"),
+                (126, 1.0, "hold"))
+            a.k(e.orb, "scaleX", (0, 0.0, "hold"), (74, 0.0, "back"), (96, 1.06, "inout"), (112, 1.03, "soft"),
+                (126, 1.0, "hold"))
+            a.k(e.orbit, "scaleX", (0, 0.0, "hold"), (108, 0.0, "back"), (150, 1.0, "hold"))
+            a.k(e.orbit, "scaleY", (0, 0.0, "hold"), (108, 0.0, "back"), (150, 1.0, "hold"))
+            a.k(e.orbit, "rotation", (0, -1.5, "hold"), (108, -1.5, "out"), (180, 0.0, "hold"))
+            a.k(e.glow, "opacity", (0, 0.0, "hold"), (96, 0.0, "out"), (140, 1.0, "hold"))
         elif k == 2:
-            a.k(e.disc, "scaleX", (0, 0.0, "hold"), (60, 0.0, "back"), (96, 1.0, "hold"))
-            a.k(e.disc, "scaleY", (0, 0.0, "hold"), (60, 0.0, "back"), (96, 1.0, "hold"))
+            a.k(e.disc, "scaleX", (0, 0.0, "hold"), (52, 0.0, "back"), (90, 1.0, "hold"))
+            a.k(e.disc, "scaleY", (0, 0.0, "hold"), (52, 0.0, "back"), (90, 1.0, "hold"))
             for i, r in enumerate(e.ripples):
-                f0 = 80 + i * 10
+                f0 = 84 + i * 10
                 a.k(r, "scaleX", (0, 0.3, "hold"), (f0, 0.3, "out"), (f0 + 40, 1.0, "hold"))
                 a.k(r, "scaleY", (0, 0.3, "hold"), (f0, 0.3, "out"), (f0 + 40, 1.0, "hold"))
-            a.k(e.bowl, "y", (0, 140.0, "hold"), (90, 140.0, "back"), (130, 60.0, "hold"))
+            a.k(e.bowl, "y", (0, 90.0, "hold"), (70, 90.0, "back"), (114, -14.0, "hold"))
+            e.v[0].key(a, 0, look("cup", body="3C3532", glaze="EDE6DA", dip=0.0, inner=0.0, tilt=0.42, rings=1.9),
+                       "hold", only=PROFILE_ONLY + ["dip", "inner"])
+            e.v[0].key(a, 70, look("cup", body="3C3532", glaze="EDE6DA", dip=0.0, inner=0.0), "settle",
+                       only=PROFILE_ONLY + ["dip", "inner"])
+            e.v[0].key(a, 124, look("bowl", dip=0.0, inner=0.0), "back", only=PROFILE_ONLY + ["dip", "inner"])
+            e.v[0].key(a, 170, dict(dip=0.32, inner=1.0), "hold", only=["dip", "inner"])
             a.k(e.streak, "offset", (0, 0.0, "hold"), (100, 0.0, "out"), (180, 1.0, "hold"))
         else:
-            for i, c in enumerate(e.coils):
+            # coil by coil: the wall rises in five weighted steps, the rib smooths it, prints appear
+            H = e.lk["h"]
+            for i in range(6):
+                f0 = 50 + i * 16
+                hv = H * min(1.0, i / 5.0)
+                if i == 0:
+                    e.v[0].key(a, 0, dict(h=2.0, prints=0.0), "hold", only=["h", "prints"])
+                    e.v[0].key(a, f0, dict(h=2.0), "back", only=["h"])
+                else:
+                    e.v[0].key(a, f0, dict(h=hv), "back" if i < 5 else "hold", only=["h"])
+            e.v[0].key(a, 140, dict(prints=0.0), "out", only=["prints"])
+            e.v[0].key(a, 172, dict(prints=1.0), "hold", only=["prints"])
+            for i, c in enumerate(e.crumbs):
                 f0 = 60 + i * 14
-                y = c.attrs["y"]
-                a.k(c, "y", (0, y - 220, "hold"), (f0, y - 220, "back"), (f0 + 26, y, "hold"))
-                a.k(c, "opacity", (0, 0.0, "hold"), (f0, 0.0, "lin"), (f0 + 6, 1.0, "hold"))
-            for i, p in enumerate(e.prints):
-                f0 = 140 + i * 6
-                a.k(p, "scaleX", (0, 0.0, "hold"), (f0, 0.0, "back"), (f0 + 16, 1.0, "hold"))
-                a.k(p, "scaleY", (0, 0.0, "hold"), (f0, 0.0, "back"), (f0 + 16, 1.0, "hold"))
+                a.k(c, "scaleX", (0, 0.0, "hold"), (f0, 0.0, "back"), (f0 + 14, 1.0, "hold"))
+                a.k(c, "scaleY", (0, 0.0, "hold"), (f0, 0.0, "back"), (f0 + 14, 1.0, "hold"))
         enters.append(a)
         i_ = L.anim(f"Persona {k} Idle", 240, loop="loop")
         show_only(i_, k)
         if k == 1:
             i_.k(e.orbit, "rotation", (0, 0.0, "lin"), (240, 6.283185, "hold"))
+            i_.k(e.orb, "y", (0, -118.0, "inout"), (120, -128.0, "inout"), (240, -118.0, "hold"))
+            i_.k(e.glow, "opacity", (0, 1.0, "inout"), (120, 0.7, "inout"), (240, 1.0, "hold"))
         elif k == 2:
             i_.k(e.streak, "offset", (0, 0.0, "lin"), (240, 1.0, "hold"))
         elif k == 3:
-            i_.k(e, "rotation", (0, 0.0, "inout"), (120, 0.025, "inout"), (240, 0.0, "hold"))
+            e.v[0].key(i_, 0, dict(yaw=0.0), "inout", only=["yaw"])
+            e.v[0].key(i_, 120, dict(yaw=0.35), "inout", only=["yaw"])
+            e.v[0].key(i_, 240, dict(yaw=0.0), "hold", only=["yaw"])
         elif k == 0:
             i_.k(e.echo, "rotation", (0, 0.14, "inout"), (120, 0.2, "inout"), (240, 0.14, "hold"))
         idles.append(i_)
@@ -859,6 +957,9 @@ def build_persona_layer(g):
     L.el.add(E("AnyState", {"x": 0.0, "y": -460.0}), E("ExitState", {"x": 1000.0, "y": -460.0}),
              E("EntryState", {"x": -220.0, "y": 0.0}, trans(sH)), sH, *sE, *sI, *sR, *sO, *sF)
     g.layers.append(L)
+
+
+PROFILE_ONLY = ["h"] + [f"r{i}" for i in range(6)] + [f"c{i}" for i in range(6)]
 
 
 # ---------------------------------------------------------------------------
@@ -935,3 +1036,8 @@ def build_scenes(g):
             g.stage.add(sc.copy)
     g.stage.add(g.card_stage)
     g.stage.add(art)
+    # matte mineral grain over the flat background colour, behind everything else
+    gst = g.abs_style(top=0, bottom=0, left=0, right=0, name="Grain Style")
+    g.stage.add(g.box("Grain", gst, E("ScriptedLayout", {"scriptAssetId": g.grain_script.id, "name": "Grain"},
+                                       E("ScriptInputNumber", {"propertyValue": 0.42, "name": "strength"})),
+                      w=10, h=10))

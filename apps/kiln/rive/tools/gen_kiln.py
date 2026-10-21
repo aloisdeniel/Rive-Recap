@@ -96,6 +96,8 @@ class Gen:
     def __init__(self, default_fixture: str):
         ID.n = 100
         SETTLED.clear()
+        import rml
+        rml.COLOR_OBJS.clear()
         self.M = Model(default_fixture)
         self.roots: list[E] = []
         self.serif = E("FontAsset", {"file": "assets/fonts/DMSerifDisplay-Regular.ttf", "name": "DM Serif Display"})
@@ -104,6 +106,9 @@ class Gen:
         self.card_script = E("ScriptAsset", {"file": "scripts/card_rules.luau", "name": "card_rules"})
         self.fmt_script = E("ScriptAsset", {"file": "scripts/format.luau", "name": "format"})
         self.seq_script = E("ScriptAsset", {"file": "scripts/sequencer.luau", "name": "sequencer"})
+        self.v3d_script = E("ScriptAsset", {"file": "scripts/vessel3d.luau", "name": "vessel3d"})
+        self.kiln_script = E("ScriptAsset", {"file": "scripts/kiln.luau", "name": "kiln"})
+        self.grain_script = E("ScriptAsset", {"file": "scripts/grain.luau", "name": "grain"})
         self.converters: list[E] = []
         self.events: dict[str, E] = {}
         # chrome paints keyed per scene by the Motif layer
@@ -291,6 +296,9 @@ class Gen:
         out.append(self.card_script.render(1))
         out.append(self.fmt_script.render(1))
         out.append(self.seq_script.render(1))
+        out.append(self.v3d_script.render(1))
+        out.append(self.kiln_script.render(1))
+        out.append(self.grain_script.render(1))
         out.append("</Rive>\n")
         return "\n".join(out)
 

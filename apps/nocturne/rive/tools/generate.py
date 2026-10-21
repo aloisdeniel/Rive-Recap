@@ -61,7 +61,9 @@ ADDITIONS = {
     "navNext": "trigger", "navPrevious": "trigger", "navReplay": "trigger",
     "navDirection": 1, "isHolding": False, "pointerDown": False, "pressSide": 0,
     "recapFinishedFired": False, "hasStats": True, "personaSlot": 0, "motifPose": 0,
-    "focusedControl": 0, "captureMode": False,
+    "focusedControl": 0, "captureMode": False, "onSummary": False,
+    "primaryPressed": "trigger", "secondaryPressed": "trigger",
+    "primaryA11yLabel": "Continue", "secondaryA11yLabel": "Pause",
     **{f"fxCount{i}": 1 for i in range(2, 9)},
 }
 COLOR_PROPS_VM = {"personaColor"}
@@ -189,7 +191,13 @@ CV_TOSTR = conv("DataConverterToString", "To text")
 CV_TONUM = conv("DataConverterToNumber", "To number")
 CV_NOT = conv("DataConverterBooleanNegate", "Not")
 CV_CLAMP_INT = formula("Clamp count (>=0, integer)", ["max(", 0, ",", "round(", "in", ")", ")"])
-CV_INT_TEXT = group("Count text", CV_CLAMP_INT, CV_TOSTR_INT)
+FORMAT_SCRIPT = nid()
+_fmt = El("ScriptedDataConverter", El("ScriptInputNumber", propertyValue=0.0, name="decimals"),
+          El("ScriptInputNumber", propertyValue=1.0, name="grouping"), scriptAssetId=FORMAT_SCRIPT, name="Grouped integer (locale)")
+CONVERTERS.append(_fmt)
+CV_FMT = _fmt.id
+CV_INT_TEXT = group("Count text", CV_CLAMP_INT, CV_FMT)
+CV_YEAR_TEXT = group("Year text", CV_CLAMP_INT, CV_TOSTR_INT)
 CV_BOOL_NUM = group("Bool to 0/1", CV_TOSTR, CV_TONUM)
 CV_NOTBOOL_NUM = group("Not bool to 0/1", CV_NOT, CV_TOSTR, CV_TONUM)
 # displayValue: 0 = flex (shown), 1 = none (hidden)
@@ -198,7 +206,7 @@ CV_HIDE_IF_FALSE = CV_NOTBOOL_NUM
 CV_COUNT = {}
 for i in range(2, 9):
     f = formula(f"Count-up {i}", ["max(", 0, ",", "round(", "in", "*", ("vm", f"fxCount{i}"), ")", ")"])
-    CV_COUNT[i] = group(f"Count-up text {i}", f, CV_TOSTR_INT)
+    CV_COUNT[i] = group(f"Count-up text {i}", f, CV_FMT)
 
 _EQ = {}
 
@@ -235,6 +243,46 @@ def cv_offscreen_if(k, base):
 CV_SEG = {k: formula(f"Segment {k} fill", ["min(", 1, ",", "max(", 0, ",", "in", "-", k, "+",
                                             ("vm", "screenProgress"), ")", ")"]) for k in range(1, 11)}
 
+# ---------------------------------------------------------------- scripts (GPU drawables)
+SCRIPT_IDS = {n: nid() for n in ("sky", "iris", "orb")}
+SCRIPT_IDS["format"] = FORMAT_SCRIPT
+SCRIPT_FILES = {"sky": "scripts/sky.luau", "iris": "scripts/iris.luau", "orb": "scripts/orb.luau", "format": "scripts/format.luau"}
+KEY_SI_NUM, KEY_SI_BOOL, KEY_SI_COLOR = 243, 245, 836
+
+
+def scripted(name, script, nums=None, bools=None, colors=None, binds=None, **kw):
+    """A ScriptedDrawable with typed script inputs. binds: input name -> DataBindContext.
+    Returns (element, {input name: input id}) so timelines can key the inputs (property propertyValue)."""
+    nums, bools, colors, binds = nums or {}, bools or {}, colors or {}, binds or {}
+    ch, ids = [], {}
+    for k, v in nums.items():
+        e = El("ScriptInputNumber", propertyValue=float(v), name=k)
+        ch.append(e)
+        ids[k] = e.id
+    for k, v in bools.items():
+        e = El("ScriptInputBoolean", propertyValue=bool(v), name=k)
+        ch.append(e)
+        ids[k] = e.id
+    for k, v in colors.items():
+        e = El("ScriptInputColor", propertyValue=argb(v), name=k)
+        ch.append(e)
+        ids[k] = e.id
+    for e in ch:
+        b = binds.get(e.attrs["name"])
+        if b is not None:
+            e.add(b)
+    return El("ScriptedDrawable", *ch, scriptAssetId=SCRIPT_IDS[script], name=name, **kw), ids
+
+
+def motion_binds(live=None):
+    """Standard bindings: reduced motion -> still, pause and hold freeze."""
+    d = {"still": bind("reducedMotion", KEY_SI_BOOL), "paused": bind("isPaused", KEY_SI_BOOL),
+         "holding": bind("isHolding", KEY_SI_BOOL)}
+    if live is not None:
+        d["live"] = live
+    return d
+
+
 # ---------------------------------------------------------------- fonts / text
 FONT_SG = nid()
 FONT_MONO = nid()
@@ -269,6 +317,31 @@ def text(name, x, y, w, h, style, value="", binding=None, align="center", ox=Non
               verticalAlignValue=valign, name=name, **kw)
 
 
+def flow_text(name, style, binding, align="left", max_h=None, value=""):
+    """A Text that is a flex item: fills the column width, hugs its height (wraps then pushes what follows)."""
+    kw = {}
+    if max_h:
+        kw.update(maxHeight=float(max_h), maxHeightUnitsValue="points")
+    part = El("LayoutParticipant", layoutWidthScaleType="fill", layoutHeightScaleType="hug", name="Flow", **kw)
+    run = El("TextValueRun", binding, styleId=style.id, text=value, name="Run")
+    return El("Text", part, style, run, x=0.0, y=0.0, originX=0.0, originY=0.0, alignValue=align, sizingValue="autoHeight",
+              overflowValue="ellipsis", wrapValue="wrap", verticalAlignValue="top", width=334.0, height=20.0, name=name)
+
+
+def flow_box(name, w, h, *children):
+    """A fixed-size flex item that hosts free-positioned art (a divider ornament)."""
+    st = El("LayoutComponentStyle", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed", name=f"{name} Style")
+    return El("LayoutComponent", st, *children, width=float(w), height=float(h), styleId=st.id, name=name)
+
+
+def column(name, x, y, w, h, *items, gap=10.0, align="left"):
+    """Copy stack: a flex column whose items keep a constant rhythm whatever the line count."""
+    cross = {"left": "topLeft", "center": "topCenter", "right": "topRight"}[align]
+    st = El("LayoutComponentStyle", flexDirectionValue="column", gapVertical=float(gap), gapVerticalUnitsValue="points",
+            layoutAlignmentType=cross, name=f"{name} Style")
+    return El("LayoutComponent", st, *items, x=float(x), y=float(y), width=float(w), height=float(h), styleId=st.id, name=name)
+
+
 def tb(prop, conv=None):
     return bind(prop, KEY_TEXT, conv)
 
@@ -296,6 +369,11 @@ def pop(oid, f0, f1, s0=0.0, ease="back", o=True):
 
 def scale_to(oid, f0, f1, s0, s1, ease="out"):
     return [(oid, "scaleX", [(f0, s0, ease), (f1, s1, "hold")]), (oid, "scaleY", [(f0, s0, ease), (f1, s1, "hold")])]
+
+
+def shift(tracks, df):
+    """Delay every key after frame 0 by df frames (frame-0 holds stay)."""
+    return [(o, p_, [(f + df if f > 0 else f, *rest) for f, *rest in keys]) for o, p_, keys in tracks]
 
 
 def prop_tr(oid, prop, pts):
@@ -409,7 +487,7 @@ def scene_component(k, name, art_children, copy_children, anims, root_extra=()):
 
 
 # ---------------------------------------------------------------- shared copy block for metric scenes
-COPY_Y = {"num": 528, "unit": 594, "div": 628, "head": 646, "sup": 722}
+COPY_Y = {"num": 516, "unit": 582, "div": 616, "head": 634, "sup": 710}
 
 
 def metric_copy(k, stat, align):
@@ -431,16 +509,15 @@ def metric_copy(k, stat, align):
         dx = 356.0
         lines = [shape("Rule L", rect(96, 1, ox=1.0), fill(AMBER, 0.55), x=-12, y=0)]
     div = node(f"S{k} Divider", star4("Spark", 0, 0, 13, AMBER, glow=4, glow_a=0.6), *lines, x=dx, y=COPY_Y["div"])
-    head = text(f"S{k} Headline", xs, COPY_Y["head"], 334, 74, tstyle("sg", 30, WHITE, weight=400, lh=36, ls=-0.3), "",
-                tb(f"screen{k}Headline"), align=align)
-    sup = text(f"S{k} Support", xs, COPY_Y["sup"], 334, 36, tstyle("mono", 12.5, ICE, 0.72, lh=18, ls=0.4), "",
-               tb(f"screen{k}Support"), align=align)
+    head = flow_text(f"S{k} Headline", tstyle("sg", 30, WHITE, weight=400, lh=36, ls=-0.3), tb(f"screen{k}Headline"), align, max_h=78)
+    sup = flow_text(f"S{k} Support", tstyle("mono", 12.5, ICE, 0.72, lh=18, ls=0.4), tb(f"screen{k}Support"), align, max_h=40)
+    col = column(f"S{k} Copy Column", 28, COPY_Y["head"], 334, 110, head, sup, gap=9, align=align)
     counter = node(f"S{k} Count Playhead", x=1.0, y=0.0)
     counter.add(bind(f"fxCount{k}", KEY_X, direction=True))
-    els = [num, unit, div, head, sup]
+    els = [num, unit, div, col]
     copy = node(f"S{k} Copy", *els, x=0, y=0)
     return copy, counter, dict(num=num.id, unit=unit.id, div=div.id, head=head.id, sup=sup.id, copy=copy.id,
-                               counter=counter.id)
+                               counter=counter.id, col=col.id)
 
 
 def copy_enter(c, t0=24):
@@ -451,15 +528,17 @@ def copy_enter(c, t0=24):
     tr_ += fade_up(c["unit"], t0 + 40, t0 + 70, dy=10)
     tr_ += [(c["div"], "scaleX", [(0, 0.0, "hold"), (t0 + 52, 0.0, "out"), (t0 + 84, 1.0, "hold")]),
             (c["div"], "opacity", [(0, 0.0, "hold"), (t0 + 52, 0.0, "out"), (t0 + 66, 1.0, "hold")])]
-    tr_ += fade_up(c["head"], t0 + 60, t0 + 92, dy=16)
-    tr_ += fade_up(c["sup"], t0 + 72, t0 + 104, dy=12)
+    # the copy column slides as one; headline and support stagger in opacity (flex items cannot be keyed in y)
+    tr_ += fade_up(c["col"], t0 + 60, t0 + 100, dy=16)
+    tr_ += [(c["head"], "opacity", [(0, 0.0, "hold"), (t0 + 60, 0.0, "out"), (t0 + 90, 1.0, "hold")]),
+            (c["sup"], "opacity", [(0, 0.0, "hold"), (t0 + 74, 0.0, "out"), (t0 + 104, 1.0, "hold")])]
     return tr_
 
 
 def copy_enter_back(c):
     tr_ = []
     tr_ += prop_tr(c["counter"], "x", [(0, 0.0, "hold"), (16, 0.0, "out"), (46, 1.0, "hold")])
-    for i, key in enumerate(("num", "unit", "head", "sup")):
+    for i, key in enumerate(("num", "unit", "col")):
         tr_ += fade_up(c[key], 16 + i * 4, 42 + i * 4, dy=-18)
     tr_ += [(c["div"], "scaleX", [(0, 0.0, "hold"), (20, 0.0, "out"), (46, 1.0, "hold")])]
     return tr_
@@ -467,7 +546,7 @@ def copy_enter_back(c):
 
 def copy_exit(c, dy=-22):
     tr_ = []
-    for i, key in enumerate(("num", "unit", "head", "sup")):
+    for i, key in enumerate(("num", "unit", "col")):
         tr_ += fade_out(c[key], i * 2, 13 + i * 2, dy=dy)
     tr_ += [(c["div"], "scaleX", [(0, 1.0, "in"), (14, 0.0, "hold")])]
     return tr_
@@ -512,37 +591,16 @@ AP_C = 160.0
 
 
 def build_aperture():
-    blades = []
-    nb = 9
     iris_tracks = []
-    psi_for = lambda t: math.asin(min(1.0, 0.045 + 0.955 * t))
-    # find blade body side
-    a0 = 0.0
-    th = a0 + math.pi + math.radians(45)
-    n = (-math.sin(th), math.cos(th))
-    c = (-AP_R * math.cos(a0), -AP_R * math.sin(a0))
-    body_neg = (n[0] * c[0] + n[1] * c[1]) > 0
-    Wb, Lb = AP_R * 1.15, AP_R * 2.5
-    for i in range(nb):
-        a = 2 * math.pi * i / nb - math.pi / 2
-        px, py = AP_C + AP_R * math.cos(a), AP_C + AP_R * math.sin(a)
-        rot_open = a + math.pi + psi_for(1.0)
-        oy = 1.0 if body_neg else 0.0
-        blade = node(f"Blade {i + 1}",
-                     shape("Leaf",
-                           rect(Lb, Wb, ox=0.0, oy=oy),
-                           stroke(ICE, 0.28, 1.0),
-                           fill(paint=linear([(0, "17304F", 1.0), (0.18, "0F2238", 1.0), (1, "091729", 1.0)],
-                                             0, 0, 0, (-Wb if body_neg else Wb)))),
-                     x=px, y=py, rotation=rot_open)
-        blades.append(blade)
-        keys = []
-        for s in range(0, 61, 5):
-            t = s / 60
-            keys.append((s, a + math.pi + psi_for(t), "lin"))
-        iris_tracks.append((blade.id, "rotation", keys))
-    clip_src = shape("Iris Clip", ellipse(AP_R * 2), x=AP_C, y=AP_C)
-    blade_grp = node("Blades", *blades, El("ClippingShape", sourceId=clip_src.id, name="Clip"), x=0, y=0)
+    # lit GPU blades (shaders/iris.wgsl, mode 1) inside the housing; the Iris timeline keys the hole,
+    # linear in time (the main timelines ease the remap), from a pupil to fully retracted
+    blades_sd, AI = scripted("Blades (GPU)", "iris",
+                             nums=dict(mode=1, cx=AP_C, cy=AP_C, hole=AP_R + 6, spin=0.0, blades=9, curl=0.85, curve=0.6, hand=1,
+                                       bloom=0.0, rim=0.9, lightness=1.0, thick=2.0, outer=AP_R, opacity=1, res=2.4))
+    iris_tracks.append((AI["hole"], "propertyValue", [(0, 6.0, "lin"), (60, AP_R + 6, "hold")]))
+    iris_tracks.append((AI["bloom"], "propertyValue", [(0, 0.9, "lin"), (20, 0.25, "lin"), (60, 0.0, "hold")]))
+    blade_grp = node("Blades", blades_sd, x=0, y=0)
+    clip_src = node("Iris Clip (unused)", x=0, y=0)
     pupil = dot("Pupil Glow", AP_C, AP_C, 14, ICE, 0.95, glow=12, glow_a=0.8, opacity=0.0)
     iris_tracks.append((pupil.id, "opacity", [(0, 1.0, "lin"), (14, 0.0, "hold")]))
 
@@ -590,12 +648,22 @@ def aperture_instance(name, cx, cy, scale, iris_t=1.0, **kw):
 # =====================================================================================
 # SCENES
 # =====================================================================================
+def sky_disk(name, k, cx, cy, r, **look):
+    """A GPU sky disk (shaders/sky.wgsl mode 1) that twinkles only while scene k is current."""
+    nums = dict(mode=1, cx=cx, cy=cy, radius=r, edge=1.6, viewX=0, viewY=0, viewScale=1, viewRot=0, density=1.0, band=1.3,
+                twinkle=1, bandAngle=-0.6, bandWidth=60, warm=0.85, vignette=0.45, exposure=1.0, seed=7, res=2.2, live=0)
+    nums.update(look)
+    return scripted(name, "sky", nums=nums, bools=dict(still=False, paused=False, holding=False),
+                    binds=motion_binds(live=bind("currentScreen", KEY_SI_NUM, cv_eq(k))))
+
+
 def scene1():
     k = 1
     cx, cy = 195.0, 300.0
     halo = shape("Halo", ellipse(330), fill(ICE, 0.10, feather=46), x=cx, y=cy)
-    disk_base = shape("Disk", ellipse(236),
-                      fill(paint=radial([(0, "21477A", 1), (0.55, "123059", 1), (1, "0A1B33", 1)], 170, -48, -56)),
+    disk_base, SD1 = sky_disk("Disk Sky (GPU)", 1, cx, cy, 118, seed=5, band=0.75, bandAngle=0.35, bandWidth=46, warm=0.6,
+                              exposure=0.85, vignette=0.55, density=0.8)
+    disk_tint = shape("Disk Tint", ellipse(236), fill(paint=radial([(0, "2A5A96", 0.45), (0.6, "123059", 0.25), (1, "0A1B33", 0.0)], 150, -48, -56)),
                       x=cx, y=cy)
     inner = shape("Disk Atmosphere", ellipse(236), stroke(ICE, 0.28, 18, feather=14), x=cx, y=cy)
     rim_tr = trim(0.0, 0.42, 0.78)
@@ -614,7 +682,7 @@ def scene1():
                     overflow="visible", extra=[wm_mod])
     coord_a = text("Coord RA", cx, cy + 34, 270, 16, tstyle("mono", 10, ICE, 0.55, ls=2.4), "RA 05h 35m · DEC −05° 23′",
                    None, align="center", wrap="noWrap")
-    disk = node("Celestial Disk", halo, rim, rim_glow, wordmark, coord_a, lat_grp, lat_clip, inner, disk_base, x=0, y=0)
+    disk = node("Celestial Disk", halo, rim, rim_glow, wordmark, coord_a, lat_grp, lat_clip, inner, disk_tint, disk_base, x=0, y=0)
     stars = starfield("Intro Stars", 26, 195, 300, 0, colors=((ICE, 1.0), (WHITE, 1.0), (AMBER, 0.9)), dmin=1.0, dmax=2.4,
                       rect_wh=(370, 420), groups=3, glow_every=7)
     art = node("S1 Art", disk, *stars, x=0, y=0)
@@ -647,6 +715,7 @@ def scene1():
     eF += fade_up(name.id, 54, 84, 14) + fade_up(head.id, 62, 96, 18) + fade_up(sup.id, 76, 106, 12) + \
         fade_up(per.id, 84, 112, 8)
     eF += [(div.id, "scaleX", [(0, 0.0, "hold"), (90, 0.0, "out"), (118, 1.0, "hold")])]
+    eF = shift(eF, 20)   # the app opens behind the stage iris; let the disk build as the blades part
     eB = []
     eB += [(disk.id, "opacity", [(0, 0.0, "hold"), (2, 0.0, "out"), (30, 1.0, "hold")]),
            (disk.id, "scaleX", [(0, 1.18, "hold"), (2, 1.18, "out"), (44, 1.0, "hold")]),
@@ -663,49 +732,34 @@ def scene1():
     for i, g in enumerate(stars):
         idle += osc(g.id, "opacity", 240, 0.55, 1.0, phase=i / 3)
     return scene_component(k, "Invitation", [art], [copy],
-                           dict(enterF=(124, eF), enterB=(56, eB), exitF=(36, xF), exitB=(36, xB), idle=(720, idle)))
+                           dict(enterF=(144, eF), enterB=(56, eB), exitF=(36, xF), exitB=(36, xB), idle=(720, idle)))
 
 
 def scene2():
     k = 2
     cx, cy, r = 195.0, 290.0, 158.0
-    sky_bg = shape("Sky", ellipse(r * 2), fill(paint=radial([(0, "17335C", 1), (0.6, "0D2343", 1), (1, "081526", 1)], r, 20, 30)),
-                   x=cx, y=cy)
-    band = node("Milky Band",
-                shape("Band Blue", ellipse(420, 96), fill(BLUE, 0.30, feather=34)),
-                shape("Band Ice", ellipse(300, 46), fill(ICE, 0.20, feather=22), y=-6),
-                shape("Band Amber", ellipse(190, 54), fill(AMBER, 0.26, feather=26), x=-60, y=22),
-                shape("Dust Lane", ellipse(260, 14), fill(MID, 0.55, feather=10), x=10, y=4),
-                x=cx, y=cy + 30, rotation=-0.55)
-    stars = starfield("Field", 70, cx, cy, r - 6, dmin=0.9, dmax=3.0, colors=((WHITE, 1), (ICE, 1), (ICE, 1), (AMBER, 0.95)),
-                      glow_every=9, groups=5)
+    # the iris opens on a dense Milky Way (GPU): it develops like a long exposure as the count runs
+    disk, SD = sky_disk("Sky Disk (GPU)", k, cx, cy, r, seed=11, bandAngle=-0.62, bandWidth=58, band=1.35, warm=0.9)
     bright = star4("Bright Star", cx + 72, cy + 6, 26, AMBER, 1.0, glow=10, glow_a=0.7, inner=0.12)
-    clip = shape("Sky Clip", ellipse(r * 2), x=cx, y=cy)
-    sky = node("Sky Disk", bright, *stars, band, sky_bg, El("ClippingShape", sourceId=clip.id, name="Clip"), x=0, y=0)
-    outer = starfield("Outer", 16, 195, 290, 0, rect_wh=(380, 440), dmin=0.8, dmax=1.8, amin=0.25, amax=0.6, groups=2)
-    art = node("S2 Art", sky, clip, *outer, x=0, y=0)
+    sky = node("Sky Disk", bright, disk, x=0, y=0)
+    art = node("S2 Art", sky, x=0, y=0)
     copy, counter, c = metric_copy(k, "observationNights", "center")
     eF = copy_enter(c, 26)
-    eF += [(sky.id, "opacity", [(0, 0.0, "hold"), (8, 0.0, "out"), (26, 1.0, "hold")]),
-           (sky.id, "scaleX", [(0, 1.0, "hold")]), ]
-    eF += [(band.id, "x", [(0, cx - 40, "hold"), (14, cx - 40, "out"), (100, cx, "hold")]),
-           (band.id, "opacity", [(0, 0.0, "hold"), (14, 0.0, "out"), (70, 1.0, "hold")])]
-    for i, g in enumerate(stars):  # stars kindle in rhythm with the count
-        f0 = 26 + i * 11
-        eF += [(g.id, "opacity", [(0, 0.0, "hold"), (f0, 0.0, "out"), (f0 + 22, 1.0, "hold")])]
+    eF += [(sky.id, "opacity", [(0, 0.0, "hold"), (6, 0.0, "out"), (22, 1.0, "hold")]),
+           (SD["exposure"], "propertyValue", [(0, 0.15, "hold"), (24, 0.15, (0.3, 0.0, 0.2, 1.0)), (90, 1.0, "hold")]),
+           (SD["band"], "propertyValue", [(0, 0.1, "hold"), (14, 0.1, (0.4, 0.0, 0.2, 1.0)), (104, 1.35, "hold")]),
+           (SD["viewScale"], "propertyValue", [(0, 1.35, "hold"), (8, 1.35, (0.2, 0.8, 0.3, 1.0)), (110, 1.0, "hold")]),
+           (SD["viewRot"], "propertyValue", [(0, -0.35, "hold"), (8, -0.35, (0.2, 0.8, 0.3, 1.0)), (120, 0.0, "hold")])]
     eF += pop(bright.id, 70, 96, 0.0, "back")
-    for i, g in enumerate(outer):
-        eF += [(g.id, "opacity", [(0, 0.0, "hold"), (40 + i * 20, 0.0, "out"), (80 + i * 20, 1.0, "hold")])]
-    eB = copy_enter_back(c) + [(sky.id, "opacity", [(0, 0.0, "hold"), (10, 0.0, "out"), (34, 1.0, "hold")]),
-                               (band.id, "x", [(0, cx + 40, "hold"), (4, cx + 40, "out"), (50, cx, "hold")])]
+    eB = copy_enter_back(c) + [(sky.id, "opacity", [(0, 0.0, "hold"), (6, 0.0, "out"), (30, 1.0, "hold")]),
+                               (SD["viewRot"], "propertyValue", [(0, 0.3, "hold"), (4, 0.3, "out"), (50, 0.0, "hold")]),
+                               (SD["viewScale"], "propertyValue", [(0, 0.85, "hold"), (4, 0.85, "out"), (50, 1.0, "hold")])]
     xF = copy_exit(c) + art_exit(art.id, 0.82, -6)
     xB = copy_exit(c, 22) + art_exit(art.id, 1.12, 6)
-    idle = [(band.id, "x", [(0, cx, "sine"), (300, cx + 10, "sine"), (600, cx, "hold")])]
-    for i, g in enumerate(stars):
-        idle += osc(g.id, "opacity", 200 + 0, 0.5, 1.0, phase=i / 5)
-    idle += osc(bright.id, "rotation", 600, -0.08, 0.08)
+    idle = [(SD["viewRot"], "propertyValue", [(0, 0.0, "sine"), (600, 0.05, "sine"), (1200, 0.0, "hold")])]
+    idle += osc(bright.id, "rotation", 600, -0.08, 0.08, steps=4) + osc(bright.id, "rotation", 1200, -0.08, 0.08)
     return scene_component(k, "Nights outside", [art], [copy, counter],
-                           dict(enterF=(132, eF), enterB=(56, eB), exitF=(36, xF), exitB=(36, xB), idle=(600, idle)))
+                           dict(enterF=(132, eF), enterB=(56, eB), exitF=(36, xF), exitB=(36, xB), idle=(1200, idle)))
 
 
 def scene3():
@@ -874,115 +928,110 @@ def scene5():
 
 def meteor(name, length, width, color=ICE, head=6.0):
     tail = shape("Trail", poly([(0, -width / 2), (0, width / 2), (-length, 0)], closed=True),
-                 fill(paint=linear([(0, color, 0.95), (0.35, color, 0.4), (1, color, 0.0)], 0, 0, -length, 0)))
-    tail_glow = shape("Trail Glow", poly([(0, -width * 1.6), (0, width * 1.6), (-length * 0.6, 0)], closed=True),
-                      fill(paint=linear([(0, BLUE, 0.5), (1, BLUE, 0.0)], 0, 0, -length * 0.6, 0), feather=6))
-    return node(name, dot("Head", 0, 0, head, WHITE, 1.0, glow=head * 1.5, glow_a=0.8), tail, tail_glow, x=0, y=0)
+                 fill(paint=linear([(0, WHITE, 1.0), (0.12, color, 0.75), (0.5, color, 0.25), (1, color, 0.0)], 0, 0, -length, 0)))
+    tail_glow = shape("Trail Glow", poly([(0, -width * 2.2), (0, width * 2.2), (-length * 0.7, 0)], closed=True),
+                      fill(paint=linear([(0, BLUE, 0.55), (1, BLUE, 0.0)], 0, 0, -length * 0.7, 0), feather=8))
+    flare = shape("Head Flare", ellipse(head * 5, head * 1.6), fill(ICE, 0.35, feather=head * 1.4))
+    return node(name, dot("Head", 0, 0, head, WHITE, 1.0, glow=head * 2.0, glow_a=0.9), flare, tail, tail_glow, x=0, y=0)
 
 
 def scene6():
     k = 6
-    wx, wy, ww, wh = 195.0, 286.0, 334.0, 344.0
-    ang = math.radians(146)  # travel direction: down-left
-    ux, uy = math.cos(ang), math.sin(ang)
-    frame = shape("Window Frame", rect(ww, wh, r=20), stroke(ICE, 0.2, 1), x=wx, y=wy)
-    corners = []
-    for sx in (-1, 1):
-        for sy in (-1, 1):
-            corners.append(shape("Corner", poly([(sx * (ww / 2 - 14), sy * (wh / 2 - 4)), (sx * (ww / 2 - 4), sy * (wh / 2 - 4)),
-                                                   (sx * (ww / 2 - 4), sy * (wh / 2 - 14))], closed=False),
-                                 stroke(AMBER, 0.75, 1.2), x=wx, y=wy))
-    win_bg = shape("Window Sky", rect(ww, wh, r=20), fill(paint=linear([(0, "0F2747", 1), (1, "081526", 1)], 0, -wh / 2, 0, wh / 2)),
-                   x=wx, y=wy)
-    clip = shape("Window Clip", rect(ww, wh, r=20), x=wx, y=wy)
-    faint = starfield("Window Stars", 24, wx, wy, 0, rect_wh=(ww - 20, wh - 20), dmin=0.8, dmax=2.0, amin=0.3, amax=0.8, groups=2)
-    radiant = (wx + 130, wy - 140)
-    # bounded pool: 5 meteors, re-used by the idle loop
-    specs = [  # (offset across, length, width, start frame idle, colour)
-        (0, 190, 3.2, 0, ICE), (-60, 120, 2.0, 52, BLUE), (52, 150, 2.4, 104, AMBER), (-120, 90, 1.6, 150, ICE),
-        (100, 110, 1.8, 196, ICE)]
-    pool = []
-    for i, (off, L, wd, f0, col) in enumerate(specs):
-        m = meteor(f"Meteor {i + 1}", L, wd, col, head=4.0 + wd)
-        # each meteor sits on its own lane rotated into the travel direction
-        lane = node(f"Lane {i + 1}", m, x=radiant[0] - uy * off * 0.6, y=radiant[1] + ux * off * 0.6, rotation=ang)
-        pool.append((lane, m, L, f0))
-    met_grp = node("Meteor Pool", *[p[0] for p in pool], El("ClippingShape", sourceId=clip.id, name="Clip"), x=0, y=0)
-    sky_grp = node("Window Sky Group", *faint, win_bg, El("ClippingShape", sourceId=clip.id, name="Clip"), x=0, y=0)
-    hero_flash = shape("Hero Afterglow", rect(330, 6, ox=1.0), fill(ICE, 0.22, feather=10), x=radiant[0], y=radiant[1],
-                       rotation=ang, opacity=0.0)
-    # long-exposure memory: faint persistent trails left by the meteors you counted (bounded: 7 strokes)
+    rx, ry = 300.0, 128.0          # the radiant: where every trail points back to (the motif sits here)
+    # long-exposure lanes radiating from the radiant: (angle deg, start dist, length, colour, alpha)
+    lanes = [(126, 60, 300, ICE, 0.46), (140, 48, 320, AMBER, 0.40), (154, 80, 250, ICE, 0.34), (112, 70, 260, BLUE, 0.40),
+             (164, 100, 190, ICE, 0.26), (134, 150, 180, BLUE, 0.30), (102, 60, 210, ICE, 0.24), (148, 190, 140, ICE, 0.22),
+             (118, 40, 150, ICE, 0.22)]
     trails, ttr = [], []
-    for j, (off, L, al) in enumerate(((0, 300, 0.30), (-60, 210, 0.22), (52, 250, 0.24), (-120, 170, 0.18), (100, 190, 0.2),
-                                      (-28, 120, 0.16), (150, 140, 0.14))):
+    for j, (ang, s0, L, col, al) in enumerate(lanes):
+        a = math.radians(ang)
+        ux, uy = math.cos(a), math.sin(a)
         t = trim(0.0, 1.0, 0.0)
         ttr.append(t)
-        x0, y0 = radiant[0] - uy * off * 0.6 + ux * 40, radiant[1] + ux * off * 0.6 + uy * 40
+        x0, y0 = rx + ux * s0, ry + uy * s0
         trails.append(shape(f"Exposure Trail {j}", poly([(x0, y0), (x0 + ux * L, y0 + uy * L)], closed=False),
-                            stroke(ICE if j % 3 else AMBER, al, 1.0, effects=[t], cap="round")))
-    trail_grp = node("Exposure Trails", *trails, El("ClippingShape", sourceId=clip.id, name="Clip"), x=0, y=0)
-    radiant_glow = shape("Radiant", ellipse(90), fill(AMBER, 0.14, feather=30), x=radiant[0], y=radiant[1])
-    art = node("S6 Art", *corners, frame, met_grp, hero_flash, trail_grp, radiant_glow, sky_grp, clip, x=0, y=0)
-    for lane, m, L, f0 in pool:
-        REST[(m.id, "x")] = 0.0
+                            stroke(w=1.1 if j % 3 else 1.6, paint=linear([(0, col, 0.0), (0.25, col, al), (1, col, al * 0.5)],
+                                                                          x0, y0, x0 + ux * L, y0 + uy * L), effects=[t], cap="round")))
+    # bounded pool: 5 meteors riding five of the lanes, re-used by the idle loop
+    specs = [(1, 230, 3.4, 0, ICE), (3, 150, 2.4, 50, BLUE), (0, 180, 2.6, 100, ICE), (5, 120, 2.0, 150, AMBER), (2, 140, 2.2, 200, ICE)]
+    pool = []
+    for i, (lane_i, L, wd, f0, col) in enumerate(specs):
+        ang, s0, LL, _, _ = lanes[lane_i]
+        m = meteor(f"Meteor {i + 1}", L, wd, col, head=3.6 + wd)
+        lane = node(f"Lane {i + 1}", m, x=rx, y=ry, rotation=math.radians(ang))
+        pool.append((lane, m, s0, s0 + LL + 40, f0))
+    met_grp = node("Meteor Pool", *[p[0] for p in pool], x=0, y=0)
+    # altitude grid: faint arcs of an all-sky camera with two labels
+    grid = [shape("Altitude 30", ellipse(560, 560), stroke(BLUE, 0.13, 1), x=rx, y=ry),
+            shape("Altitude 60", ellipse(330, 330), stroke(BLUE, 0.11, 1, effects=[dash(2, 5)]), x=rx, y=ry),
+            shape("Meridian", poly([(rx, ry), (rx - 330, ry + 330)], closed=False), stroke(ICE, 0.08, 1))]
+    glabels = [text("Alt 60", rx - 150, ry + 96, 70, 14, tstyle("mono", 9, ICE, 0.45, ls=1.2), "ALT 60°", None, align="left", wrap="noWrap"),
+               text("Alt 30", 40, 300, 70, 14, tstyle("mono", 9, ICE, 0.45, ls=1.2), "ALT 30°", None, align="left", wrap="noWrap"),
+               text("Radiant", rx - 46, ry + 34, 92, 14, tstyle("mono", 9, AMBER, 0.75, ls=1.6), "RADIANT", None, align="center", wrap="noWrap")]
+    radiant_glow = shape("Radiant", ellipse(120), fill(AMBER, 0.16, feather=40), x=rx, y=ry)
+    hero_flash = shape("Hero Afterglow", rect(360, 8, ox=0.0), fill(ICE, 0.18, feather=12), x=rx, y=ry,
+                       rotation=math.radians(lanes[1][0]), opacity=0.0)
+    art = node("S6 Art", met_grp, hero_flash, *trails, *glabels, radiant_glow, *grid, x=0, y=0)
+    for lane, m, xs, xe, f0 in pool:
+        m.attrs["x"] = float(xs)
+        REST[(m.id, "x")] = float(xs)
         REST[(m.id, "opacity")] = 0.0
         m.attrs["opacity"] = 0.0
     copy, counter, c = metric_copy(k, "meteorSightings", "right")
     eF = copy_enter(c, 26)
-    eF += [(sky_grp.id, "opacity", [(0, 0.0, "hold"), (4, 0.0, "out"), (30, 1.0, "hold")]),
-           (frame.id, "opacity", [(0, 0.0, "hold"), (4, 0.0, "out"), (24, REST[(frame.id, "opacity")], "hold")])]
-    for g in corners:
-        eF += [(g.id, "opacity", [(0, 0.0, "hold"), (14, 0.0, "out"), (34, 1.0, "hold")])]
-    travel = 560
-    # hero meteor + two followers synchronised with the count's beat
-    for idx, (lane, m, L, f0) in enumerate(pool[:3]):
-        s = 22 + idx * 18
-        dur = 38 - idx * 4
-        eF += [(m.id, "x", [(0, -20, "hold"), (s, -20, (0.3, 0.2, 0.6, 1.0)), (s + dur, travel, "hold")]),
-               (m.id, "opacity", [(0, 0.0, "hold"), (s, 0.0, "lin"), (s + 4, 1.0, "hold"), (s + dur - 10, 1.0, "lin"), (s + dur, 0.0, "hold")])]
-    eF += [(hero_flash.id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "out"), (52, 1.0, "in"), (110, 0.0, "hold")])]
+    for g in grid:
+        eF += [(g.id, "opacity", [(0, 0.0, "hold"), (4, 0.0, "out"), (40, REST[(g.id, "opacity")], "hold")])]
+    eF += [(g.id, "opacity", [(0, 0.0, "hold"), (60, 0.0, "out"), (90, 1.0, "hold")]) for g in glabels]
+    eF += scale_to(grid[0].id, 0, 0, 0.7, 0.7, "hold") + [(grid[0].id, "scaleX", [(0, 0.7, "hold"), (4, 0.7, "out"), (60, 1.0, "hold")]),
+                                                          (grid[0].id, "scaleY", [(0, 0.7, "hold"), (4, 0.7, "out"), (60, 1.0, "hold")])]
+    # hero meteor + two followers on the count's beat; each leaves its exposure trail
+    for idx, (lane, m, xs, xe, f0) in enumerate(pool[:3]):
+        st = 22 + idx * 16
+        dur = 34 - idx * 4
+        eF += [(m.id, "x", [(0, xs, "hold"), (st, xs, (0.3, 0.2, 0.6, 1.0)), (st + dur, xe, "hold")]),
+               (m.id, "opacity", [(0, 0.0, "hold"), (st, 0.0, "lin"), (st + 3, 1.0, "hold"), (st + dur - 9, 1.0, "lin"), (st + dur, 0.0, "hold")])]
+    eF += [(hero_flash.id, "opacity", [(0, 0.0, "hold"), (32, 0.0, "out"), (42, 1.0, "in"), (110, 0.0, "hold")])]
     for j, t in enumerate(ttr):
-        f0 = 30 + j * 9
-        eF += [(t.id, "end", [(0, 0.0, "hold"), (f0, 0.0, (0.3, 0.2, 0.4, 1.0)), (f0 + 26, 1.0, "hold")])]
+        f0 = 24 + j * 8
+        eF += [(t.id, "end", [(0, 0.0, "hold"), (f0, 0.0, (0.3, 0.2, 0.4, 1.0)), (f0 + 24, 1.0, "hold")])]
     eF += [(radiant_glow.id, "opacity", [(0, 0.0, "hold"), (10, 0.0, "out"), (60, 1.0, "hold")])]
-    eB = copy_enter_back(c) + [(sky_grp.id, "opacity", [(0, 0.0, "hold"), (2, 0.0, "out"), (24, 1.0, "hold")])]
+    eB = copy_enter_back(c)
+    for j, t in enumerate(ttr):
+        eB += [(t.id, "start", [(0, 1.0, "hold"), (2, 1.0, "out"), (32, 0.0, "hold")])]
     xF = copy_exit(c) + art_exit(art.id, 0.9, -6)
+    for j, t in enumerate(ttr):
+        xF += [(t.id, "start", [(0, 0.0, "in"), (22, 1.0, "hold")])]
     xB = copy_exit(c, 22) + art_exit(art.id, 1.08, 6)
     idle = []
     loop = 250
     idle += osc(radiant_glow.id, "opacity", loop, 0.7, 1.0)
-    for lane, m, L, f0 in pool:
-        dur = 46
-        s = f0 % loop
-        keys_x = [(0, -20, "hold"), (s, -20, (0.3, 0.2, 0.6, 1.0)), (s + dur, travel, "hold"), (loop, -20, "hold")]
-        keys_o = [(0, 0.0, "hold"), (s, 0.0, "lin"), (s + 5, 1.0, "hold"), (s + dur - 12, 1.0, "lin"), (s + dur, 0.0, "hold"), (loop, 0.0, "hold")]
+    for lane, m, xs, xe, f0 in pool:
+        dur = 40
+        st = f0 % loop
+        keys_x = [(0, xs, "hold"), (st, xs, (0.3, 0.2, 0.6, 1.0)), (st + dur, xe, "hold"), (loop, xs, "hold")]
+        keys_o = [(0, 0.0, "hold"), (st, 0.0, "lin"), (st + 4, 1.0, "hold"), (st + dur - 10, 1.0, "lin"), (st + dur, 0.0, "hold"), (loop, 0.0, "hold")]
         idle += [(m.id, "x", keys_x), (m.id, "opacity", keys_o)]
-    for i, g in enumerate(faint):
-        idle += osc(g.id, "opacity", 180, 0.6, 1.0, phase=i / 2)
     return scene_component(k, "Meteors spotted", [art], [copy, counter],
                            dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(loop, idle)))
+
+
+def orb(name, k, cx, cy, r, live=None, **kw):
+    nums = dict(kind=0, cx=cx, cy=cy, radius=r, phase=0.78, turn=0.0, spinSpeed=0.02, tilt=0.0, earthshine=0.6, tintAmount=0.0,
+                rimWarm=1.0, ringTilt=0.42, ring=1.0, exposure=1.0, halo=1.0, seed=3, res=2.2, live=0)
+    colors = {"tint": kw.pop("tint", ICE)}
+    nums.update(kw)
+    binds = motion_binds(live=live if live is not None else bind("currentScreen", KEY_SI_NUM, cv_eq(k)))
+    return scripted(name, "orb", nums=nums, bools=dict(still=False, paused=False, holding=False), colors=colors, binds=binds)
 
 
 def scene7():
     k = 7
     cx, cy, d = 182.0, 296.0, 256.0
-    lit_paint = lambda: radial([(0, "E6F4F6", 1), (0.5, "B3CFE0", 1), (1, "5E80A8", 1)], d * 0.75, d * 0.18, -d * 0.12)
-    dark = "0C1F38"
-    litB = shape("Lit Gibbous", ellipse(0.0001, d), fill(paint=lit_paint()), x=cx, y=cy)
-    half_dark = shape("Dark Half", rect(d / 2 + 1, d + 2, ox=1.0, oy=0.5), fill(dark, 1.0), x=cx, y=cy)
-    darkA = shape("Shadow Crescent", ellipse(d, d), fill(dark, 1.0), x=cx, y=cy)
-    lit = shape("Lit Disk", ellipse(d), fill(paint=lit_paint()), x=cx, y=cy)
-    craters = []
-    cr = [(-40, -50, 34), (30, -20, 22), (55, 40, 40), (-20, 60, 26), (-70, 10, 18), (10, -84, 14), (80, -40, 16),
-          (-50, 95, 12), (90, 80, 10)]
-    for i, (dx, dy, cd) in enumerate(cr):
-        craters.append(shape(f"Crater {i}", ellipse(cd, cd * 0.92), fill("3A5C86", 0.16), stroke(ICE, 0.14, 0.8), x=cx + dx, y=cy + dy))
-    maria = shape("Mare", poly([(cx - 60, cy - 10, "c", 0.4, 30), (cx + 10, cy - 40, "c", 0.2, 34), (cx + 40, cy + 20, "c", 1.9, 30),
-                                (cx - 30, cy + 40, "c", 3.4, 30)], closed=True), fill("6F8FB5", 0.16, feather=10))
-    clip = shape("Moon Clip", ellipse(d), x=cx, y=cy)
-    moon_body = node("Moon Body", *craters, maria, litB, half_dark, darkA, lit, El("ClippingShape", sourceId=clip.id, name="Clip"), x=0, y=0)
-    halo = shape("Moon Halo", ellipse(d + 60), fill(ICE, 0.12, feather=40), x=cx, y=cy)
-    rim = shape("Moon Rim", ellipse(d + 2), stroke(ICE, 0.4, 1), x=cx, y=cy)
+    # a lit 3D moon (GPU): the sun sweeps round it in step with the count, new -> crescent -> half -> gibbous
+    moon, MO = orb("Moon (GPU)", k, cx, cy, d / 2, phase=0.78, earthshine=0.7, seed=4.0, tilt=0.25)
+    halo = shape("Moon Halo", ellipse(d + 70), fill(ICE, 0.10, feather=44), x=cx, y=cy)
+    warm = shape("Moon Warm Limb", ellipse(d + 18), stroke(AMBER, 0.22, 10, feather=12, effects=[trim(0.0, 0.32, 0.88)]), x=cx, y=cy)
+    rim = shape("Moon Rim", ellipse(d + 10), stroke(ICE, 0.22, 1), x=cx, y=cy)
     orbit = shape("Session Orbit", ellipse(d + 96), stroke(ICE, 0.18, 1, effects=[dash(1, 6)]), x=cx, y=cy)
     glyphs = []
     ng = 9
@@ -993,37 +1042,27 @@ def scene7():
         glyphs.append(node(f"Session {i + 1}", dot("Lit", 0, 0, 11, ICE, 0.95),
                            shape("Shade", ellipse(11), fill(MID, 1.0), x=-11 * (1 - frac) + 0.0, opacity=1.0 - frac * 0.9),
                            shape("Ring", ellipse(15), stroke(ICE, 0.3, 1)), x=gx, y=gy))
-    art = node("S7 Art", *glyphs, orbit, rim, moon_body, clip, halo, x=0, y=0)
+    moon_body = node("Moon Body", moon, x=0, y=0)
+    art = node("S7 Art", *glyphs, orbit, rim, warm, moon_body, halo, x=0, y=0)
     copy, counter, c = metric_copy(k, "moonSessions", "right")
-    # successive masked illumination: new -> crescent -> half -> gibbous (settled)
-    darkA_w_rest = 0.0001
-    REST[(darkA.id, "width")] = 0.0001
-    darkA[0] if False else None
-    for ch in darkA.children:
-        if ch.tag == "Ellipse":
-            ch.attrs["width"] = 0.0001
-            REST[(ch.id, "width")] = 0.0001
-            darkA_e = ch
-    for ch in litB.children:
-        if ch.tag == "Ellipse":
-            ch.attrs["width"] = 168.0
-            REST[(ch.id, "width")] = 168.0
-            litB_e = ch
     eF = copy_enter(c, 26)
-    eF += [(darkA_e.id, "width", [(0, d, "hold"), (18, d, (0.45, 0.0, 0.55, 1.0)), (62, 0.0001, "hold")]),
-           (litB_e.id, "width", [(0, 0.0001, "hold"), (62, 0.0001, (0.3, 0.0, 0.3, 1.0)), (96, 168.0, "hold")]),
-           (moon_body.id, "rotation", [(0, -0.25, "hold"), (10, -0.25, "out"), (100, 0.0, "hold")]),
+    eF += [(MO["phase"], "propertyValue", [(0, 0.0, "hold"), (14, 0.0, (0.35, 0.0, 0.25, 1.0)), (96, 0.78, "hold")]),
+           (MO["turn"], "propertyValue", [(0, -0.5, "hold"), (8, -0.5, (0.2, 0.7, 0.3, 1.0)), (110, 0.0, "hold")]),
+           (moon_body.id, "scaleX", [(0, 0.9, "hold"), (4, 0.9, "back"), (60, 1.0, "hold")]),
+           (moon_body.id, "scaleY", [(0, 0.9, "hold"), (4, 0.9, "back"), (60, 1.0, "hold")]),
            (halo.id, "opacity", [(0, 0.0, "hold"), (30, 0.0, "out"), (100, 1.0, "hold")]),
+           (warm.id, "opacity", [(0, 0.0, "hold"), (70, 0.0, "out"), (110, 1.0, "hold")]),
+           (rim.id, "opacity", [(0, 0.0, "hold"), (6, 0.0, "out"), (40, REST[(rim.id, "opacity")], "hold")]),
            (orbit.id, "opacity", [(0, 0.0, "hold"), (10, 0.0, "out"), (40, REST[(orbit.id, "opacity")], "hold")])]
-    for i, g in enumerate(glyphs):
+    for i, g in enumerate(glyphs):  # each session glyph lands as the terminator passes it
         f0 = 26 + i * 7
         eF += pop(g.id, f0, f0 + 16, 0.2, "back")
-    eB = copy_enter_back(c) + [(darkA_e.id, "width", [(0, 0.0001, "hold")]),
-                               (litB_e.id, "width", [(0, d, "hold"), (2, d, "out"), (40, 168.0, "hold")])]
-    xF = copy_exit(c) + art_exit(art.id, 0.86, -6) + [(litB_e.id, "width", [(0, 168.0, "in"), (30, d, "hold")])]
-    xB = copy_exit(c, 22) + art_exit(art.id, 1.08, 6) + [(darkA_e.id, "width", [(0, 0.0001, "in"), (30, 120, "hold")])]
-    idle = osc(halo.id, "opacity", 480, 0.7, 1.0) + [(moon_body.id, "rotation", [(0, 0.0, "sine"), (600, 0.03, "sine"), (1200, 0.0, "hold")])]
-    idle += [(orbit.id, "rotation", [(0, 0.0, "lin"), (1200, 2 * math.pi / 16, "hold")])]
+    eB = copy_enter_back(c) + [(MO["phase"], "propertyValue", [(0, 1.0, "hold"), (2, 1.0, "out"), (44, 0.78, "hold")]),
+                               (MO["turn"], "propertyValue", [(0, 0.4, "hold"), (2, 0.4, "out"), (50, 0.0, "hold")])]
+    xF = copy_exit(c) + art_exit(art.id, 0.86, -6) + [(MO["phase"], "propertyValue", [(0, 0.78, "in"), (30, 1.0, "hold")])]
+    xB = copy_exit(c, 22) + art_exit(art.id, 1.08, 6) + [(MO["phase"], "propertyValue", [(0, 0.78, "in"), (30, 0.45, "hold")])]
+    idle = osc(halo.id, "opacity", 480, 0.7, 1.0) + [(orbit.id, "rotation", [(0, 0.0, "lin"), (1200, 2 * math.pi / 16, "hold")])]
+    idle += osc(warm.id, "opacity", 600, 0.7, 1.0)
     return scene_component(k, "Lunar sessions", [art], [copy, counter],
                            dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(1200, idle)))
 
@@ -1056,10 +1095,11 @@ def scene8():
             pts.append((rad * math.cos(a) * 1.15, rad * math.sin(a) * 0.82 - 8))
         col = [ICE, ICE, BLUE, ICE, AMBER, BLUE, ICE][i]
         strokes_def.append((pts, col, 0.75 if col == ICE else 0.7, 1.1 if i % 2 else 1.5))
+    # filaments: a few wisps leaving the core
     hatch = []
-    for j in range(14):
-        x0 = -70 + j * 9
-        hatch.append(([(x0, 70), (x0 + 22, 40)], ICE, 0.35, 0.9))
+    for j, (a0, L) in enumerate(((-0.5, 120), (2.2, 110), (3.6, 95), (1.0, 80))):
+        pts = [((26 + t * L) * math.cos(a0 + t * 0.7), (20 + t * L * 0.7) * math.sin(a0 + t * 0.7) - 8) for t in (0, 0.33, 0.66, 1.0)]
+        hatch.append((pts, ICE if j % 2 else BLUE, 0.45, 0.9))
     sketch = []
     trims8 = []
     for i, (pts, col, a, w) in enumerate(strokes_def + hatch):
@@ -1067,14 +1107,27 @@ def scene8():
         trims8.append(t)
         pth = smooth_path(pts) if len(pts) > 2 else poly(pts, closed=False)
         sketch.append(shape(f"Stroke {i + 1}", pth, stroke(col, a, w, effects=[t], cap="round")))
+    # stipple: pencil dots densest at the core, laid down in four passes
+    stip = [node(f"Stipple {g + 1}", x=0, y=0) for g in range(4)]
+    sr = random.Random(88)
+    for i in range(64):
+        rad = 92 * (sr.random() ** 1.6)
+        a = sr.random() * 2 * math.pi
+        stip[i % 4].add(dot("Dot", round(rad * math.cos(a) * 1.15, 1), round(rad * math.sin(a) * 0.82 - 8, 1),
+                            round(0.9 + 1.1 * sr.random(), 2), ICE if i % 5 else AMBER, 0.55 + 0.35 * sr.random()))
     crosses = []
     for (sx, sy, s) in ((-96, -110, 7), (104, -60, 9), (80, 96, 6), (-110, 40, 5), (20, -126, 6)):
         crosses.append(node("Star Mark", shape("h", rect(s * 2, 1.1), fill(WHITE, 0.85)), shape("v", rect(1.1, s * 2), fill(WHITE, 0.85)),
                             x=sx, y=sy))
     glow = shape("Nebula Wash", ellipse(200, 140), fill(BLUE, 0.16, feather=36), y=-8)
     glow2 = shape("Nebula Warm", ellipse(90, 60), fill(AMBER, 0.12, feather=24), x=30, y=10)
-    sheet = node("Sketch Sheet", *crosses, *sketch, ann, ann2, *regs, glow2, glow, margin, paper, x=cx, y=cy, rotation=-0.045)
-    art = node("S8 Art", sheet, x=0, y=0)
+    sheet = node("Sketch Sheet", *crosses, *stip, *sketch, ann, ann2, *regs, glow2, glow, margin, paper, x=cx, y=cy, rotation=-0.045)
+    # the loupe (the travelling motif sits on it) shows the sky the sketch was drawn from
+    lx, ly = POSES[8]["m"][0], POSES[8]["m"][1]
+    loupe, LP = sky_disk("Loupe Sky (GPU)", k, lx, ly, 38, seed=31, band=1.7, bandAngle=0.5, bandWidth=15, warm=1.0, density=1.5,
+                         vignette=0.5, res=3.0)
+    loupe_grp = node("Loupe", loupe, shape("Loupe Shadow", ellipse(92), fill(MID_DEEP, 0.45, feather=10), x=lx + 3, y=ly + 5), x=0, y=0)
+    art = node("S8 Art", loupe_grp, sheet, x=0, y=0)
     copy, counter, c = metric_copy(k, "sketchesMade", "left")
     eF = copy_enter(c, 26)
     eF += [(sheet.id, "y", [(0, cy + 44, "hold"), (4, cy + 44, "back"), (44, cy, "hold")]),
@@ -1087,6 +1140,11 @@ def scene8():
            (glow2.id, "opacity", [(0, 0.0, "hold"), (70, 0.0, "out"), (120, 1.0, "hold")])]
     for i, cc in enumerate(crosses):
         eF += pop(cc.id, 80 + i * 6, 96 + i * 6, 0.0, "back")
+    for i, g in enumerate(stip):
+        eF += [(g.id, "opacity", [(0, 0.0, "hold"), (54 + i * 12, 0.0, "out"), (70 + i * 12, 1.0, "hold")])]
+    eF += [(loupe_grp.id, "opacity", [(0, 0.0, "hold"), (84, 0.0, "out"), (112, 1.0, "hold")]),
+           (LP["exposure"], "propertyValue", [(0, 0.0, "hold"), (90, 0.0, (0.3, 0.0, 0.2, 1.0)), (130, 1.0, "hold")]),
+           (LP["viewScale"], "propertyValue", [(0, 1.8, "hold"), (90, 1.8, (0.2, 0.8, 0.3, 1.0)), (140, 1.0, "hold")])]
     eB = copy_enter_back(c) + [(sheet.id, "rotation", [(0, 0.08, "hold"), (2, 0.08, "back"), (44, -0.045, "hold")]),
                                (sheet.id, "opacity", [(0, 0.0, "hold"), (2, 0.0, "out"), (20, 1.0, "hold")])]
     xF = copy_exit(c) + [(sheet.id, "y", [(0, cy, "in"), (34, cy - 30, "hold")]),
@@ -1124,26 +1182,34 @@ def scene9():
                            shape("Ticks", ellipse(dd + 10), stroke(ICE, 0.35, 5, effects=[dash(0.8, math.pi * (dd + 10) / (24 + 12 * j) - 0.8)])),
                            star4("Mark", dd / 2, 0, 8, AMBER, glow=3), x=0, y=0))
     inner_ap, inner_remap = aperture_instance("Inner Aperture", 0, 0, 0.26, 1.0)
-    e0 = slot_node(0, inner_ap, *rings0, *neb)
+    neb_gpu, NB = sky_disk("Deep Sky (GPU)", 9, 0, 0, 100, seed=21, band=1.6, bandAngle=0.85, bandWidth=34, warm=1.0,
+                           density=1.1, vignette=0.7, exposure=1.0, res=2.4)
+    for nb in neb:
+        nb.attrs["opacity"] = 0.55
+        REST[(nb.id, "opacity")] = 0.55
+    e0 = slot_node(0, inner_ap, *rings0, neb_gpu, *neb)
     for j, rg in enumerate(rings0):
         f0 = 40 + j * 10
         eF += pop(rg.id, f0, f0 + 34, 0.25 + j * 0.2, "back")
         idle += [(rg.id, "rotation", [(0, 0.0, "lin"), (1440, (1 if j % 2 == 0 else -1) * 2 * math.pi / (2 + j), "hold")])]
     for j, nb in enumerate(neb):
         eF += pop(nb.id, 30 + j * 8, 90 + j * 8, 0.3, "out")
-    eF += [(inner_remap.id, "time", [(0, 0.0, "hold"), (60, 0.0, "out"), (100, 1.0, "hold")])]
+    eF += [(inner_remap.id, "time", [(0, 0.0, "hold"), (60, 0.0, "out"), (100, 1.0, "hold")]),
+           (NB["viewScale"], "propertyValue", [(0, 2.6, "hold"), (24, 2.6, (0.2, 0.8, 0.3, 1.0)), (130, 1.0, "hold")]),
+           (NB["viewRot"], "propertyValue", [(0, -0.9, "hold"), (24, -0.9, (0.2, 0.8, 0.3, 1.0)), (130, 0.0, "hold")]),
+           (NB["exposure"], "propertyValue", [(0, 0.0, "hold"), (24, 0.0, "out"), (90, 1.0, "hold")])]
+    idle += [(NB["viewRot"], "propertyValue", [(0, 0.0, "lin"), (1440, 0.35, "hold")])]
     em.append(e0)
 
     # 1 Lunar Archivist: lunar disk with orbiting phases
-    disk_fill = solid(ICE, 1.0)
-    disk_fill.add(bind("personaColor", KEY_COLOR))
+    pmoon, PM = orb("Persona Moon (GPU)", 9, 0, 0, 86, phase=0.86, tintAmount=0.55, earthshine=0.8, seed=8.0, tilt=-0.3,
+                    halo=1.2, tint=ICE)
+    s_tint = pmoon.children[[c_.attrs.get("name") for c_ in pmoon.children].index("tint")]
+    s_tint.add(bind("personaColor", KEY_SI_COLOR))
     ldisk = node("Lunar Disk",
-                 shape("Disk Glow", ellipse(186), fill(BLUE, 0.3, feather=26)),
-                 *[shape(f"Crater {i}", ellipse(s), fill(MID, 0.22), x=dx, y=dy) for i, (dx, dy, s) in
-                   enumerate(((-30, -26, 30), (24, 10, 22), (-8, 44, 18), (40, -40, 12), (-50, 20, 10)))],
-                 shape("Terminator", ellipse(172), fill(paint=linear([(0, MID, 0.0), (0.55, MID, 0.0), (1, MID, 0.75)], -86, 0, 86, 0))),
-                 shape("Disk", ellipse(172), El("Fill", disk_fill, name="Persona Fill")),
-                 shape("Disk Rim", ellipse(174), stroke(ICE, 0.5, 1.2)),
+                 shape("Disk Glow", ellipse(200), fill(BLUE, 0.28, feather=30)),
+                 pmoon,
+                 shape("Disk Rim", ellipse(184), stroke(ICE, 0.35, 1.0)),
                  x=0, y=0)
     orbit1 = node("Phase Orbit", shape("Orbit Path", ellipse(268, 268), stroke(ICE, 0.25, 1, effects=[dash(1, 5)])), x=0, y=0)
     for j in range(6):
@@ -1159,6 +1225,7 @@ def scene9():
            (orbit1.id, "scaleY", [(0, 0.3, "hold"), (40, 0.3, "back"), (100, 1.0, "hold")]),
            (orbit1.id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "out"), (60, 1.0, "hold")])]
     idle += [(orbit1.id, "rotation", [(0, 0.0, "lin"), (1440, 2 * math.pi, "hold")])]
+    eF += [(PM["phase"], "propertyValue", [(0, 0.2, "hold"), (30, 0.2, (0.3, 0.0, 0.2, 1.0)), (110, 0.86, "hold")])]
     em.append(e1)
 
     # 2 Planet Tracker: orbital reticle
@@ -1170,10 +1237,11 @@ def scene9():
         x, y = r * math.cos(th), r * sq * math.sin(th)
         return x * math.cos(tilt) - y * math.sin(tilt), x * math.sin(tilt) + y * math.cos(tilt)
     px0, py0 = orbit_xy(0.6)
-    planet = node("Planet", shape("Planet Glow", ellipse(44), fill(AMBER, 0.4, feather=14)),
-                  shape("Planet Body", ellipse(34), El("Fill", planet_fill, name="Persona Fill")),
-                  shape("Planet Ring", ellipse(58, 12), stroke(ICE, 0.7, 1.2), rotation=-0.3),
-                  x=px0, y=py0)
+    pplanet, PP = orb("Persona Planet (GPU)", 9, 0, 0, 21, kind=1, tintAmount=1.0, seed=5.0, tilt=-0.35, ringTilt=0.38,
+                      spinSpeed=0.12, halo=1.0, res=3.0, tint=AMBER)
+    p_tint = pplanet.children[[c_.attrs.get("name") for c_ in pplanet.children].index("tint")]
+    p_tint.add(bind("personaColor", KEY_SI_COLOR))
+    planet = node("Planet", shape("Planet Glow", ellipse(60), fill(AMBER, 0.30, feather=18)), pplanet, x=px0, y=py0)
     orbit_plane = node("Orbit Plane", shape("Orbit", ellipse(256), stroke(AMBER, 0.65, 1.2, effects=[o_tr])),
                        x=0, y=0, scaleY=0.42, rotation=-0.32)
     arm = planet
@@ -1216,16 +1284,17 @@ def scene9():
     mw_fill = solid(MID, 1.0)
     mw_fill.add(bind("personaColor", KEY_COLOR))
     head = node("Arc Head", dot("Head", 0, 0, 12, WHITE, 1.0, glow=14, glow_a=0.9), x=0, y=0, rotation=0.0)
+    ecl_gpu, EC = orb("Eclipse (GPU)", 9, 0, 0, 74, kind=2, tintAmount=1.0, seed=2.0, earthshine=0.7, spinSpeed=0.01, halo=1.0,
+                      tint=MID, res=2.2)
+    e_tint = ecl_gpu.children[[c_.attrs.get("name") for c_ in ecl_gpu.children].index("tint")]
+    e_tint.add(bind("personaColor", KEY_SI_COLOR))
     head_arm = node("Arc Head Arm", node("Head Pos", dot("Head", 0, 0, 11, WHITE, 1.0, glow=14, glow_a=0.9), x=140, y=0),
                     x=0, y=0, rotation=2 * math.pi * (0.55 + 0.62))
     e3 = slot_node(3,
                    head_arm,
                    shape("Meteor Arc", ellipse(280), stroke(w=3.0, paint=arc_paint, effects=[m_tr], cap="round")),
                    shape("Meteor Arc Glow", ellipse(280), stroke(AMBER, 0.5, 10, feather=10, effects=[m_tr_g], cap="round")),
-                   node("Eclipse",
-                        shape("Eclipse Corona", ellipse(176), fill(ICE, 0.35, feather=24)),
-                        shape("Eclipse Rim", ellipse(150), stroke(ICE, 0.75, 1.4)),
-                        shape("Eclipse Disk", ellipse(148), El("Fill", mw_fill, name="Persona Fill")), x=0, y=0),
+                   node("Eclipse", ecl_gpu, shape("Eclipse Rim", ellipse(150), stroke(ICE, 0.35, 1.0)), x=0, y=0),
                    *[node(f"Streak {j}", meteor(f"Mini {j}", 70 - j * 12, 1.6, ICE, head=3.0), x=-40 + j * 38, y=-96 + j * 22,
                           rotation=math.radians(150)) for j in range(3)])
     eclipse = [c_ for c_ in e3.children if c_.attrs.get("name") == "Eclipse"][0]
@@ -1233,6 +1302,7 @@ def scene9():
            (m_tr_g.id, "end", [(0, 0.0, "hold"), (36, 0.0, (0.5, 0.0, 0.15, 1.0)), (70, 0.62, "hold")]),
            (head_arm.id, "rotation", [(0, 2 * math.pi * 0.55, "hold"), (36, 2 * math.pi * 0.55, (0.5, 0.0, 0.15, 1.0)),
                                       (70, 2 * math.pi * 1.17, "hold")]),
+           (EC["halo"], "propertyValue", [(0, 0.0, "hold"), (60, 0.0, (0.3, 0.0, 0.2, 1.0)), (100, 1.0, "hold")]),
            (eclipse.id, "scaleX", [(0, 0.2, "hold"), (50, 0.2, "back"), (92, 1.0, "hold")]),
            (eclipse.id, "scaleY", [(0, 0.2, "hold"), (50, 0.2, "back"), (92, 1.0, "hold")])]
     idle += [(m_tr.id, "offset", [(0, 0.55, "sine"), (720, 0.58, "sine"), (1440, 0.55, "hold")]),
@@ -1243,28 +1313,26 @@ def scene9():
     emblems = node("Emblems", *em, x=0, y=0)
     REST[(head.id, "rotation")] = 0.0
     # copy
-    lab = text("S9 Label", 195, 486, 334, 18, tstyle("mono", 11, ICE, 0.75, ls=3.0), "", tb("personaLabel"),
-               align="center", wrap="noWrap")
-    title = text("S9 Title", 195, 510, 350, 96, tstyle("sg", 40, WHITE, weight=400, lh=46, ls=-0.8), "", tb("personaName"),
-                 align="center")
+    lab = flow_text("S9 Label", tstyle("mono", 11, ICE, 0.75, ls=3.0), tb("personaLabel"), "center", max_h=20)
+    title = flow_text("S9 Title", tstyle("sg", 40, WHITE, weight=400, lh=46, ls=-0.8), tb("personaName"), "center", max_h=96)
     spark_fill = solid(AMBER, 1.0)
     spark_fill.add(bind("personaColor", KEY_COLOR))
     divp = node("S9 Divider",
                 shape("Spark Ring", ellipse(18), stroke(ICE, 0.6, 1)),
                 shape("Spark", El("Star", width=14.0, height=14.0, points=4, innerRadius=0.2, name="Path"), El("Fill", spark_fill, name="Persona Fill")),
                 shape("Rule L", rect(64, 1, ox=1.0), fill(AMBER, 0.55), x=-16),
-                shape("Rule R", rect(64, 1, ox=0.0), fill(AMBER, 0.55), x=16), x=195, y=622)
-    desc = text("S9 Description", 195, 642, 334, 52, tstyle("mono", 13.5, ICE, 0.85, lh=20, ls=0.6), "", tb("personaDescription"),
-                align="center")
-    copy = node("S9 Copy", lab, title, divp, desc, x=0, y=0)
+                shape("Rule R", rect(64, 1, ox=0.0), fill(AMBER, 0.55), x=16), x=175, y=11)
+    div_box = flow_box("S9 Divider Slot", 350, 22, divp)
+    desc = flow_text("S9 Description", tstyle("mono", 13.5, ICE, 0.85, lh=20, ls=0.6), tb("personaDescription"), "center", max_h=62)
+    col = column("S9 Copy Column", 20, 486, 350, 230, lab, title, div_box, desc, gap=10, align="center")
+    copy = node("S9 Copy", col, x=0, y=0)
     art = node("S9 Art", emblems, x=0, y=0)
-    eF += fade_up(lab.id, 70, 96, 10) + fade_up(title.id, 82, 118, 22) + fade_up(desc.id, 104, 134, 10)
+    fo = lambda oid, f0, f1: [(oid, "opacity", [(0, 0.0, "hold"), (f0, 0.0, "out"), (f1, 1.0, "hold")])]
+    eF += fade_up(col.id, 70, 124, 22) + fo(lab.id, 70, 96) + fo(title.id, 82, 116) + fo(desc.id, 104, 134)
     eF += [(divp.id, "scaleX", [(0, 0.0, "hold"), (96, 0.0, "back"), (124, 1.0, "hold")]),
-           (title.id, "scaleX", [(0, 0.94, "hold"), (82, 0.94, "out"), (130, 1.0, "hold")]),
            (art.id, "opacity", [(0, 0.0, "hold"), (24, 0.0, "out"), (44, 1.0, "hold")])]
     eB = [(art.id, "opacity", [(0, 0.0, "hold"), (4, 0.0, "out"), (30, 1.0, "hold")])]
-    for i, kk in enumerate((lab, title, desc)):
-        eB += fade_up(kk.id, 16 + i * 4, 42 + i * 4, -16)
+    eB += fade_up(col.id, 16, 50, -16) + fo(lab.id, 16, 40) + fo(title.id, 20, 44) + fo(desc.id, 24, 48)
     xF = art_exit(art.id, 0.8, 0) + fade_out(copy.id, 0, 14, -20)
     xB = art_exit(art.id, 1.15, 0, f1=24) + fade_out(copy.id, 0, 14, 20)
     return scene_component(k, "Persona reveal", [art], [copy],
@@ -1295,8 +1363,19 @@ def scene10():
         t = trim(0.0, 0.16, j * 0.2 + 0.02)
         ring_arcs.append((shape(f"Data Arc {j}", ellipse(104), stroke(cols[j], 0.9, 3, effects=[t], cap="round"), x=cx, y=seal_y), t))
     ring_grp = node("Data Ring", *[a for a, _ in ring_arcs], x=0, y=0)
+    seal_sky, SS = sky_disk("Seal Sky (GPU)", 10, cx, seal_y, 41, seed=13, band=1.4, bandAngle=-0.7, bandWidth=18, warm=0.9,
+                            density=1.3, vignette=0.6, res=3.0)
+    corners = []
+    for sx in (-1, 1):
+        for sy in (-1, 1):
+            x0, y0 = cx + sx * 151, cy + sy * (ch / 2 - 16)
+            corners.append(shape("Plate Corner", poly([(x0, y0 - sy * 12), (x0, y0), (x0 - sx * 12, y0)], closed=False),
+                                 stroke(AMBER, 0.6, 1.1)))
+    grid_lines = [shape("Grid V", rect(1, 96), fill(ICE, 0.08), x=cx, y=434),
+                  shape("Grid H1", rect(250, 1), fill(ICE, 0.08), x=cx, y=430),
+                  shape("Grid H2", rect(250, 1), fill(ICE, 0.08), x=cx, y=496)]
     wm = text("Card Wordmark", cx, 238, 300, 26, tstyle("sg", 20, ICE, weight=500, ls=3.0), "NOCTURNE", None, align="center", wrap="noWrap")
-    yr = text("Card Year", cx, 264, 200, 16, tstyle("mono", 11, AMBER, 0.95, ls=4.0), "", tb("year", CV_INT_TEXT), align="center", wrap="noWrap")
+    yr = text("Card Year", cx, 264, 200, 16, tstyle("mono", 11, AMBER, 0.95, ls=4.0), "", tb("year", CV_YEAR_TEXT), align="center", wrap="noWrap")
     nm = text("Card Name", cx, 286, 290, 16, tstyle("mono", 11, ICE, 0.75, ls=1.5), "", tb("userName"), align="center", wrap="noWrap")
     nm.add(bind("shareIncludeName", KEY_OPACITY, CV_BOOL_NUM))
     p_fill = solid(ICE, 1.0)
@@ -1306,8 +1385,11 @@ def scene10():
                             align="center", wrap="noWrap"),
                        text("Card Persona Name", 0, 18, 290, 30, tstyle("sg", 24, WHITE, weight=400, ls=-0.3), "", tb("personaName"),
                             align="center", wrap="noWrap"),
-                       shape("Persona Swatch Ring", ellipse(14), stroke(ICE, 0.7, 1), x=0, y=58),
-                       shape("Persona Swatch", ellipse(10), El("Fill", p_fill, name="Persona Fill"), x=0, y=58),
+                       shape("Persona Rule L", rect(40, 1, ox=1.0), fill(AMBER, 0.45), x=-12, y=58),
+                       shape("Persona Rule R", rect(40, 1, ox=0.0), fill(AMBER, 0.45), x=12, y=58),
+                       shape("Persona Spark Ring", ellipse(13), stroke(ICE, 0.6, 1), x=0, y=58),
+                       shape("Persona Spark", El("Star", width=10.0, height=10.0, points=4, innerRadius=0.22, name="Path"),
+                             El("Fill", p_fill, name="Persona Fill"), x=0, y=58),
                        x=cx, y=312)
     persona_blk.add(bind("showScreen9", KEY_OPACITY, CV_BOOL_NUM))
     stat_nodes = []
@@ -1322,7 +1404,7 @@ def scene10():
         n_.add(bind(f"showScreen{sk}", KEY_OPACITY, CV_BOOL_NUM))
         stat_nodes.append(n_)
     sh = text("Card Headline", cx, 578, 300, 48, tstyle("sg", 18, WHITE, weight=400, lh=23), "", tb("summaryHeadline"), align="center")
-    full = node("Card Full", *stat_nodes, sh, persona_blk, x=0, y=0)
+    full = node("Card Full", *stat_nodes, *grid_lines, sh, persona_blk, x=0, y=0)
     full.add(bind("hasStats", KEY_OPACITY, CV_BOOL_NUM))
     # empty / new-user variant: a small, complete motif (the seal) and a welcoming invitation
     eh = text("Empty Headline", cx, 330, 290, 84, tstyle("sg", 30, WHITE, weight=400, lh=38), "", tb("emptyHeadline"), align="center")
@@ -1332,7 +1414,9 @@ def scene10():
                 shape("l2", poly([(0, -14), (42, 4)], closed=False), stroke(ICE, 0.4, 1, effects=[dash(2, 4)])), x=cx, y=520)
     empty = node("Card Empty", eh, es, trio, x=0, y=0)
     empty.add(bind("hasStats", KEY_OPACITY, CV_NOTBOOL_NUM))
-    card = node("Share Card", wm, yr, nm, full, empty, ring_grp, card_inner, card_edge, card_bg, card_glow, x=0, y=0)
+    # bound-opacity content (name, persona, stats) sits in a keyed wrapper so nothing pops in before the card lands
+    reveal = node("Card Reveal", nm, full, empty, x=0, y=0)
+    card = node("Share Card", wm, yr, reveal, ring_grp, seal_sky, *corners, card_inner, card_edge, card_bg, card_glow, x=0, y=0)
     sup = text("S10 Support", cx, 664, 334, 36, tstyle("mono", 12.5, ICE, 0.78, lh=18, ls=0.4), "", tb("summarySupport"), align="center")
     art = node("S10 Art", card, x=0, y=0)
     copy = node("S10 Copy", sup, x=0, y=0)
@@ -1345,6 +1429,13 @@ def scene10():
           (card_inner.id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "out"), (70, REST[(card_inner.id, "opacity")], "hold")])]
     for j, (a_, t) in enumerate(ring_arcs):
         eF += [(t.id, "end", [(0, 0.0, "hold"), (34 + j * 6, 0.0, "out"), (64 + j * 6, 0.16, "hold")])]
+    eF += [(reveal.id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "out"), (66, 1.0, "hold")])]
+    eF += [(seal_sky.id, "opacity", [(0, 0.0, "hold"), (30, 0.0, "out"), (60, 1.0, "hold")]),
+           (SS["viewRot"], "propertyValue", [(0, -1.2, "hold"), (30, -1.2, (0.2, 0.8, 0.3, 1.0)), (120, 0.0, "hold")])]
+    for j, g in enumerate(corners):
+        eF += pop(g.id, 50 + j * 5, 70 + j * 5, 0.3, "back")
+    for j, g in enumerate(grid_lines):
+        eF += [(g.id, "scaleX" if j else "scaleY", [(0, 0.0, "hold"), (70 + j * 6, 0.0, "out"), (100 + j * 6, 1.0, "hold")])]
     eF += fade_up(wm.id, 40, 64, 10) + fade_up(yr.id, 46, 70, 8) + fade_up(nm.id, 50, 74, 8)
     eF += fade_up(persona_blk.id, 54, 84, 14)
     for j, sn in enumerate(stat_nodes):
@@ -1377,15 +1468,22 @@ def scene10():
 # =====================================================================================
 # MAIN ARTBOARD
 # =====================================================================================
+IRIS_OPEN = 1000.0  # stage iris hole radius that covers nothing from any pose
+
+
+def iris_open(kk):
+    """Smallest hole that clears the stage from pose kk's centre (farthest corner + margin): no wasted travel."""
+    mx, my = POSES[kk]["m"][0], POSES[kk]["m"][1]
+    return max(math.hypot(cx_ - mx, cy_ - my) for cx_ in (0, W) for cy_ in (0, H)) + 20.0
 POSES = {  # motif centre, scale, iris openness (0 pupil .. 1 open), rotation; lodestar; sky offset/scale
     1: dict(m=(195, 300, 0.86, 1.0, 0.0), l=(292, 196, 1.0, 1.0), sky=(0, 0, 1.0)),
     2: dict(m=(195, 290, 1.07, 0.70, 0.35), l=(267, 296, 0.0, 0.0), sky=(0, -18, 1.08)),
     3: dict(m=(236, 292, 0.30, 0.55, 0.9), l=(236, 164, 0.8, 1.0), sky=(-14, -6, 0.94)),
     4: dict(m=(195, 292, 0.15, 0.10, 1.2), l=(338, 233, 0.9, 1.0), sky=(0, 10, 1.2)),
     5: dict(m=(318, 124, 0.24, 0.85, 1.6), l=(56, 402, 0.8, 1.0), sky=(12, 0, 0.9)),
-    6: dict(m=(84, 152, 0.30, 0.82, 2.0), l=(325, 146, 1.1, 1.0), sky=(20, 14, 1.05)),
+    6: dict(m=(300, 128, 0.24, 0.80, 2.0), l=(300, 128, 1.25, 1.0), sky=(20, 14, 1.05)),
     7: dict(m=(182, 296, 0.97, 1.0, 2.3), l=(252, 200, 0.7, 1.0), sky=(-10, 6, 1.0)),
-    8: dict(m=(316, 470, 0.22, 0.78, 2.6), l=(272, 330, 0.7, 1.0), sky=(-20, -10, 1.12)),
+    8: dict(m=(234, 262, 0.27, 0.93, 2.6), l=(272, 330, 0.7, 1.0), sky=(-20, -10, 1.12)),
     9: dict(m=(195, 290, 0.95, 1.0, 3.0), l=(195, 104, 1.2, 1.0), sky=(0, 0, 1.25)),
     10: dict(m=(195, 178, 0.19, 0.92, 3.3), l=(276, 150, 0.6, 1.0), sky=(0, -24, 0.96)),
 }
@@ -1399,6 +1497,12 @@ def build_main():
     sky_groups = starfield("Sky", 64, 195, 422, 0, rect_wh=(470, 900), dmin=0.7, dmax=2.1, amin=0.2, amax=0.75,
                            colors=((ICE, 1), (WHITE, 1), (ICE, 1), (AMBER, 0.8)), groups=4, glow_every=13)
     sky = node("Parallax Sky", *[node("Sky Layer", g, x=-195, y=-422) for g in sky_groups], x=195, y=422)
+    # GPU sky (shaders/sky.wgsl): opaque, so the vector sky above is only the no-shader fallback
+    sky_gpu, SKY = scripted("Sky (GPU)", "sky",
+                            nums=dict(mode=0, width=W, height=H, viewX=0, viewY=0, viewScale=1, viewRot=0, density=0.30,
+                                      band=0.75, twinkle=1, bandAngle=-0.62, bandWidth=150, warm=0.55, vignette=0, exposure=1.0,
+                                      seed=3, res=2, live=1),
+                            bools=dict(still=False, paused=False, holding=False), binds=motion_binds())
     # ---------- scenes (nested components)
     scene_nodes = []
     for ab in SCENE_ARTBOARDS:
@@ -1409,6 +1513,11 @@ def build_main():
     m0 = POSES[1]["m"]
     motif, remap = aperture_instance("Motif", m0[0], m0[1], m0[2], m0[3])
     lode = star4("Lodestar", POSES[1]["l"][0], POSES[1]["l"][1], 22, AMBER, 1.0, glow=9, glow_a=0.75, inner=0.12)
+    # ---------- stage iris (signature transition, shaders/iris.wgsl)
+    iris_stage, IR = scripted("Stage Iris (GPU)", "iris",
+                              nums=dict(mode=0, width=W, height=H, cx=195, cy=300, hole=0.0, spin=0.62,
+                                        blades=9, curl=0.85, curve=0.55, hand=1, bloom=0.6, rim=1, lightness=1, thick=2.4,
+                                        outer=150, opacity=1, res=2))
     # ---------- finder (signature interaction, scene 1 only)
     fc = node("Finder Centre", x=0, y=0)
     lens_clip = shape("Lens", ellipse(84), x=0, y=0)
@@ -1426,13 +1535,13 @@ def build_main():
                   *[shape(f"Finder Tick {i}", rect(1.2, 8), fill(ICE, 0.9), x=29 * math.cos(i * math.pi / 2), y=29 * math.sin(i * math.pi / 2),
                           rotation=i * math.pi / 2 + math.pi / 2) for i in range(4)],
                   lens_clip,
-                  x=46, y=-38)
+                  x=-60, y=-58)
     reveal = node("Revealed Stars", *hidden_stars, El("ClippingShape", sourceId=lens_clip.id, name="Lens Clip"), x=0, y=0)
     finder = node("Finder (drag)", handle, reveal, fc, x=195, y=300)
     finder.add(bind("currentScreen", KEY_X, cv_offscreen_unless(1, 195)))
     REST[(finder.id, "x")] = 195.0
     # ---------- header chrome
-    year_t = text("Year", 362, 34, 100, 16, tstyle("mono", 11, ICE, 0.85, ls=3.0), "", tb("year", CV_INT_TEXT), align="right", wrap="noWrap")
+    year_t = text("Year", 362, 34, 100, 16, tstyle("mono", 11, ICE, 0.85, ls=3.0), "", tb("year", CV_YEAR_TEXT), align="right", wrap="noWrap")
     mark = node("Wordmark Mark", shape("Ring", ellipse(13), stroke(ICE, 0.9, 1.1)),
                 *[shape(f"t{i}", rect(1.1, 4), fill(ICE, 0.9), x=9 * math.cos(i * math.pi / 2), y=9 * math.sin(i * math.pi / 2),
                         rotation=i * math.pi / 2 + math.pi / 2) for i in range(4)],
@@ -1459,47 +1568,67 @@ def build_main():
                   name="Progress Segments")
     header = node("Header", year_t, wordmark, mark, x=0, y=0)
 
-    # ---------- controls
-    def button(name, idx, x, y, label_prop, icon_children, accent=ICE, primary=False, label2=None):
-        d = 50.0 if primary else 44.0
-        ring = shape("Ring", ellipse(d), stroke(accent, 0.85 if primary else 0.55, 1.3))
-        focus = shape("Focus Ring", ellipse(d + 9), stroke(AMBER, 0.8, 1.4, effects=[dash(3, 3)]))
+    # ---------- controls: three always-present slots (nothing hidden stays in the Tab order).
+    # The centre slot is Continue, or Share on the summary; the right slot is Pause/Play, or Replay on the summary.
+    # A router layer reads `onSummary` to decide what a press means.
+    LAB = lambda: tstyle("mono", 9.5, ICE, 0.8, ls=2.0, lh=14)
+
+    def hit_target(name, idx, a11y_prop):
+        focus = shape("Focus Ring", ellipse(59 if idx == 3 else 53), stroke(AMBER, 0.8, 1.4, effects=[dash(3, 3)]))
         focus.add(bind("focusedControl", KEY_OPACITY, cv_eq(idx)))
         REST[(focus.id, "opacity")] = 1.0
         hitb = shape(f"{name} Hit", El("FocusData", name="Focus"),
-                     El("SemanticData", bind(label_prop, 983), role="button", label=name, name="Semantics"),
+                     El("SemanticData", bind(a11y_prop, 983), role="button", label=name, name="Semantics"),
                      rect(76, 64, r=12), fill(ICE, 0.0), isTargetOpaque=True, x=0, y=6)
-        lab = text("Label", 0, d / 2 + 6, 110, 14, tstyle("mono", 9.5, ICE, 0.8, ls=2.0, lh=14), "", tb(label_prop), align="center")
-        labs = [lab]
-        if label2:
-            lab.add(bind(label2[1], KEY_OPACITY, CV_NOTBOOL_NUM))
-            lab2 = text("Label Alt", 0, d / 2 + 6, 110, 14, tstyle("mono", 9.5, ICE, 0.8, ls=2.0, lh=14), "", tb(label2[0]), align="center")
-            lab2.add(bind(label2[1], KEY_OPACITY, CV_BOOL_NUM))
-            labs.append(lab2)
-        b = node(name, *labs, *icon_children, focus, ring, hitb, x=x, y=y)
-        return b, hitb
+        return focus, hitb
+
+    def face(name, d, accent, a, icon, label_prop, show):
+        lab = text("Label", 0, d / 2 + 6, 110, 14, LAB(), "", tb(label_prop), align="center")
+        f = node(name, lab, *icon, shape("Ring", ellipse(d), stroke(accent, a, 1.3)), x=0, y=0)
+        if show is not None:
+            f.add(bind("onSummary", KEY_OPACITY, show))
+        return f, lab
 
     chev = lambda s: shape("Chevron", poly([(-3 * s, -7), (4 * s, 0), (-3 * s, 7)], closed=False), stroke(ICE, 0.95, 1.6, cap="round"))
     pause_icon = node("Pause Icon", shape("a", rect(2.2, 13), fill(ICE, 0.95), x=-4), shape("b", rect(2.2, 13), fill(ICE, 0.95), x=4))
     pause_icon.add(bind("isPaused", KEY_OPACITY, CV_NOTBOOL_NUM))
     play_icon = shape("Play Icon", poly([(-4, -7), (7, 0), (-4, 7)], closed=True), fill(ICE, 0.95))
     play_icon.add(bind("isPaused", KEY_OPACITY, CV_BOOL_NUM))
-    share_icon = node("Share Icon", shape("Arrow", poly([(0, 6), (0, -7)], closed=False), stroke(AMBER, 1, 1.6, cap="round")),
-                      shape("Head", poly([(-5, -2), (0, -7), (5, -2)], closed=False), stroke(AMBER, 1, 1.6, cap="round")),
-                      shape("Tray", poly([(-7, 2), (-7, 8), (7, 8), (7, 2)], closed=False), stroke(AMBER, 1, 1.4, cap="round")))
-    replay_icon = node("Replay Icon", shape("Loop", ellipse(14), stroke(ICE, 0.95, 1.5, effects=[trim(0.0, 0.8, 0.1)], cap="round")),
-                       shape("Tip", poly([(3, -10), (8, -7), (3, -3)], closed=True), fill(ICE, 0.95)))
+    share_icon = node("Share Icon", shape("Arrow", poly([(0, 5), (0, -8)], closed=False), stroke(AMBER, 1, 1.6, cap="round")),
+                      shape("Head", poly([(-4.5, -3.5), (0, -8), (4.5, -3.5)], closed=False), stroke(AMBER, 1, 1.6, cap="round", join="round")),
+                      shape("Tray", poly([(-7, 0), (-7, 8), (7, 8), (7, 0)], closed=False), stroke(AMBER, 1, 1.4, cap="round")))
+    # replay: a clockwise arc open at the top; the arrowhead sits on the arc's end, aligned to its tangent
+    rr, a0, a1 = 6.5, math.radians(-62), math.radians(242)
+    arc_pts = [(rr * math.cos(a0 + (a1 - a0) * i / 28), 0.6 + rr * math.sin(a0 + (a1 - a0) * i / 28)) for i in range(29)]
+    ex, ey = arc_pts[-1]
+    tx, ty = -math.sin(a1), math.cos(a1)          # tangent (direction of travel)
+    nx_, ny_ = math.cos(a1), math.sin(a1)         # outward normal
+    tip = [(ex + tx * 3.6, ey + ty * 3.6), (ex - tx * 1.2 + nx_ * 3.2, ey - ty * 1.2 + ny_ * 3.2),
+           (ex - tx * 1.2 - nx_ * 3.2, ey - ty * 1.2 - ny_ * 3.2)]
+    replay_icon = node("Replay Icon", shape("Loop", poly(arc_pts[:-1] + [(ex - tx * 0.8, ey - ty * 0.8)], closed=False),
+                                            stroke(ICE, 0.95, 1.5, cap="round")),
+                       shape("Tip", poly(tip, closed=True), fill(ICE, 0.95)))
     by = 780.0
-    prev_b, prev_hit = button("Previous", 1, 70, by, "previousLabel", [chev(-1)])
-    pause_b, pause_hit = button("Pause", 2, 320, by, "pauseLabel", [pause_icon, play_icon], label2=("playLabel", "isPaused"))
-    next_b, next_hit = button("Continue", 3, 195, by, "continueLabel", [chev(1)], accent=BLUE, primary=True)
-    share_b, share_hit = button("Share", 4, 195, by, "shareLabel", [share_icon], accent=AMBER, primary=True)
-    replay_b, replay_hit = button("Replay", 5, 320, by, "replayLabel", [replay_icon])
-    next_b.add(bind("currentScreen", KEY_X, cv_offscreen_if(10, 195)))
-    pause_b.add(bind("currentScreen", KEY_X, cv_offscreen_if(10, 320)))
-    share_b.add(bind("currentScreen", KEY_X, cv_offscreen_unless(10, 195)))
-    replay_b.add(bind("currentScreen", KEY_X, cv_offscreen_unless(10, 320)))
-    controls = node("Controls", prev_b, next_b, pause_b, share_b, replay_b, x=0, y=0)
+    # previous
+    prev_focus, prev_hit = hit_target("Previous", 1, "previousLabel")
+    prev_face, _ = face("Previous Face", 44.0, ICE, 0.55, [chev(-1)], "previousLabel", None)
+    prev_b = node("Previous", prev_face, prev_focus, prev_hit, x=70, y=by)
+    # primary: Continue / Share
+    prim_focus, next_hit = hit_target("Primary", 3, "primaryA11yLabel")
+    cont_face, _ = face("Continue Face", 50.0, BLUE, 0.85, [chev(1)], "continueLabel", CV_NOTBOOL_NUM)
+    share_face, _ = face("Share Face", 50.0, AMBER, 0.9, [share_icon], "shareLabel", CV_BOOL_NUM)
+    next_b = node("Continue / Share", cont_face, share_face, prim_focus, next_hit, x=195, y=by)
+    # secondary: Pause / Play / Replay
+    sec_focus, pause_hit = hit_target("Secondary", 2, "secondaryA11yLabel")
+    lab_pause = text("Label", 0, 28, 110, 14, LAB(), "", tb("pauseLabel"), align="center")
+    lab_pause.add(bind("isPaused", KEY_OPACITY, CV_NOTBOOL_NUM))
+    lab_play = text("Label Alt", 0, 28, 110, 14, LAB(), "", tb("playLabel"), align="center")
+    lab_play.add(bind("isPaused", KEY_OPACITY, CV_BOOL_NUM))
+    transport = node("Transport Face", lab_pause, lab_play, pause_icon, play_icon, shape("Ring", ellipse(44), stroke(ICE, 0.55, 1.3)))
+    transport.add(bind("onSummary", KEY_OPACITY, CV_NOTBOOL_NUM))
+    replay_face, _ = face("Replay Face", 44.0, ICE, 0.55, [replay_icon], "replayLabel", CV_BOOL_NUM)
+    pause_b = node("Pause / Replay", transport, replay_face, sec_focus, pause_hit, x=320, y=by)
+    controls = node("Controls", prev_b, next_b, pause_b, x=0, y=0)
     chrome = node("Chrome", header, progress, controls, x=0, y=0)
     chrome.add(bind("captureMode", KEY_OPACITY, CV_NOTBOOL_NUM))
     # ---------- gesture regions
@@ -1521,7 +1650,7 @@ def build_main():
         ev_fin = El("Event", name="recapFinished")
     seq_dummy = node("Sequencer Marker", x=0, y=0)
     stage = node("Stage", El("FocusData", canFocus=False, name="Keyboard Host"),
-                 chrome, finder, lode, motif, scenes, sky, nebula_bg, tap_prev, tap_next, x=0, y=0)
+                 chrome, iris_stage, finder, lode, motif, scenes, sky_gpu, sky, nebula_bg, tap_prev, tap_next, x=0, y=0)
     stage_bg = bg
 
     # =================================================================== timelines (main)
@@ -1544,6 +1673,11 @@ def build_main():
             (lode.id, "opacity", [(frame, lo if lode_o is None else lode_o, ease)]),
             (sky.id, "x", [(frame, 195 + sx, ease)]), (sky.id, "y", [(frame, 422 + sy, ease)]),
             (sky.id, "scaleX", [(frame, ss, ease)]), (sky.id, "scaleY", [(frame, ss, ease)]),
+            (SKY["viewX"], "propertyValue", [(frame, sx * 4.0, ease)]), (SKY["viewY"], "propertyValue", [(frame, sy * 4.0, ease)]),
+            (IR["cx"], "propertyValue", [(frame, mx, ease)]), (IR["cy"], "propertyValue", [(frame, my, ease)]),
+            (IR["hole"], "propertyValue", [(frame, iris_open(kk), ease)]), (IR["spin"], "propertyValue", [(frame, kk * 0.62, ease)]),
+            (IR["bloom"], "propertyValue", [(frame, 0.0, ease)]), (IR["hand"], "propertyValue", [(frame, 1.0, ease)]),
+            (SKY["viewScale"], "propertyValue", [(frame, ss, ease)]), (SKY["viewRot"], "propertyValue", [(frame, p.get("rot", (kk - 1) * 0.11), ease)]),
         ]
 
     def merge(*lists):
@@ -1554,6 +1688,49 @@ def build_main():
         return [(o, p_, ks) for (o, p_), ks in d.items()]
 
     POSE_A, THF_A, THB_A = {}, {}, {}
+    IRIS_IDS = {IR[n] for n in ("cx", "cy", "hole", "spin", "bloom", "hand")}
+    CLOSE = (0.55, 0.0, 0.85, 0.45)      # accelerating shutter
+    OPEN = (0.42, 0.0, 0.18, 1.0)        # the pupil lingers, then the blades fly back and settle
+    IRIS_F_END = {kk: 56 for kk in range(1, 11)}
+    IRIS_F_END[1], IRIS_F_END[9] = 74, 84
+
+    def iris_static(kk, f_end, hand):
+        mx, my = POSES[kk]["m"][0], POSES[kk]["m"][1]
+        return [(IR["cx"], "propertyValue", [(0, mx, "hold"), (f_end, mx, "hold")]),
+                (IR["cy"], "propertyValue", [(0, my, "hold"), (f_end, my, "hold")]),
+                (IR["hand"], "propertyValue", [(0, hand, "hold"), (f_end, hand, "hold")])]
+
+    def iris_forward(kk):
+        s_ = kk * 0.62
+        f_end = IRIS_F_END[kk]
+        IRIS_OPEN = iris_open(kk)
+        tr_ = iris_static(kk, f_end, 1.0)
+        if kk == 1:   # opening the app (and replay): start shut, breathe, open on the intro sky
+            hole = [(0, 0.0, "hold"), (14, 0.0, (0.4, 0.0, 0.6, 1.0)), (26, 9.0, "sine"), (32, 7.0, OPEN), (f_end, IRIS_OPEN, "hold")]
+            bloom = [(0, 0.5, "sine"), (26, 1.0, "sine"), (44, 0.35, "out"), (f_end, 0.0, "hold")]
+            spin = [(0, s_ - 1.6, (0.3, 0.0, 0.2, 1.0)), (f_end, s_, "hold")]
+        elif kk == 9:  # persona anticipation: the pupil breathes twice before opening
+            hole = [(0, IRIS_OPEN, CLOSE), (15, 7.0, "sine"), (25, 46.0, "sine"), (34, 9.0, "sine"), (43, 34.0, "sine"),
+                    (52, 6.0, OPEN), (f_end, IRIS_OPEN, "hold")]
+            bloom = [(0, 0.0, "out"), (15, 0.9, "sine"), (25, 0.5, "sine"), (34, 1.0, "sine"), (43, 0.6, "sine"),
+                     (52, 1.2, "out"), (70, 0.2, "out"), (f_end, 0.0, "hold")]
+            spin = [(0, s_ - 1.0, "inout"), (15, s_ - 0.45, "sine"), (52, s_ - 0.3, (0.3, 0.0, 0.2, 1.0)), (f_end, s_, "hold")]
+        else:
+            hole = [(0, IRIS_OPEN, CLOSE), (15, 6.5, (0.3, 0.0, 0.4, 1.0)), (19, 11.0, "sine"), (24, 8.5, OPEN), (f_end, IRIS_OPEN, "hold")]
+            bloom = [(0, 0.0, "out"), (13, 0.25, "out"), (16, 1.0, "sine"), (24, 0.85, "out"), (38, 0.2, "out"), (f_end, 0.0, "hold")]
+            spin = [(0, s_ - 1.0, "inout"), (15, s_ - 0.38, (0.3, 0.0, 0.2, 1.0)), (f_end, s_, "hold")]
+        return tr_ + [(IR["hole"], "propertyValue", hole), (IR["bloom"], "propertyValue", bloom), (IR["spin"], "propertyValue", spin)]
+
+    def iris_back(kk):
+        # reverse: mirrored blades, opposite spin, a quicker shutter
+        s_ = kk * 0.62
+        IRIS_OPEN = iris_open(kk)
+        tr_ = iris_static(kk, 44, -1.0)
+        hole = [(0, IRIS_OPEN, CLOSE), (12, 8.0, (0.3, 0.0, 0.4, 1.0)), (16, 12.0, OPEN), (44, IRIS_OPEN, "hold")]
+        bloom = [(0, 0.0, "out"), (12, 0.8, "sine"), (18, 0.6, "out"), (32, 0.1, "out"), (44, 0.0, "hold")]
+        spin = [(0, s_ + 1.0, "inout"), (12, s_ + 0.35, (0.3, 0.0, 0.2, 1.0)), (44, s_, "hold")]
+        return tr_ + [(IR["hole"], "propertyValue", hole), (IR["bloom"], "propertyValue", bloom), (IR["spin"], "propertyValue", spin)]
+
     for kk in range(1, 11):
         POSE_A[kk] = anim(f"Motif Pose {kk}", 1, pose_tracks(kk))
         # signature transition: hold the pupil closed briefly, then open onto the new scale of sky
@@ -1568,11 +1745,13 @@ def build_main():
             fwd = [t for t in fwd if not (t[0] == remap.id)]
             fwd.append((remap.id, "time", [(0, 0.0, "hold"), (14, 0.0, "sine"), (24, 0.12, "sine"), (34, 0.0, "sine"),
                                            (42, 0.08, "sine"), (50, 0.0, (0.3, 0.0, 0.2, 1.0)), (70, 1.0, "hold")]))
-        THF_A[kk] = anim(f"Motif Through {kk} (forward)", open_f, fwd)
+        fwd = [t for t in fwd if t[0] not in IRIS_IDS] + iris_forward(kk)
+        THF_A[kk] = anim(f"Motif Through {kk} (forward)", max(open_f, IRIS_F_END[kk]), fwd)
         bwd = merge(pose_tracks(kk, 0, 1.45, 0.0, -0.55, 0.0),
                     pose_tracks(kk, 8, 1.45, 0.0, -0.55, 0.0, ease=(0.3, 0.0, 0.25, 1.0)),
                     pose_tracks(kk, 40))
-        THB_A[kk] = anim(f"Motif Through {kk} (back)", 40, bwd)
+        bwd = [t for t in bwd if t[0] not in IRIS_IDS] + iris_back(kk)
+        THB_A[kk] = anim(f"Motif Through {kk} (back)", 44, bwd)
         A += [POSE_A[kk], THF_A[kk], THB_A[kk]]
     ambient_idle = anim("Ambient Idle", 720,
                         sum([osc(g.id, "opacity", 720, 0.55, 1.0, phase=i / 4, steps=4) for i, g in enumerate(sky_groups)], []) +
@@ -1615,7 +1794,7 @@ def build_main():
         if kk > 1:
             trs.append(tr(SEQ[1], c_trig("navReplay"), actions=[a_num("navDirection", 1), a_bool("recapFinishedFired", False)]))
         st = El("AnimationState",
-                a_num("currentScreen", kk),
+                a_num("currentScreen", kk), a_bool("onSummary", kk == 10),
                 El("StateMachineFireEvent", eventId=ev_screen.id, occursValue=0),
                 *trs,
                 animationId=tick.id, reset=True, x=float(220 * kk), y=float(0 if kk % 2 else 160), id=SEQ[kk])
@@ -1631,6 +1810,22 @@ def build_main():
                          El("StateMachineFireEvent", eventId=ev_fin.id, occursValue=0), *done_trs,
                          animationId=tick.id, x=2420.0, y=320.0, id=SEQ_DONE))
     layers.append(layer("Sequence", SEQ[1], seq_states))
+
+    # --- Control router: what the centre and right slots mean depends on onSummary
+    R = {n_: nid() for n_ in ("idle", "next", "share", "toggle", "replay")}
+    layers.append(layer("Control Router", R["idle"], [
+        El("AnimationState",
+           tr(R["next"], c_trig("primaryPressed"), c_bool("onSummary", False)),
+           tr(R["share"], c_trig("primaryPressed"), c_bool("onSummary", True)),
+           tr(R["toggle"], c_trig("secondaryPressed"), c_bool("onSummary", False)),
+           tr(R["replay"], c_trig("secondaryPressed"), c_bool("onSummary", True)),
+           animationId=tick.id, x=0.0, y=0.0, id=R["idle"]),
+        El("AnimationState", a_trig("navNext"), tr(R["idle"]), animationId=tick.id, reset=True, x=260.0, y=-180.0, id=R["next"]),
+        El("AnimationState", El("StateMachineFireEvent", eventId=ev_share.id, occursValue=0), tr(R["idle"]), animationId=tick.id,
+           reset=True, x=260.0, y=-60.0, id=R["share"]),
+        El("AnimationState", a_toggle("isPaused", CV_NOT), tr(R["idle"]), animationId=tick.id, reset=True, x=260.0, y=60.0, id=R["toggle"]),
+        El("AnimationState", a_trig("navReplay"), tr(R["idle"]), animationId=tick.id, reset=True, x=260.0, y=180.0, id=R["replay"]),
+    ]))
 
     # --- Gesture: tap vs hold
     G = {n_: nid() for n_ in ("idle", "press", "hold", "tapN", "tapP")}
@@ -1749,11 +1944,9 @@ def build_main():
                 targetId=hit.id, listenerTypeValue="drag", name="Drag Finder"))
     # buttons: pointer click, keyboard Enter on the focused button, screen-reader tap
     L.append(lst("Previous", prev_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_trig("navPrevious")]))
-    L.append(lst("Continue", next_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_trig("navNext")]))
-    L.append(lst("Pause / Play", pause_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_toggle("isPaused", CV_NOT)]))
-    L.append(lst("Share", share_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [El("ListenerFireEvent", eventId=ev_share.id)]))
-    L.append(lst("Replay", replay_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_trig("navReplay")]))
-    for idx, hb in ((1, prev_hit), (2, pause_hit), (3, next_hit), (4, share_hit), (5, replay_hit)):
+    L.append(lst("Primary (Continue / Share)", next_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_trig("primaryPressed")]))
+    L.append(lst("Secondary (Pause / Replay)", pause_hit.id, [it("click"), kb("enter", "kpEnter"), sem_tap()], [a_trig("secondaryPressed")]))
+    for idx, hb in ((1, prev_hit), (2, pause_hit), (3, next_hit)):
         L.append(lst(f"Focus {idx}", hb.id, [it("focus")], [a_num("focusedControl", idx)]))
         L.append(lst(f"Blur {idx}", hb.id, [it("blur")], [a_num("focusedControl", 0)]))
     # keyboard on the stage (keys bubble up from whichever control holds focus)
@@ -1783,7 +1976,9 @@ def main():
     main_ab = build_main()
     os.makedirs(OUT, exist_ok=True)
     files = {
-        "00_data.rml": [VM_EL, *CONVERTERS, *FONTS, El("ScriptAsset", file="clock.luau", name="clock", id=CLOCK_SCRIPT)],
+        "00_data.rml": [VM_EL, *CONVERTERS, *FONTS, El("ScriptAsset", file="clock.luau", name="clock", id=CLOCK_SCRIPT),
+                        *[El("ScriptAsset", file=SCRIPT_FILES[n], name=n, id=i) for n, i in SCRIPT_IDS.items()
+                          if os.path.exists(os.path.join(HERE, "..", SCRIPT_FILES[n]))]],
         "10_main.rml": [main_ab],
         "20_aperture.rml": [APERTURE],
         "30_scenes.rml": [*SCENE_ARTBOARDS, *COMPONENT_ASSETS],

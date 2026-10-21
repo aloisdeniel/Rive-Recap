@@ -89,7 +89,7 @@ recap.on(EventType.RiveEvent, ({ data }) => {
 });
 ```
 
-Property and state machine names come from each project's `README.md`. Build the `.riv` with `rive apps/<app>/rive --once`; projects that contain Luau scripts (every app except Sprig, Parlance and Patchwork) must instead be built signed with `rive apps/<app>/rive --publish`, because web runtimes reject unsigned scripts.
+Property and state machine names come from each project's `README.md`. Build the `.riv` with `rive apps/<app>/rive --once`; projects that contain Luau scripts and shaders (every app except Parlance) must instead be built signed with `rive apps/<app>/rive --publish`, because web runtimes reject unsigned scripts.
 
 Full documentation: [Rive web runtime](https://rive.app/docs/runtimes/web/web-js) · [Data binding on the web](https://rive.app/docs/runtimes/web/data-binding) · [All runtimes](https://rive.app/docs/runtimes/getting-started)
 

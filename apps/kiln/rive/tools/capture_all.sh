@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
 # Regenerates every capture under captures/. Slow-ish (each shot is a headless run).
-# Usage: tools/capture_all.sh [section...]   sections: settled personas transitions reduced fixtures responsive card video
+# Usage: tools/capture_all.sh [section...]
+#   sections: settled personas transitions reduced fixtures responsive card focus firing video
 set -u
 cd "$(dirname "$0")/.."
 ROOT="$PWD"
 R="${RIVE:-$HOME/.rive/bin/rive}"
 C="$ROOT/captures"
 J="${JOBS:-8}"
-SECTIONS="${*:-settled personas transitions reduced fixtures responsive card video}"
+SECTIONS="${*:-settled personas transitions reduced fixtures responsive card focus firing video}"
 mkdir -p "$C"
 NEXT="--pointer=click@372,300"
 BACK="--pointer=click@40,300"
@@ -67,6 +68,18 @@ responsive)
 card)
   shot "$C/share-card/sharecard-standalone-default-private.png" --artboard=ShareCard --advance=2 &
   shot "$C/share-card/sharecard-standalone-public.png" --artboard=ShareCard --data=shareIncludeName=true --data=shareIncludeSensitiveValues=true --advance=2 &
+  wait ;;
+focus)
+  # keyboard focus rings appear only after Tab (focus-visible); pointer presses hide them
+  shot "$C/focus/story-tab1-previous.png" --data=autoAdvanceEnabled=false --data=currentScreen=3 --advance=200 --key=tab --advance=20 &
+  shot "$C/focus/story-tab3-continue.png" --data=autoAdvanceEnabled=false --data=currentScreen=3 --advance=200 --key=tab --advance=8 --key=tab --advance=8 --key=tab --advance=20 &
+  shot "$C/focus/summary-tab1-replay.png" --data=currentScreen=10 --advance=200 --key=tab --advance=20 &
+  shot "$C/focus/story-no-ring-after-pointer.png" --data=autoAdvanceEnabled=false --data=currentScreen=3 --advance=200 --key=tab --advance=8 --pointer=click@200,40 --advance=20 &
+  wait ;;
+firing)
+  # scene 5: the WGSL kiln chamber heats from the floor and cools into the palette; the 3D pot glows
+  for f in 30 70 100 130 175; do throttle
+    shot "$C/firing/firing-f$(printf %03d $f).png" --data=currentScreen=4 --advance=200 --key=right --advance=$f & done
   wait ;;
 video)
   # full auto-advance run sampled at 12 fps, stitched with ffmpeg (if present)

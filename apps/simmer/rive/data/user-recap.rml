@@ -386,6 +386,10 @@
   <ScriptAsset file="scripts/director.luau" name="director" id="0:511"/>
   <ScriptAsset file="scripts/formatCount.luau" name="formatCount" id="0:512"/>
   <ScriptAsset file="scripts/eventAudit.luau" name="eventAudit" id="0:513"/>
+  <ScriptAsset file="scripts/riso.luau" name="riso" id="0:514"/>
+  <ScriptAsset file="scripts/steam.luau" name="steam" id="0:515"/>
+  <ScriptAsset file="scripts/cloth.luau" name="cloth" id="0:516"/>
+  <ScriptAsset file="scripts/letters.luau" name="letters" id="0:517"/>
   <ScriptedDataConverter scriptAssetId="0:512" name="Format count (locale)" id="0:521"/>
   <DataConverterToString decimals="0" round="true" name="Integer" id="0:522"/>
 </Rive>

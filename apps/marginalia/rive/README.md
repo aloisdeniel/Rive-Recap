@@ -1,7 +1,8 @@
 # Marginalia — 2026 reading-journal recap (Rive)
 
 A ten-scene, Wrapped-style recap for the fictional reading journal **Marginalia**,
-authored as editable RML + one Luau script and compiled with the Rive CLI (1.6.0).
+authored as editable RML + four Luau scripts and three WGSL shaders, compiled with
+the Rive CLI (1.6.0).
 All user-dependent values come from a single `UserRecap` view-model instance;
 the fixture data is fictional (January 1–December 31, 2026) and is not measured
 activity.
@@ -11,6 +12,12 @@ apps/marginalia/rive/
   rive.yaml                 project (main artboard: Recap)
   rml/recap.rml             the whole document (generated, but plain editable RML)
   scripts/director.luau     sequencing / formatting / input "director"
+  scripts/pagestage.luau    hosts the pages, draws every page turn as a 3D paper curl
+  scripts/paper.luau        laid-paper grain multiplied over the whole recap
+  scripts/moon.luau         the engraved moon (a lit sphere, ScriptedDrawable)
+  shaders/pageturn.wgsl     leaf curl, lighting, show-through, marbled endpaper, shadows
+  shaders/paper.wgsl        procedural paper (fibres, laid/chain lines, specks, edge wear)
+  shaders/moon.wgsl         sphere shaded as a copperplate engraving
   tools/build_rml.py        generator for rml/recap.rml (+ art.py, rmlkit.py)
   tools/capture.py          headless capture helper (taps, fixtures, viewports)
   tools/capture_all.sh      regenerates captures/
@@ -18,7 +25,7 @@ apps/marginalia/rive/
   tools/probe.sh            prints key UserRecap values after a scripted run
   fixtures/                 sample.json, zero.json, extreme.json
   assets/fonts/             Cormorant Garamond (+ Italic), Libre Franklin, OFL texts
-  captures/                 stills, transition frames, motion preview
+  captures/                 stills and transition frames (walkthrough: ../video.webm)
   build/marginalia-recap.riv
 ```
 
@@ -28,6 +35,84 @@ generator exists because ten scenes × seven timelines and the scene/ribbon
 transition graphs are mechanical; the output is ordinary RML that opens and
 edits like any other. If you hand-edit the RML, stop regenerating (or port the
 edit into `tools/art.py`).
+
+## Improvement pass (October 2026)
+
+The first version worked but read as "solid": a page turn that was a 2D
+`scaleX` squash (type visibly compressed mid-turn), flat parchment, a ribbon
+that hung across the header's year and over copy, and a few weak scenes. This
+pass keeps the contract, events, fixtures and behaviour checks intact and
+raises the craft.
+
+**What changed**
+
+| Area | Before | After |
+|---|---|---|
+| Signature page turn | 2D fold (`scaleX` about the spine + travelling shade) | a real **3D paper curl on the GPU**: the leaving page lifts from its lower-right corner (anticipation: a small lift and settle), rolls over a moving cylinder whose radius swells mid-turn, and leaves past the spine. Lit relative to the flat page (which stays pixel-exact), warm sepia shadows, a sheen along the crest, the **back of the leaf shows the print faintly through the paper, mirrored**, the hovering flipped part shadows the flat page and the roll casts a soft shadow onto the next page. 4x MSAA. Back navigation un-rolls the earlier page back over (live-textured: its content keeps playing as it lands, the corner settles last). Reversing mid-turn retargets the leaf; rapid taps stack up to two leaves |
+| Opening | intro page fades in | the recap **opens on a closed cloth book** (oxblood, gilt frame, stamped wordmark + bound year). After a beat the board cover swings open (a stiffer, slower leaf) showing a procedurally **marbled endpaper** on its back, revealing the pop-up city as it rises |
+| Paper | flat fills | a laid-paper texture generated once on the GPU (fibres, laid and chain lines, pulp specks, a worn warm edge), multiplied over the whole recap so pages, type and chrome share one stock |
+| Moon (scenes 4 -> 5) | flat disc with three crater ellipses | an **engraved sphere**: lit, with seas and craters, printed as latitude hatching that swells with darkness, cross-hatching in the deepest shadow, stipple in the seas, gilt outline; slow libration (static under reduced motion / pause). Still the carried object: keyed swing, carry and spotlight shrink apply |
+| Bookmark ribbon | hung from the screen top, crossed "2026" (6, 10) and copy (3) | emerges from under the progress rule (the book's headband); every pose re-placed clear of copy and header; drawn *above* the turning leaf, so it stays unbroken through every cut |
+| Scene 3 (pages) | thin noodle strokes, clipped book, support line colliding with it | a gilt-edged band of page edges (body, hairlines, dark fore-edge, gilt edge, shadow) streams out of an open book, sweeps across the page and runs in behind the numeral's last digit; loose leaves lift off toward the number as it resolves |
+| Scene 6 (passages) | small slips, large dead area | larger slips with shadows piled under the widened bookmark, ornaments balanced round it |
+| Scene 7 (streak) | radial "stain" glow | a brass reading lamp swings in, its bulb lights and a cone of light falls on a five-volume stack whose day tabs tick out |
+| Scene 8 (book club) | wire-like strokes | satin ribbons (selvedge, body, sheen line) weaving round the book; two answering quote marks |
+| Scene 10 (summary) | headline broke as "A little year. A / lot of you." | one line where it fits, two balanced lines (fitted) for longer copy |
+| Replay icon | arrowhead sat on the arc's start, pointing nowhere | rebuilt from geometry: clockwise arc open at the top, arrowhead on the arc's end aligned to its tangent |
+
+**Architecture change (why).** Headless capture (`--screenshot`, which the
+video renderer uses) runs `advance` every frame but `draw` only for the final
+frame, so a "snapshot the old page in draw" approach cannot work there (and is
+fragile on hosts that skip draws). The former single `Scenes` artboard is
+therefore split into **ten `Page N` artboards**, plus **`Carry`** (ribbon +
+moon) and **`Cover`**. `scripts/pagestage.luau` (a `ScriptedLayout` in the
+stage, replacing the `NestedArtboardLeaf`) hosts them as instances bound to the
+same `UserRecap` instance and keeps a tiny book model: a flat base page plus
+leaves in flight, each easing toward turned (1) or landed (0). Each leaf is the
+page's live artboard rendered into a canvas every frame and curled on the GPU.
+The pages' own state machines now keep a leaving page fully drawn for 1.2 s
+(longer than any turn) instead of folding it themselves. All choreography,
+idle loops, persona layers and the summary layers are unchanged and live in
+their page's state machine.
+
+**3D / shader techniques used.** Scripted GPU rendering (Luau `GPUCanvas`,
+`GPUPipeline`, WGSL): a 61x103 grid leaf deformed in the vertex shader
+(cylinder curl, pinhole perspective, perspective-correct varyings), a depth
+buffer, per-pixel curl angle in the fragment shader (no faceting along the
+fold), two pipelines sharing one explicit bind-group layout (cast-shadow pass,
+leaf pass), 4x MSAA resolved into the canvas. Fragment-only shaders for the
+paper texture (rendered once per resize) and the engraved moon (re-rendered
+only when its turn moved visibly, only on scenes 4-5). No `discard` anywhere,
+no per-frame buffer allocation, views created once per resize (see `rive docs
+gpu-performance`). Not used: imported 3D meshes / bones (nothing in the brief
+needs them), a 3D book object (the curl already carries the "real book" read
+without competing with the pages' art).
+
+**Fallbacks.** No shader support -> the leaf folds flat toward the spine (2D,
+same book model), the paper overlay is skipped, the moon draws as a flat
+vector disc. Reduced motion -> no cover, no turns, no libration: the pages'
+own 200 ms cross-fades, final values at once (unchanged behaviour).
+
+**New compromises.**
+- The leaf's front is the page rendered into a canvas at the presenting pixel
+  density (`resize` scale) - sharp on device; headless captures are @1x.
+- Carried objects (ribbon, moon) float *above* the turning leaf by design;
+  the moon swinging in for scene 4 crosses the leaving page 3.
+- The cover hides part of the intro entrance (towers rising) for its first
+  ~1 s; the wordmark banner reveal still plays after it opens.
+- Three or more navigations inside one turn (0.84 s) complete the oldest leaf
+  at once (two leaves in flight is the cap).
+- `scripts/` are unsigned in local builds: web hosts need a signed
+  `rive ... --publish` build (not done here) for any of the scripted effects.
+
+**Performance** (same machine and method as below; CPU-side CLI figures, not
+device GPU time): `.riv` 2.32 MB -> **2.48 MB** (+160 KB: three scripts, three
+shaders, the cover). `--bench=600` (intro): advance mean 0.024 -> **~0.02 ms**,
+render-record mean 0.104 -> **~0.095 ms** (p95 0.15 ms). `--bench=1200` with
+`autoAdvanceSeconds=3` (two page turns inside the run): render mean ~0.095 ms,
+p95 0.15 ms, max 0.74 ms; no wasm memory growth. GPU cost per turn frame: one
+page render into a canvas + one MSAA pass of ~6.2k vertices; idle frames draw
+one page + the cached paper image.
 
 ## Preview
 
@@ -60,27 +145,35 @@ Build: `rive apps/marginalia/rive --once` writes `build/marginalia-recap.riv`
 
 | Artboard | Size | Role |
 |---|---|---|
-| `Recap` (main) | 390×844, layout root | chrome: header (wordmark, year, progress), stage, controls; the `Director` script; events; keyboard/focus; bound to `UserRecap` |
-| `Scenes` (component) | 390×664 | all ten scenes, the persistent ribbon, the carried moon, the page-turn fold; its own state machine. Placed in the stage as a `NestedArtboardLeaf` with `fit=contain`, `isPaused` bound to `_motionPaused` |
+| `Recap` (main) | 390×844, layout root | chrome: header (wordmark, year, progress), stage, controls; the `Director` script; the `Page Stage` script (stage); the `Paper Grain` overlay; events; keyboard/focus; bound to `UserRecap` |
+| `Page 1` … `Page 10` (components) | 390×664 each | one scene each, with its own state machine (scene layer, plus Persona for 9 and the summary/card layers for 10). Hosted as script instances by `Page Stage`, contain-fitted into the stage |
+| `Carry` (component) | 390×664 | the objects carried through the cuts: the bookmark ribbon (10 poses) and the moon (swing, carry, spotlight). Drawn above the pages and the turning leaf |
+| `Cover` (component) | 390×664 | the closed book the recap opens on (static artwork) |
 | `ShareCard` (component) | 340×460 | the static, chrome-free share card for the host to snapshot |
 
-Draw hierarchy per scene: `Scene N` › `Turn Edge Light`, `Turn Shade`, `Content`
-(`Copy` — never parallaxed — then `Parallax … (near/mid/far)` groups), `Paper`.
-Scene 1 is declared first, so a lower scene always lies on top of a higher one:
-forward navigation turns the current page away (it folds toward the left spine,
-`scaleX 1→0`, shading as it goes) to reveal the next page underneath; back
-navigation swings the previous page back over (`scaleX 0→1`).
+Draw hierarchy per page: `Scene N` › `Content` (`Copy` — never parallaxed —
+then `Parallax … (near/mid/far)` groups), `Paper`. The stage draws, bottom to
+top: the base page, any leaves in flight (a lower page number on top), then
+`Carry`. Forward navigation turns the current page away to reveal the next one
+already playing underneath; back navigation lands the earlier page back over.
 
 ### State machines
 
-**Scenes** (nested, 18 layers)
-- `Scene 1` … `Scene 10`: `Hidden → Enter | Enter Back | Static(reduced motion) → Idle → Exit | Exit Back → Hidden`, driven only by `currentScreen`, `_navDir` and `reducedMotion`. Rapid navigation is safe: every layer independently resolves to "am I current / before / after", exits blend in 90 ms from wherever the entrance was, and a scene re-requested mid-exit goes straight back in.
+**Page N** (one per page)
+- `Scene N`: `Hidden → Enter | Enter Back | Static(reduced motion) → Idle → Exit | Exit Back → Hidden`, driven only by `currentScreen`, `_navDir` and `reducedMotion`. `Exit`/`Exit Back` hold the page fully drawn for 1.2 s (the Page Stage script turns or covers it), `Enter Back` arrives settled. Rapid navigation is safe: every page independently resolves to "am I current / before / after", and a page re-requested mid-exit goes straight back in.
+- Page 9 adds `Persona`: per-persona `Reveal → Idle`, `Static`, `Leaving` states, keyed on `_personaRow`; a persona change mid-scene clears to `Hidden` before the new reveal, so two personas never mix.
+- Page 10 adds `Summary Mode` (full card vs zero-user invitation), `Summary Card Persona Mini`, `Summary Card Reader Name`.
+
+**Carry**
 - `Ribbon`: one pose per scene; 10×9 transitions (760 ms ease-in-out, 0 ms under reduced motion). The ribbon's 13 path vertices are keyed per pose, so it *deforms* between scenes rather than sliding.
 - `Ribbon Flutter`: restrained idle sway (off under reduced motion).
 - `Moon Carrier`: the moon swings in on its pendulum in scene 4 and is **carried** (820 ms) into scene 5 where it shrinks into the theatre spotlight; reversible.
-- `Page Turn`: the fold shadow/light that travels with the turning leaf (`_turnFwd` / `_turnBack` triggers).
-- `Persona`: per-persona `Reveal → Idle`, `Static`, `Leaving` states, keyed on `_personaRow`; a persona change mid-scene clears to `Hidden` before the new reveal, so two personas never mix.
-- `Summary Mode` (full card vs zero-user invitation), `Summary Card Persona Mini`, `Summary Card Reader Name`.
+
+**Page turns** are not a state machine: `scripts/pagestage.luau` watches
+`currentScreen`/`_navDir`/`reducedMotion`/`_motionPaused` and animates leaves
+(840 ms; cover 1.1 s after a 0.45 s hold). Paused freezes leaves and stops
+advancing every hosted artboard (the former `NestedArtboardLeaf.isPaused`
+binding).
 
 **Recap** (root, 8 layers + listeners): three event layers, controls mode
 (Continue/Pause ↔ Share/Replay), pause/play icon, three focus-ring layers;
@@ -96,8 +189,8 @@ and the sequencer "brain"; it never draws scene art (it draws only the
 progress segments). Each frame it:
 
 1. builds the eligible list from `showScreen1..10` (1 and 10 always eligible; 9 only when at least one stat is eligible) and validates `currentScreen`;
-2. applies queued commands (`_cmd*` triggers from buttons/keys, and its own tap/hold recognition) — navigation writes `_navDir`, then `currentScreen`, fires `_turnFwd`/`_turnBack` (not under reduced motion) and `_evtScreen`;
-3. computes pause = `isPaused || hold || isSharing || isBackgrounded` → `_motionPaused` (freezes the whole Scenes state machine and the timer);
+2. applies queued commands (`_cmd*` triggers from buttons/keys, and its own tap/hold recognition) — navigation writes `_navDir`, then `currentScreen`, and fires `_evtScreen` (the Page Stage script sees the change and turns the page);
+3. computes pause = `isPaused || hold || isSharing || isBackgrounded` → `_motionPaused` (freezes every hosted artboard, the page turn and the timer);
 4. runs the dwell timer *after* the entrance settles (1.8 s; 0.25 s reduced) with `autoAdvanceSeconds` clamped to 3–120 s, writes `screenProgress`, auto-advances, and on the summary fires `_evtFinished` once (latched until Replay);
 5. formats every stat into its `*Text` string (locale separators), counting the current scene's hero value from 0 over 200–1200 ms (ease-out cubic) on forward entry only;
 6. maps `personaIndex` → `_personaRow` (unknown → 0), `personaName`, `personaDescription`, `personaColor`, all in the same frame;
@@ -106,8 +199,8 @@ progress segments). Each frame it:
 
 ## Binding & event contract
 
-One view model, **`UserRecap`**, one instance, bound to `Recap` and inherited by
-the nested `Scenes` artboard. The host binds the **same instance** to
+One view model, **`UserRecap`**, one instance, bound to `Recap`; the Page Stage
+script instantiates `Page 1…10`, `Carry` and `Cover` with that same instance. The host binds the **same instance** to
 `ShareCard` when it snapshots. No scene owns a copy of any statistic.
 
 **Why not Rive's `viewModelType="global"`?** Tested with this CLI: an artboard
@@ -152,7 +245,7 @@ instance).
 | `primaryA11yLabel`, `secondaryA11yLabel` (added) | string | accessible labels of the two context buttons: Continue/Share and Pause/Play/Replay, taken from the localized label strings |
 
 Underscore-prefixed properties (`_navDir`, `_parallaxX/Y`, `_personaRow`,
-`_motionPaused`, `_hasStats`, `_focus`, `_cmd*`, `_turn*`, `_evt*`, `_dbg*Events`)
+`_motionPaused`, `_hasStats`, `_focus`, `_cmd*`, `_evt*`, `_dbg*Events`)
 are private runtime state, not user data; hosts should not write them.
 
 ### Events (fired by the `Recap` state machine)
@@ -182,15 +275,16 @@ Persona mapping (Director table; colour also drives the persona plate and card m
 
 | Beat | Implementation |
 |---|---|
-| Signature transition | page turn: outgoing scene folds to the spine (`scaleX`, 650 ms ease-in-out) with shade + edge light, fold shadow travels with it; incoming scene is revealed beneath. Back = previous page swings back over |
+| Signature transition | 3D page curl on the GPU (840 ms): corner lift + settle (anticipation), roll sweeps past the spine, lit leaf with mirrored show-through on its back, cast shadows; the next page plays underneath. Back = the earlier page, live, un-rolls back over and its corner settles last |
+| Opening | closed cloth book; the board cover swings open (1.1 s) onto page 1, marbled endpaper on its back |
 | Unbroken ribbon | one oxblood bookmark whose 13 vertices morph between ten poses (760 ms) across every cut; becomes scene 6's bookmark and drapes over the share card |
 | Continuity carry #2 | the moon: pendulum entrance in scene 4, carried into scene 5 as the spotlight |
-| Hero sequences | (1) book unfolds into a pop-up paper city, wordmark banner unmasked; (4) window sky unmasks, pages open, town rises, moon swings on an elastic pendulum; (3) nine page-edge strokes flow along a path and resolve into the monumental numeral; plus spines-to-doorways (2), theatre curtains + nine unfolding genre arches (5), fragments flying under the bookmark (6), ticking day tabs (7), two ribbons weaving behind/over a book (8) |
+| Hero sequences | (1) cover opens, book unfolds into a pop-up paper city, wordmark banner unmasked; (4) window sky unmasks, pages open, town rises, the engraved moon swings on an elastic pendulum; (3) a gilt-edged band of page edges streams out of a book and into the monumental numeral, loose leaves lifting toward it; plus spines-to-doorways (2), theatre curtains + nine unfolding genre arches (5), slips flying under the bookmark (6), a reading lamp lighting a stack whose day tabs tick out (7), two satin ribbons weaving behind/over a book (8) |
 | Persona reveal | plate rises (anticipation), then one of four bespoke choreographies |
 | Summary assembly | card lands with overshoot, medallion turns in, rule draws, five stats file in |
 | Score | 0–200 ms anticipation (gold rule / book dip), 200–1200 ms hero + count-up, 1200–1800 ms copy, then a restrained seamless idle loop (first key = last key) |
 | Signature interaction | pointer parallax on three depth groups (±5/10/18 px), only from the stage band; drags never navigate; text never moves |
-| Reduced motion | scenes cross-fade 200–220 ms into static settled poses; values final immediately; ribbon/moon snap; no page turns, parallax or idle loops |
+| Reduced motion | scenes cross-fade 200–220 ms into static settled poses; values final immediately; ribbon/moon snap; no cover, page turns, moon libration, parallax or idle loops |
 
 `genresExplored` also drives the theatre directly: arch *k* is lit when the
 value ≥ *k* (range-mapper converters), faint otherwise.
@@ -213,14 +307,18 @@ renders no text.
 
 ## Measurements (Apple M5 Pro, macOS 26.6, Rive CLI 1.6.0, headless @1x)
 
-- `.riv`: **2.31 MB**, of which 2.10 MB are the three embedded variable fonts (art + timelines ≈ 0.2 MB).
-- `rive --bench=600` (intro scene, includes the Director script): advance mean 0.028 ms (p95 0.073), render-record mean 0.136 ms (p95 0.18, max 5.5 ms first frame); no wasm memory growth. These are CPU-side figures from the CLI, not device GPU frame times; no physical phone was available, so device frame-rate is **not measured**.
-- Object counts: Scenes ≈ 17.2k objects (115 timelines, 18 layers, 541 transitions), Recap ≈ 470.
-- Budget choices: no particles, no per-count objects (7 tabs, 9 arches, 12 fragments regardless of value), 4 clip masks total, hidden scenes sit in 1-frame states (no offscreen loops).
+- `.riv`: **2.48 MB**, of which 2.10 MB are the three embedded variable fonts (art, timelines, 3 scripts, 3 shaders ≈ 0.38 MB). Before the improvement pass: 2.32 MB.
+- `rive --bench=600` (intro scene, all scripts as published): advance mean ≈0.02 ms (p95 0.04–0.07), render-record mean ≈0.095 ms (p95 0.15, max 0.4–0.7 ms); `--bench=1200 --data=autoAdvanceSeconds=3` (includes two page turns) is the same within noise; no wasm memory growth. These are CPU-side figures from the CLI, not device GPU frame times; no physical phone was available, so device frame-rate is **not measured**.
+- Per page-turn frame on the GPU: one page re-rendered into a canvas, one 4x MSAA pass (shadow quad + 6.2k-vertex leaf). Idle frames: one page + `Carry` + one cached paper image (multiply).
+- Object counts: pages 1.0k–2.4k objects each (Page 9 largest), Carry ≈3.2k (mostly the 10×9 ribbon transitions), Cover ≈100, Recap ≈480.
+- Budget choices: no particles, no per-count objects (7 tabs, 9 arches, 13 slips regardless of value), 4 clip masks total, hidden pages sit in 1-frame states and are not drawn, GPU work only while something is on screen (leaves in flight, moon on 4–5), the paper texture is generated once per resize.
 
 ## Verification performed
 
 `--verify` and `inspect --summary` are clean (0 errors, 0 warnings, `problems: []`).
+All rows below were re-run after the improvement pass with identical results
+(the Director's logic is unchanged; only the unused `_turnFwd`/`_turnBack`
+triggers were removed).
 Behaviour was checked headlessly with `tools/probe.sh` (reads `UserRecap` after a scripted run; `_dbg*Events` count every event fire):
 
 | Check | Result |
@@ -242,18 +340,21 @@ Behaviour was checked headlessly with `tools/probe.sh` (reads `UserRecap` after 
 | Extreme fixture (de-DE, 12.345.678, 40%+ longer copy, 55-char name, −5, persona 7) | separators, fitted headlines, ellipsized units/name, −5→0, persona row 0 |
 | Viewports 320×568 / 390×844 / 430×932 / 1280×800 contain | chrome reflows, stage contain-fits |
 
-Captures (`captures/`): `settled/` (all ten), `personas/` (four, settled + mid-reveal),
-`transitions/` (three frames of every forward turn, back turns, intro entrance,
-moon hero + carry, summary assembly), `reduced-motion/`, `fixtures/` (zero,
-extreme), `responsive/`, `interaction/`, and `motion-preview.mp4` (a full
-tap-driven run, 15 fps, rendered frame-exact from headless captures).
+Captures (`captures/`, regenerated by `tools/capture_all.sh`): `settled/` (all ten),
+`personas/` (four, settled + mid-reveal), `transitions/` (three frames of every
+forward page curl, back turns, the cover opening, replay landing page 1 over
+the summary, five rapid taps, moon hero + carry, summary assembly),
+`reduced-motion/`, `fixtures/` (zero, extreme), `responsive/`, `interaction/`,
+`cover-artboard.png` and `share-card-artboard.png`. The full walkthrough is
+`../video.webm` (rendered by `scripts/render-video.py marginalia`);
+`tools/motion_preview.py` can still render a tap-driven preview locally.
 
 ## Unsupported techniques & substitutions
 
-- **Sequencing in a script, visuals in state machines.** Skipping hidden scenes, the dwell timer, hold-vs-tap and locale formatting are not expressible cleanly in state-machine conditions; the Director script decides *which* scene, and the state machines own *every* visual state, transition and event. The sequencing state machine is therefore "Scenes" + the Director, not a single pure state machine.
+- **Sequencing in a script, visuals in state machines.** Skipping hidden scenes, the dwell timer, hold-vs-tap and locale formatting are not expressible cleanly in state-machine conditions; the Director script decides *which* scene, and the state machines own *every* visual state, transition and event. The sequencing state machine is therefore the pages' state machines + the Director, not a single pure state machine.
 - **Lines of type flowing into paths** — `TextFollowPathModifier` is not used (all real text is bound model copy that must stay readable); substituted by nine page-edge strokes drawn along a path with keyed `TrimPath`s (scene 3) and ribbons drawn with trims (scenes 8, 9).
-- **3D page turn** — no perspective/skew in Rive transforms; a 2D fold (`scaleX` about the spine + travelling shadow/light) stands in.
-- **Raster paper grain** — none; texture comes from layered tints, gradients and rules (pure vector, editable).
+- **3D page turn** — Rive transforms have no perspective, so the turn is rendered by script on the GPU (`GPUCanvas` + WGSL) from the page's live artboard; a 2D fold remains as the no-shader fallback.
+- **Raster paper grain** — no bitmap is shipped; the grain is generated procedurally on the GPU at load (and skipped where shaders are unavailable, leaving the vector parchment).
 - **Count-up** — Rive has no number tween for bound text; the Director writes the intermediate formatted strings.
 - **Locale formatting / pluralization** — no ICU in the runtime; grouping separators are a small table in the Director, pluralization is the host's job.
 - **Event payload** — the `screen` custom property on `screenChanged` is bound to `currentScreen`; runtimes that do not report event properties must read `currentScreen`.
@@ -267,5 +368,6 @@ tap-driven run, 15 fps, rendered frame-exact from headless captures).
 - The Director's persona table holds English defaults; a host that localizes must write `personaName`/`personaDescription` itself (they are preserved, but a stale localized string is not detected if the host changes the index without updating the text).
 - RTL was not verified (no RTL target locale in the brief); layouts are authored LTR.
 - Device frame-rate/thermal measurements were not possible (no device attached); only CLI bench figures are recorded.
-- The page turn compresses the outgoing scene's text horizontally during the 650 ms fold — intentional (it is the printed page), but it is a squash, not a perspective rotation.
+- The page curl is a cylinder model (a corner peel past the spine), not a cloth simulation; the board cover uses the same model with a large radius.
+- Scripted effects need a GPU-capable runtime and a signed `--publish` build on the web; elsewhere the vector fallbacks apply.
 - Fonts are full variable families (2.1 MB). Subsetting would cut the file ~80 % but produces Modified Versions under the OFL (reserved-name rules), so it was not done.

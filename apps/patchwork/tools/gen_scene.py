@@ -504,7 +504,7 @@ def build_s2():
         st_path = el("PointsPath", el("StraightVertex", x=-base / 2 + 12, y=-7), el("StraightVertex", x=0, y=-68),
                      el("StraightVertex", x=base / 2 - 12, y=-7), isClosed=True, isClockwise=True, name="Path")
         body = node(f"S2 {nm} body", *mf(), shape("Stitch", st_path, stroke(a(OAT, 0.85), 1.3, dash=(5, 4))),
-                    shape("Cloth", tri_path, fill(col)))
+                    shape("Cloth", tri_path, fill(col), stroke(CREAM, 3.0, join="round")))
         hinge = node(f"S2 {nm} hinge", body, x=cx + dx, y=cy + dy, rotation=rot)
         tri.append(hinge)
         f0 = 14 + i * 7
@@ -535,8 +535,44 @@ def build_s2():
     an.tween(card.id, "opacity", 0, 0.0, 6, 1.0, "linear")
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen2Headline", "screen2Support", hy=104, sy=650)
-    sc.root.add(th.el, card, *tri, *corners, ts.el, quilt_lines(a(OAT_DD, 0.4)), bg(OAT))
+    th, ts = scene_text_block(sc, an, "screen2Headline", "screen2Support", hy=104, sy=686)
+    # the quilt field starts at y 204: long (3+ line) headlines shrink to fit above it
+    th.el.attrs.update(sizingValue="fixed", height=92, overflowValue="fitFontSize", verticalAlignValue="top")
+    # the star block sits in a full-bleed quilt: diamond-in-square half-square
+    # triangles (the same piecing as the fold's 3D sheet) assemble in a wave
+    # rippling out from the block, as in the art-direction reference
+    FC, FY0, ROWS = 65, 204, 7
+    f_dark = [IND_D, TEAL_D, TER_D, "FF2E5A54", IND]
+    f_light = [OAT_D, ROSE_D, OAT_DD, TER_L]
+    field = node("S2 quilt field")
+    for r in range(ROWS):
+        for c in range(6):
+            x0, y0 = c * FC, FY0 + r * FC
+            bi, bj = c // 2, (r + 1) // 2
+            dark = f_dark[(bi * 2 + bj * 3) % len(f_dark)]
+            light = f_light[(bi + bj * 3) % len(f_light)]
+            ix, iy = c % 2, (r + 1) % 2
+            h = FC / 2
+            tri_pts = {(0, 0): [(h, -h), (h, h), (-h, h)], (1, 1): [(-h, -h), (h, -h), (-h, h)],
+                       (1, 0): [(-h, -h), (h, h), (-h, h)], (0, 1): [(-h, -h), (h, -h), (h, h)]}[(ix, iy)]
+            cell = node(f"S2 field {r}_{c}",
+                        shape("Dark", poly_path(tri_pts), fill(dark)),
+                        shape("Light", rect(FC, FC), fill(light), stroke(a(OAT, 0.5), 1.1, dash=(5, 4))),
+                        x=x0 + h, y=y0 + h)
+            field.add(cell)
+            d = math.hypot(x0 + h - cx, y0 + h - cy)
+            f0 = 6 + d / 26.0
+            an.seq(cell.id, "scaleX", [(0, 0.0), (f0, 0.0, "cloth"), (f0 + 22, 1.0)])
+            an.seq(cell.id, "scaleY", [(0, 0.3), (f0, 0.3, "back"), (f0 + 20, 1.0)])
+            an.seq(cell.id, "rotation", [(0, 0.6 if (r + c) % 2 else -0.6), (f0, 0.6 if (r + c) % 2 else -0.6, "back"),
+                                         (f0 + 24, 0.0)])
+    bind_top = shape("S2 field binding top", rect(W + 20, 8, ox=0, oy=0.5), fill(IND),
+                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-10, y=FY0)
+    bind_bot = shape("S2 field binding bottom", rect(W + 20, 8, ox=0, oy=0.5), fill(IND),
+                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-10, y=FY0 + ROWS * FC)
+    for bnd in (bind_top, bind_bot):
+        an.seq(bnd.id, "scaleX", [(0, 0.0), (4, 0.0, "out"), (40, 1.0)])
+    sc.root.add(th.el, card, *tri, *corners, ts.el, bind_top, bind_bot, field, quilt_lines(a(OAT_DD, 0.4)), bg(OAT))
     return sc
 
 
@@ -589,7 +625,7 @@ def build_s3():
     an.seq(num.el.id, "x", [(0, 34, "antic"), (12, 22, "cloth"), (40, 34)])
     an.tween(num.el.id, "opacity", 0, 0.0, 10, 1.0, "linear")
     count_keys(an, 12, 62, (0.3, 0.1, 0.4, 1.0))
-    th, ts = scene_text_block(sc, an, "screen3Headline", "screen3Support", hy=104, sy=690)
+    th, ts = scene_text_block(sc, an, "screen3Headline", "screen3Support", hy=104, sy=686)
     sc.root.add(th.el, num.el, unit.el, grid, ts.el, quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
     return sc
 
@@ -624,18 +660,28 @@ def build_s4():
     # fabric strips unrolling from the calendar like a scarf
     strips = []
     strip_cols = [ROSE, TER, IND, MUST, TEAL]
+    strip_alt = [ROSE_L, TER_L, IND_L, OAT_D, TEAL_L]
     for i, col in enumerate(strip_cols):
         off = (i - 2) * 30
         trim = el("TrimPath", start=0, end=0, name="Unroll")
         pth = curve_path([(196 + off, 440, 1.57, 30), (150 + off * 0.8, 560, 2.2, 50), (60 + off * 0.6, 640, 2.0, 50),
                           (-30 + off * 0.4, 760, 2.4, 40)])
+        stitch_trim = el("TrimPath", start=0, end=0, name="Unroll stitch")
+        piece_trim = el("TrimPath", start=0, end=0, name="Unroll piecing")
+        # paints: later draws on top -> ribbon, then its pieced patches, then the stitch
         strips.append(shape(f"S4 strip {i}", pth,
-                            el("Stroke", solid(a(OAT, 0.9)), el("DashPath", el("Dash", length=6, name="on"), el("Dash", length=5, name="off"), name="d"),
-                               el("TrimPath", start=0, end=0, name="Unroll stitch"), thickness=1.3, cap="round", name="Stitch"),
-                            el("Stroke", solid(col), trim, thickness=28, cap="butt", name="Ribbon")))
+                            el("Stroke", solid(col), trim, thickness=28, cap="butt", name="Ribbon"),
+                            el("Stroke", solid(strip_alt[i]), el("DashPath", el("Dash", length=34, name="on"),
+                                                                 el("Dash", length=30, name="off"), offset=i * 17,
+                                                                 name="Piecing"),
+                               piece_trim, thickness=28, cap="butt", name="Patches"),
+                            el("Stroke", solid(a(CREAM, 0.95)), el("DashPath", el("Dash", length=6, name="on"),
+                                                                   el("Dash", length=5, name="off"), name="d"),
+                               stitch_trim, thickness=1.4, cap="round", name="Stitch")))
         f0 = 34 + i * 6
         an.tween(trim.id, "end", f0, 0.0, f0 + 40, 1.0, "out")
-        an.tween(strips[-1].children[1].children[2].id, "end", f0 + 6, 0.0, f0 + 46, 1.0, "out")
+        an.tween(piece_trim.id, "end", f0, 0.0, f0 + 40, 1.0, "out")
+        an.tween(stitch_trim.id, "end", f0 + 6, 0.0, f0 + 46, 1.0, "out")
     # calendar
     cw, chh = 222, 252
     num = hero_num("S4 days", "communityDays", 0, -40, 180, 92, IND)
@@ -666,10 +712,10 @@ def build_s4():
     an.tween(cal.id, "opacity", 0, 0.0, 6, 1.0, "linear")
     an.tween(unit.el.id, "opacity", 50, 0.0, 68, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen4Headline", "screen4Support", hy=104, sy=712, sdark=False)
+    th, ts = scene_text_block(sc, an, "screen4Headline", "screen4Support", hy=104, sy=704, sdark=False)
     ts.el.attrs["originY"] = 0.5
     sway(cal.id, "rotation", 0.05, 0.02)
-    plate = shape("S4 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=712)
+    plate = shape("S4 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=704)
     sc.root.add(th.el, ts.el, plate, cal, *strips, *hills, *clouds, sun, bg(sky))
     return sc
 
@@ -723,9 +769,9 @@ def build_s5():
     an.seq(num.el.id, "y", [(0, 380, "antic"), (12, 392, "cloth"), (40, 360)])
     an.tween(num.el.id, "opacity", 0, 0.0, 12, 1.0, "linear")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen5Headline", "screen5Support", hy=104, sy=712, sdark=False)
+    th, ts = scene_text_block(sc, an, "screen5Headline", "screen5Support", hy=104, sy=704, sdark=False)
     ts.el.attrs["originY"] = 0.5
-    plate = shape("S5 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=712)
+    plate = shape("S5 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=704)
     sc.root.add(th.el, ts.el, plate, num.el, unit.el, bloom, *leaves, stem, *seeds, *reversed(bands), bg("FFF6E3DC"))
     return sc
 
@@ -742,10 +788,19 @@ def build_s6():
     right = shape("Right cloth", curve_path([(0, -120, 0, 0), (70, -126, 0.2, 40), (136, -60, 1.3, 50), (124, 70, 1.9, 50),
                                              (60, 128, 2.9, 40), (0, 120, 0, 0)], closed=True),
                   fill(IND), stroke(a(OAT, 0.8), 1.4, dash=(6, 4)))
-    lpatch = node("Left motif", *m_mug(46, OAT), x=-66, y=-6)
-    rpatch = node("Right motif", *m_book(48, ROSE), x=66, y=8)
-    L = node("S6 left", lpatch, left, x=195, y=520)
-    R = node("S6 right", rpatch, right, x=195, y=520)
+    lpatch = node("Left motif", *m_mug(66, OAT), x=-62, y=-4)
+    rpatch = node("Right motif", *m_book(70, ROSE), x=64, y=6)
+    lapp = [patch(f"S6 left applique {i}", w_, w_, c_, x=x_, y=y_, rot=r_, shadow=False)[0]
+            for i, (x_, y_, w_, c_, r_) in enumerate([(-78, -78, 30, TEAL_L, 0.12), (-96, 62, 26, ROSE, -0.1),
+                                                      (-34, 92, 22, MUST, 0.2)])]
+    rapp = [patch(f"S6 right applique {i}", w_, w_, c_, x=x_, y=y_, rot=r_, shadow=False)[0]
+            for i, (x_, y_, w_, c_, r_) in enumerate([(84, -82, 28, TER, -0.14), (104, 56, 24, TEAL, 0.1),
+                                                      (40, 96, 22, ROSE_L, -0.2)])]
+    for i, ap in enumerate(lapp + rapp):
+        an.seq(ap.id, "scaleX", [(0, 0.0), (54 + i * 4, 0.0, "back"), (66 + i * 4, 1.0)])
+        an.seq(ap.id, "scaleY", [(0, 0.0), (54 + i * 4, 0.0, "back"), (66 + i * 4, 1.0)])
+    L = node("S6 left", lpatch, *lapp, left, x=195, y=520)
+    R = node("S6 right", rpatch, *rapp, right, x=195, y=520)
     an.seq(L.id, "x", [(0, 120), (8, 96, "in"), (14, 96, "cloth"), (40, 195)])
     an.seq(R.id, "x", [(0, 270), (8, 294, "in"), (14, 294, "cloth"), (40, 195)])
     an.seq(L.id, "rotation", [(0, -0.25), (14, -0.3, "back"), (46, 0.0)])
@@ -783,7 +838,7 @@ def build_s6():
     an.seq(darn.id, "scaleY", [(0, 0.0), (4, 0.0, "cloth"), (34, 1.0)])
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen6Headline", "screen6Support", hy=104, sy=680)
+    th, ts = scene_text_block(sc, an, "screen6Headline", "screen6Support", hy=104, sy=686)
     sway(L.id, "rotation", 0.0, -0.015)
     sway(R.id, "rotation", 0.0, 0.015)
     sc.root.add(th.el, darn, *xs, seam, R, L, ts.el, quilt_lines(a(OAT, 0.35)), bg(ROSE))
@@ -803,7 +858,10 @@ def build_s7():
                                 name="Glow"), name="Fill"), x=dx, y=dy)
     rays = shape("Light spill", el("PointsPath", el("StraightVertex", x=-dw / 2, y=dh / 2), el("StraightVertex", x=dw / 2, y=dh / 2),
                                     el("StraightVertex", x=dw / 2 + 120, y=dh / 2 + 150), el("StraightVertex", x=-dw / 2 - 120, y=dh / 2 + 150),
-                                    isClosed=True, name="Path"), fill(a(ROSE_L, 0.35)), x=dx, y=dy)
+                                    isClosed=True, name="Path"),
+                 el("Fill", el("LinearGradient", el("GradientStop", colorValue=a(ROSE_L, 0.42), position=0),
+                               el("GradientStop", colorValue=a(ROSE_L, 0.0), position=1), startX=0, startY=dh / 2,
+                               endX=0, endY=dh / 2 + 82, name="Spill"), name="Fill"), x=dx, y=dy)
     an.tween(rays.id, "opacity", 20, 0.0, 60, 1.0, "out")
     an.tween(light.id, "opacity", 10, 0.3, 40, 1.0, "out")
     sway(rays.id, "scaleX", 1.0, 0.05)
@@ -864,7 +922,7 @@ def build_s7():
         sway(s.id, "opacity", 0.4 + 0.1 * (i % 3), 0.5)
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen7Headline", "screen7Support", hy=104, sy=694, dark=True)
+    th, ts = scene_text_block(sc, an, "screen7Headline", "screen7Support", hy=104, sy=686, dark=True)
     floor = shape("S7 floor", rect(W + 80, 140, ox=0, oy=0), fill(IND_D), x=-40, y=dy + dh / 2)
     sc.root.add(th.el, *people, mat, *doors, num.el, unit.el, light, frame, rays, ts.el, floor, *stars,
                 quilt_lines(a(IND_L, 0.35)), bg(IND))
@@ -915,7 +973,7 @@ def build_s8():
     an.seq(num.el.id, "scaleY", [(0, 0.9, "antic"), (10, 0.86, "cloth"), (36, 1.0)])
     an.tween(num.el.id, "opacity", 0, 0.0, 10, 1.0, "linear")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen8Headline", "screen8Support", hy=104, sy=672)
+    th, ts = scene_text_block(sc, an, "screen8Headline", "screen8Support", hy=104, sy=686)
     sc.thread_verts = verts
     sc.root.add(th.el, num.el, unit.el, thread, *patches, ts.el, quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
     return sc
@@ -984,14 +1042,28 @@ EMBLEMS = [emblem_weaver, emblem_helper, emblem_builder, emblem_welcomer]
 # =====================================================================
 # Scene 9 — Persona reveal (four distinct choreographies)
 # =====================================================================
+SCRIPT_MEDALLION = new_id()
+
+
+def medallion(name, light=1.0):
+    """GPU quilted cushion (scripts/medallion.luau); the vector Disc under it is the fallback."""
+    return el("ScriptedDrawable", el("ScriptInputNumber", propertyValue=290, name="size"),
+              el("ScriptInputNumber", propertyValue=light, name="light"), scriptAssetId=SCRIPT_MEDALLION, name=name)
+
+
 def build_s9():
     sc = Scene(9, "Persona", frames=134)
     anims = [sc.new_anim(f"_p{k}") for k in range(4)]
     ecx, ecy = 195, 500
+    med = medallion("S9 medallion", 0.0)
     disc = node("S9 disc", shape("Accent ring", ellipse(300, 300), el("Stroke", el("SolidColor", bind(vm, "personaColor", 37), colorValue=TER, name="Accent"),
                                                                        thickness=6, name="Accent")),
-                shape("Stitch ring", ellipse(276, 276), stroke(a(OAT, 0.7), 1.5, dash=(6, 4))),
-                shape("Disc", ellipse(290, 290), fill(IND)), x=ecx, y=ecy)
+                med, shape("Disc", ellipse(290, 290), fill(IND)),
+                shape("Accent keyline", ellipse(309, 309), stroke(a(IND_D, 0.4), 1.2)), x=ecx, y=ecy)
+    light_in = med.children[1]
+    for an in anims:
+        # the light sweeps round the quilted cushion as the emblem arrives
+        an.seq(light_in.id, "propertyValue", [(0, 0.0), (24, 0.0, (0.45, 0.0, 0.25, 1.0)), (122, 1.0)])
     roots, parts = [], []
     for k, fnc in enumerate(EMBLEMS):
         r, pp = fnc(f"S9 P{k}")
@@ -1110,7 +1182,9 @@ def build_s10():
     pdisc = node("Card emblem", psolo, shape("Accent ring", ellipse(300, 300),
                                               el("Stroke", el("SolidColor", bind(vm, "personaColor", 37), colorValue=TER, name="Accent"),
                                                  thickness=6, name="Accent")),
-                 shape("Disc", ellipse(290, 290), fill(IND)), x=-cw / 2 + 64, y=-ch / 2 + 136, scaleX=0.3, scaleY=0.3)
+                 medallion("Card medallion"), shape("Disc", ellipse(290, 290), fill(IND)),
+                 shape("Accent keyline", ellipse(309, 309), stroke(a(IND_D, 0.4), 4.0)),
+                 x=-cw / 2 + 64, y=-ch / 2 + 136, scaleX=0.3, scaleY=0.3)
     plabel = text("Card persona label", -cw / 2 + 118, -ch / 2 + 104, 196, 12, "atkb", TER_D, prop="personaLabel", align="left")
     pname = text("Card persona", -cw / 2 + 118, -ch / 2 + 122, 196, 21, "bree", IND, prop="personaName", align="left", lh=23,
                  h=48, overflow="fitFontSize")
@@ -1158,6 +1232,11 @@ def build_s10():
     sc.flap = flap
     card = node("S10 share card", flap, thanks.el, corner, logo, wm.el, yr.el, who_n, persona_gate, stat_grid, empty, strip, border,
                 cloth, shade, x=card_x, y=card_y)
+    # the card body stitches up around the carried emblem
+    for part in (cloth, shade, strip, logo, wm.el, yr.el, corner, flap, thanks.el):
+        an.seq(part.id, "opacity", [(0, 0.0), (8, 0.0, "out"), (20, 1.0)])
+    an.seq(cloth.id, "scaleY", [(0, 0.82), (8, 0.82, "cloth"), (30, 1.0)])
+    an.seq(shade.id, "scaleY", [(0, 0.82), (8, 0.82, "cloth"), (30, 1.0)])
     an.seq(card.id, "scaleX", [(0, 0.9), (6, 0.9, "cloth"), (40, 1.0)])
     an.seq(card.id, "scaleY", [(0, 0.9), (6, 0.9, "cloth"), (40, 1.0)])
     an.seq(card.id, "opacity", [(0, 1.0)])
@@ -1180,7 +1259,14 @@ def build_s10():
     hge.add(bind(vm, "_noActivity", 18, conv=C_BOOL_OPACITY))
     sc.psolo = psolo
     sc.proots = proots
-    sc.root.add(hg, hge, card, sup.el, quilt_lines(a(IND_L, 0.45), step=40), bg(IND))
+    # scene 9 ends on an indigo disc at (195, 500): it blooms to fill the screen
+    # and becomes the summary's ground, so 9 -> 10 has no colour cut
+    bloom = shape("S10 disc bloom", ellipse(290, 290), fill(IND), x=195, y=500)
+    an.seq(bloom.id, "scaleX", [(0, 1.0, (0.55, 0.0, 0.35, 1.0)), (22, 4.2)])
+    an.seq(bloom.id, "scaleY", [(0, 1.0, (0.55, 0.0, 0.35, 1.0)), (22, 4.2)])
+    qlines = quilt_lines(a(IND_L, 0.45), step=40)
+    an.seq(qlines.id, "opacity", [(0, 0.0), (14, 0.0, "linear"), (30, 1.0)])
+    sc.root.add(hg, hge, card, sup.el, qlines, bloom, bg(OAT))
     return sc
 
 
@@ -1201,58 +1287,65 @@ scene_nodes = [SCENES[n].root for n in range(1, 11)]
 SCENE_SOLO = el("Solo", *scene_nodes, activeComponentId=scene_nodes[0].id, name="Scenes")
 
 # ---------------------------------------------------------------- backdrop (the larger quilt seen on camera pull-back)
+# A diamond-in-square quilt of half-square triangles: the same piecing as the
+# 3D sheet the fold lays down, so the pull-back reads as "this scene is one
+# patch of a bigger quilt". Only drawn during hand-offs (opacity keyed).
 backdrop_kids = []
-bcols = [IND_D, TER_D, TEAL_D, IND, ROSE_D, TEAL]
-for r in range(-1, 11):
-    for c in range(-1, 6):
-        col = bcols[(r * 3 + c * 5) % len(bcols)]
-        backdrop_kids.append(shape(f"Q{r}_{c}", rect(86, 86, r=3), fill(col), stroke(a(OAT, 0.35), 1.2, dash=(5, 4)),
-                                   x=c * 90 + 15, y=r * 90 + 2))
-BACKDROP = node("Backdrop quilt", *backdrop_kids)
+BQ = 74
+b_dark = [IND_D, TER_D, TEAL_D, IND, ROSE_D, TEAL]
+b_light = [OAT_DD, OAT_D, "FFCDB8A0"]
+for r in range(-1, 13):
+    for c in range(-1, 7):
+        x0, y0 = c * BQ - 25, r * BQ - 16
+        bi, bj = (c + 2) // 2, (r + 2) // 2
+        dark = b_dark[(bi * 3 + bj * 5) % len(b_dark)]
+        light = b_light[(bi + bj * 2) % len(b_light)]
+        # the dark triangle points at its 2x2 block centre (diamond-in-square)
+        ix, iy = c % 2, r % 2
+        corners = {(0, 0): [(BQ, 0), (BQ, BQ), (0, BQ)], (1, 1): [(0, 0), (BQ, 0), (0, BQ)],
+                   (1, 0): [(0, 0), (BQ, BQ), (0, BQ)], (0, 1): [(0, 0), (BQ, 0), (BQ, BQ)]}[(ix, iy)]
+        backdrop_kids.append(shape(f"Q{r}_{c} dark", poly_path(corners), fill(dark), x=x0, y=y0))
+        backdrop_kids.append(shape(f"Q{r}_{c}", rect(BQ, BQ, ox=0, oy=0), fill(light),
+                                   stroke(a(OAT, 0.45), 1.1, dash=(5, 4)), x=x0, y=y0))
+BACKDROP = node("Backdrop quilt", *backdrop_kids, opacity=0)
 
-WORLD_INNER = node("World content", SCENE_SOLO, x=-W / 2, y=-H / 2)
-WORLD = node("World camera", WORLD_INNER, x=W / 2, y=H / 2)
+# The scene patch: clipped to the artboard while the camera pulls back (the
+# clip is only switched on during hand-offs), with a stitched binding and a
+# soft shadow so it sits in the larger quilt like a real patch.
+PATCH_MASK = shape("Patch mask", rect(W, H, ox=0, oy=0))
+PATCH_CLIP = el("ClippingShape", sourceId=PATCH_MASK.id, isVisible=False, name="Patch clip")
+WORLD_INNER = node("World content", PATCH_CLIP, SCENE_SOLO, PATCH_MASK, x=-W / 2, y=-H / 2)
+PATCH_FRAME = node("Patch frame",
+                   shape("Patch binding stitch", rect(W + 14, H + 14, r=6, ox=0, oy=0),
+                         stroke(a(CREAM, 0.9), 1.8, dash=(7, 5)), x=-7, y=-7),
+                   shape("Patch binding", rect(W + 22, H + 22, r=8, ox=0, oy=0), fill(IND_D), x=-11, y=-11),
+                   shape("Patch shadow", rect(W + 22, H + 22, r=10, ox=0, oy=0),
+                         el("Fill", solid(a(IND_D, 0.55)), el("Feather", strength=18, offsetY=10, name="Soft"),
+                            fillRule="clockwise", name="Shadow"), x=-11, y=-11),
+                   x=-W / 2, y=-H / 2)
+WORLD = node("World camera", WORLD_INNER, PATCH_FRAME, x=W / 2, y=H / 2)
 
 # ---------------------------------------------------------------- handoff (signature transition)
-
-
-def fold_panel(name, col, pivot_x, extend_dir, accent):
-    """A full-screen fabric panel hinged on a vertical seam at pivot_x."""
-    x0 = 0 if extend_dir > 0 else -W
-    patches = []
-    rng = [(0.2, 0.15, 70), (0.65, 0.3, 54), (0.35, 0.62, 80), (0.8, 0.8, 60), (0.15, 0.88, 48)]
-    for i, (fx, fy, s) in enumerate(rng):
-        patches.append(shape(f"Applique {i}", rect(s, s, r=4), fill(a(accent, 0.55)), stroke(a(OAT, 0.6), 1.2, dash=(5, 4)),
-                             x=x0 + fx * W, y=fy * H, rotation=0.1 * (i - 2)))
-    edge_x = x0 + (0 if extend_dir > 0 else 0)
-    lead = W if extend_dir > 0 else -W  # x of the free (leading) edge
-    trim = el("TrimPath", start=0, end=1, name="Stitch run")
-    stitch = shape("Leading stitch", el("PointsPath", el("StraightVertex", x=lead - extend_dir * 14, y=-20),
-                                         el("StraightVertex", x=lead - extend_dir * 14, y=H + 20), isClosed=False, name="Path"),
-                   el("Stroke", solid(OAT), el("DashPath", el("Dash", length=9, name="on"), el("Dash", length=6, name="off"), name="d"),
-                      trim, thickness=2.4, cap="round", name="Running stitch"))
-    fold_shadow = shape("Fold shadow", rect(26, H + 40, ox=0.5, oy=0), el("Fill", el("LinearGradient",
-                                                                                    el("GradientStop", colorValue=a(IND_D, 0.0), position=0),
-                                                                                    el("GradientStop", colorValue=a(IND_D, 0.45), position=1),
-                                                                                    startX=-13 * extend_dir, startY=0, endX=13 * extend_dir, endY=0,
-                                                                                    name="Shade"), name="Fill"),
-                        x=lead - extend_dir * 13, y=-20)
-    cloth = shape("Panel cloth", rect(W + 4, H + 40, ox=0 if extend_dir > 0 else 1, oy=0), fill(col), y=-20)
-    n = node(name, stitch, fold_shadow, *patches, cloth, x=pivot_x, y=0, scaleX=0)
-    return n, trim
-
-
-FOLD_FR, FOLD_FR_TRIM = fold_panel("Fold fwd cover", TER, W, -1, ROSE)
-FOLD_FL, FOLD_FL_TRIM = fold_panel("Fold fwd reveal", TER, 0, 1, ROSE)
-FOLD_BL, FOLD_BL_TRIM = fold_panel("Fold back cover", ROSE, 0, 1, TEAL)
-FOLD_BR, FOLD_BR_TRIM = fold_panel("Fold back reveal", ROSE, W, -1, TEAL)
-NEEDLE = needle("Guide needle", x=W + 40, y=-80, rot=math.pi, scale=1.0)
-NEEDLE_THREAD = shape("Needle thread", el("PointsPath", el("StraightVertex", x=0, y=-46), el("StraightVertex", x=0, y=-140),
-                                          isClosed=False, name="Path"), stroke(TER, 2.0, dash=(7, 5)))
-NEEDLE_RIG = node("Needle rig", NEEDLE, NEEDLE_THREAD, x=W + 40, y=-80)
-NEEDLE.attrs.update(x=0, y=0)
+# The fold itself is a GPU-rendered 3D quilt (scripts/cloth.luau +
+# shaders/cloth.wgsl). The Handoff timelines key its inputs: `fold` (0..1 the
+# sheet lands, 1..2 it folds away), `dir` (+1 forward / -1 back) and `cam` (the
+# camera scale, so the sheet always fits the scene patch).
+SCRIPT_CLOTH = new_id()
+SCRIPT_WEAVE = new_id()
+CLOTH_FOLD = el("ScriptInputNumber", propertyValue=0, name="fold")
+CLOTH_DIR = el("ScriptInputNumber", propertyValue=1, name="dir")
+CLOTH_CAM = el("ScriptInputNumber", propertyValue=1, name="cam")
+CLOTH = el("ScriptedDrawable", CLOTH_FOLD, CLOTH_DIR, CLOTH_CAM, scriptAssetId=SCRIPT_CLOTH, x=0, y=0,
+           name="Quilt fold")
+_weave_style = new_id()
+WEAVE = el("LayoutComponent",
+           el("LayoutComponentStyle", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed", id=_weave_style,
+              name="Cloth ground style"),
+           el("ScriptedLayout", el("ScriptInputNumber", propertyValue=1, name="strength"), scriptAssetId=SCRIPT_WEAVE,
+              name="Cloth ground"),
+           x=0, y=0, width=W, height=H, styleId=_weave_style, name="Cloth ground")
 RM_VEIL = shape("Reduced-motion veil", rect(W, H, ox=0, oy=0), fill(OAT), opacity=0)
-HANDOFF = node("Handoff", NEEDLE_RIG, FOLD_FR, FOLD_FL, FOLD_BL, FOLD_BR, RM_VEIL)
+HANDOFF = node("Handoff", CLOTH, RM_VEIL)
 
 # ---------------------------------------------------------------- chrome: header, progress, controls
 THEME = {}
@@ -1342,9 +1435,43 @@ cont_arrow = shape("Continue arrow", el("PointsPath", el("StraightVertex", x=-6,
 cont_lbl.el.attrs["x"] = -8
 cont_btn = button(2, "Continue button", 195, 196, 52, 26, "continueLabel", [cont_lbl.el, cont_arrow], "fill", light=IND, dark=OAT)
 share_lbl = label("Share label", "shareLabel", 90, 15, "share text")
-share_btn = button(3, "Share button", 139, 118, 52, 26, "shareLabel", [share_lbl.el], "fill", light=IND, dark=OAT)
+share_lbl.el.attrs["x"] = 11
+share_icon_s = themed("share icon", OAT, IND)
+# tray with an arrow rising out of it
+SHARE_ICON = shape("Share icon",
+                   el("PointsPath", el("StraightVertex", x=-6, y=0), el("StraightVertex", x=-6, y=6),
+                      el("StraightVertex", x=6, y=6), el("StraightVertex", x=6, y=0), isClosed=False, name="Tray"),
+                   el("PointsPath", el("StraightVertex", x=0, y=2.5), el("StraightVertex", x=0, y=-7.5),
+                      isClosed=False, name="Shaft"),
+                   el("PointsPath", el("StraightVertex", x=-3.8, y=-4), el("StraightVertex", x=0, y=-7.8),
+                      el("StraightVertex", x=3.8, y=-4), isClosed=False, name="Head"),
+                   el("Stroke", share_icon_s, thickness=2.0, cap="round", join="round", name="S"), x=-31, y=0)
+share_btn = button(3, "Share button", 139, 118, 52, 26, "shareLabel", [share_lbl.el, SHARE_ICON], "fill", light=IND, dark=OAT)
 replay_lbl = label("Replay label", "replayLabel", 84, 15, "replay text", light=IND, dark=OAT)
-replay_btn = button(4, "Replay button", 259, 106, 52, 26, "replayLabel", [replay_lbl.el], "outline", light=IND, dark=OAT)
+replay_lbl.el.attrs["x"] = 11
+
+
+def replay_icon():
+    """Clockwise arc open at the top; the arrowhead sits on the arc's end and
+    points along its tangent (direction of travel), built from geometry."""
+    r, t0, t1 = 6.6, math.radians(-48), math.radians(208)
+    pts = [(r * math.cos(t0 + (t1 - t0) * i / 20), r * math.sin(t0 + (t1 - t0) * i / 20)) for i in range(21)]
+    ex, ey = pts[-1]
+    dx, dy = -math.sin(t1), math.cos(t1)  # d/dtheta of (cos, sin): clockwise on screen (y down)
+    nx_, ny_ = -dy, dx
+    tip = (ex + dx * 4.2, ey + dy * 4.2)
+    b1 = (ex - dx * 0.6 + nx_ * 3.6, ey - dy * 0.6 + ny_ * 3.6)
+    b2 = (ex - dx * 0.6 - nx_ * 3.6, ey - dy * 0.6 - ny_ * 3.6)
+    arc = el("PointsPath", *[el("StraightVertex", x=x, y=y) for x, y in pts], isClosed=False, name="Arc")
+    head = poly_path([tip, b1, b2], name="Head")
+    return node("Replay icon",
+                shape("Replay arrowhead", head, el("Fill", themed("replay icon head", IND, OAT), name="F")),
+                shape("Replay arc", arc, el("Stroke", themed("replay icon arc", IND, OAT), thickness=2.0, cap="round", join="round", name="S")),
+                x=-30, y=0.5)
+
+
+replay_btn = button(4, "Replay button", 259, 106, 52, 26, "replayLabel", [replay_lbl.el, replay_icon()], "outline",
+                    light=IND, dark=OAT)
 pause_icon = themed("pause icon", IND, OAT)
 play_icon = themed("play icon", IND, OAT)
 PAUSE_GLYPH = shape("Pause glyph", el("Rectangle", width=4, height=16, x=-4, cornerRadiusTL=1.5, name="L"),
@@ -1373,7 +1500,7 @@ SURFACE = shape("Release surface", rect(W, H, ox=0, oy=0), fill("00000000"))
 CHROME = node("Chrome", hdr_logo, wm_t.el, yr_t.el, PROGRESS, prev_btn, CTRL_SOLO, pause_btn)
 CHROME.add(bind(vm, "shareCaptureMode", 18, conv=G_CHROME))
 APP = node("App", el("FocusData", canTouch=False, canTraverse=False, name="Keyboard host"),
-           CHROME, DEL_SOLO, NAV_LEFT, NAV_RIGHT, HANDOFF, HERO_DRIVER, WORLD, BACKDROP, SURFACE)
+           WEAVE, CHROME, DEL_SOLO, NAV_LEFT, NAV_RIGHT, HANDOFF, HERO_DRIVER, WORLD, BACKDROP, SURFACE)
 
 # =====================================================================
 # Animations
@@ -1390,7 +1517,13 @@ def finalize_scene_anim(sc, an):
     an.key(DEL_SOLO.id, "activeComponentId", 0, {1: DEL_S1, 10: DEL_S10}.get(n, DEL_NONE).id, kind="Id")
     an.key(prev_btn.id, "opacity", 0, 0.35 if n == 1 else 1.0)
     for key, (sid, light, dark) in THEME.items():
-        an.key(sid, "colorValue", 0, dark if sc.dark else light, kind="Color")
+        if n == 10:
+            # the chrome turns light-on-dark only once the indigo bloom is behind it
+            an.key(sid, "colorValue", 0, light, kind="Color")
+            an.key(sid, "colorValue", 9, light, "linear", kind="Color")
+            an.key(sid, "colorValue", 17, dark, kind="Color")
+        else:
+            an.key(sid, "colorValue", 0, dark if sc.dark else light, kind="Color")
     an.key(sc.root.id, "opacity", 0, 1.0)
 
 
@@ -1420,47 +1553,50 @@ for n in range(1, 11):
 REST = Anim("rest", 1)
 
 # handoff animations ------------------------------------------------
-COVER_F = 18
-REVEAL_F = 26
+COVER_F = 22
+REVEAL_F = 28
+CAM = 0.82
 
 
-def handoff_cover(name, panel, trim, from_x_edge, dir_):
+def cam_keys(an, pts):
+    for prop in ("scaleX", "scaleY"):
+        an.seq(WORLD.id, prop, pts)
+    an.seq(CLOTH_CAM.id, "propertyValue", pts)
+
+
+def handoff_on(an):
+    an.key(PATCH_CLIP.id, "isVisible", 0, True, kind="Bool")
+    an.key(BACKDROP.id, "opacity", 0, 1.0)
+    an.key(RM_VEIL.id, "opacity", 0, 0.0)
+
+
+def handoff_cover(name, dir_):
     an = Anim(name, COVER_F)
-    for pnl in (FOLD_FR, FOLD_FL, FOLD_BL, FOLD_BR):
-        if pnl is not panel:
-            an.key(pnl.id, "scaleX", 0, 0.0)
-    an.seq(panel.id, "scaleX", [(0, 0.0, (0.55, 0.0, 0.25, 1.0)), (COVER_F, 1.0)])
-    an.seq(trim.id, "end", [(0, 0.0, "inout"), (COVER_F, 1.0)])
-    # the guide needle runs down the leading edge as the fold travels
-    lead0 = W + 30 if dir_ > 0 else -30
-    lead1 = 30 if dir_ > 0 else W - 30
-    an.seq(NEEDLE_RIG.id, "x", [(0, lead0, (0.55, 0.0, 0.25, 1.0)), (COVER_F, lead1)])
-    an.seq(NEEDLE_RIG.id, "y", [(0, -60, "inout"), (COVER_F, H + 120)])
-    an.seq(NEEDLE_RIG.id, "rotation", [(0, math.pi - 0.25 * dir_), (COVER_F, math.pi + 0.1 * dir_)])
-    an.seq(WORLD.id, "scaleX", [(0, 1.0, "inout"), (COVER_F, 0.86)])
-    an.seq(WORLD.id, "scaleY", [(0, 1.0, "inout"), (COVER_F, 0.86)])
-    an.key(RM_VEIL.id, "opacity", 0, 0.0)
+    an.seq(CLOTH_FOLD.id, "propertyValue", [(0, 0.0, "linear"), (COVER_F, 1.0)])
+    an.key(CLOTH_DIR.id, "propertyValue", 0, float(dir_))
+    cam_keys(an, [(0, 1.0, (0.45, 0.0, 0.3, 1.0)), (COVER_F, CAM)])
+    handoff_on(an)
     return an
 
 
-def handoff_reveal(name, panel, dir_):
+def handoff_reveal(name, dir_):
     an = Anim(name, REVEAL_F)
-    for pnl in (FOLD_FR, FOLD_FL, FOLD_BL, FOLD_BR):
-        if pnl is not panel:
-            an.key(pnl.id, "scaleX", 0, 0.0)
-    an.seq(panel.id, "scaleX", [(0, 1.0, (0.6, 0.0, 0.2, 1.0)), (REVEAL_F, 0.0)])
-    an.seq(WORLD.id, "scaleX", [(0, 0.86, (0.3, 0.0, 0.2, 1.0)), (REVEAL_F, 1.0)])
-    an.seq(WORLD.id, "scaleY", [(0, 0.86, (0.3, 0.0, 0.2, 1.0)), (REVEAL_F, 1.0)])
-    an.key(NEEDLE_RIG.id, "y", 0, H + 160)
-    an.key(RM_VEIL.id, "opacity", 0, 0.0)
+    an.seq(CLOTH_FOLD.id, "propertyValue", [(0, 1.0, "linear"), (REVEAL_F, 2.0)])
+    an.key(CLOTH_DIR.id, "propertyValue", 0, float(dir_))
+    # hold the pull-back while the fold lifts, then push in as it clears
+    cam_keys(an, [(0, CAM, "linear"), (8, CAM, (0.4, 0.0, 0.2, 1.0)), (REVEAL_F, 1.0)])
+    handoff_on(an)
+    an.key(PATCH_CLIP.id, "isVisible", REVEAL_F, False, kind="Bool")
+    an.key(BACKDROP.id, "opacity", REVEAL_F, 0.0)
     return an
 
 
-A_COVER_F = handoff_cover("handoff_cover_forward", FOLD_FR, FOLD_FR_TRIM, W, 1)
-A_REVEAL_F = handoff_reveal("handoff_reveal_forward", FOLD_FL, 1)
-A_COVER_B = handoff_cover("handoff_cover_back", FOLD_BL, FOLD_BL_TRIM, 0, -1)
-A_REVEAL_B = handoff_reveal("handoff_reveal_back", FOLD_BR, -1)
+A_COVER_F = handoff_cover("handoff_cover_forward", 1)
+A_REVEAL_F = handoff_reveal("handoff_reveal_forward", 1)
+A_COVER_B = handoff_cover("handoff_cover_back", -1)
+A_REVEAL_B = handoff_reveal("handoff_reveal_back", -1)
 A_QUEUE = Anim("handoff_queue_hold", 6)
+A_QUEUE.key(CLOTH_FOLD.id, "propertyValue", 0, 1.0)
 A_CARRY = Anim("handoff_carry", 8)
 A_CARRY.seq(WORLD.id, "scaleX", [(0, 1.0, "inout"), (4, 0.97, "inout"), (8, 1.0)])
 A_CARRY.seq(WORLD.id, "scaleY", [(0, 1.0, "inout"), (4, 0.97, "inout"), (8, 1.0)])
@@ -1468,16 +1604,17 @@ A_RM_COVER = Anim("handoff_reduced_cover", 9)
 A_RM_COVER.tween(RM_VEIL.id, "opacity", 0, 0.0, 9, 1.0, "linear")
 A_RM_REVEAL = Anim("handoff_reduced_reveal", 12)
 A_RM_REVEAL.tween(RM_VEIL.id, "opacity", 0, 1.0, 12, 0.0, "linear")
-for a_ in (A_RM_COVER, A_RM_REVEAL, A_CARRY):
-    for pnl in (FOLD_FR, FOLD_FL, FOLD_BL, FOLD_BR):
-        a_.key(pnl.id, "scaleX", 0, 0.0)
-for a_ in (A_RM_COVER, A_RM_REVEAL):
+A_HANDOFF_IDLE = Anim("handoff_idle", 1)
+for a_ in (A_RM_COVER, A_RM_REVEAL, A_CARRY, A_HANDOFF_IDLE):
+    a_.key(CLOTH_FOLD.id, "propertyValue", 0, 0.0)
+    a_.key(PATCH_CLIP.id, "isVisible", 0, False, kind="Bool")
+    a_.key(BACKDROP.id, "opacity", 0, 0.0)
+for a_ in (A_RM_COVER, A_RM_REVEAL, A_HANDOFF_IDLE):
     a_.key(WORLD.id, "scaleX", 0, 1.0)
     a_.key(WORLD.id, "scaleY", 0, 1.0)
-A_HANDOFF_IDLE = Anim("handoff_idle", 1)
+    a_.key(CLOTH_CAM.id, "propertyValue", 0, 1.0)
 A_HANDOFF_IDLE.key(RM_VEIL.id, "opacity", 0, 0.0)
-for pnl in (FOLD_FR, FOLD_FL, FOLD_BL, FOLD_BR):
-    A_HANDOFF_IDLE.key(pnl.id, "scaleX", 0, 0.0)
+
 
 # thanks flap
 A_THANKS_OPEN = Anim("thanks_open", 150)
@@ -1864,6 +2001,9 @@ ROOT = el("Rive", ARTBOARD, *CONVS,
           E("FontAsset", {"file": "assets/fonts/BreeSerif-Regular.ttf", "name": "Bree Serif"}, id=FONT_BREE),
           E("FontAsset", {"file": "assets/fonts/AtkinsonHyperlegible-Regular.ttf", "name": "Atkinson Hyperlegible"}, id=FONT_ATK),
           E("FontAsset", {"file": "assets/fonts/AtkinsonHyperlegible-Bold.ttf", "name": "Atkinson Hyperlegible Bold"}, id=FONT_ATKB),
+          E("ScriptAsset", {"file": "scripts/cloth.luau", "name": "cloth"}, id=SCRIPT_CLOTH),
+          E("ScriptAsset", {"file": "scripts/weave.luau", "name": "weave"}, id=SCRIPT_WEAVE),
+          E("ScriptAsset", {"file": "scripts/medallion.luau", "name": "medallion"}, id=SCRIPT_MEDALLION),
           vm.element(inst_id), version=1, kind="fragment")
 
 header = ("<!-- GENERATED by apps/patchwork/tools/gen_scene.py — Patchwork ten-scene recap.\n"

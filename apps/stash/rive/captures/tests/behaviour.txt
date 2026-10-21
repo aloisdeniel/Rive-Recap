@@ -4,8 +4,8 @@
 [PASS] one screenChanged per scene visited  -- 6 events, ['currentScreen=1', 'currentScreen=2', 'currentScreen=3', 'currentScreen=4', 'currentScreen=5', 'currentScreen=6']
 [PASS] press-and-hold freezes (holding/frozen true while held)  -- ['_frozen=False', '_holding=False', '_frozen=True', '_holding=True', '_frozen=False', '_holding=False']
 [PASS] releasing a hold does not navigate  -- ['currentScreen=1']
-[PASS] pause button sets isPaused and holds progress  -- isPaused=True progress=0.178571433
-[PASS] play resumes (isPaused false again, still on scene 1 then advancing)  -- 0.323809534
+[PASS] pause button sets isPaused and holds progress  -- isPaused=True progress=0.135714293
+[PASS] play resumes (isPaused false again, still on scene 1 then advancing)  -- 0.280952394
 [PASS] Right, Right, Left navigates 1->2->3->2  -- ['currentScreen=1', 'currentScreen=2', 'currentScreen=3', 'currentScreen=2']
 [PASS] Space toggles pause
 [PASS] hidden 3,5,6: forward 1->2->4->7, back to 4  -- ['currentScreen=1', 'currentScreen=2', 'currentScreen=4', 'currentScreen=7', 'currentScreen=4']
@@ -23,3 +23,7 @@
 [PASS] personaIndex=7 falls back to row 0
 [PASS] negative money clamps to 0, counts round  -- 0 13
 [PASS] no eligible stats: intro -> summary, 2 segments  -- ['currentScreen=1', 'currentScreen=10']
+[PASS] tapping the motif's coin fires _coinNudge and does not navigate  -- 1 ['currentScreen=1']
+[PASS] screenChanged heard as a Rive event once per scene (10)  -- 10
+[PASS] recapFinished heard as a Rive event exactly once  -- 1
+[PASS] shareTapped heard as a Rive event exactly once  -- 1

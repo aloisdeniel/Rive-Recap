@@ -588,6 +588,13 @@
         "changed": true
       },
       {
+        "name": "_focusVisible",
+        "path": "_focusVisible",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
         "name": "_nextTapped",
         "path": "_nextTapped",
         "type": "trigger",
@@ -615,6 +622,76 @@
         "name": "_replay",
         "path": "_replay",
         "type": "trigger",
+        "changed": true
+      },
+      {
+        "name": "_idle1",
+        "path": "_idle1",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle2",
+        "path": "_idle2",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle3",
+        "path": "_idle3",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle4",
+        "path": "_idle4",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle5",
+        "path": "_idle5",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle6",
+        "path": "_idle6",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle7",
+        "path": "_idle7",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle8",
+        "path": "_idle8",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle9",
+        "path": "_idle9",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle10",
+        "path": "_idle10",
+        "type": "number",
+        "value": -0.804166675,
         "changed": true
       }
     ]
