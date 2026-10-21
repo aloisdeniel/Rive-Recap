@@ -33,9 +33,10 @@ Each project's `README.md` documents its exact binding and event contract, fonts
 
 ## How it was made
 
-1. [PROMPT_TEMPLATE.md](PROMPT_TEMPLATE.md) describes a recap in general terms: scenes, data model, navigation, motion and verification.
+1. [PROMPT_TEMPLATE.md](PROMPT_TEMPLATE.md) describes a recap in general terms: scenes, data model, navigation, motion, rendering techniques (GPU Canvas 3D and shaders) and verification.
 2. Each app gets a brief adapted from it — `apps/<app>/PROMPT.md` with a concept image, palette and sample data ([gallery](apps/README.md)).
 3. An agent reads the brief and builds the project with the Rive CLI: RML scene source, artwork, state machines and data binding, checked with `rive <project> --verify`, `rive inspect` and headless screenshots, then exported with `rive <project> --once`.
+4. A refinement pass reviews the first version against the concept, fixes inconsistencies, pushes the motion further and adds 3D or shaders where they earn their place, while keeping every check passing.
 
 To make one for your own app, copy the template, describe your product, metrics and visual direction, and run the same loop.
 

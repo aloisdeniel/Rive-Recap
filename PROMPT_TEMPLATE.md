@@ -29,7 +29,32 @@ in the Rive Editor.
 - Logo & assets: {{ASSET_LIST_AND_PATHS}}  (logo, mascot, icons, illustrations)
 - Iconography / illustration style: {{ILLUSTRATION_STYLE}}
 - Motion style: {{MOTION_STYLE}}  (snappy and bouncy / smooth and premium / minimal)
+- Signature transition: {{SIGNATURE_TRANSITION}}  (one ownable move that carries
+  an object from one screen into the next, e.g. "a page turn reveals the next
+  scene"; design its reverse for going back too)
 - Do / don't: {{BRAND_RULES}}
+
+## 2b. Rendering techniques
+Vector RML is the base, but you can also use Rive's GPU Canvas from Luau
+scripts: real 3D meshes and WGSL shaders. Look up the CLI docs
+(`rive docs gpu-performance`, `assets`, `luau/protocols`, `rigging`) and
+`rive samples` before writing any; never invent an API.
+- Use them where they clearly beat flat vector: a lit 3D hero object that turns
+  or morphs (a vessel, coin, hold, planet), a 3D page curl or fabric fold for the
+  signature transition, a texture or material shader (paper grain, risograph ink,
+  glaze, CRT glow), or an atmospheric effect (star field, steam, chalk dust,
+  heat haze). Don't add them just to tick a box.
+- Real shape morphs use vertex deformation (bones / meshes), not squash and
+  stretch.
+- Every GPU element needs a flat vector fallback for runtimes without GPU
+  scripting, goes static or calm under reduced motion, freezes on pause, and
+  redraws only when something changes.
+- Keep 3D surfaces from sharing a plane: coplanar faces z-fight. Give
+  overlapping layers distinct heights.
+- Budget it: bounded draws, few large masks, no object per raw count. Measure
+  with `rive <project> --bench` and report the numbers.
+- Scripts mean the web build must be signed: `rive <project> --publish`, which
+  needs `rive login`. Say so in the report.
 
 ## 3. User stats (all values are runtime data, never hardcoded)
 Bind all user data to a single global view model named {{VIEW_MODEL_NAME}}
@@ -118,3 +143,28 @@ Suggested topics if I left slots blank (pick what fits the category):
   the state machine reaches screen 10 and fires recapFinished.
 - Report: the list of bound properties and events (names + types) so I can wire
   them up in the app, plus any compromises you made.
+
+## 8. Refinement phase (after the first version works)
+Once version 1 is delivered and verified, do a second pass that turns it from
+"works" into a showpiece. Don't stop at the first version.
+1. Critique first. Render a full walkthrough (settled frames plus mid-transition
+   frames), compare it against the concept art and this brief, and write down
+   what's weak before changing anything:
+   - Inconsistencies: type sizes and weights, headline/support baselines and
+     spacing, colours, icon details (e.g. a replay arrowhead that doesn't sit on
+     its arc).
+   - Overlaps and orphans: text over art or controls, a lone word on the last
+     line, especially with the extreme / long-copy data.
+   - Generic scenes and motion: compositions that don't match the concept,
+     transitions that are only fades or slides, motion without anticipation and
+     follow-through, a reverse transition that just plays the forward one
+     backwards.
+2. Fix and elevate. Close the gaps with the concept, give every handoff the
+   signature move with a designed reverse, and bring in 3D / shaders where
+   section 2b says they earn their place.
+3. Keep everything that works working: the same view model, property names and
+   events; navigation (including keyboard); reduced motion; hidden screens; the
+   fixtures. Re-run every check from section 7. Change a check only for an
+   intentional behaviour change, and say so.
+4. Report before vs after: what changed, `.riv` size and `--bench` numbers,
+   anything that got worse, and what's still weak.
