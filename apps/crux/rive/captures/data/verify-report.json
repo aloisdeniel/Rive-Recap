@@ -1,0 +1,162 @@
+[
+ {
+  "check": "tap right two-thirds advances",
+  "pass": true,
+  "detail": "2"
+ },
+ {
+  "check": "tap left third goes back",
+  "pass": true,
+  "detail": "(3, -1)"
+ },
+ {
+  "check": "rapid taps reach scene 6",
+  "pass": true,
+  "detail": "[(0, 1), (0.55, 2), (0.617, 3), (0.683, 4), (0.75, 5), (0.817, 6), (3.833, 6)]"
+ },
+ {
+  "check": "rapid taps settle (entered == current)",
+  "pass": true,
+  "detail": "[(0, 1), (0.55, 0), (1.183, 6), (3.833, 6)]"
+ },
+ {
+  "check": "one screenSignal per scene change",
+  "pass": true,
+  "detail": "5"
+ },
+ {
+  "check": "hold pauses",
+  "pass": true,
+  "detail": "(True, 3)"
+ },
+ {
+  "check": "release resumes without a tap",
+  "pass": true,
+  "detail": "(False, 3)"
+ },
+ {
+  "check": "pause button toggles isPaused",
+  "pass": true,
+  "detail": "[(0, False), (3.1, True), (5.2, False), (6.117, False)]"
+ },
+ {
+  "check": "progress frozen while paused (no progress writes 3.2-5.0 s)",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "progress resumes after play",
+  "pass": true,
+  "detail": "(6.117, 0.330952406)"
+ },
+ {
+  "check": "forward skips hidden 3,4",
+  "pass": true,
+  "detail": "(5, 8)"
+ },
+ {
+  "check": "back skips hidden 4,3",
+  "pass": true,
+  "detail": "(2, 2)"
+ },
+ {
+  "check": "all flags false still yields intro -> summary",
+  "pass": true,
+  "detail": "(10, 2, True)"
+ },
+ {
+  "check": "starting on a hidden scene snaps to the next visible",
+  "pass": true,
+  "detail": "8"
+ },
+ {
+  "check": "recapFinished signal fires once on settle",
+  "pass": true,
+  "detail": "[(1.8, True)]"
+ },
+ {
+  "check": "replay returns to scene 1",
+  "pass": true,
+  "detail": "[(0, 10), (3.1, 1), (6.2, 2), (7.117, 2)]"
+ },
+ {
+  "check": "after replay, a full auto-advance run finishes again (latch reset)",
+  "pass": true,
+  "detail": "[(2.0, True), (53.999, True)]"
+ },
+ {
+  "check": "0.2 s dwell is clamped to 3 s readable minimum",
+  "pass": true,
+  "detail": "4.8"
+ },
+ {
+  "check": "autoAdvanceEnabled=false never advances",
+  "pass": true,
+  "detail": "1"
+ },
+ {
+  "check": "Right/Right/Left -> scene 2",
+  "pass": true,
+  "detail": "2"
+ },
+ {
+  "check": "Space toggles pause",
+  "pass": true,
+  "detail": "True"
+ },
+ {
+  "check": "Tab moves visible focus to the first control (Previous)",
+  "pass": true,
+  "detail": "1"
+ },
+ {
+  "check": "Tab, Tab, Enter activates Pause",
+  "pass": true,
+  "detail": "(2, True)"
+ },
+ {
+  "check": "persona 2 maps name/line/colour atomically",
+  "pass": true,
+  "detail": "('Balance Seeker', 'FF385DF4')"
+ },
+ {
+  "check": "unknown persona index falls back to row 0",
+  "pass": true,
+  "detail": "Route Reader"
+ },
+ {
+  "check": "negative count clamped to 0",
+  "pass": true,
+  "detail": "0"
+ },
+ {
+  "check": "fr-FR grouping",
+  "pass": true,
+  "detail": "'1\\xa0234\\xa0567'"
+ },
+ {
+  "check": "es-ES does not group 4 digits",
+  "pass": true,
+  "detail": "1320"
+ },
+ {
+  "check": "hero counts up from 0 to the bound value (number layer is transparent until frame 12)",
+  "pass": true,
+  "detail": "['86', '0', '15', '17', '32', '34', '50', '52', '67', '69', '84', '86', '86']"
+ },
+ {
+  "check": "reduced motion shows final value immediately",
+  "pass": true,
+  "detail": "86"
+ },
+ {
+  "check": "Share tap pauses and marks sharing",
+  "pass": true,
+  "detail": "(True, True)"
+ },
+ {
+  "check": "dragging the hold does not navigate",
+  "pass": true,
+  "detail": "1"
+ }
+]

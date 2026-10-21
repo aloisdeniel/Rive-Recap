@@ -1,0 +1,1019 @@
+{
+  "schema": 1,
+  "artboard": "Recap",
+  "stateMachine": "Recap",
+  "viewModel": {
+    "name": "Default",
+    "viewModel": "UserRecap",
+    "properties": [
+      {
+        "name": "userName",
+        "path": "userName",
+        "type": "string",
+        "value": "Alex",
+        "changed": false
+      },
+      {
+        "name": "year",
+        "path": "year",
+        "type": "number",
+        "value": 2026,
+        "changed": false
+      },
+      {
+        "name": "periodLabel",
+        "path": "periodLabel",
+        "type": "string",
+        "value": "January 1–December 31, 2026",
+        "changed": false
+      },
+      {
+        "name": "locale",
+        "path": "locale",
+        "type": "string",
+        "value": "en-GB",
+        "changed": false
+      },
+      {
+        "name": "totalSaved",
+        "path": "totalSaved",
+        "type": "number",
+        "value": 1248,
+        "changed": false
+      },
+      {
+        "name": "deposits",
+        "path": "deposits",
+        "type": "number",
+        "value": 96,
+        "changed": false
+      },
+      {
+        "name": "goalsCompleted",
+        "path": "goalsCompleted",
+        "type": "number",
+        "value": 3,
+        "changed": false
+      },
+      {
+        "name": "roundupsSaved",
+        "path": "roundupsSaved",
+        "type": "number",
+        "value": 148.5,
+        "changed": false
+      },
+      {
+        "name": "activeMonths",
+        "path": "activeMonths",
+        "type": "number",
+        "value": 10,
+        "changed": false
+      },
+      {
+        "name": "largestGoalAmount",
+        "path": "largestGoalAmount",
+        "type": "number",
+        "value": 420,
+        "changed": false
+      },
+      {
+        "name": "goalJars",
+        "path": "goalJars",
+        "type": "number",
+        "value": 5,
+        "changed": false
+      },
+      {
+        "name": "personaIndex",
+        "path": "personaIndex",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "personaName",
+        "path": "personaName",
+        "type": "string",
+        "value": "Steady Builder",
+        "changed": false
+      },
+      {
+        "name": "personaDescription",
+        "path": "personaDescription",
+        "type": "string",
+        "value": "Small steps, your own pace.",
+        "changed": false
+      },
+      {
+        "name": "personaColor",
+        "path": "personaColor",
+        "type": "color",
+        "value": "FFBFF4D4",
+        "changed": false
+      },
+      {
+        "name": "autoAdvanceSeconds",
+        "path": "autoAdvanceSeconds",
+        "type": "number",
+        "value": 7,
+        "changed": false
+      },
+      {
+        "name": "autoAdvanceEnabled",
+        "path": "autoAdvanceEnabled",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "isPaused",
+        "path": "isPaused",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "reducedMotion",
+        "path": "reducedMotion",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "soundEnabled",
+        "path": "soundEnabled",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "currentScreen",
+        "path": "currentScreen",
+        "type": "number",
+        "value": 2,
+        "changed": true
+      },
+      {
+        "name": "screenProgress",
+        "path": "screenProgress",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "shareIncludeName",
+        "path": "shareIncludeName",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "shareIncludeSensitiveValues",
+        "path": "shareIncludeSensitiveValues",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "continueLabel",
+        "path": "continueLabel",
+        "type": "string",
+        "value": "Continue",
+        "changed": false
+      },
+      {
+        "name": "previousLabel",
+        "path": "previousLabel",
+        "type": "string",
+        "value": "Previous",
+        "changed": false
+      },
+      {
+        "name": "pauseLabel",
+        "path": "pauseLabel",
+        "type": "string",
+        "value": "Pause",
+        "changed": false
+      },
+      {
+        "name": "playLabel",
+        "path": "playLabel",
+        "type": "string",
+        "value": "Play",
+        "changed": false
+      },
+      {
+        "name": "shareLabel",
+        "path": "shareLabel",
+        "type": "string",
+        "value": "Share",
+        "changed": false
+      },
+      {
+        "name": "replayLabel",
+        "path": "replayLabel",
+        "type": "string",
+        "value": "Replay",
+        "changed": false
+      },
+      {
+        "name": "introHeadline",
+        "path": "introHeadline",
+        "type": "string",
+        "value": "Your 2026 on Stash",
+        "changed": false
+      },
+      {
+        "name": "introSupport",
+        "path": "introSupport",
+        "type": "string",
+        "value": "A year, uniquely yours.",
+        "changed": false
+      },
+      {
+        "name": "summaryHeadline",
+        "path": "summaryHeadline",
+        "type": "string",
+        "value": "A little year. A lot of you.",
+        "changed": false
+      },
+      {
+        "name": "summarySupport",
+        "path": "summarySupport",
+        "type": "string",
+        "value": "Take a piece of your year with you.",
+        "changed": false
+      },
+      {
+        "name": "emptyHeadline",
+        "path": "emptyHeadline",
+        "type": "string",
+        "value": "Every story starts somewhere.",
+        "changed": false
+      },
+      {
+        "name": "emptySupport",
+        "path": "emptySupport",
+        "type": "string",
+        "value": "Your next chapter is waiting.",
+        "changed": false
+      },
+      {
+        "name": "personaLabel",
+        "path": "personaLabel",
+        "type": "string",
+        "value": "Your personal style",
+        "changed": false
+      },
+      {
+        "name": "showScreen1",
+        "path": "showScreen1",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen2",
+        "path": "showScreen2",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen3",
+        "path": "showScreen3",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen4",
+        "path": "showScreen4",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen5",
+        "path": "showScreen5",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen6",
+        "path": "showScreen6",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen7",
+        "path": "showScreen7",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen8",
+        "path": "showScreen8",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen9",
+        "path": "showScreen9",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen10",
+        "path": "showScreen10",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "screen2Headline",
+        "path": "screen2Headline",
+        "type": "string",
+        "value": "Little by little, you built this.",
+        "changed": false
+      },
+      {
+        "name": "screen2Support",
+        "path": "screen2Support",
+        "type": "string",
+        "value": "Your deposits, on your terms.",
+        "changed": false
+      },
+      {
+        "name": "screen2Unit",
+        "path": "screen2Unit",
+        "type": "string",
+        "value": "EUR saved",
+        "changed": false
+      },
+      {
+        "name": "screen3Headline",
+        "path": "screen3Headline",
+        "type": "string",
+        "value": "Small moves added up.",
+        "changed": false
+      },
+      {
+        "name": "screen3Support",
+        "path": "screen3Support",
+        "type": "string",
+        "value": "Every contribution had a place.",
+        "changed": false
+      },
+      {
+        "name": "screen3Unit",
+        "path": "screen3Unit",
+        "type": "string",
+        "value": "deposits",
+        "changed": false
+      },
+      {
+        "name": "screen4Headline",
+        "path": "screen4Headline",
+        "type": "string",
+        "value": "You made room for a yes.",
+        "changed": false
+      },
+      {
+        "name": "screen4Support",
+        "path": "screen4Support",
+        "type": "string",
+        "value": "Plans turned into possibilities.",
+        "changed": false
+      },
+      {
+        "name": "screen4Unit",
+        "path": "screen4Unit",
+        "type": "string",
+        "value": "goals completed",
+        "changed": false
+      },
+      {
+        "name": "screen5Headline",
+        "path": "screen5Headline",
+        "type": "string",
+        "value": "Change made a difference.",
+        "changed": false
+      },
+      {
+        "name": "screen5Support",
+        "path": "screen5Support",
+        "type": "string",
+        "value": "Optional roundups found their own rhythm.",
+        "changed": false
+      },
+      {
+        "name": "screen5Unit",
+        "path": "screen5Unit",
+        "type": "string",
+        "value": "EUR from roundups",
+        "changed": false
+      },
+      {
+        "name": "screen6Headline",
+        "path": "screen6Headline",
+        "type": "string",
+        "value": "A habit at your pace.",
+        "changed": false
+      },
+      {
+        "name": "screen6Support",
+        "path": "screen6Support",
+        "type": "string",
+        "value": "Some months looked different. That's okay.",
+        "changed": false
+      },
+      {
+        "name": "screen6Unit",
+        "path": "screen6Unit",
+        "type": "string",
+        "value": "active months",
+        "changed": false
+      },
+      {
+        "name": "screen7Headline",
+        "path": "screen7Headline",
+        "type": "string",
+        "value": "A plan became real.",
+        "changed": false
+      },
+      {
+        "name": "screen7Support",
+        "path": "screen7Support",
+        "type": "string",
+        "value": "Your completed goal: weekend away.",
+        "changed": false
+      },
+      {
+        "name": "screen7Unit",
+        "path": "screen7Unit",
+        "type": "string",
+        "value": "EUR goal funded",
+        "changed": false
+      },
+      {
+        "name": "screen8Headline",
+        "path": "screen8Headline",
+        "type": "string",
+        "value": "A little space for what matters.",
+        "changed": false
+      },
+      {
+        "name": "screen8Support",
+        "path": "screen8Support",
+        "type": "string",
+        "value": "Your plans each got a place.",
+        "changed": false
+      },
+      {
+        "name": "screen8Unit",
+        "path": "screen8Unit",
+        "type": "string",
+        "value": "goal jars",
+        "changed": false
+      },
+      {
+        "name": "currencyCode",
+        "path": "currencyCode",
+        "type": "string",
+        "value": "EUR",
+        "changed": false
+      },
+      {
+        "name": "completedGoalName",
+        "path": "completedGoalName",
+        "type": "string",
+        "value": "Weekend away",
+        "changed": false
+      },
+      {
+        "name": "navNext",
+        "path": "navNext",
+        "type": "trigger",
+        "changed": true
+      },
+      {
+        "name": "navPrev",
+        "path": "navPrev",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "togglePause",
+        "path": "togglePause",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "replay",
+        "path": "replay",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "isSharing",
+        "path": "isSharing",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "appBackgrounded",
+        "path": "appBackgrounded",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "personaAutoMap",
+        "path": "personaAutoMap",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "_navDir",
+        "path": "_navDir",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_visibleCount",
+        "path": "_visibleCount",
+        "type": "number",
+        "value": 10,
+        "changed": false
+      },
+      {
+        "name": "_visibleIndex",
+        "path": "_visibleIndex",
+        "type": "number",
+        "value": 2,
+        "changed": true
+      },
+      {
+        "name": "_canGoBack",
+        "path": "_canGoBack",
+        "type": "boolean",
+        "value": true,
+        "changed": true
+      },
+      {
+        "name": "_canGoNext",
+        "path": "_canGoNext",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "_isSummary",
+        "path": "_isSummary",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_emptyState",
+        "path": "_emptyState",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_personaKnown",
+        "path": "_personaKnown",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "_personaSlot",
+        "path": "_personaSlot",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_frozen",
+        "path": "_frozen",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_holding",
+        "path": "_holding",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_finished",
+        "path": "_finished",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_pauseButtonLabel",
+        "path": "_pauseButtonLabel",
+        "type": "string",
+        "value": "Pause",
+        "changed": false
+      },
+      {
+        "name": "_focus",
+        "path": "_focus",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_chromeColor",
+        "path": "_chromeColor",
+        "type": "color",
+        "value": "FFFFF4DD",
+        "changed": false
+      },
+      {
+        "name": "_chromeOnColor",
+        "path": "_chromeOnColor",
+        "type": "color",
+        "value": "FF241B3C",
+        "changed": false
+      },
+      {
+        "name": "_stageX",
+        "path": "_stageX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_stageY",
+        "path": "_stageY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_stageScale",
+        "path": "_stageScale",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_viewW",
+        "path": "_viewW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_viewH",
+        "path": "_viewH",
+        "type": "number",
+        "value": 844,
+        "changed": false
+      },
+      {
+        "name": "_chromeInset",
+        "path": "_chromeInset",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_handoffFwd",
+        "path": "_handoffFwd",
+        "type": "trigger",
+        "changed": true
+      },
+      {
+        "name": "_handoffBack",
+        "path": "_handoffBack",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_coinNudge",
+        "path": "_coinNudge",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_evtScreenChanged",
+        "path": "_evtScreenChanged",
+        "type": "trigger",
+        "changed": true
+      },
+      {
+        "name": "_evtRecapFinished",
+        "path": "_evtRecapFinished",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_evtShareTapped",
+        "path": "_evtShareTapped",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_count1",
+        "path": "_count1",
+        "type": "number",
+        "value": 0.87500006,
+        "changed": true
+      },
+      {
+        "name": "_count2",
+        "path": "_count2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count3",
+        "path": "_count3",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count4",
+        "path": "_count4",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count5",
+        "path": "_count5",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count6",
+        "path": "_count6",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count7",
+        "path": "_count7",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count8",
+        "path": "_count8",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count9",
+        "path": "_count9",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count10",
+        "path": "_count10",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      }
+    ]
+  },
+  "globals": [],
+  "nested": [
+    {
+      "path": "Toy coin art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Handoff coin art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Riding coin",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 0",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 1",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 2",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 3",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 4",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 5",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 6",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Pile coin 7",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Share card",
+      "artboard": "ShareCard",
+      "inherits": true
+    },
+    {
+      "path": "Share card/Empty coin",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Share card/Card coin",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 10 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 9 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 8 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 7 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 6 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 5 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 4 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 3 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 2 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 1 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Spiral coin 0 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 7 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 6 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 5 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 4 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 3 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 2 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 1 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Roundup coin 0 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Merged coin art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Zigzag coin art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 6 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 5 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 4 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 3 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 2 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 1 art",
+      "artboard": "Coin",
+      "inherits": true
+    },
+    {
+      "path": "Drop coin 0 art",
+      "artboard": "Coin",
+      "inherits": true
+    }
+  ]
+}

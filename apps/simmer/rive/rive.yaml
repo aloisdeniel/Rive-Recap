@@ -1,0 +1,5 @@
+name: simmer-recap
+main: Simmer Recap
+logs:
+  file: build/rive.log
+  problems: build/problems.log

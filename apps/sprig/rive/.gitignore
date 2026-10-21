@@ -1,0 +1,3 @@
+build/*
+!build/sprig-recap.riv
+!build/sprig-recap.rev

@@ -1,0 +1,9 @@
+name: kiln-recap
+main: KilnRecap
+exclude:
+  - tools
+  - captures
+  - fixtures
+logs:
+  file: build/rive.log
+  problems: build/problems.log

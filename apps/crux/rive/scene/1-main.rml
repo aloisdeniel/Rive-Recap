@@ -1,0 +1,953 @@
+<Rive version="1" kind="fragment">
+  <Artboard defaultStateMachineId="0:21" viewModelId="0:90000" viewModelInstanceId="0:89999" width="390" height="844" x="0" y="0" styleId="0:22" name="Crux Recap" id="0:20">
+    <LayoutComponentStyle name="Artboard Style" id="0:22"/>
+    <LayoutComponent width="390" height="844" styleId="0:6351" name="Root" id="0:6352">
+      <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fill" flexDirectionValue="column" name="Style" id="0:6351"/>
+      <FocusData canFocus="false" name="Keys" id="0:6348"/>
+      <SemanticData role="group" label="Crux recap" name="Semantics" id="0:6354">
+        <DataBindContext sourcePathIds="0:90000-0:90084" propertyKey="984" id="0:6353"/>
+      </SemanticData>
+      <LayoutComponent width="390" height="64" styleId="0:6079" name="Top Bar" id="0:6080">
+        <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" flexDirectionValue="row" layoutAlignmentType="centerLeft" gapHorizontal="14" gapHorizontalUnitsValue="points" paddingLeft="20" paddingLeftUnitsValue="points" paddingRight="20" paddingRightUnitsValue="points" name="Style" id="0:6079"/>
+        <Fill name="Fill" id="0:6081">
+          <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6082"/>
+        </Fill>
+        <LayoutComponent width="390" height="2" styleId="0:6075" name="Rule" id="0:6076">
+          <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fixed" name="Style" id="0:6075"/>
+          <Fill name="Fill" id="0:6077">
+            <SolidColor colorValue="FF20221F" name="Color" id="0:6078"/>
+          </Fill>
+        </LayoutComponent>
+        <LayoutComponent width="66" height="24" styleId="0:5822" name="Wordmark Slot" id="0:5823">
+          <LayoutComponentStyle layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:5822"/>
+          <NestedArtboardLeaf artboardId="0:60" fit="contain" name="Wordmark" id="0:5821"/>
+        </LayoutComponent>
+        <LayoutComponent width="40" height="4" styleId="0:6064" name="Progress" id="0:6065">
+          <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" flexDirectionValue="row" gapHorizontal="4" gapHorizontalUnitsValue="points" name="Style" id="0:6064"/>
+          <LayoutComponent width="2" height="4" styleId="0:5831" clip="true" name="Segment 1" id="0:5845">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 1 Style" id="0:5831">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5832" id="0:5844"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5846">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5847"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5824" name="Segment 1 Fill" id="0:5825">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5824"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5828"/>
+              <Fill name="Fill" id="0:5826">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5827"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5829" id="0:5830"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5855" clip="true" name="Segment 2" id="0:5869">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 2 Style" id="0:5855">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5856" id="0:5868"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5870">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5871"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5848" name="Segment 2 Fill" id="0:5849">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5848"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5852"/>
+              <Fill name="Fill" id="0:5850">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5851"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5853" id="0:5854"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5879" clip="true" name="Segment 3" id="0:5893">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 3 Style" id="0:5879">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5880" id="0:5892"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5894">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5895"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5872" name="Segment 3 Fill" id="0:5873">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5872"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5876"/>
+              <Fill name="Fill" id="0:5874">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5875"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5877" id="0:5878"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5903" clip="true" name="Segment 4" id="0:5917">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 4 Style" id="0:5903">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5904" id="0:5916"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5918">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5919"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5896" name="Segment 4 Fill" id="0:5897">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5896"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5900"/>
+              <Fill name="Fill" id="0:5898">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5899"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5901" id="0:5902"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5927" clip="true" name="Segment 5" id="0:5941">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 5 Style" id="0:5927">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5928" id="0:5940"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5942">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5943"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5920" name="Segment 5 Fill" id="0:5921">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5920"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5924"/>
+              <Fill name="Fill" id="0:5922">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5923"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5925" id="0:5926"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5951" clip="true" name="Segment 6" id="0:5965">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 6 Style" id="0:5951">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5952" id="0:5964"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5966">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5967"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5944" name="Segment 6 Fill" id="0:5945">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5944"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5948"/>
+              <Fill name="Fill" id="0:5946">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5947"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5949" id="0:5950"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5975" clip="true" name="Segment 7" id="0:5989">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 7 Style" id="0:5975">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:5976" id="0:5988"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:5990">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:5991"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5968" name="Segment 7 Fill" id="0:5969">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5968"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5972"/>
+              <Fill name="Fill" id="0:5970">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5971"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5973" id="0:5974"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:5999" clip="true" name="Segment 8" id="0:6013">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 8 Style" id="0:5999">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:6000" id="0:6012"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:6014">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:6015"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:5992" name="Segment 8 Fill" id="0:5993">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:5992"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:5996"/>
+              <Fill name="Fill" id="0:5994">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:5995"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:5997" id="0:5998"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:6023" clip="true" name="Segment 9" id="0:6037">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 9 Style" id="0:6023">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:6024" id="0:6036"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:6038">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:6039"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:6016" name="Segment 9 Fill" id="0:6017">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6016"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:6020"/>
+              <Fill name="Fill" id="0:6018">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:6019"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:6021" id="0:6022"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="2" height="4" styleId="0:6047" clip="true" name="Segment 10" id="0:6061">
+            <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" cornerRadiusTL="2" name="Segment 10 Style" id="0:6047">
+              <DataBindContext sourcePathIds="0:90000-0:90081" propertyKey="596" converterId="0:6048" id="0:6060"/>
+            </LayoutComponentStyle>
+            <Fill name="Fill" id="0:6062">
+              <SolidColor colorValue="2D20221F" name="Color" id="0:6063"/>
+            </Fill>
+            <LayoutComponent width="2" height="4" styleId="0:6040" name="Segment 10 Fill" id="0:6041">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6040"/>
+              <ComponentOrigin originX="0" originY="0.5" name="Origin" id="0:6044"/>
+              <Fill name="Fill" id="0:6042">
+                <SolidColor colorValue="FF20221F" name="Color" id="0:6043"/>
+              </Fill>
+              <DataBindContext sourcePathIds="0:90000-0:90083" propertyKey="16" converterId="0:6045" id="0:6046"/>
+            </LayoutComponent>
+          </LayoutComponent>
+          <SemanticData role="text" isLiveRegion="true" label="Story progress" name="Semantics" id="0:6067">
+            <DataBindContext sourcePathIds="0:90000-0:90084" propertyKey="984" id="0:6066"/>
+          </SemanticData>
+        </LayoutComponent>
+        <Text x="0" y="0" sizingValue="autoWidth" alignValue="left" name="Year" id="0:6068">
+          <LayoutParticipant layoutWidthScaleType="hug" layoutHeightScaleType="hug" name="Year Layout" id="0:6074"/>
+          <TextStylePaint fontSize="13" lineHeight="16" fontAssetId="0:93" familyName="IBM Plex Mono" styleName="Medium" name="Year Style" id="0:6070">
+            <Fill name="Fill" id="0:6071">
+              <SolidColor colorValue="FF20221F" name="Ink" id="0:6069"/>
+            </Fill>
+          </TextStylePaint>
+          <TextValueRun styleId="0:6070" text="2026" name="yearDisplay" id="0:6072">
+            <DataBindContext sourcePathIds="0:90000-0:90078" propertyKey="268" id="0:6073"/>
+          </TextValueRun>
+        </Text>
+      </LayoutComponent>
+      <LayoutComponent width="390" height="600" styleId="0:6349" name="Story Area" id="0:6350">
+        <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6349"/>
+      </LayoutComponent>
+      <LayoutComponent width="390" height="104" styleId="0:6336" name="Bottom Bar" id="0:6337">
+        <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" flexDirectionValue="row" layoutAlignmentType="centerLeft" gapHorizontal="10" gapHorizontalUnitsValue="points" paddingLeft="20" paddingLeftUnitsValue="points" paddingRight="20" paddingRightUnitsValue="points" paddingBottom="18" paddingBottomUnitsValue="points" name="Style" id="0:6336"/>
+        <LayoutComponent width="52" height="52" styleId="0:6118" name="Previous" id="0:6119">
+          <LayoutComponentStyle cornerRadiusTL="26" layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6118"/>
+          <FocusData name="Focus" id="0:6124"/>
+          <SemanticData role="button" label="Previous" name="Semantics" id="0:6117">
+            <DataBindContext sourcePathIds="0:90000-0:90026" propertyKey="983" id="0:6116"/>
+          </SemanticData>
+          <Fill name="Fill" id="0:6120">
+            <SolidColor colorValue="FF20221F" name="Color" id="0:6121"/>
+          </Fill>
+          <Stroke thickness="2" cap="butt" join="round" name="Stroke" id="0:6122">
+            <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6123"/>
+          </Stroke>
+          <LayoutComponent width="62" height="62" styleId="0:6093" name="Previous Focus Ring" id="0:6094">
+            <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="-5" positionTopUnitsValue="points" positionLeft="-5" positionLeftUnitsValue="points" positionRight="-5" positionRightUnitsValue="points" positionBottom="-5" positionBottomUnitsValue="points" cornerRadiusTL="31" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6093"/>
+            <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:6095">
+              <SolidColor colorValue="FF385DF4" name="Color" id="0:6096"/>
+            </Stroke>
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="18" converterId="0:6097" id="0:6115"/>
+          </LayoutComponent>
+          <Node name="Previous Icon" x="26" y="26" id="0:6125">
+            <Shape x="0" y="0" name="Back" scaleX="1" scaleY="1" id="0:6092">
+              <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6083">
+                <StraightVertex x="9" y="0" id="0:6084"/>
+                <StraightVertex x="-8" y="0" id="0:6085"/>
+              </PointsPath>
+              <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6086">
+                <StraightVertex x="-1" y="-7" id="0:6087"/>
+                <StraightVertex x="-8" y="0" id="0:6088"/>
+                <StraightVertex x="-1" y="7" id="0:6089"/>
+              </PointsPath>
+              <Stroke thickness="3" cap="square" join="miter" name="Stroke" id="0:6090">
+                <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6091"/>
+              </Stroke>
+            </Shape>
+          </Node>
+        </LayoutComponent>
+        <LayoutComponent width="52" height="52" styleId="0:6218" name="Middle Slot" id="0:6219">
+          <LayoutComponentStyle layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6218"/>
+          <LayoutComponent width="52" height="52" styleId="0:6210" name="Replay" id="0:6211">
+            <LayoutComponentStyle cornerRadiusTL="26" layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6210"/>
+            <FocusData name="Focus" id="0:6216"/>
+            <SemanticData role="button" label="Replay" name="Semantics" id="0:6209">
+              <DataBindContext sourcePathIds="0:90000-0:90030" propertyKey="983" id="0:6208"/>
+            </SemanticData>
+            <Fill name="Fill" id="0:6212">
+              <SolidColor colorValue="FF20221F" name="Color" id="0:6213"/>
+            </Fill>
+            <Stroke thickness="2" cap="butt" join="round" name="Stroke" id="0:6214">
+              <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6215"/>
+            </Stroke>
+            <LayoutComponent width="62" height="62" styleId="0:6185" name="Replay Focus Ring" id="0:6186">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="-5" positionTopUnitsValue="points" positionLeft="-5" positionLeftUnitsValue="points" positionRight="-5" positionRightUnitsValue="points" positionBottom="-5" positionBottomUnitsValue="points" cornerRadiusTL="31" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6185"/>
+              <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:6187">
+                <SolidColor colorValue="FF385DF4" name="Color" id="0:6188"/>
+              </Stroke>
+              <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="18" converterId="0:6189" id="0:6207"/>
+            </LayoutComponent>
+            <Node name="Replay Icon" x="26" y="26" id="0:6217">
+              <Shape name="Loop" id="0:6177">
+                <Ellipse width="20" height="20" name="Path" id="0:6174"/>
+                <Stroke thickness="3" cap="round" name="Stroke" id="0:6176">
+                  <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6175"/>
+                  <TrimPath start="0.08" end="0.86" offset="0" modeValue="sequential" name="Open" id="0:6173"/>
+                </Stroke>
+              </Shape>
+              <Shape name="Head" id="0:6184">
+                <PointsPath isClosed="true" isClockwise="true" name="Path" id="0:6178">
+                  <StraightVertex x="6" y="-12" radius="1" id="0:6179"/>
+                  <StraightVertex x="12" y="-4" radius="1" id="0:6180"/>
+                  <StraightVertex x="2" y="-3" radius="1" id="0:6181"/>
+                </PointsPath>
+                <Fill name="Fill" id="0:6182">
+                  <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6183"/>
+                </Fill>
+              </Shape>
+            </Node>
+          </LayoutComponent>
+          <LayoutComponent width="52" height="52" styleId="0:6165" name="Pause" id="0:6166">
+            <LayoutComponentStyle cornerRadiusTL="26" layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6165"/>
+            <FocusData name="Focus" id="0:6171"/>
+            <SemanticData role="button" label="Pause" name="Semantics" id="0:6164">
+              <DataBindContext sourcePathIds="0:90000-0:90085" propertyKey="983" id="0:6163"/>
+            </SemanticData>
+            <Fill name="Fill" id="0:6167">
+              <SolidColor colorValue="FF20221F" name="Color" id="0:6168"/>
+            </Fill>
+            <Stroke thickness="2" cap="butt" join="round" name="Stroke" id="0:6169">
+              <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6170"/>
+            </Stroke>
+            <LayoutComponent width="62" height="62" styleId="0:6140" name="Pause Focus Ring" id="0:6141">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="-5" positionTopUnitsValue="points" positionLeft="-5" positionLeftUnitsValue="points" positionRight="-5" positionRightUnitsValue="points" positionBottom="-5" positionBottomUnitsValue="points" cornerRadiusTL="31" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6140"/>
+              <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:6142">
+                <SolidColor colorValue="FF385DF4" name="Color" id="0:6143"/>
+              </Stroke>
+              <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="18" converterId="0:6144" id="0:6162"/>
+            </LayoutComponent>
+            <Node name="Pause Icon" x="26" y="26" id="0:6172">
+              <Node name="Pause Glyph" id="0:6131">
+                <Shape name="Bars" id="0:6130">
+                  <Rectangle width="5" height="18" x="-5" name="Path" id="0:6126"/>
+                  <Rectangle width="5" height="18" x="5" name="Path" id="0:6127"/>
+                  <Fill name="Fill" id="0:6128">
+                    <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6129"/>
+                  </Fill>
+                </Shape>
+              </Node>
+              <Node name="Play Glyph" opacity="0" id="0:6139">
+                <Shape name="Play" id="0:6138">
+                  <PointsPath isClosed="true" isClockwise="true" name="Path" id="0:6132">
+                    <StraightVertex x="-5" y="-9" radius="1.5" id="0:6133"/>
+                    <StraightVertex x="9" y="0" radius="1.5" id="0:6134"/>
+                    <StraightVertex x="-5" y="9" radius="1.5" id="0:6135"/>
+                  </PointsPath>
+                  <Fill name="Fill" id="0:6136">
+                    <SolidColor colorValue="FFDCFF3F" name="Color" id="0:6137"/>
+                  </Fill>
+                </Shape>
+              </Node>
+            </Node>
+          </LayoutComponent>
+        </LayoutComponent>
+        <LayoutComponent width="40" height="56" styleId="0:6334" name="Pill Slot" id="0:6335">
+          <LayoutComponentStyle layoutWidthScaleType="fill" layoutHeightScaleType="fixed" name="Style" id="0:6334"/>
+          <LayoutComponent width="40" height="56" styleId="0:6305" name="Share" id="0:6306">
+            <LayoutComponentStyle cornerRadiusTL="28" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" flexDirectionValue="row" layoutAlignmentType="centerLeft" gapHorizontal="10" gapHorizontalUnitsValue="points" paddingLeft="24" paddingLeftUnitsValue="points" paddingRight="20" paddingRightUnitsValue="points" id="0:6305"/>
+            <FocusData name="Focus" id="0:6311"/>
+            <SemanticData role="button" label="Share" name="Semantics" id="0:6304">
+              <DataBindContext sourcePathIds="0:90000-0:90029" propertyKey="983" id="0:6303"/>
+            </SemanticData>
+            <Fill name="Fill" id="0:6307">
+              <SolidColor colorValue="FFDCFF3F" name="Color" id="0:6308"/>
+            </Fill>
+            <Stroke thickness="2" cap="butt" join="round" name="Stroke" id="0:6309">
+              <SolidColor colorValue="FF20221F" name="Color" id="0:6310"/>
+            </Stroke>
+            <LayoutComponent width="10" height="66" styleId="0:6280" name="Share Focus Ring" id="0:6281">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="-5" positionTopUnitsValue="points" positionLeft="-5" positionLeftUnitsValue="points" positionRight="-5" positionRightUnitsValue="points" positionBottom="-5" positionBottomUnitsValue="points" cornerRadiusTL="33" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6280"/>
+              <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:6282">
+                <SolidColor colorValue="FF385DF4" name="Color" id="0:6283"/>
+              </Stroke>
+              <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="18" converterId="0:6284" id="0:6302"/>
+            </LayoutComponent>
+            <Text x="0" y="0" sizingValue="autoWidth" alignValue="left" overflowValue="ellipsis" name="Share Label" id="0:6227">
+              <LayoutParticipant layoutWidthScaleType="fill" layoutHeightScaleType="hug" name="Label Layout" id="0:6233"/>
+              <TextStylePaint fontSize="15" lineHeight="18" fontAssetId="0:93" familyName="IBM Plex Mono" styleName="Medium" name="Share Label Style" id="0:6229">
+                <Fill name="Fill" id="0:6230">
+                  <SolidColor colorValue="FF20221F" name="Ink" id="0:6228"/>
+                </Fill>
+              </TextStylePaint>
+              <TextValueRun styleId="0:6229" text="Share" name="shareLabel" id="0:6231">
+                <DataBindContext sourcePathIds="0:90000-0:90029" propertyKey="268" id="0:6232"/>
+              </TextValueRun>
+            </Text>
+            <LayoutComponent width="24" height="24" styleId="0:6332" name="Share Glyph" id="0:6333">
+              <LayoutComponentStyle layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6332"/>
+              <Node name="Share Art" x="12" y="12" id="0:6331">
+                <Shape name="Up" id="0:6322">
+                  <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6313">
+                    <StraightVertex x="0" y="6" id="0:6314"/>
+                    <StraightVertex x="0" y="-9" id="0:6315"/>
+                  </PointsPath>
+                  <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6316">
+                    <StraightVertex x="-6" y="-3" id="0:6317"/>
+                    <StraightVertex x="0" y="-9" id="0:6318"/>
+                    <StraightVertex x="6" y="-3" id="0:6319"/>
+                  </PointsPath>
+                  <Stroke thickness="3" cap="square" join="miter" name="Stroke" id="0:6320">
+                    <SolidColor colorValue="FF20221F" name="Color" id="0:6321"/>
+                  </Stroke>
+                </Shape>
+                <Shape name="Tray" id="0:6330">
+                  <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6323">
+                    <StraightVertex x="-9" y="2" id="0:6324"/>
+                    <StraightVertex x="-9" y="10" id="0:6325"/>
+                    <StraightVertex x="9" y="10" id="0:6326"/>
+                    <StraightVertex x="9" y="2" id="0:6327"/>
+                  </PointsPath>
+                  <Stroke thickness="3" cap="butt" join="miter" name="Stroke" id="0:6328">
+                    <SolidColor colorValue="FF20221F" name="Color" id="0:6329"/>
+                  </Stroke>
+                </Shape>
+              </Node>
+            </LayoutComponent>
+          </LayoutComponent>
+          <LayoutComponent width="40" height="56" styleId="0:6259" name="Continue" id="0:6260">
+            <LayoutComponentStyle cornerRadiusTL="28" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" flexDirectionValue="row" layoutAlignmentType="centerLeft" gapHorizontal="10" gapHorizontalUnitsValue="points" paddingLeft="24" paddingLeftUnitsValue="points" paddingRight="20" paddingRightUnitsValue="points" id="0:6259"/>
+            <FocusData name="Focus" id="0:6265"/>
+            <SemanticData role="button" label="Continue" name="Semantics" id="0:6258">
+              <DataBindContext sourcePathIds="0:90000-0:90025" propertyKey="983" id="0:6257"/>
+            </SemanticData>
+            <Fill name="Fill" id="0:6261">
+              <SolidColor colorValue="FF20221F" name="Color" id="0:6262"/>
+            </Fill>
+            <Stroke thickness="2" cap="butt" join="round" name="Stroke" id="0:6263">
+              <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6264"/>
+            </Stroke>
+            <LayoutComponent width="10" height="66" styleId="0:6234" name="Continue Focus Ring" id="0:6235">
+              <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="-5" positionTopUnitsValue="points" positionLeft="-5" positionLeftUnitsValue="points" positionRight="-5" positionRightUnitsValue="points" positionBottom="-5" positionBottomUnitsValue="points" cornerRadiusTL="33" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6234"/>
+              <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:6236">
+                <SolidColor colorValue="FF385DF4" name="Color" id="0:6237"/>
+              </Stroke>
+              <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="18" converterId="0:6238" id="0:6256"/>
+            </LayoutComponent>
+            <Text x="0" y="0" sizingValue="autoWidth" alignValue="left" overflowValue="ellipsis" name="Continue Label" wrapValue="noWrap" id="0:6220">
+              <LayoutParticipant layoutWidthScaleType="fill" layoutHeightScaleType="hug" name="Label Layout" id="0:6226"/>
+              <TextStylePaint fontSize="15" lineHeight="18" fontAssetId="0:93" familyName="IBM Plex Mono" styleName="Medium" name="Continue Label Style" id="0:6222">
+                <Fill name="Fill" id="0:6223">
+                  <SolidColor colorValue="FFF1EEE7" name="Ink" id="0:6221"/>
+                </Fill>
+              </TextStylePaint>
+              <TextValueRun styleId="0:6222" text="Continue" name="continueLabel" id="0:6224">
+                <DataBindContext sourcePathIds="0:90000-0:90025" propertyKey="268" id="0:6225"/>
+              </TextValueRun>
+            </Text>
+            <LayoutComponent width="24" height="24" styleId="0:6278" name="Continue Arrow" id="0:6279">
+              <LayoutComponentStyle layoutWidthScaleType="fixed" layoutHeightScaleType="fixed" name="Style" id="0:6278"/>
+              <Node name="Arrow Art" x="12" y="12" id="0:6277">
+                <Shape x="0" y="0" name="Arrow" scaleX="1" scaleY="1" id="0:6276">
+                  <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6267">
+                    <StraightVertex x="-9" y="0" id="0:6268"/>
+                    <StraightVertex x="8" y="0" id="0:6269"/>
+                  </PointsPath>
+                  <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:6270">
+                    <StraightVertex x="1" y="-7" id="0:6271"/>
+                    <StraightVertex x="8" y="0" id="0:6272"/>
+                    <StraightVertex x="1" y="7" id="0:6273"/>
+                  </PointsPath>
+                  <Stroke thickness="3" cap="square" join="miter" name="Stroke" id="0:6274">
+                    <SolidColor colorValue="FFDCFF3F" name="Color" id="0:6275"/>
+                  </Stroke>
+                </Shape>
+              </Node>
+            </LayoutComponent>
+          </LayoutComponent>
+        </LayoutComponent>
+      </LayoutComponent>
+      <LayoutComponent width="390" height="844" styleId="0:6346" name="Director Box" id="0:6347">
+        <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6346"/>
+        <ScriptedLayout scriptAssetId="0:80" name="Director" id="0:6345">
+          <FocusData canTraverse="false" name="Focus" id="0:6344"/>
+        </ScriptedLayout>
+      </LayoutComponent>
+      <LayoutComponent width="390" height="844" styleId="0:6340" name="Stage Box" clip="true" id="0:6341">
+        <LayoutComponentStyle positionTypeValue="absolute" widthUnitsValue="auto" heightUnitsValue="auto" positionTop="0" positionTopUnitsValue="points" positionLeft="0" positionLeftUnitsValue="points" positionRight="0" positionRightUnitsValue="points" positionBottom="0" positionBottomUnitsValue="points" layoutWidthScaleType="fill" layoutHeightScaleType="fill" name="Style" id="0:6340"/>
+        <Fill name="Fill" id="0:6342">
+          <SolidColor colorValue="FFF1EEE7" name="Color" id="0:6343"/>
+        </Fill>
+        <NestedArtboardLeaf artboardId="0:70" fit="cover" alignmentX="0" alignmentY="-0.8" name="Stage" id="0:6339">
+          <NestedStateMachine animationId="0:71" name="Story" id="0:6338"/>
+        </NestedArtboardLeaf>
+      </LayoutComponent>
+    </LayoutComponent>
+    <Event name="screenChanged" id="0:6357">
+      <CustomPropertyNumber propertyValue="1" name="screen" id="0:6356">
+        <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="243" id="0:6355"/>
+      </CustomPropertyNumber>
+    </Event>
+    <Event name="recapFinished" id="0:6358"/>
+    <Event name="shareTapped" id="0:6359"/>
+    <StateMachine name="Recap" id="0:21">
+      <StateMachineListener targetId="0:6119" name="Previous" id="0:6370">
+        <ListenerInputType listenerTypeValue="click" id="0:6361"/>
+        <ListenerInputTypeSemantic listenerTypeValue="semanticAction" id="0:6363">
+          <SemanticInput actionType="tap" id="0:6362"/>
+        </ListenerInputTypeSemantic>
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6366">
+          <KeyboardInput keyType="enter" keyPhase="1" id="0:6364"/>
+          <KeyboardInput keyType="kpEnter" keyPhase="1" id="0:6365"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6369">
+          <BindablePropertyTrigger propertyValue="1" id="0:6368">
+            <DataBindContext sourcePathIds="0:90000-0:90094" propertyKey="686" direction="true" id="0:6367"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6166" name="Pause / Play" id="0:6380">
+        <ListenerInputType listenerTypeValue="click" id="0:6371"/>
+        <ListenerInputTypeSemantic listenerTypeValue="semanticAction" id="0:6373">
+          <SemanticInput actionType="tap" id="0:6372"/>
+        </ListenerInputTypeSemantic>
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6376">
+          <KeyboardInput keyType="enter" keyPhase="1" id="0:6374"/>
+          <KeyboardInput keyType="kpEnter" keyPhase="1" id="0:6375"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6379">
+          <BindablePropertyTrigger propertyValue="1" id="0:6378">
+            <DataBindContext sourcePathIds="0:90000-0:90095" propertyKey="686" direction="true" id="0:6377"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6211" name="Replay" id="0:6390">
+        <ListenerInputType listenerTypeValue="click" id="0:6381"/>
+        <ListenerInputTypeSemantic listenerTypeValue="semanticAction" id="0:6383">
+          <SemanticInput actionType="tap" id="0:6382"/>
+        </ListenerInputTypeSemantic>
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6386">
+          <KeyboardInput keyType="enter" keyPhase="1" id="0:6384"/>
+          <KeyboardInput keyType="kpEnter" keyPhase="1" id="0:6385"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6389">
+          <BindablePropertyTrigger propertyValue="1" id="0:6388">
+            <DataBindContext sourcePathIds="0:90000-0:90096" propertyKey="686" direction="true" id="0:6387"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6260" name="Continue" id="0:6400">
+        <ListenerInputType listenerTypeValue="click" id="0:6391"/>
+        <ListenerInputTypeSemantic listenerTypeValue="semanticAction" id="0:6393">
+          <SemanticInput actionType="tap" id="0:6392"/>
+        </ListenerInputTypeSemantic>
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6396">
+          <KeyboardInput keyType="enter" keyPhase="1" id="0:6394"/>
+          <KeyboardInput keyType="kpEnter" keyPhase="1" id="0:6395"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6399">
+          <BindablePropertyTrigger propertyValue="1" id="0:6398">
+            <DataBindContext sourcePathIds="0:90000-0:90093" propertyKey="686" direction="true" id="0:6397"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6306" name="Share" id="0:6411">
+        <ListenerInputType listenerTypeValue="click" id="0:6402"/>
+        <ListenerInputTypeSemantic listenerTypeValue="semanticAction" id="0:6404">
+          <SemanticInput actionType="tap" id="0:6403"/>
+        </ListenerInputTypeSemantic>
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6407">
+          <KeyboardInput keyType="enter" keyPhase="1" id="0:6405"/>
+          <KeyboardInput keyType="kpEnter" keyPhase="1" id="0:6406"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6410">
+          <BindablePropertyTrigger propertyValue="1" id="0:6409">
+            <DataBindContext sourcePathIds="0:90000-0:90097" propertyKey="686" direction="true" id="0:6408"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+        <ListenerFireEvent eventId="0:6359" id="0:6401"/>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6119" name="Previous Focus" id="0:6416">
+        <ListenerInputType listenerTypeValue="focus" id="0:6412"/>
+        <ListenerViewModelChange id="0:6415">
+          <BindablePropertyNumber propertyValue="1" id="0:6414">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6413"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6119" name="Previous Blur" id="0:6421">
+        <ListenerInputType listenerTypeValue="blur" id="0:6417"/>
+        <ListenerViewModelChange id="0:6420">
+          <BindablePropertyNumber propertyValue="0" id="0:6419">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6418"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6166" name="Pause Focus" id="0:6426">
+        <ListenerInputType listenerTypeValue="focus" id="0:6422"/>
+        <ListenerViewModelChange id="0:6425">
+          <BindablePropertyNumber propertyValue="2" id="0:6424">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6423"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6166" name="Pause Blur" id="0:6431">
+        <ListenerInputType listenerTypeValue="blur" id="0:6427"/>
+        <ListenerViewModelChange id="0:6430">
+          <BindablePropertyNumber propertyValue="0" id="0:6429">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6428"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6211" name="Replay Focus" id="0:6436">
+        <ListenerInputType listenerTypeValue="focus" id="0:6432"/>
+        <ListenerViewModelChange id="0:6435">
+          <BindablePropertyNumber propertyValue="3" id="0:6434">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6433"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6211" name="Replay Blur" id="0:6441">
+        <ListenerInputType listenerTypeValue="blur" id="0:6437"/>
+        <ListenerViewModelChange id="0:6440">
+          <BindablePropertyNumber propertyValue="0" id="0:6439">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6438"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6260" name="Continue Focus" id="0:6446">
+        <ListenerInputType listenerTypeValue="focus" id="0:6442"/>
+        <ListenerViewModelChange id="0:6445">
+          <BindablePropertyNumber propertyValue="4" id="0:6444">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6443"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6260" name="Continue Blur" id="0:6451">
+        <ListenerInputType listenerTypeValue="blur" id="0:6447"/>
+        <ListenerViewModelChange id="0:6450">
+          <BindablePropertyNumber propertyValue="0" id="0:6449">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6448"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6306" name="Share Focus" id="0:6456">
+        <ListenerInputType listenerTypeValue="focus" id="0:6452"/>
+        <ListenerViewModelChange id="0:6455">
+          <BindablePropertyNumber propertyValue="5" id="0:6454">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6453"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6306" name="Share Blur" id="0:6461">
+        <ListenerInputType listenerTypeValue="blur" id="0:6457"/>
+        <ListenerViewModelChange id="0:6460">
+          <BindablePropertyNumber propertyValue="0" id="0:6459">
+            <DataBindContext sourcePathIds="0:90000-0:90090" propertyKey="636" direction="true" id="0:6458"/>
+          </BindablePropertyNumber>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6352" name="Key Next" id="0:6468">
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6464">
+          <KeyboardInput keyType="right" keyPhase="1" id="0:6462"/>
+          <KeyboardInput keyType="pageDown" keyPhase="1" id="0:6463"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6467">
+          <BindablePropertyTrigger propertyValue="1" id="0:6466">
+            <DataBindContext sourcePathIds="0:90000-0:90093" propertyKey="686" direction="true" id="0:6465"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6352" name="Key Previous" id="0:6475">
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6471">
+          <KeyboardInput keyType="left" keyPhase="1" id="0:6469"/>
+          <KeyboardInput keyType="pageUp" keyPhase="1" id="0:6470"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6474">
+          <BindablePropertyTrigger propertyValue="1" id="0:6473">
+            <DataBindContext sourcePathIds="0:90000-0:90094" propertyKey="686" direction="true" id="0:6472"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6352" name="Key Pause" id="0:6481">
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6477">
+          <KeyboardInput keyType="space" keyPhase="1" id="0:6476"/>
+        </ListenerInputTypeKeyboard>
+        <ListenerViewModelChange id="0:6480">
+          <BindablePropertyTrigger propertyValue="1" id="0:6479">
+            <DataBindContext sourcePathIds="0:90000-0:90095" propertyKey="686" direction="true" id="0:6478"/>
+          </BindablePropertyTrigger>
+        </ListenerViewModelChange>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6352" name="Tab" id="0:6485">
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6483">
+          <KeyboardInput keyType="tab" keyPhase="1" id="0:6482"/>
+        </ListenerInputTypeKeyboard>
+        <FocusActionTraversal traversalKind="next" id="0:6484"/>
+      </StateMachineListener>
+      <StateMachineListener targetId="0:6352" name="Shift Tab" id="0:6489">
+        <ListenerInputTypeKeyboard listenerTypeValue="keyboard" id="0:6487">
+          <KeyboardInput keyType="tab" keyPhase="1" modifiers="1" id="0:6486"/>
+        </ListenerInputTypeKeyboard>
+        <FocusActionTraversal traversalKind="previous" id="0:6488"/>
+      </StateMachineListener>
+      <StateMachineLayer name="Signals" id="0:6507">
+        <AnyState x="-200" y="-200" id="0:6508"/>
+        <ExitState x="-200" y="-300" id="0:6509"/>
+        <EntryState x="-200" y="0" id="0:6511">
+          <StateTransition stateToId="0:6491" id="0:6510"/>
+        </EntryState>
+        <AnimationState animationId="0:6360" x="0" y="0" id="0:6491">
+          <FocusActionTarget targetId="0:6345" id="0:6490"/>
+          <StateTransition stateToId="0:6493" id="0:6499">
+            <TransitionViewModelCondition id="0:6498">
+              <TransitionPropertyViewModelComparator id="0:6496">
+                <BindablePropertyTrigger id="0:6495">
+                  <DataBindContext sourcePathIds="0:90000-0:90098" propertyKey="686" id="0:6494"/>
+                </BindablePropertyTrigger>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueTriggerComparator id="0:6497"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+        <AnimationState animationId="0:6360" x="260" y="0" id="0:6493">
+          <StateMachineFireEvent eventId="0:6357" occursValue="0" id="0:6492"/>
+          <StateTransition stateToId="0:6491" id="0:6505">
+            <TransitionViewModelCondition id="0:6504">
+              <TransitionPropertyViewModelComparator id="0:6502">
+                <BindablePropertyTrigger id="0:6501">
+                  <DataBindContext sourcePathIds="0:90000-0:90098" propertyKey="686" id="0:6500"/>
+                </BindablePropertyTrigger>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueTriggerComparator id="0:6503"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+          <StateTransition stateToId="0:6491" id="0:6506"/>
+        </AnimationState>
+      </StateMachineLayer>
+      <StateMachineLayer name="Finish" id="0:6522">
+        <AnyState x="-200" y="-200" id="0:6523"/>
+        <ExitState x="-200" y="-300" id="0:6524"/>
+        <EntryState x="-200" y="0" id="0:6526">
+          <StateTransition stateToId="0:6512" id="0:6525"/>
+        </EntryState>
+        <AnimationState animationId="0:6360" x="0" y="0" id="0:6512">
+          <StateTransition stateToId="0:6514" id="0:6520">
+            <TransitionViewModelCondition id="0:6519">
+              <TransitionPropertyViewModelComparator id="0:6517">
+                <BindablePropertyTrigger id="0:6516">
+                  <DataBindContext sourcePathIds="0:90000-0:90099" propertyKey="686" id="0:6515"/>
+                </BindablePropertyTrigger>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueTriggerComparator id="0:6518"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+        <AnimationState animationId="0:6360" x="260" y="0" id="0:6514">
+          <StateMachineFireEvent eventId="0:6358" occursValue="0" id="0:6513"/>
+          <StateTransition stateToId="0:6512" id="0:6521"/>
+        </AnimationState>
+      </StateMachineLayer>
+      <StateMachineLayer name="Chrome" id="0:6579">
+        <AnyState x="-200" y="-200" id="0:6580"/>
+        <ExitState x="-200" y="-300" id="0:6581"/>
+        <EntryState x="-200" y="0" id="0:6583">
+          <StateTransition stateToId="0:6530" id="0:6582"/>
+        </EntryState>
+        <AnimationState animationId="0:6527" x="0" y="0" id="0:6530">
+          <StateTransition stateToId="0:6532" duration="200" id="0:6550">
+            <TransitionViewModelCondition opValue="equal" id="0:6549">
+              <TransitionPropertyViewModelComparator id="0:6547">
+                <BindablePropertyNumber id="0:6546">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6545"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="10" id="0:6548"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+          <StateTransition stateToId="0:6531" duration="200" id="0:6567">
+            <TransitionViewModelCondition opValue="greaterThan" id="0:6561">
+              <TransitionPropertyViewModelComparator id="0:6559">
+                <BindablePropertyNumber id="0:6558">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6557"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="1" id="0:6560"/>
+            </TransitionViewModelCondition>
+            <TransitionViewModelCondition opValue="lessThan" id="0:6566">
+              <TransitionPropertyViewModelComparator id="0:6564">
+                <BindablePropertyNumber id="0:6563">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6562"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="10" id="0:6565"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+        <AnimationState animationId="0:6528" x="260" y="0" id="0:6531">
+          <StateTransition stateToId="0:6530" duration="200" id="0:6538">
+            <TransitionViewModelCondition opValue="equal" id="0:6537">
+              <TransitionPropertyViewModelComparator id="0:6535">
+                <BindablePropertyNumber id="0:6534">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6533"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="1" id="0:6536"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+          <StateTransition stateToId="0:6532" duration="200" id="0:6556">
+            <TransitionViewModelCondition opValue="equal" id="0:6555">
+              <TransitionPropertyViewModelComparator id="0:6553">
+                <BindablePropertyNumber id="0:6552">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6551"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="10" id="0:6554"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+        <AnimationState animationId="0:6529" x="520" y="0" id="0:6532">
+          <StateTransition stateToId="0:6530" duration="200" id="0:6544">
+            <TransitionViewModelCondition opValue="equal" id="0:6543">
+              <TransitionPropertyViewModelComparator id="0:6541">
+                <BindablePropertyNumber id="0:6540">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6539"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="1" id="0:6542"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+          <StateTransition stateToId="0:6531" duration="200" id="0:6578">
+            <TransitionViewModelCondition opValue="greaterThan" id="0:6572">
+              <TransitionPropertyViewModelComparator id="0:6570">
+                <BindablePropertyNumber id="0:6569">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6568"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="1" id="0:6571"/>
+            </TransitionViewModelCondition>
+            <TransitionViewModelCondition opValue="lessThan" id="0:6577">
+              <TransitionPropertyViewModelComparator id="0:6575">
+                <BindablePropertyNumber id="0:6574">
+                  <DataBindContext sourcePathIds="0:90000-0:90021" propertyKey="636" id="0:6573"/>
+                </BindablePropertyNumber>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueNumberComparator value="10" id="0:6576"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+      </StateMachineLayer>
+      <StateMachineLayer name="Pause Glyph" id="0:6600">
+        <AnyState x="-200" y="-200" id="0:6601"/>
+        <ExitState x="-200" y="-300" id="0:6602"/>
+        <EntryState x="-200" y="0" id="0:6604">
+          <StateTransition stateToId="0:6586" id="0:6603"/>
+        </EntryState>
+        <AnimationState animationId="0:6584" x="0" y="0" id="0:6586">
+          <StateTransition stateToId="0:6587" duration="120" id="0:6593">
+            <TransitionViewModelCondition opValue="equal" id="0:6592">
+              <TransitionPropertyViewModelComparator id="0:6590">
+                <BindablePropertyBoolean id="0:6589">
+                  <DataBindContext sourcePathIds="0:90000-0:90018" propertyKey="634" id="0:6588"/>
+                </BindablePropertyBoolean>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueBooleanComparator value="true" id="0:6591"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+        <AnimationState animationId="0:6585" x="260" y="0" id="0:6587">
+          <StateTransition stateToId="0:6586" duration="120" id="0:6599">
+            <TransitionViewModelCondition opValue="equal" id="0:6598">
+              <TransitionPropertyViewModelComparator id="0:6596">
+                <BindablePropertyBoolean id="0:6595">
+                  <DataBindContext sourcePathIds="0:90000-0:90018" propertyKey="634" id="0:6594"/>
+                </BindablePropertyBoolean>
+              </TransitionPropertyViewModelComparator>
+              <TransitionValueBooleanComparator value="false" id="0:6597"/>
+            </TransitionViewModelCondition>
+          </StateTransition>
+        </AnimationState>
+      </StateMachineLayer>
+    </StateMachine>
+    <LinearAnimation duration="1" fps="60" name="Blank" id="0:6360"/>
+    <LinearAnimation duration="1" fps="60" name="Chrome Intro" id="0:6527">
+      <KeyedObject objectId="0:6259" id="0:6605">
+        <KeyedProperty property="displayValue" id="0:6606">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6607"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6305" id="0:6608">
+        <KeyedProperty property="displayValue" id="0:6609">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6610"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6165" id="0:6611">
+        <KeyedProperty property="displayValue" id="0:6612">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6613"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6210" id="0:6614">
+        <KeyedProperty property="displayValue" id="0:6615">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6616"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6119" id="0:6617">
+        <KeyedProperty property="opacity" id="0:6618">
+          <KeyFrameDouble value="0.35" frame="0" interpolationType="hold" id="0:6619"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+    <LinearAnimation duration="1" fps="60" name="Chrome Story" id="0:6528">
+      <KeyedObject objectId="0:6259" id="0:6620">
+        <KeyedProperty property="displayValue" id="0:6621">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6622"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6305" id="0:6623">
+        <KeyedProperty property="displayValue" id="0:6624">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6625"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6165" id="0:6626">
+        <KeyedProperty property="displayValue" id="0:6627">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6628"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6210" id="0:6629">
+        <KeyedProperty property="displayValue" id="0:6630">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6631"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6119" id="0:6632">
+        <KeyedProperty property="opacity" id="0:6633">
+          <KeyFrameDouble value="1" frame="0" interpolationType="hold" id="0:6634"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+    <LinearAnimation duration="1" fps="60" name="Chrome Final" id="0:6529">
+      <KeyedObject objectId="0:6259" id="0:6635">
+        <KeyedProperty property="displayValue" id="0:6636">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6637"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6305" id="0:6638">
+        <KeyedProperty property="displayValue" id="0:6639">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6640"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6165" id="0:6641">
+        <KeyedProperty property="displayValue" id="0:6642">
+          <KeyFrameUint value="1" frame="0" interpolationType="hold" id="0:6643"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6210" id="0:6644">
+        <KeyedProperty property="displayValue" id="0:6645">
+          <KeyFrameUint value="0" frame="0" interpolationType="hold" id="0:6646"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6119" id="0:6647">
+        <KeyedProperty property="opacity" id="0:6648">
+          <KeyFrameDouble value="1" frame="0" interpolationType="hold" id="0:6649"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+    <LinearAnimation duration="1" fps="60" name="Glyph Pause" id="0:6584">
+      <KeyedObject objectId="0:6131" id="0:6650">
+        <KeyedProperty property="opacity" id="0:6651">
+          <KeyFrameDouble value="1" frame="0" interpolationType="hold" id="0:6652"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6139" id="0:6653">
+        <KeyedProperty property="opacity" id="0:6654">
+          <KeyFrameDouble value="0" frame="0" interpolationType="hold" id="0:6655"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+    <LinearAnimation duration="1" fps="60" name="Glyph Play" id="0:6585">
+      <KeyedObject objectId="0:6131" id="0:6656">
+        <KeyedProperty property="opacity" id="0:6657">
+          <KeyFrameDouble value="0" frame="0" interpolationType="hold" id="0:6658"/>
+        </KeyedProperty>
+      </KeyedObject>
+      <KeyedObject objectId="0:6139" id="0:6659">
+        <KeyedProperty property="opacity" id="0:6660">
+          <KeyFrameDouble value="1" frame="0" interpolationType="hold" id="0:6661"/>
+        </KeyedProperty>
+      </KeyedObject>
+    </LinearAnimation>
+  </Artboard>
+</Rive>

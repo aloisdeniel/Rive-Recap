@@ -1,0 +1,18 @@
+# New user: no eligible metric scenes, no persona evidence. Intro -> welcoming summary.
+--data=volunteerHours=0
+--data=projectsJoined=0
+--data=communityDays=0
+--data=gardenSessions=0
+--data=repairItems=0
+--data=welcomeSessions=0
+--data=activeMonths=0
+--data=showScreen2=false
+--data=showScreen3=false
+--data=showScreen4=false
+--data=showScreen5=false
+--data=showScreen6=false
+--data=showScreen7=false
+--data=showScreen8=false
+--data=showScreen9=false
+--data=personaName=
+--data=personaDescription=

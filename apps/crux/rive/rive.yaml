@@ -1,0 +1,10 @@
+name: crux-recap
+main: Crux Recap
+exclude:
+  - tools
+  - captures
+  - fixtures
+  - README.md
+logs:
+  file: build/rive.log
+  problems: build/problems.log

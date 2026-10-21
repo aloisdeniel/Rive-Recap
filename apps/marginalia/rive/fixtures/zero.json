@@ -1,0 +1,19 @@
+{
+  "userName": "Sam",
+  "booksFinished": 0,
+  "pagesRead": 0,
+  "readingHours": 0,
+  "genresExplored": 0,
+  "passagesSaved": 0,
+  "longestStreakDays": 0,
+  "bookClubChats": 0,
+  "personaIndex": -1,
+  "showScreen2": false,
+  "showScreen3": false,
+  "showScreen4": false,
+  "showScreen5": false,
+  "showScreen6": false,
+  "showScreen7": false,
+  "showScreen8": false,
+  "showScreen9": false
+}

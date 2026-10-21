@@ -1,0 +1,3 @@
+build/*
+!build/kiln-recap.riv
+!build/kiln-recap.rev

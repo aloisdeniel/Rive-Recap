@@ -1,0 +1,9 @@
+name: nocturne-recap
+main: Nocturne Recap
+exclude:
+  - tools
+  - fixtures
+  - captures
+logs:
+  file: build/rive.log
+  problems: build/problems.log

@@ -1,0 +1,5 @@
+name: switchyard-recap
+main: Switchyard Recap
+logs:
+  file: build/rive.log
+  problems: build/problems.log

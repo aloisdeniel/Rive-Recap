@@ -1,0 +1,3 @@
+build/*
+!build/stash-recap.riv
+!build/stash-recap.rev

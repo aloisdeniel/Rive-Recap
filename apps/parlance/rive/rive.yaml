@@ -1,0 +1,5 @@
+name: parlance-recap
+main: Parlance Recap
+logs:
+  file: build/parlance-recap.log
+  problems: build/problems.log

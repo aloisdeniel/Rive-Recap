@@ -1,0 +1,88 @@
+
+== rest after 1s
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== tap forward once
+  currentScreen=2  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== rapid taps x5 (expect screen 6, 6 events)
+  currentScreen=6  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=6  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== forward 3 then back 1 (expect 3, dir -1)
+  currentScreen=3  screenProgress=0  isPaused=False  _navDir=-1  _holding=False  _screenChangedCount=5  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== hold 1.5s then release (no navigation)
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=True  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== hold released (still screen 1)
+  currentScreen=1  screenProgress=0.026  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== pause button (progress frozen)
+  currentScreen=1  screenProgress=0.036  isPaused=True  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== pause then resume
+  currentScreen=1  screenProgress=0.181  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== continue button
+  currentScreen=2  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== previous button from 3
+  currentScreen=2  screenProgress=0  isPaused=False  _navDir=-1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== keys: right right left space
+  currentScreen=2  screenProgress=0  isPaused=True  _navDir=-1  _holding=False  _screenChangedCount=4  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== hidden 3,4,7 (segments adapt, skip)
+  currentScreen=5  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=3  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..xx..x...
+
+== auto-advance full run, 3s dwell (expect 10, finished once)
+  currentScreen=10  screenProgress=1  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=10  _shareTappedCount=0  _recapFinishedCount=1  _finished=1  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== auto-advance disabled (stays on 1)
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== unsafe dwell 0.2s clamps to 3s (expect 2 after 6s)
+  currentScreen=2  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== summary: share tap emits shareTapped
+  currentScreen=10  screenProgress=1  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=1  _recapFinishedCount=1  _finished=1  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== summary: replay resets latch
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=1  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== new user: intro -> summary only
+  currentScreen=10  screenProgress=0.287  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=1  _personaVariant=1
+  segments (. shown, x hidden): .xxxxxxxx.
+
+== unknown persona index 7 falls back to 0
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=0
+  segments (. shown, x hidden): ..........
+
+== turntable drag on scene 2 never navigates
+  currentScreen=2  screenProgress=0.138  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== still tap on the vessel still navigates
+  currentScreen=3  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=2  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........
+
+== invalid start screen 0 -> intro
+  currentScreen=1  screenProgress=0  isPaused=False  _navDir=1  _holding=False  _screenChangedCount=1  _shareTappedCount=0  _recapFinishedCount=0  _finished=0  _isEmpty=0  _personaVariant=1
+  segments (. shown, x hidden): ..........

@@ -1,0 +1,51 @@
+{"schema": 1, "kind": "header", "artboard": "Recap", "stateMachine": "Recap", "intervalFrames": 1}
+{"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}
+{"frame": 1, "time": 0.0166666675, "values": [{"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 132, "time": 2.19999862, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
+{"frame": 133, "time": 2.21666527, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
+{"frame": 134, "time": 2.23333192, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
+{"frame": 135, "time": 2.24999857, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
+{"frame": 136, "time": 2.26666522, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
+{"frame": 137, "time": 2.28333187, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
+{"frame": 138, "time": 2.29999852, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
+{"frame": 139, "time": 2.31666517, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
+{"frame": 140, "time": 2.33333182, "values": [{"path": "screenProgress", "value": 0.021428572}]}
+{"frame": 141, "time": 2.34999847, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
+{"frame": 142, "time": 2.36666512, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
+{"frame": 143, "time": 2.38333178, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
+{"frame": 144, "time": 2.39999843, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
+{"frame": 145, "time": 2.41666508, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
+{"frame": 146, "time": 2.43333173, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
+{"frame": 147, "time": 2.44999838, "values": [{"path": "currentScreen", "value": 2}, {"path": "screenProgress", "value": 0}, {"path": "_visibleIndex", "value": 2}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 278, "time": 4.63333845, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
+{"frame": 279, "time": 4.65000534, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
+{"frame": 280, "time": 4.66667223, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
+{"frame": 281, "time": 4.68333912, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
+{"frame": 282, "time": 4.70000601, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
+{"frame": 283, "time": 4.7166729, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
+{"frame": 284, "time": 4.73333979, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
+{"frame": 285, "time": 4.75000668, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
+{"frame": 286, "time": 4.76667356, "values": [{"path": "screenProgress", "value": 0.021428572}]}
+{"frame": 287, "time": 4.78334045, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
+{"frame": 288, "time": 4.80000734, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
+{"frame": 289, "time": 4.81667423, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
+{"frame": 290, "time": 4.83334112, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
+{"frame": 291, "time": 4.85000801, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
+{"frame": 292, "time": 4.8666749, "values": [{"path": "screenProgress", "value": 0.0357142873}]}
+{"frame": 293, "time": 4.88334179, "values": [{"path": "screenProgress", "value": 0.0380952395}]}
+{"frame": 294, "time": 4.90000868, "values": [{"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": -1}, {"path": "_visibleIndex", "value": 1}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 425, "time": 7.08337116, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
+{"frame": 426, "time": 7.10003805, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
+{"frame": 427, "time": 7.11670494, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
+{"frame": 428, "time": 7.13337183, "values": [{"path": "screenProgress", "value": 0.00952380989}]}
+{"frame": 429, "time": 7.15003872, "values": [{"path": "screenProgress", "value": 0.0119047621}]}
+{"frame": 430, "time": 7.16670561, "values": [{"path": "screenProgress", "value": 0.0142857153}]}
+{"frame": 431, "time": 7.1833725, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
+{"frame": 432, "time": 7.20003939, "values": [{"path": "screenProgress", "value": 0.0190476198}]}
+{"frame": 433, "time": 7.21670628, "values": [{"path": "screenProgress", "value": 0.021428572}]}
+{"frame": 434, "time": 7.23337317, "values": [{"path": "screenProgress", "value": 0.0238095243}]}
+{"frame": 435, "time": 7.25004005, "values": [{"path": "screenProgress", "value": 0.0261904784}]}
+{"frame": 436, "time": 7.26670694, "values": [{"path": "screenProgress", "value": 0.0285714306}]}
+{"frame": 437, "time": 7.28337383, "values": [{"path": "screenProgress", "value": 0.0309523828}]}
+{"frame": 438, "time": 7.30004072, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
+{"frame": 438, "time": 7.30004072, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0.0333333351}, {"path": "_navDir", "value": -1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}

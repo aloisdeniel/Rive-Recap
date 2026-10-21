@@ -1,0 +1,13 @@
+PASS next/back :: screen=1 screenChanged x5 (expect 5: 1,2,3,2,1)
+PASS rapid taps :: screen=6 events=6
+PASS hold to pause :: held paused=True released paused=False screen=1
+PASS pause/resume :: progress paused 0.224 -> 0.224, resumed 0.300
+PASS keyboard :: screen=2 paused=True
+PASS hidden scenes :: 1->next->next = 5 (expect 5); back = 2 (expect 2)
+PASS auto-advance :: screen=10 screenChanged x10 recapFinished x1
+PASS share + replay :: shareTapped x1, finish before replay x1, after replay+rerun x2, screen after replay=1
+PASS autoAdvanceEnabled=false :: screen=1
+PASS zero user :: intro -> 10 empty=True
+PASS unknown persona index falls back to row 0 :: slot=0 name=City Connector
+PASS route chip isolated :: screen=4 activeRoute=1
+PASS reduced motion :: screen=2 count playhead=1

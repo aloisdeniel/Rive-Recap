@@ -1,0 +1,328 @@
+{
+  "boot": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "next x1 (tap right two-thirds)": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "back (tap left third)": {
+    "values": {
+      "currentScreen": 3,
+      "currentSegment": 2,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": -1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "rapid x6 taps": {
+    "values": {
+      "currentScreen": 7,
+      "currentSegment": 6,
+      "visibleCount": 10,
+      "screenProgress": 0.135714293,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "hold (pressed 600 ms)": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0.178571433,
+      "isPaused": true,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "hold released (no tap)": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0.209523827,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "pause button": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0.135714293,
+      "isPaused": true,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "pause then resume": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0.280952394,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "keyboard right x2, left x1": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": -1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "keyboard space pauses": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": true,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "keyboard tab focus + enter (prev)": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": -1,
+      "focusedControl": 1,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "auto-advance full run (3 s dwell)": {
+    "values": {
+      "currentScreen": 10,
+      "currentSegment": 9,
+      "visibleCount": 10,
+      "screenProgress": 1,
+      "isPaused": false,
+      "recapComplete": true,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "screenChanged",
+      "recapFinished"
+    ]
+  },
+  "auto-advance clamps 0.5 s to 3 s (after 4 s)": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0.638888896,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "autoAdvanceEnabled=false (30 s)": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": []
+  },
+  "share tapped on summary": {
+    "values": {
+      "currentScreen": 10,
+      "currentSegment": 9,
+      "visibleCount": 10,
+      "screenProgress": 1,
+      "isPaused": true,
+      "recapComplete": true,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": true
+    },
+    "events": [
+      "screenChanged",
+      "recapFinished",
+      "shareTapped"
+    ]
+  },
+  "replay from summary": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": -1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "recapFinished",
+      "screenChanged"
+    ]
+  },
+  "hidden 4 & 7: next from 3": {
+    "values": {
+      "currentScreen": 5,
+      "currentSegment": 3,
+      "visibleCount": 8,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "pot tap does not navigate": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "negative count clamps": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false,
+      "sharedMeals": 0
+    },
+    "events": []
+  },
+  "unknown persona index": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "screenProgress": 0,
+      "isPaused": false,
+      "recapComplete": false,
+      "navDirection": 1,
+      "focusedControl": 0,
+      "isSharing": false,
+      "personaIndex": 0,
+      "personaName": "Flavor Explorer"
+    },
+    "events": []
+  }
+}

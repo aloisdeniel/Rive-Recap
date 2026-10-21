@@ -1,0 +1,17 @@
+# Extreme values + long copy (>40% longer strings). Mirrors fixtures/extreme.json.
+--data=userName=Maximiliana Alexandrina Featherstonehaugh-Worthington III
+--data=volunteerHours=1234567
+--data=projectsJoined=4821
+--data=communityDays=366
+--data=gardenSessions=12045
+--data=repairItems=99999
+--data=welcomeSessions=250
+--data=activeMonths=12
+--data=screen2Unit=hours contributed to neighbourhood projects
+--data=screen2Headline=You showed up for your community, again and again, all year long.
+--data=screen2Support=Your time joined something bigger than any one of us could build alone.
+--data=screen6Unit=items repaired and returned to everyday use
+--data=personaIndex=2
+--data=personaName=Hands-on Builder of Shared Neighbourhood Things
+--data=personaDescription=You enjoy making something useful together, one small fix at a time.
+--data=shareIncludeName=true
