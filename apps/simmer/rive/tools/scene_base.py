@@ -14,6 +14,7 @@ watches `currentScreen`, `navDirection` and `reducedMotion`:
 from rml import E, node, shape, fill, rect, Anim, layer, astate, trans, cond_num, cond_bool, ms2f
 from data import P
 from text import style, text, reveal_modifier, key_reveal, key_shown
+import stage
 
 W, H = 390, 844
 ENTER_MS = 2100        # the director starts the dwell timer after this
@@ -24,18 +25,28 @@ class Scene:
     def __init__(self, k, name, x_stage):
         self.k = k
         self.name = name
-        self.ab = E('Artboard', isComponent=True, width=float(W), height=float(H), name=name, x=float(x_stage), y=0.0)
+        # clip off: the scene draws wherever the layout puts it on the (resizable) root stage
+        self.ab = E('Artboard', isComponent=True, width=float(W), height=float(H), name=name, x=float(x_stage), y=0.0, clip=False)
         self.style = E('LayoutComponentStyle', name='Artboard Style')
         self.ab.attrs['styleId'] = self.style.id
         self.content = node('Content', x=W / 2, y=H / 2)
         self.inner = node('Inner', x=-W / 2, y=-H / 2)   # children authored in artboard coordinates
         self.content.add(self.inner)
+        # Stage: offsets the scene so Content (keyed around the master's centre) pivots on the real stage centre
+        self.stage = stage.place_stage(node('Stage', [self.content]))
         self.enter = Anim(f'{name} enter', ms2f(ENTER_MS))
         self.idle = Anim(f'{name} idle', ms2f(IDLE_MS), loop='loop')
         self.final = {}   # (oid, prop) -> settled value, for the reduced-motion entrance
         self.extra_layers = []
         self.extra_anims = []
         self.exit_extra = []   # callables(anim, sign)
+
+    # -------- responsive groups (see tools/stage.py)
+    def copy_group(self, kids, key=None, name='Copy'):
+        return stage.place_copy(node(name, kids), key if key is not None else self.k)
+
+    def art_group(self, kids, key=None, name='Art'):
+        return stage.place_art(node(name, kids), key if key is not None else self.k)
 
     # -------- helpers that record settled values
     def key(self, obj, prop, seq, kind='Double'):
@@ -147,7 +158,7 @@ class Scene:
         sm = E('StateMachine', name=f'{self.name} machine')
         sm.add(life, *self.extra_layers)
         self.ab.attrs['defaultStateMachineId'] = sm.id
-        self.ab.add(self.style, self.content, sm)
+        self.ab.add(self.style, self.stage, sm)
         self.ab.add(*[a.build() for a in anims])
         self.ab.add(*[a.build() for a in self.extra_anims])
         return self.ab
@@ -160,6 +171,7 @@ def hero_number(scene, prop, conv, x, y, w=342, align='left', size=118, color='t
     st = style('display', size, 800, color, lh=size * 0.98, ls=-3, opsz=96, name='Hero')
     t = text('Hero number', [(st, '0', prop, conv)], x=x, y=y, width=w, height=size * 1.05, sizing='fixed',
              align=align, overflow='fitFontSize', wrap='noWrap')
+    stage.bind_copy_width(t)
     return t
 
 

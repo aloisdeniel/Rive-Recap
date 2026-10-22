@@ -11,11 +11,13 @@ apps/nocturne/rive/
   rml/20_aperture.rml    "Aperture Motif" reusable component (iris + observatory reticle)
   rml/30_scenes.rml      ten scene components ("Scene 1 · Invitation" … "Scene 10 · Summary")
   clock.luau             dwell timer (auto-advance) + accessible labels of the two context controls
+  layout.luau            responsive layout: reads the laid-out size, writes the portrait / landscape layout into UserRecap
   scripts/               sky.luau, iris.luau, orb.luau (GPU drawables), format.luau (locale digit grouping)
   shaders/               sky.wgsl, iris.wgsl, orb.wgsl
   assets/fonts/          Space Grotesk (variable) + IBM Plex Mono, with OFL licence texts
   fixtures/              sample.json, new-user.json, extreme-long-copy.json
-  tools/                 generate.py (+ rml.py DSL), interaction_tests.py, capture_all.py, shoot.py, preview.sh
+  tools/                 generate.py (+ rml.py DSL), interaction_tests.py, capture_all.py, capture_responsive.py, shoot.py,
+                         preview.sh
   captures/              review stills and key transition frames (the walkthrough is ../video.webm)
   build/nocturne-recap.riv   runtime export (unsigned, see "Scripts and signing")
 ```
@@ -97,8 +99,8 @@ transition still closes and opens), the background shows the vector gradient and
 disks and orbs draw flat vector circles. The no-scripts case is covered under "Scripts and signing".
 
 **New compromises.**
-* GPU canvases render at a fixed density (2–3 px per point, set per drawable), not the device scale, because the
-  `Node` protocol gets no `resize`. They are sharp at @2x, slightly soft at @3x.
+* GPU canvases rendered at a fixed density (2–3 px per point). Since the responsive pass they follow the art scale ×
+  the device scale reported to the layout script (see "Responsive layout").
 * The stage iris covers the scene for about 150 ms per cut, so the outgoing exit and incoming entrance are partly
   behind blades by design. Scene 1's entrance was delayed by 330 ms so the app-opening iris reveals it.
 * The persona-anticipation cut is longer (1.4 s), on purpose for the emotional high point.
@@ -114,6 +116,132 @@ Under reduced motion it is 0.156 ms. There is no wasm memory growth. Details are
 * `finder_drag_does_not_navigate` now starts its drag at the finder's new position (135, 242). This is an intentional
   change: the finder was moved off the wordmark.
 * Two cases were added: `tab_order_only_visible_controls` and `summary_slots_are_share_and_replay`.
+
+## Responsive layout
+
+The recap now fills any canvas. There are two layouts, chosen by one width rule, and each one adapts continuously to
+every size on its side of the threshold. It is not one fixed artboard scaled with letterboxing.
+
+**The rule.** The file uses the **landscape** layout when the laid-out artboard is **at least `layoutBreakpoint` wide**
+(default **768**), and the **portrait** layout otherwise. Only the width counts: 768 × 1024 and 820 × 1180 are landscape,
+and 667 × 375 and 740 × 360 are portrait. `layoutBreakpoint` is a new host-owned `UserRecap` number. The file
+reports what it decided in `isLandscape` (and `isSideBySide`, `layoutWidth`, `layoutHeight`). It re-evaluates the rule
+on every resize, including in the middle of a scene or a transition. The scene, its state and the progress are kept;
+only the layout changes.
+
+| | Portrait (< breakpoint) | Landscape (≥ breakpoint) |
+|---|---|---|
+| Composition | The hero art is stacked over the copy, as authored at 390 × 844. When the canvas is too short to stack readable copy under the art (phones held sideways: wider than 1.1 × its height, or art below half scale), the art moves beside the copy | Art and copy always sit **side by side** in a centred composition with a capped width (ultrawide canvases keep their margins). The copy column is aligned toward the art: left-aligned on art-left scenes, right-aligned on **scenes 6 and 7, which are mirrored** (art on the right). On tall canvases (768 × 1024, 820 × 1180) the two columns are **staggered on a diagonal**: large art at the top on its side, the copy below it on the other side |
+| Copy | Each scene's authored alignment (centre, left or right) | Centre-aligned copy (scenes 1, 2, 4, 9) turns left-aligned, and its divider takes the left-hand form |
+| Persona (9) | Emblem over a centred title block | A title page: the emblem in the art column, a left-aligned label, title, divider and description beside it |
+| Summary (10) | The tall share card | A **wide two-panel share card**: the seal, wordmark, year, name and persona on the left panel; the stat grid (3 + 2) and headline on the right. The same card is used side by side in portrait. Tall landscape canvases keep the tall card, which fills them better (`layCardT`) |
+| Transport | A centred bottom row | A right-hand **rail** (Previous, Continue/Share, Pause/Replay) on wide canvases (aspect ≥ 1.2), a bottom row on tall ones. Portrait side by side also uses the rail |
+| Chrome scale | 1 to 1.25 with the size | 1 to 1.5 with the size (1280 × 720 is the reference) |
+
+**What follows the real size.**
+
+* **Backgrounds** bleed edge to edge: the GPU sky and the vector gradient are sized to `layoutWidth` × `layoutHeight`;
+  the vector fallback stars scale to cover. Copy and controls keep safe margins (portrait 16–40 pt, landscape 24–72 pt).
+* **Text** never scales below its authored size in the chrome (header, labels: the chrome scale is never below 1). The
+  copy frame never goes below 0.86 (support line ≥ 10.75 pt, unit label ≥ 12 pt, period label ≥ 9 pt). On short
+  canvases the **hero number's box shrinks** first (116 → 84 pt, the font fits the box), and the copy below it moves up.
+  The share card's micro labels were raised to 10.5–11 pt, so they stay ≥ 9 pt at the smallest card scale. Decorative
+  instrument annotations (bearings, `ALT 60°`, coordinates, the sketch caption; 9–10 pt in design) fade out before the art
+  scale would draw them below 8 pt.
+* **Controls** keep their 76 × 64 pt hit areas (44–50 pt rings) at every size.
+* **No overlaps**: art, copy and controls each get their own region. The header steps aside on the summary only when
+  the share card needs the room (the card has its own wordmark and year).
+* **Tap zones** cover the real canvas below the header (minus the rail): the left third goes back, the right two-thirds
+  go forward, and hold-to-pause works anywhere in them. **Progress segments** span the real width, margin to margin.
+* **GPU canvases** are sized to their real box at device resolution. The stage iris and the sky are allocated at the
+  canvas size × device scale (supersampled up to 2× on small canvases), and every art drawable at art scale × device
+  scale. All of them re-allocate (`GPUCanvas:resize`) when the size or density changes, capped at 4096 px. This also
+  fixes the old "fixed 2–3 px per point" compromise.
+* **The stage iris covers the whole viewport** at every size. Its centre and hole are keyed in design space and mapped
+  through the hero frame; the keyed "open" radius is stretched to the real farthest corner, so the blades start and end
+  exactly off-screen and close with no gap at the edges.
+
+**Mechanism.** `layout.luau` is a `ScriptedLayout` in an absolutely positioned box that fills the main artboard, so its
+`resize(size, scale)` receives the laid-out size and the device scale. It computes the whole layout and writes it into
+`UserRecap` (the `lay*` numbers below); the markup is bound to those numbers. Nothing is laid out by hand twice:
+
+* Every scene keeps its 390 × 844 design. Its hero art sits in an **art frame** and its copy in a **copy frame**: a
+  translate and a uniform scale, bound to `layArtX/Y/S` (or the mirrored `layArtXB`) and `layCopyX/Y/S` (or
+  `layCopyXB`). The summary sits in a **card frame**. A frame maps a design box (art 0..390 × 100..480, copy 28..362 ×
+  458..752, the tall or wide card) into the region the layout gives it. Keyed animation inside the frames is untouched.
+* The two arrangements of one element are bound to a 0/1 switch through `a + switch × b` formula converters: positions,
+  rectangle sizes, gradient ends, text alignment and text wrap. `laySideT` (0 stacked, 1 side by side) drives the copy
+  alignment and dividers; `layCardT` (0 tall, 1 wide) drives the share card.
+* The travelling motif, the lodestar and the scene-1 finder live in a **hero frame** (`layHero*`). It equals the current
+  scene's frame, and the script **eases it on a scene change (0.1–0.46 s, while the stage iris is shut)**, so the pupil
+  travels across the screen to an art column on the other side. It **snaps on a resize**, so a resize settles in one
+  frame. The stage iris reads the same hero frame.
+* Header, progress row, transport and tap zones are bound to `layHdr*`, `layProg*`, `layPrev*/layPrim*/laySec*`,
+  `layTap*`, and are scaled by `layChrome`.
+
+**Host setup.** Use the runtime's **layout fit**, so the artboard is resized to the canvas and re-laid out on every
+resize (the CLI's default `--fit=layout` does the same). Check the exact option names in the Rive runtime docs ("Layout"
+/ "Fit"). At the time of writing they were: web `layout: new Layout({ fit: Fit.Layout })` plus
+`rive.resizeDrawingSurfaceToCanvas()` on resize; Apple `fit: .layout`; Android `Fit.LAYOUT` (`app:riveFit="LAYOUT"`);
+Flutter `Fit.layout`; React Native `Fit.Layout`. Give the view the full screen, including behind the system bars if you
+want the sky to bleed there, and keep the system insets out of the controls. The rest is in the file. Do not use
+`contain`/`cover`: they scale the 390 × 844 authoring size instead of laying the file out. The layout runs in a script,
+like the dwell clock, so it needs a signed build on the web (see "Scripts and signing"). Without scripts the file stays
+at its 390 × 844 defaults.
+
+**Contract addition.**
+
+| Property | Type | Owner | Purpose |
+|---|---|---|---|
+| `layoutBreakpoint` | Number | host | Landscape when the artboard width ≥ this (default 768). Non-finite values fall back to 768 |
+| `isLandscape`, `isSideBySide` | Boolean | file (layout script) | The layout in use, and whether art and copy sit side by side |
+| `layoutWidth`, `layoutHeight`, `layScale` | Number | file | The laid-out size in points and the device scale |
+| `lay*` (42 numbers: frames, chrome, transport, tap zones, densities, `laySideT`, `layCardT`, `layNumBox`, `layAnnot`, `layHdrAlpha`) | Number | file | Internal layout outputs. Host: do not write. Their defaults are the exact 390 × 844 values |
+
+**Size limits tested** (`captures/responsive/`, one contact sheet per subject across the whole matrix):
+
+* Portrait: 320 × 568, 360 × 640, 390 × 844, 430 × 932, 600 × 960, 767 × 1024, and short 667 × 375, 740 × 360.
+* Landscape: 768 × 1024, 820 × 1180, 1024 × 768, 1280 × 720, 1440 × 900, 1920 × 1080, 2560 × 1080, 1366 × 600.
+* Every size covers scenes 1, 2, 3, 6, 7, 9 and 10 settled, plus two frames of the 5 → 6 iris (shut and opening).
+  Also: the four personas, reduced motion, the new-user and extreme fixtures, and a resize across the threshold in
+  the middle of scene 3, in both directions.
+* At 390 × 844 the layout reproduces the authored design exactly (`portrait_defaults_reproduce_design`).
+
+**Checks.** `tools/interaction_tests.py` has **26/26** passing: the 20 originals at 390 × 844, unchanged, and 6 new
+ones:
+
+* `orientation_follows_width_only`: 767 / 768 / 667 × 375 / 1366 × 600.
+* `breakpoint_is_host_tunable`.
+* `portrait_defaults_reproduce_design`.
+* `landscape_keyboard_taps_and_rail`: Right ×3, the tap zones, the rail buttons and hold, at 1280 × 720.
+* `tap_zones_span_real_width`.
+* `resize_across_threshold_mid_scene`: landscape → portrait on scene 3, the same in the middle of the 3 → 4 iris, and
+  portrait → landscape. Each keeps the scene, the motif pose ends on the scene, and the hero frame settles on the
+  scene's art frame.
+
+The CLI cannot resize a headless run, so that check uses a probe build. `NOCTURNE_RESIZE_PROBE="<s>:<W>x<H>[:<W0>x<H0>]"
+python3 tools/generate.py` (run on a temporary copy by the test) sets three script inputs that make the layout script
+re-lay out as if the canvas changed at that time. Production builds leave them off (`simAt = -1`).
+
+**Compromises.**
+
+* Portrait on a short, wide canvas (a phone held sideways) borrows the side-by-side arrangement and the rail. Stacked,
+  the copy alone would not fit at a readable size under the art at 375 pt.
+* One art frame is shared by all scenes, so every scene's art is scaled as one 390 × 380 design box. Scenes whose art
+  is off-centre in that box (3, 6) sit a little off-centre in their column. Faint decorative great circles (≤ 13 %
+  alpha) can extend behind the copy, as they already did at 390 × 844.
+* Tall landscape canvases keep the side-by-side (staggered) layout as the width rule requires, so the art is
+  width-limited (≈ 1.2× at 768 × 1024) and the canvas keeps generous sky above and below.
+* A resize during the 0.36 s hero-frame glide of a scene change cuts the glide short: the motif snaps to the new
+  frame. The stage iris is shut at that moment, so it is hidden.
+* Bound text widths do not re-centre a single-line ellipsised text, so the share card's name and persona lines keep one
+  width (228 pt) in both cards. The name wraps inside a one-line box instead of a no-wrap ellipsis, so a long name stays
+  centred and is cut with an ellipsis.
+* The wide card's stat cells are 104 pt wide (inside the stats panel, clear of the card edge). A label with one very long
+  word (the extreme fixture's German "Beobachtungsstunden") breaks inside the word and ends in an ellipsis on its
+  second line; values shrink to fit their cell.
+* Headless captures run at @1x, so device-scale sharpness (@2x/@3x) was verified by the arithmetic (canvas = box ×
+  scale), not by pixels.
 
 ## Preview
 
@@ -135,7 +263,7 @@ Headless checks (no window):
 
 ```bash
 rive . --verify && rive inspect . --summary     # both clean: 0 errors, problems: []
-python3 tools/interaction_tests.py              # 20 behavioural cases, all passing
+python3 tools/interaction_tests.py              # 26 behavioural cases (6 responsive), all passing
 python3 tools/capture_all.py                    # regenerates captures/
 ```
 
@@ -317,11 +445,9 @@ its asset loader.
 * **Lunar illumination:** a lit sphere (`shaders/orb.wgsl`): the timeline keys the sun's angle, so the terminator sweeps
   across real relief. No-shader fallback: a flat disk.
 * **Raster grain:** none. Everything is vector or procedural; no image is shipped.
-* **Responsive layout:** the composition is fixed at 390 × 844. Other screens use a `contain` presentation, which
-  letterboxes and centres the artboard, rather than a reflow. It was captured at 320 × 568, 430 × 932 and
-  1440 × 900 (`captures/viewports/`). Safe margins are 28 pt at the sides, the header sits above y = 100 and the
-  controls below y = 756. Inside the artboard the copy blocks are flex columns, so wrapped headlines push the support
-  line instead of overlapping it.
+* **Responsive layout:** a script computes the layout from the laid-out size and the markup is bound to it, because
+  the scenes are keyed, hand-composed art that flex layout cannot scale uniformly. See "Responsive layout". Inside each
+  frame the copy blocks are still flex columns, so wrapped headlines push the support line instead of overlapping it.
 
 ## Measurements
 
@@ -334,18 +460,20 @@ CLI (advance, and render command encoding); GPU time and on-device frame rate we
 | `--bench=600 --data=reducedMotion=true` | n/a | advance 0.017 ms; render 0.156 ms mean, p95 0.23 (static shader images, no re-renders) |
 | `--bench=1200 --data=autoAdvanceSeconds=3` (two iris transitions) | n/a | advance 0.041 ms; render 0.51 ms mean, p95 1.0, max 1.5 |
 | Script memory growth | 0 wasm pages | 0 wasm pages |
-| `.riv` size | 649,924 bytes | 881,640 bytes (+232 KB: 5 scripts, 3 shaders, keyed inputs; about 410 KB is still the fonts) |
+| `.riv` size | 649,924 bytes | 881,640 bytes (+232 KB: 5 scripts, 3 shaders, keyed inputs; about 410 KB is still the fonts). Responsive layout: **906,207 bytes** (+24.6 KB: `layout.luau`, the `lay*` numbers, their bindings and formula converters) |
 | Objects | about 25.5k | about 26.3k (main 9.4k; scenes 0.9k–2.9k) |
 
 GPU work per frame: one fullscreen-triangle pass per canvas that changed. While idle that is the background sky and the
-current scene's sky disk or orb at most 30 times a second. During a transition, the stage iris (780 × 1688 px) and the
-motif blades are re-rendered each frame. Nothing is rendered for hidden scenes or hidden personas. Particle-like
+current scene's sky disk or orb at most 30 times a second. During a transition, the stage iris (canvas × device scale, e.g. 780 × 1688 px
+at 390 × 844 @2x) and the motif blades are re-rendered each frame. Nothing is rendered for hidden scenes or hidden personas. Particle-like
 elements are bounded pools: 5 meteors, 9 trails, 36 ring markers, 64 stipple dots. Stars are procedural. No object is
 created per raw count.
 
 ## Captures (`captures/`)
 
-Regenerate with `python3 tools/capture_all.py`. The full walkthrough is `../video.webm`.
+Regenerate with `python3 tools/capture_all.py` (390 × 844) and `python3 tools/capture_responsive.py` (every size).
+`JOBS=2 KEEP=<dir>` runs the responsive renders two at a time and keeps the full-size frames in `<dir>` for review.
+The full walkthroughs are `../video.webm` (390 × 844) and `../video-landscape.webm` (1280 × 720).
 
 | Folder | Contents |
 |---|---|
@@ -355,7 +483,7 @@ Regenerate with `python3 tools/capture_all.py`. The full walkthrough is `../vide
 | `reduced-motion/` | Scenes 1, 2, 7, 9, 10 and frame 6 of a transition (no iris, opacity only) |
 | `fixtures/` | New-user intro and summary, plus extreme / long-copy (+40% German strings, a 49-character name, values up to 1,284,567) |
 | `interaction/` | Finder drag, paused, hold, Tab focus, Share focused on the summary, `captureMode` share card, name on card, hidden scenes 3, 4 and 9, a runtime update (`observationNights = 512`), de-DE digit grouping |
-| `viewports/` | The three presentation sizes listed above |
+| `responsive/` | The viewport matrix as contact sheets (`python3 tools/capture_responsive.py`, needs Pillow): scenes 1, 2, 3, 6, 7, 9 and 10, two iris frames, the personas, reduced motion, the fixtures and the mid-scene resize, at every size of "Responsive layout" |
 
 ## Scripts and signing
 

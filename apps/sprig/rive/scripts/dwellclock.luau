@@ -33,9 +33,10 @@ type Clock = {
 }
 
 function init(self: Clock, context: Context): boolean
-    -- init runs twice; the view model is only there the second time
+    -- init runs more than once: the view model is absent the first time, and a host that binds its own
+    -- UserRecap instance re-inits with it. Always (re)bind to the instance we are given now.
     local vm = context:viewModel()
-    if vm == nil or self.vm ~= nil then
+    if vm == nil then
         return true
     end
     self.vm = vm

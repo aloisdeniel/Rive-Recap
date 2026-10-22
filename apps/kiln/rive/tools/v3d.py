@@ -66,6 +66,10 @@ class V3D:
             self.el.add(inp)
         for k, v in (frame or FRAME).items():
             self.el.add(E("ScriptInputNumber", {"propertyValue": float(v), "name": k}))
+        if keyed:
+            # pieces on the art stage: the canvas follows the stage scale and the device ratio
+            self.el.add(E("ScriptInputNumber", {"propertyValue": 1.0, "name": "zoom"}, bind(g.p("_artScale"), 243)))
+            self.el.add(E("ScriptInputNumber", {"propertyValue": 1.0, "name": "dpr"}, bind(g.p("_dpr"), 243)))
         if turn:
             self.el.add(E("ScriptInputNumber", {"propertyValue": 0.0, "name": "turn"}, bind(g.p("_turnPhase"), 243)))
         if scene:

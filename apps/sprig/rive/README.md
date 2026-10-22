@@ -7,16 +7,19 @@ need a signed build** (`rive . --publish`, requires `rive login`, not produced h
 
 | Path | What |
 |---|---|
-| `scene.rml` | Editable source (generated, ~83k lines). Artboards `SprigRecap` (390×844, default) and `ShareCard` (330×476 component) |
+| `scene.rml` | Editable source (generated, ~84k lines). Artboards `SprigRecap` (designed at 390×844, laid out at any size, default) and `ShareCard` (330×476 component) |
 | `tools/sprig_main.py`, `tools/sprig_scenes*.py`, `tools/build_sprig.py`, `tools/rml.py` | Generator. Edit these and rerun them rather than hand-editing 10 scenes × 8 timelines |
+| `tools/layout.py`, `tools/resp.py` | Responsive layout: chrome bands and per-scene placements as expressions, compiled to formula converters or to the generated solver (see [Responsive layout](#responsive-layout)) |
+| `scripts/viewport.luau`, `scripts/layoutsolve.luau` | Viewport probe (`ScriptedLayout`) and the layout solver it runs (**generated** by `tools/resp.py`, do not edit) |
 | `scripts/paperleaf.luau` + `.wgsl` | Lit 3D folded-paper leaf / seed half-shell (transition sweep, scene 1–2 seed, scene 4 giant leaves, scene 9 cradle) |
 | `scripts/canopylight.luau` + `.wgsl` | Paper stock + light falling through a canopy, over every scene |
 | `scripts/dwellclock.luau` | Owns `screenProgress` and the auto-advance (exact pause) |
-| `build/sprig-recap.riv` | Runtime export (1.30 MB, unsigned). `build/` is git-ignored except this file |
+| `build/sprig-recap.riv` | Runtime export (1.37 MB, unsigned). `build/` is git-ignored except this file |
 | `assets/fonts/` | Bundled fonts (no raster assets remain) |
 | `captures/` | Headless PNG captures (see the list below); the full walkthrough is `../video.webm` |
 | `tools/capture.sh`, `tools/capture_all.sh`, `tools/goto.sh` | Reproducible capture scripts (`goto.sh` frames count from the last click) |
-| `tools/check.py` | Headless behaviour checks (14), see [Improvement pass](#checks) |
+| `tools/check.py`, `tools/harness/` | Headless behaviour checks (19: 14 at 390×844, 5 responsive), see [Checks](#checks) |
+| `tools/responsive.py` | Renders the viewport matrix into `captures/responsive/` contact sheets |
 
 ## Build, preview and export
 
@@ -28,8 +31,10 @@ rive .                               # live previewer (window); click/tap or use
 rive . --once && cp build/rive.riv build/sprig-recap.riv
 rive . --once --rev=build/sprig-recap.rev     # needs `rive login` (NOT produced, see Limitations)
 tools/capture_all.sh                 # regenerate captures/ (removes stale PNGs first)
-python3 tools/check.py               # 14 headless behaviour checks
-(cd ../../.. && scripts/render-video.py sprig --jobs 3)   # walkthrough -> apps/sprig/video.webm
+python3 tools/check.py               # 19 headless behaviour checks (incl. a mid-scene resize)
+python3 tools/responsive.py --mid    # viewport matrix -> captures/responsive/*.png
+(cd ../../.. && scripts/render-video.py sprig --jobs 2)   # walkthrough -> apps/sprig/video.webm (390x844)
+(cd ../../.. && scripts/render-video.py sprig --jobs 2 --viewport 1280x720 --output apps/sprig/video-landscape.webm)
 ```
 
 Fixtures: the view model carries three exported instances, `Sample` (the default, matching `sample-data.json`), `NewUser` and `Extreme`.
@@ -72,8 +77,10 @@ All names are on `UserRecap`. "Host" means the app adapter writes the value; "SM
 | shareIncludeName, shareIncludeSensitiveValues | Boolean | host | Default false. The name line and the period line on the card are hidden unless set |
 | showScreen1…showScreen10 | Boolean | host | Hide absent metrics, not genuine zeros |
 | groupSeparator | String | host (**adapter addition**) | Thousands separator for count-ups (default `,`; use `.` or a narrow NBSP per locale) |
+| layoutBreakpoint | Number | host (**contract addition**, optional) | Width in points at which the landscape layout takes over (default **768**: landscape when the artboard width ≥ 768). Non-finite or ≤ 0 falls back to 768. May change at any time; the scene re-lays out at once |
 | `_navNext`, `_navPrev`, `_replay` | Trigger | SM/host | Private plumbing. The host may fire them for its own buttons, setting `_navDir` (+1 or −1) first |
 | `_navDir`, `_pressing`, `_pressSide`, `_holdPaused`, `_leafHeld`, `_focusIndex` | Number/Bool | SM | Private (leading underscore). Not user data |
+| `_vw`, `_vh`, `_dpr`, `_landscape`, `_tall`, `_rpt`/`_rpw`/`_rlw`/`_rlt`, `_ch1…_ch10`, `_l…` (147) | Number/Bool | file (scripts) | Private responsive-layout state, see [Responsive layout](#responsive-layout). Hosts never write them; `_landscape` is safe to read |
 
 **Events** (reported to the host):
 
@@ -104,7 +111,7 @@ If the persona is unknown or empty, the host sets `showScreen9=false`. The zero-
 
 ## Interaction
 
-- **Tap regions** (y 96–752): the left third goes back, the right two-thirds go forward. Holding for 350 ms or more pauses (`_holdPaused`, progress dims), and releasing after a hold does **not** navigate.
+- **Tap regions** (between the top band and the controls; y 96–752 at 390×844): the left third of the **real width** goes back, the right two-thirds go forward. Holding for 350 ms or more pauses (`_holdPaused`, progress dims), and releasing after a hold does **not** navigate.
 - **Visible controls**: Previous, Continue, and Pause/Play (Share and Replay on the summary). All are at least 48 × 48 px, have `SemanticData` labels bound to the label strings, and a `FocusData` focus ring.
 - **Keyboard**: ←/→ navigate, Space pauses, Tab and Shift+Tab move focus, Enter activates the focused button. The file focuses its keyboard surface on start.
 - **Signature interaction**: hold the big heart leaf on the intro and it bends toward the pointer (a joystick driving two pose timelines). On release it springs back with an elastic overshoot. Its hit region is `isTargetOpaque`, so it never triggers navigation or a hold-pause, and it is moved off-canvas whenever scene 1 isn't current.
@@ -146,6 +153,115 @@ If the persona is unknown or empty, the host sets `showScreen9=false`. The zero-
   camera move or idle loop (the canopy light is frozen), and numbers show their final value immediately. All controls
   stay available.
 
+## Responsive layout
+
+The artboard is designed at 390×844 but is laid out at whatever size the host gives it. There are **two layouts,
+chosen by a pure width breakpoint**, and each adapts continuously to every size on its side of the threshold.
+
+### The rule
+
+- **Landscape layout when the artboard width ≥ `layoutBreakpoint`** (a new `UserRecap` number, default **768**),
+  otherwise the **portrait layout**. Height plays no part in the choice: 768×1024 and 820×1180 get the landscape layout,
+  667×375 and 740×360 the portrait one.
+- The orientation is derived from the **actual artboard width at runtime** and re-derived on every resize and on every
+  change of `layoutBreakpoint`, including mid-scene: the current scene, its progress and its state are kept, and only
+  the placement changes on the next frame (checked headless, below). `_landscape` is readable by the host.
+- Inside each layout, an aspect switch (`_tall`: height ≥ 1.1 × width) picks one of two arrangements, so the
+  portrait layout also works on a phone on its side and the landscape layout on a tablet held upright.
+
+| | Portrait layout (width < breakpoint) | Landscape layout (width ≥ breakpoint) |
+|---|---|---|
+| Chrome | Wordmark, year and the progress row across the top; Previous / Continue / Pause along the bottom (short canvases: a cluster under the art) | Wordmark, year and a full-width progress row; Previous / Pause / Continue as a cluster at the bottom right, under the copy |
+| Tall canvas | The 390×844 composition: number and copy on top (text scale 0.78–1.3), hero art below, bottom-anchored and fitted to the space left. **390×844 is the identity case** | Number and copy side by side in a row (number left, copy column right), the hero art below at up to 2.2× |
+| Wide canvas | Copy column left (the number above it), hero art right, compact chrome | **Hero art left, the big number and the copy column right**, type up to 2.1× (2.6–2.8× for the intro, persona and summary), copy vertically centred |
+| Persona (9) | Label, name and line over the arch stage, which now sits clear of the controls | Arch stage, cradle and pothos left; label, a large persona name and the line right |
+| Summary (10) | Headline over the share card | The share card left at up to 1.8×, headline and support right, Share / Replay under them |
+
+Everywhere: backgrounds are sized to the viewport (with room for the 0.94 camera recede), the ground (hills, the
+paper terraces of scene 3, scene 7's floor) is stretched to the full width, corner foliage stays glued to its corner,
+the progress row spans the real width (one flex segment per visible scene), the tap zones and hold-to-pause cover the
+real width, text columns re-wrap at their new width, and controls are 52 pt (×1–1.35 in landscape).
+
+### Mechanism
+
+1. **Viewport probe** (`scripts/viewport.luau`): a `ScriptedLayout` in a fill-sized root `LayoutComponent`, so its
+   `resize(size, scale)` receives the artboard's real size and the device pixel ratio. It writes private `UserRecap`
+   numbers: `_vw`, `_vh`, `_dpr`, `_landscape`, `_tall` and the arrangement one-hots `_rpt/_rpw/_rlw/_rlt`.
+2. **Placement as data binding.** Every responsive object is a plain wrapper `Node` (or a rectangle, a text column
+   width, a path vertex, a trim offset, a script input, the joystick) whose properties are bound. Children keep their
+   authored design coordinates and all their keyed animation, so choreography is untouched: the wrappers only map
+   design space to screen space. The layout is written once, in Python (`tools/layout.py`), as expressions of the
+   viewport; `tools/resp.py` compiles each one:
+   - short expressions → native `DataConverterFormula` converters (49);
+   - long ones (min/max over four arrangements) → `scripts/layoutsolve.luau`, a **generated** solver with shared
+     subexpressions computed once; the probe runs it and writes 147 private `_l…` numbers, bound directly.
+3. **Measured copy.** Each copy column binds its `computedHeight` back into `_ch1…_ch10` (`direction="true"`), and the
+   solver re-runs when they change. Column widths come from estimates (no feedback loop); scales and positions use
+   the **measured** height, so long names and localized copy push what follows instead of colliding.
+4. **Full-screen pieces follow the viewport**: the signature frame vine is a rounded rectangle whose vertices are bound
+   to the real edges (its trims start at the real vine tip), the leaf iris and its paper edge grow from the real vine
+   tip scaled to cover any viewport, the content camera recedes/pushes about the viewport centre, and the 3D transition
+   leaf sits in a viewport-centred wrapper scaled with the screen.
+5. **GPU canvases at their real size**: `paperleaf` takes `res` bound to its on-screen scale × device pixels (at least
+   the authored supersampling, capped at a 2048 px canvas) and resizes its canvas and MSAA/depth targets when it changes
+   (targets are shared per size and released when unused); `canopylight` takes `w`/`h`/`dpr` and resizes the paper
+   sheet (device resolution, ≤ 4096 px) and the light canvas, re-rendering the paper.
+6. **Rebinding.** `viewport.luau` and `dwellclock.luau` now rebind on every `init` that carries a view model, so a host
+   that binds its own `UserRecap` instance after load gets a working layout and clock (the earlier first-`init`-only
+   guard silently kept the default instance, which the resize harness exposed).
+
+Without scripting nothing is written: every private value keeps its default, which is the 390×844 design.
+
+### Host setup
+
+- **Use the runtime's layout fit** so the artboard is resized to the canvas and reflows (in the CLI this is the default
+  `--fit=layout`). The option is the `Layout` fit in each runtime, e.g. `Fit.Layout` on the web
+  (`new Layout({ fit: Fit.Layout })`, then call `resizeDrawingSurfaceToCanvas()` on resize), `.layout` on Apple,
+  `Fit.LAYOUT` on Android, `Fit.layout` in Flutter; **check the Rive runtime docs for your version's exact names**,
+  and for the layout scale factor, which should stay at the device pixel ratio so 1 artboard unit = 1 pt.
+- Do **not** use `contain`/`cover`: they scale the 390×844 artboard instead of re-laying it out.
+- Optionally write `layoutBreakpoint`. Everything else responsive is internal.
+- Unchanged: web hosts still need a signed build (`rive . --publish`).
+
+### Tested sizes (`captures/responsive/`)
+
+Each sheet is one scene, portrait row then landscape row, in this order:
+portrait 320×568, 360×640, 390×844, 430×932, 600×960, 767×1024, 667×375, 740×360;
+landscape 768×1024, 820×1180, 1024×768, 1280×720, 1440×900, 1920×1080, 2560×1080, 1366×600.
+`mid-fwd-1to2-f20.png` and `mid-back-4to3-f18.png` show a forward and a reverse transition 20 / 18 frames in at
+every size: the frame vine hugs the real edges, the iris and 3D leaf cover the whole viewport. The walkthroughs are
+`../video.webm` (390×844) and `../video-landscape.webm` (1280×720).
+
+Responsive checks in `tools/check.py`:
+- `orientation_follows_width`: 767×1024 portrait, 768×1024 landscape, 740×360 portrait, 1366×600 landscape…
+- `breakpoint_is_tunable`: `layoutBreakpoint` 1100 keeps 1024 wide portrait, 600 makes 700 wide landscape.
+- `right_arrow_and_tap_zones_at_other_sizes`: Right ×2 and tap next/next/back at 1280×720, 740×360, 320×568 and 820×1180.
+- `hold_pauses_on_real_width`: hold on the real right edge pauses and its release does not navigate.
+- `resize_across_threshold_mid_scene`: a throwaway harness project (`build/harness`, never shipped) instances the
+  recap, settles scene 2 at 1280×800, resizes it to 600×900 mid-scene (still scene 2, now portrait, settled, the
+  applied placement equals the solved one), presses Continue and resizes back to 1280×800 **mid-transition** (lands on
+  scene 3, landscape, settled). All 147 solved values then equal those of a fresh start at the same size.
+
+### Compromises
+
+- **Placement, not per-shape reflow.** Hand-drawn art moves and scales as groups (art, number block, copy column,
+  corner foliage, ground). Copy re-wraps for real; illustrations do not re-compose shape by shape.
+- **Private view-model state.** `UserRecap` carries 166 private underscore numbers for the layout (147 solved
+  placements, 10 measured heights, the viewport). They are not user data and hosts never write them, but they show up
+  in a data dump. The alternative, formulas only, made the RML 3× larger.
+- **Smallest phones.** At 320×568 copy is 0.78× (support 14 px, units 11.5 px), but the share card on the summary is
+  drawn at about 0.53×, so its stat labels are about 6 px on screen. The host's share image renders the `ShareCard`
+  artboard at native size, so the shared card is unaffected.
+- **Extreme copy.** The 40%-longer extreme fixture fits everywhere except the 740×360 short phone, where scene 2's
+  four-line headline plus support runs past the bottom at the 0.66× floor, and 320×568, where it reaches the vine.
+- **Backdrops under copy.** In landscape, scene 3's paper terraces and the story vine run behind the copy column; scene
+  4's foliage and scene 7's hands still bleed under the portrait control row, as in the design. Scene 7's hands are
+  framed in a paper panel in side-by-side arrangements so the arms do not end mid-screen.
+- **Very wide screens** (2560×1080) keep the copy column capped at 420 design units and the art at 2.6×, so there is
+  generous empty paper rather than giant type.
+- **3D resolution** is capped at 2048 px canvases (transition leaf ≈ 2.3 px/unit): slightly soft on a 5K display.
+- A live resize between two arrangements is a cut, not an animated reflow.
+
 ## Captures (`captures/`)
 
 Regenerated by `tools/capture_all.sh` (it deletes the old PNGs first). Frame numbers count from the navigating click.
@@ -162,7 +278,8 @@ Regenerated by `tools/capture_all.sh` (it deletes the old PNGs first). Frame num
 | `extreme-*.png` | 128,940 values, 52-character name, 40%+ longer copy |
 | `hidden-3-4-7-nav.png` | 7 progress segments; navigation skips the hidden scenes |
 | `paused-scene1.png` | Paused state |
-| `viewport-*.png` | 320×568, 430×932 and desktop 1280×800 with `fit=contain` |
+| `responsive/scene01…10.png` | Each settled scene across the 16-size viewport matrix (see [Responsive layout](#responsive-layout)) |
+| `responsive/mid-fwd-1to2-f20.png`, `responsive/mid-back-4to3-f18.png` | A forward and a reverse transition, mid-flight, at every size |
 
 Motion preview: `apps/sprig/video.webm` (34.5 s, every scene and transition, rendered headless by
 `scripts/render-video.py sprig`).
@@ -187,13 +304,14 @@ Both are embedded in the `.riv`. All textures (paper fibre, canopy light, leaf v
   interpolator, `x + rm·(target − x)`, reading the metric and `reducedMotion` through bound formula tokens.
 - **Event payloads**: `screenChanged` carries a constant `index` per scene through the Event's custom property. Read `currentScreen` if your runtime doesn't expose payloads.
 - **Locale formatting**: there is no in-file locale formatter. Count-ups group thousands with the adapter-supplied `groupSeparator`. Values at or above 1,000,000 show without inner grouping. Large values scale the numeral down in steps instead of overflowing.
-- **Responsive reflow**: the master is a fixed 390×844 composition, and smaller or wider screens rely on host `Fit.contain` with a forest letterbox (see the viewport captures). At 320×568 everything scales to 0.67; body text is now 18 px in the master, about 12.1 px there (was 10.7 px).
+- **Responsive reflow**: since the responsive pass the file lays itself out at any size with a portrait and a landscape layout; see [Responsive layout](#responsive-layout). Hand-drawn art is placed and scaled by group rather than reflowed shape by shape.
 - **Relative bind paths**: the CLI can't author them. All binds are absolute paths into `UserRecap`.
 
 ## Measurements
 
-See the table in [Improvement pass](#performance). Object counts: SprigRecap 51,222 objects (was 24,658; the increase is
-almost all keyframes for the vertex morphs and their reverse/reduced holds), ShareCard 882, 18 state-machine layers.
+See the table in [Improvement pass](#performance). Object counts: SprigRecap 51,592 objects (24,658 in the first version; the
+increase is almost all keyframes for the vertex morphs and their reverse/reduced holds, plus 370 from the responsive
+pass), ShareCard 882, 18 state-machine layers.
 Frame rate on a device was not measured; no device or runtime profiler was available.
 
 ## Remaining limitations (honest)
@@ -308,7 +426,8 @@ Frame rate on a device was not measured; no device or runtime profiler was avail
 
 ### Checks
 
-`python3 tools/check.py` — 14/14 pass: Right/Left keys, hidden-scene skipping both ways, 12 rapid taps land on 10,
+`python3 tools/check.py` — 19/19 pass (14 at 390×844 below, plus 5 responsive checks listed in
+[Responsive layout](#responsive-layout)): Right/Left keys, hidden-scene skipping both ways, 12 rapid taps land on 10,
 auto-advance at 1.8 s settle + dwell, dwell clamped to 3 s, auto-advance disabled holds, pause freezes progress exactly
 and resumes from the same point, the summary never auto-advances, Replay returns to 1, Space pauses, hold pauses and its
 release does not navigate. `rive . --verify` 0 errors / 0 warnings, `rive inspect . --summary` problems `[]`.
@@ -329,6 +448,13 @@ frame rate and GPU time were not measured.
 | Wasm memory growth | +0 | +0 |
 | Pause latency | up to dwell/28 (250 ms at 7 s) | 0 (same frame) |
 | Body text at 320×568 | 10.7 px | 12.1 px |
+
+**Responsive pass:** `.riv` 1,296,615 → **1,370,377 B** (+5.7%: wrapper nodes, binds, 49 formula converters, the
+generated solver); SprigRecap 51,222 → 51,592 objects; `scene.rml` ~84.9k lines. `--bench=600` (intro) p50 advance /
+render 0.090 / 0.206 ms at 390×844 and 0.096 / 0.218 ms at 1280×720 (measured while other renders shared the machine,
+so means and p95 are noisy); wasm memory +0. The solver runs only when the size, breakpoint, scene or a copy height
+changes. The canopy paper sheet is now rendered at the real size × device pixels (≤ 4096 px), e.g. 1920×1080 at @1x
+→ 2880×1620 (≈ 18.7 MB) instead of a fixed 585×1266.
 
 GPU work per frame: the current scene's 3D piece re-renders only while one of its inputs moves (entrance, idle sway);
 the transition leaf renders only during a cut (~45 frames); the canopy light renders a 133×287 pass while it drifts;

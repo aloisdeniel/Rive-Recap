@@ -19,6 +19,9 @@ type Flap = {
     flips: Input<number>,
     pitch: Input<number>,
     gpu: boolean,
+    samples: number,
+    pw: number,
+    ph: number,
     canvas: GPUCanvas?,
     msaaTex: GPUTexture?,
     depth: GPUTexture?,
@@ -55,6 +58,24 @@ local function buildFallback(self: Flap)
         p:close()
     end
     self.fbPath = p
+end
+
+-- canvas size in device pixels; `res` (pixels per point) is bound to the layout so
+-- the board renders at its real on-screen resolution, re-allocated when it changes
+local function targetSize(self: Flap): (number, number, number)
+    local k = math.clamp(self.res, 1, 4)
+    local pw = math.max(16, math.ceil(self.w * k / 8) * 8)
+    local ph = math.max(16, math.ceil(self.h * k / 8) * 8)
+    return k, pw, ph
+end
+
+local function allocTargets(self: Flap, pw: number, ph: number)
+    if self.samples > 1 then
+        self.msaaTex = GPUTexture.new({ width = pw, height = ph, format = 'rgba8unorm', renderTarget = true,
+            sampleCount = self.samples, label = 'flap msaa' })
+    end
+    self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
+        sampleCount = self.samples, label = 'flap depth' })
 end
 
 function init(self: Flap, context: Context): boolean
@@ -104,17 +125,11 @@ function init(self: Flap, context: Context): boolean
     end
     self.ibuf = GPUBuffer.new({ size = COLS * ROWS * 8, usage = 'vertex', data = idata, immutable = true,
         label = 'flap instances' })
-    local k = math.max(1, self.res)
-    self.k = k
-    local pw = math.max(16, math.ceil(self.w * k / 8) * 8)
-    local ph = math.max(16, math.ceil(self.h * k / 8) * 8)
+    self.samples = samples
+    local k, pw, ph = targetSize(self)
+    self.k, self.pw, self.ph = k, pw, ph
     self.canvas = context:gpuCanvas({ width = pw, height = ph })
-    if samples > 1 then
-        self.msaaTex = GPUTexture.new({ width = pw, height = ph, format = 'rgba8unorm', renderTarget = true,
-            sampleCount = samples, label = 'flap msaa' })
-    end
-    self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
-        sampleCount = samples, label = 'flap depth' })
+    allocTargets(self, pw, ph)
     self.gpu = true
     return true
 end
@@ -178,6 +193,14 @@ function draw(self: Flap, renderer: Renderer)
         renderer:drawPath(self.fbPath, self.fbPaint)
         return
     end
+    local k, pw, ph = targetSize(self)
+    if pw ~= self.pw or ph ~= self.ph then
+        canvas:resize(pw, ph)
+        allocTargets(self, pw, ph)
+        self.pw, self.ph = pw, ph
+        self.lastKey = ''
+    end
+    self.k = k
     local key = string.format('%.4f|%.4f|%.2f|%.2f|%.4f', self.roll, self.idle, self.active, self.flips, self.pitch)
     if key ~= self.lastKey then
         self.lastKey = key
@@ -201,6 +224,9 @@ return function(): Node<Flap>
         flips = 6,
         pitch = 0.12,
         gpu = false,
+        samples = 1,
+        pw = 0,
+        ph = 0,
         canvas = nil,
         msaaTex = nil,
         depth = nil,

@@ -5,7 +5,7 @@ set -u
 cd "$(dirname "$0")/../rive"
 R=~/.rive/bin/rive
 OUT=captures
-mkdir -p $OUT/scenes $OUT/personas $OUT/transitions $OUT/fixtures $OUT/reduced-motion $OUT/states $OUT/viewports
+mkdir -p $OUT/scenes $OUT/personas $OUT/transitions $OUT/fixtures $OUT/reduced-motion $OUT/states
 
 shot() { # out [args...]
   local o=$1; shift
@@ -79,6 +79,6 @@ shot $OUT/states/focus-ring-continue.png --advance=150 --key=tab --advance=4 --k
 shot $OUT/states/share-capture-mode-card.png --data=shareCaptureMode=true $(taps 9) --advance=220
 shot $OUT/states/share-card-name-included.png --data=shareIncludeName=true $(taps 9) --advance=220
 
-# 7) viewports (host uses fit=contain on a fixed 390x844 artboard)
-for v in 320x568 390x844 430x932 1280x800; do shot $OUT/viewports/viewport-$v.png --viewport=$v --fit=contain $(taps 1) --advance=200; done
+# 7) responsive layout: the viewport matrix as contact sheets (captures/responsive)
+"$(dirname "$0")/capture_responsive.sh"
 echo done

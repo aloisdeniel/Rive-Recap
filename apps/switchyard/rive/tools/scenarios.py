@@ -30,10 +30,21 @@ def gen(debug):
                    capture_output=True)
 
 
-def run(name, steps, fixture=None, data=()):
+def run(name, steps, fixture=None, data=(), size=None, resize=None):
+    """size=(w, h): the artboard size (the debug build binds it to _testW/_testH, as a
+    host's layout fit would set it). resize=(t, w, h): resize to w x h at t seconds."""
     png = os.path.join(OUT, f"{name}.png")
     dump = os.path.join(OUT, f"{name}.json")
     args = [f"--screenshot={png}", f"--data-dump={dump}"] + fixture_args(fixture) + [f"--data={d}" for d in data]
+    if size or resize:
+        w, h = size or (390, 844)
+        args += [f"--data=_testW={w}", f"--data=_testH={h}"]
+        vw, vh = w, h
+        if resize:
+            t, w2, h2 = resize
+            args += [f"--data=_testAt={t}", f"--data=_testW2={w2}", f"--data=_testH2={h2}"]
+            vw, vh = max(w, w2), max(h, h2)
+        args.append(f"--viewport={vw}x{vh}")
     args += steps
     code, log = rive(args)
     if code:
@@ -49,6 +60,85 @@ RESULTS = []
 def check(name, cond, detail):
     RESULTS.append((name, bool(cond), detail))
     print(("PASS " if cond else "FAIL ") + name + " :: " + detail)
+
+
+def real(vm, key, x, y):
+    """design point of a placed group -> real artboard point"""
+    return (round(vm[f"_{key}X"] + x * vm[f"_{key}S"]), round(vm[f"_{key}Y"] + y * vm[f"_{key}S"]))
+
+
+def dock_points(vm):
+    """real centres of Prev and Continue from the dumped chrome layout"""
+    cs, dy = vm["_cs"], vm["_dockY"]
+    y = round(dy + (790 + vm["_dockBtnY"]) * cs)
+    return (round((vm["_dockL"] + 50) * cs), y), (round((vm["_dockR"] + 259) * cs), y)
+
+
+def orientation_checks():
+    """Responsive: breakpoint rule, real-size interaction, resizes across the threshold."""
+    # 14. the breakpoint is a pure width rule, tunable through layoutBreakpoint
+    got = {}
+    for w, h in ((767, 1024), (768, 1024), (667, 375), (1280, 720), (820, 1180)):
+        _, vm = run(f"14_breakpoint_{w}x{h}", adv(20), size=(w, h))
+        got[(w, h)] = vm["_landscape"]
+    _, vm_bp = run("14_breakpoint_override", adv(20), size=(1280, 720), data=["layoutBreakpoint=1300"])
+    check("breakpoint rule", got[(767, 1024)] == 0 and got[(768, 1024)] == 1 and got[(667, 375)] == 0
+          and got[(1280, 720)] == 1 and got[(820, 1180)] == 1 and vm_bp["_landscape"] == 0,
+          f"767x1024={got[(767, 1024)]} 768x1024={got[(768, 1024)]} 667x375={got[(667, 375)]} "
+          f"1280x720={got[(1280, 720)]} 820x1180={got[(820, 1180)]} 1280 with breakpoint 1300={vm_bp['_landscape']}")
+
+    # 15. landscape interaction at the real size: tap zones use the real width (left
+    # third back, right two-thirds next), hold pauses, Right arrow advances, the dock
+    # buttons and the route chips are hit where they are drawn
+    size = (1280, 720)
+    _, vm0 = run("15_landscape_layout", adv(20), size=size)
+    prev_pt, next_pt = dock_points(vm0)
+    steps = adv(40) + click(1000, 360) + adv(30) + click(500, 360) + adv(30) + ["--key=right"] + adv(30) + \
+        ["--key=right"] + adv(30) + click(*prev_pt) + adv(30) + click(*next_pt) + adv(30) + click(300, 360) + adv(30)
+    ev, vm = run("15a_landscape_taps", steps, size=size)
+    # 1 -(tap x=1000)-> 2 -(tap x=500, middle third)-> 3 -(Right)-> 4 -(Right)-> 5 -(Prev)-> 4 -(Continue)-> 5
+    # -(tap x=300, left third)-> 4
+    check("landscape taps / keys / dock", vm["currentScreen"] == 4 and ev.count("screenChanged") == 8,
+          f"screen={vm['currentScreen']} (expect 4) screenChanged x{ev.count('screenChanged')} (expect 8)")
+    steps = adv(60) + [f"--pointer=move@1000,360", "--pointer=down@1000,360"] + adv(60)
+    _, vm_h = run("15b_landscape_hold", steps, size=size)
+    _, vm_r = run("15c_landscape_release", steps + ["--pointer=up@1000,360"] + adv(10), size=size)
+    check("landscape hold-to-pause", vm_h["isPaused"] is True and vm_r["isPaused"] is False
+          and vm_r["currentScreen"] == 1, f"held={vm_h['isPaused']} released={vm_r['isPaused']} "
+          f"screen={vm_r['currentScreen']}")
+    _, v4 = run("15d_landscape_chip_layout", adv(20), size=size, data=["currentScreen=4"])
+    chip = real(v4, "s4art", 146, 488)       # B12
+    ev, vm = run("15e_landscape_chip", adv(30) + click(*chip) + adv(60), size=size, data=["currentScreen=4"])
+    check("landscape route chip isolated", vm["currentScreen"] == 4 and vm["_activeRoute"] == 2,
+          f"chip at {chip}: screen={vm['currentScreen']} activeRoute={vm['_activeRoute']}")
+
+    # 16. resize across the threshold mid-scene: the scene is kept, nothing re-fires,
+    # the new layout settles and the story carries on
+    steps = adv(30) + ["--key=right"] + adv(30) + ["--key=right"] + adv(60) + adv("2s")
+    ev, vm = run("16a_resize_portrait_to_landscape", steps, resize=(2.0, 1280, 720), size=(390, 844))
+    progress_a = vm["screenProgress"]
+    ev2, vm2 = run("16b_resize_then_next", steps + ["--key=right"] + adv(150), resize=(2.0, 1280, 720),
+                   size=(390, 844))
+    check("resize portrait -> landscape mid-scene", vm["currentScreen"] == 3 and vm["_landscape"] == 1
+          and ev.count("screenChanged") == 3 and vm["_vw"] == 1280 and progress_a > 0
+          and vm2["currentScreen"] == 4 and ev2.count("screenChanged") == 4,
+          f"screen={vm['currentScreen']} landscape={vm['_landscape']} vw={vm['_vw']} "
+          f"screenChanged x{ev.count('screenChanged')} progress={progress_a:.3f}; then Right -> {vm2['currentScreen']}")
+    # landscape -> portrait while the 4 -> 5 roundel is mid-flight, then settle
+    steps = adv(40) + ["--key=right"] * 3 + adv(150) + ["--key=right"] + adv(20) + adv(150)
+    ev, vm = run("16c_resize_mid_transition", steps, resize=(3.2, 600, 960), size=(1280, 720),
+                 data=["autoAdvanceEnabled=false"])
+    check("resize landscape -> portrait mid-transition", vm["currentScreen"] == 5 and vm["_landscape"] == 0
+          and ev.count("screenChanged") == 5 and vm["_vw"] == 600,
+          f"screen={vm['currentScreen']} landscape={vm['_landscape']} vw={vm['_vw']} "
+          f"screenChanged x{ev.count('screenChanged')}")
+    # the persona and summary through a resize, then back on the original size
+    steps = adv(60) + adv(200)
+    ev, vm = run("16d_resize_summary", steps, resize=(1.0, 740, 360), size=(1440, 900),
+                 data=["currentScreen=10"])
+    check("resize on the summary keeps it settled", vm["currentScreen"] == 10 and ev.count("recapFinished") == 1
+          and vm["_landscape"] == 0, f"screen={vm['currentScreen']} recapFinished x{ev.count('recapFinished')} "
+          f"landscape={vm['_landscape']}")
 
 
 def main():
@@ -149,6 +239,7 @@ def main():
         ev, vm = run("13_reduced_motion", steps, data=["reducedMotion=true"])
         check("reduced motion", vm["currentScreen"] == 2 and vm["_count2"] == 1,
               f"screen={vm['currentScreen']} count playhead={vm['_count2']}")
+        orientation_checks()
     finally:
         gen(False)
     fails = [r for r in RESULTS if not r[1]]

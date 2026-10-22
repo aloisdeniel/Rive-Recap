@@ -490,6 +490,13 @@
         "changed": false
       },
       {
+        "name": "layoutBreakpoint",
+        "path": "layoutBreakpoint",
+        "type": "number",
+        "value": 768,
+        "changed": false
+      },
+      {
         "name": "_navDir",
         "path": "_navDir",
         "type": "number",
@@ -693,6 +700,1294 @@
         "type": "number",
         "value": -0.804166675,
         "changed": true
+      },
+      {
+        "name": "_vw",
+        "path": "_vw",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_vh",
+        "path": "_vh",
+        "type": "number",
+        "value": 844,
+        "changed": false
+      },
+      {
+        "name": "_landscape",
+        "path": "_landscape",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cs",
+        "path": "_cs",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_scx",
+        "path": "_scx",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_scy",
+        "path": "_scy",
+        "type": "number",
+        "value": 411,
+        "changed": false
+      },
+      {
+        "name": "_artClipW",
+        "path": "_artClipW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_copyClipX",
+        "path": "_copyClipX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_copyClipW",
+        "path": "_copyClipW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_copyW",
+        "path": "_copyW",
+        "type": "number",
+        "value": 342,
+        "changed": false
+      },
+      {
+        "name": "_rkX",
+        "path": "_rkX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_rkY",
+        "path": "_rkY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_rkS",
+        "path": "_rkS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_mX",
+        "path": "_mX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_mY",
+        "path": "_mY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_mS",
+        "path": "_mS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_hdrWmX",
+        "path": "_hdrWmX",
+        "type": "number",
+        "value": 26,
+        "changed": false
+      },
+      {
+        "name": "_hdrWmY",
+        "path": "_hdrWmY",
+        "type": "number",
+        "value": 32,
+        "changed": false
+      },
+      {
+        "name": "_hdrYrX",
+        "path": "_hdrYrX",
+        "type": "number",
+        "value": 366,
+        "changed": false
+      },
+      {
+        "name": "_hdrYrY",
+        "path": "_hdrYrY",
+        "type": "number",
+        "value": 22,
+        "changed": false
+      },
+      {
+        "name": "_hdrBandW",
+        "path": "_hdrBandW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_hdrBandH",
+        "path": "_hdrBandH",
+        "type": "number",
+        "value": 82,
+        "changed": false
+      },
+      {
+        "name": "_dockY",
+        "path": "_dockY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_dockL",
+        "path": "_dockL",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_dockR",
+        "path": "_dockR",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_dockBtnY",
+        "path": "_dockBtnY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_dockBandW",
+        "path": "_dockBandW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_dockBandH",
+        "path": "_dockBandH",
+        "type": "number",
+        "value": 104,
+        "changed": false
+      },
+      {
+        "name": "_s1PX",
+        "path": "_s1PX",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_s1PY",
+        "path": "_s1PY",
+        "type": "number",
+        "value": 353,
+        "changed": false
+      },
+      {
+        "name": "_s1DS",
+        "path": "_s1DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_res1",
+        "path": "_res1",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_s1copyX",
+        "path": "_s1copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1copyY",
+        "path": "_s1copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1copyS",
+        "path": "_s1copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s1topX",
+        "path": "_s1topX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1topY",
+        "path": "_s1topY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1topS",
+        "path": "_s1topS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s1artX",
+        "path": "_s1artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1artY",
+        "path": "_s1artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s1artS",
+        "path": "_s1artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s2PX",
+        "path": "_s2PX",
+        "type": "number",
+        "value": 318,
+        "changed": false
+      },
+      {
+        "name": "_s2PY",
+        "path": "_s2PY",
+        "type": "number",
+        "value": 176,
+        "changed": false
+      },
+      {
+        "name": "_s2DS",
+        "path": "_s2DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_tramW",
+        "path": "_tramW",
+        "type": "number",
+        "value": 394,
+        "changed": true
+      },
+      {
+        "name": "_res2",
+        "path": "_res2",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_copyW2",
+        "path": "_copyW2",
+        "type": "number",
+        "value": 228,
+        "changed": false
+      },
+      {
+        "name": "_s2copyX",
+        "path": "_s2copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2copyY",
+        "path": "_s2copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2copyS",
+        "path": "_s2copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s2tramX",
+        "path": "_s2tramX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2tramY",
+        "path": "_s2tramY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2tramS",
+        "path": "_s2tramS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s2artX",
+        "path": "_s2artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2artY",
+        "path": "_s2artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s2artS",
+        "path": "_s2artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s3PX",
+        "path": "_s3PX",
+        "type": "number",
+        "value": 52,
+        "changed": false
+      },
+      {
+        "name": "_s3PY",
+        "path": "_s3PY",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_s3DS",
+        "path": "_s3DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_copyWs",
+        "path": "_copyWs",
+        "type": "number",
+        "value": 300,
+        "changed": false
+      },
+      {
+        "name": "_s3copyX",
+        "path": "_s3copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3copyY",
+        "path": "_s3copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3copyS",
+        "path": "_s3copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s3artX",
+        "path": "_s3artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3artY",
+        "path": "_s3artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3artS",
+        "path": "_s3artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s3lowerX",
+        "path": "_s3lowerX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3lowerY",
+        "path": "_s3lowerY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s3lowerS",
+        "path": "_s3lowerS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s4PX",
+        "path": "_s4PX",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_s4PY",
+        "path": "_s4PY",
+        "type": "number",
+        "value": 164,
+        "changed": false
+      },
+      {
+        "name": "_s4DS",
+        "path": "_s4DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s4copyX",
+        "path": "_s4copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s4copyY",
+        "path": "_s4copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s4copyS",
+        "path": "_s4copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s4artX",
+        "path": "_s4artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s4artY",
+        "path": "_s4artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s4artS",
+        "path": "_s4artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s5PX",
+        "path": "_s5PX",
+        "type": "number",
+        "value": 330,
+        "changed": false
+      },
+      {
+        "name": "_s5PY",
+        "path": "_s5PY",
+        "type": "number",
+        "value": 560,
+        "changed": false
+      },
+      {
+        "name": "_s5DS",
+        "path": "_s5DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s5copyX",
+        "path": "_s5copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s5copyY",
+        "path": "_s5copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s5copyS",
+        "path": "_s5copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s5artX",
+        "path": "_s5artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s5artY",
+        "path": "_s5artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s5artS",
+        "path": "_s5artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s6PX",
+        "path": "_s6PX",
+        "type": "number",
+        "value": 300,
+        "changed": false
+      },
+      {
+        "name": "_s6PY",
+        "path": "_s6PY",
+        "type": "number",
+        "value": 176,
+        "changed": false
+      },
+      {
+        "name": "_s6DS",
+        "path": "_s6DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s6copyX",
+        "path": "_s6copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6copyY",
+        "path": "_s6copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6copyS",
+        "path": "_s6copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s6stubO",
+        "path": "_s6stubO",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6artX",
+        "path": "_s6artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6artY",
+        "path": "_s6artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6artS",
+        "path": "_s6artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s6seaX",
+        "path": "_s6seaX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6seaY",
+        "path": "_s6seaY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6seaS",
+        "path": "_s6seaS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s7PX",
+        "path": "_s7PX",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_s7PY",
+        "path": "_s7PY",
+        "type": "number",
+        "value": 216,
+        "changed": false
+      },
+      {
+        "name": "_s7DS",
+        "path": "_s7DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s7copyX",
+        "path": "_s7copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s7copyY",
+        "path": "_s7copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s7copyS",
+        "path": "_s7copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s7artX",
+        "path": "_s7artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s7artY",
+        "path": "_s7artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s7artS",
+        "path": "_s7artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s8PX",
+        "path": "_s8PX",
+        "type": "number",
+        "value": 60,
+        "changed": false
+      },
+      {
+        "name": "_s8PY",
+        "path": "_s8PY",
+        "type": "number",
+        "value": 420,
+        "changed": false
+      },
+      {
+        "name": "_s8DS",
+        "path": "_s8DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_res8",
+        "path": "_res8",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_s8copyX",
+        "path": "_s8copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s8copyY",
+        "path": "_s8copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s8copyS",
+        "path": "_s8copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s8artX",
+        "path": "_s8artX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s8artY",
+        "path": "_s8artY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s8artS",
+        "path": "_s8artS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s9PX",
+        "path": "_s9PX",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_s9PY",
+        "path": "_s9PY",
+        "type": "number",
+        "value": 296,
+        "changed": false
+      },
+      {
+        "name": "_s9DS",
+        "path": "_s9DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_copyWt",
+        "path": "_copyWt",
+        "type": "number",
+        "value": 346,
+        "changed": false
+      },
+      {
+        "name": "_s9copyX",
+        "path": "_s9copyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s9copyY",
+        "path": "_s9copyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s9copyS",
+        "path": "_s9copyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s9emblemX",
+        "path": "_s9emblemX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s9emblemY",
+        "path": "_s9emblemY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s9emblemS",
+        "path": "_s9emblemS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10PX",
+        "path": "_s10PX",
+        "type": "number",
+        "value": 195,
+        "changed": false
+      },
+      {
+        "name": "_s10PY",
+        "path": "_s10PY",
+        "type": "number",
+        "value": 430,
+        "changed": false
+      },
+      {
+        "name": "_s10DS",
+        "path": "_s10DS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_cc0X",
+        "path": "_cc0X",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc0Y",
+        "path": "_cc0Y",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc1X",
+        "path": "_cc1X",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc1Y",
+        "path": "_cc1Y",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc2X",
+        "path": "_cc2X",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc2Y",
+        "path": "_cc2Y",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc3X",
+        "path": "_cc3X",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc3Y",
+        "path": "_cc3Y",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc4X",
+        "path": "_cc4X",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cc4Y",
+        "path": "_cc4Y",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cardTextW",
+        "path": "_cardTextW",
+        "type": "number",
+        "value": 302,
+        "changed": false
+      },
+      {
+        "name": "_cardW",
+        "path": "_cardW",
+        "type": "number",
+        "value": 342,
+        "changed": false
+      },
+      {
+        "name": "_cardH",
+        "path": "_cardH",
+        "type": "number",
+        "value": 516,
+        "changed": false
+      },
+      {
+        "name": "_cinfoX",
+        "path": "_cinfoX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cinfoY",
+        "path": "_cinfoY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cperX",
+        "path": "_cperX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cperY",
+        "path": "_cperY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdiscX",
+        "path": "_cdiscX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdiscY",
+        "path": "_cdiscY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_clinesO",
+        "path": "_clinesO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_cyrX",
+        "path": "_cyrX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cyrY",
+        "path": "_cyrY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdivO",
+        "path": "_cdivO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_cdivpX",
+        "path": "_cdivpX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdivpY",
+        "path": "_cdivpY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_chperfO",
+        "path": "_chperfO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_cstubX",
+        "path": "_cstubX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cstubY",
+        "path": "_cstubY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cvperfO",
+        "path": "_cvperfO",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_shead1O",
+        "path": "_shead1O",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_shead2O",
+        "path": "_shead2O",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10headX",
+        "path": "_s10headX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10headY",
+        "path": "_s10headY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10headS",
+        "path": "_s10headS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_ssupO",
+        "path": "_ssupO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10supX",
+        "path": "_s10supX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10supY",
+        "path": "_s10supY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10supS",
+        "path": "_s10supS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10cardX",
+        "path": "_s10cardX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10cardY",
+        "path": "_s10cardY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10cardS",
+        "path": "_s10cardS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10ecopyX",
+        "path": "_s10ecopyX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10ecopyY",
+        "path": "_s10ecopyY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10ecopyS",
+        "path": "_s10ecopyS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10eartX",
+        "path": "_s10eartX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s10eartY",
+        "path": "_s10eartY",
+        "type": "number",
+        "value": -18,
+        "changed": true
+      },
+      {
+        "name": "_s10eartS",
+        "path": "_s10eartS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_testW",
+        "path": "_testW",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "_testH",
+        "path": "_testH",
+        "type": "number",
+        "value": 844,
+        "changed": false
+      },
+      {
+        "name": "_testW2",
+        "path": "_testW2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_testH2",
+        "path": "_testH2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_testAt",
+        "path": "_testAt",
+        "type": "number",
+        "value": -1,
+        "changed": false
       }
     ]
   },

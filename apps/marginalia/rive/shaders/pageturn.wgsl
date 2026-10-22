@@ -103,7 +103,7 @@ fn fbm(p: vec2<f32>) -> f32 {
 // Combed marbling for the inside of the board cover: domain-warped bands of
 // ink blue, oxblood and cream with gilt veins, as on a bookbinder's endpaper.
 fn marbled(pp: vec2<f32>) -> vec3<f32> {
-    let q = pp / u.page.x * 3.2;
+    let q = pp / min(u.page.x, u.page.y * 0.62) * 3.2;
     let warp = vec2<f32>(fbm(q * 1.3 + vec2<f32>(1.7, 9.2)), fbm(q * 1.3 + vec2<f32>(8.3, 2.8)));
     let r = q + 1.9 * warp;
     let comb = sin(r.x * 22.0) * 0.08;

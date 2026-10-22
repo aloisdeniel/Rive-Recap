@@ -3,7 +3,7 @@
 // surface. Rendered once into a canvas; drawing it costs one image per frame.
 
 struct U {
-    a: vec4<f32>, // width, height (pixels), seed, unused
+    a: vec4<f32>, // width, height (points: the pattern is resolution independent), seed, unused
 };
 
 @group(0) @binding(0) var<uniform> u: U;

@@ -72,6 +72,7 @@ PROPS = [
     # ---- host-provided extras (documented additions)
     ("personaAdapterEnabled", "bool", True),
     ("shareDismissed", "trigger", None),
+    ("layoutBreakpoint", "number", 768),
     # ---- adapter-owned derived fields (written by director.luau; host may read)
     ("sessionsDisplay", "string", "86"),
     ("sendsDisplay", "string", "214"),
@@ -151,6 +152,44 @@ DEFAULT_INSTANCE = "0:89999"
 
 
 def view_model():
+    return [user_recap(), rig_view_model()]
+
+
+# ---------------------------------------------------------------- layout rig (file-internal)
+# A global view model the director writes and the stage/chrome read: the responsive
+# layout's transforms. It is plumbing, not user data - the host never touches it.
+RIG_VM_ID = "0:95000"
+RIG_DEFAULT = "0:94999"
+RIG_P = {}
+RIG_DEFAULTS = {}
+_rid = [95000]
+
+
+def rig_prop(name, default=0.0):
+    if name not in RIG_P:
+        _rid[0] += 1
+        RIG_P[name] = f"0:{_rid[0]}"
+        RIG_DEFAULTS[name] = default
+    return name
+
+
+def rig_path(name):
+    rig_prop(name)
+    return f"{RIG_VM_ID}-{RIG_P[name]}"
+
+
+def rig_view_model():
+    vm = E("ViewModel", viewModelType="global", defaultInstanceId=RIG_DEFAULT, name="CruxRig", id=RIG_VM_ID)
+    for name in RIG_P:
+        vm.add(E("ViewModelPropertyNumber", name=name, id=RIG_P[name]))
+    inst = E("ViewModelInstance", exports=True, name="Default", id=RIG_DEFAULT)
+    for name in RIG_P:
+        inst.add(E("ViewModelInstanceNumber", propertyValue=RIG_DEFAULTS[name], viewModelPropertyId=RIG_P[name]))
+    vm.add(inst)
+    return vm
+
+
+def user_recap():
     vm = E("ViewModel", defaultInstanceId=DEFAULT_INSTANCE, name="UserRecap", id=VM_ID)
     for name, typ, _ in PROPS:
         tag = {"number": "ViewModelPropertyNumber", "string": "ViewModelPropertyString",

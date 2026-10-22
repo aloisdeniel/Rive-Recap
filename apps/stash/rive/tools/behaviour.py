@@ -15,7 +15,7 @@ import sys
 RIVE = os.environ.get("RIVE", os.path.expanduser("~/.rive/bin/rive"))
 OUT = "captures/tests"
 os.makedirs(OUT, exist_ok=True)
-FILTER = "currentScreen,_evt*,_heard*,_coinNudge,_finished,isPaused,_frozen,_holding,screenProgress,_visibleCount,_visibleIndex,_navDir,_focus,personaName,_personaSlot,totalSaved,deposits"
+FILTER = "_landscape,_split,_wideCard,_viewW,_a4s,_c4s,_mfx,_mfy,_mfs,currentScreen,_evt*,_heard*,_coinNudge,_finished,isPaused,_frozen,_holding,screenProgress,_visibleCount,_visibleIndex,_navDir,_focus,personaName,_personaSlot,totalSaved,deposits"
 
 
 def run(name, args):
@@ -149,6 +149,47 @@ check("recapFinished heard as a Rive event exactly once", count(ev, "_heardRecap
 ev, st = run("events_share", probe + ["--data=currentScreen=10", "--advance=3s", "--pointer=click@280,792", "--advance=10"])
 check("shareTapped heard as a Rive event exactly once", count(ev, "_heardShareTapped") == 1,
       str(count(ev, "_heardShareTapped")))
+
+# 18. responsive layout: orientation is a pure width rule against layoutBreakpoint
+for vp, want in (("390x844", False), ("767x1024", False), ("740x360", False), ("768x1024", True), ("1280x720", True)):
+    ev, st = run(f"orient_{vp}", [f"--viewport={vp}", "--advance=10"])
+    check(f"{vp}: landscape layout is {want}", st.get("_landscape") is want, str(st.get("_landscape")))
+ev, st = run("orient_breakpoint", ["--data=layoutBreakpoint=300", "--advance=10"])
+check("layoutBreakpoint=300 puts 390x844 in the landscape layout", st.get("_landscape") is True)
+ev, st = run("orient_short", ["--viewport=667x375", "--data=currentScreen=10", "--advance=3s"])
+check("667x375 (portrait layout) splits into columns and uses the wide card", st.get("_landscape") is False
+      and st.get("_split") is True and st.get("_wideCard") is True, f'{st.get("_split")} {st.get("_wideCard")}')
+
+# 19. landscape input: tap zones and the footer follow the real width, Right still advances
+L = ["--viewport=1280x720"]
+ev, st = run("land_taps", L + [T, "--pointer=click@1100,300", "--advance=2.4s", "--pointer=click@200,300", "--advance=2.4s"])
+check("1280x720: right two-thirds advances, left third goes back", screens(ev)[-2:] == ["currentScreen=2", "currentScreen=1"],
+      str(screens(ev)))
+ev, st = run("land_keys", L + [T, "--key=right", "--advance=2.4s", "--key=right", "--advance=1s"])
+check("1280x720: Right arrow advances scenes", screens(ev)[-2:] == ["currentScreen=2", "currentScreen=3"], str(screens(ev)))
+ev, st = run("land_continue", L + [T, "--pointer=click@400,672", "--advance=2.4s"])
+check("1280x720: the Continue button (under the copy column) advances", screens(ev)[-1:] == ["currentScreen=2"], str(screens(ev)))
+ev, st = run("land_hold", L + [T, "--pointer=down@1100,300", "--advance=1.5s", "--pointer=up@1100,300", "--advance=1s"])
+check("1280x720: hold pauses and its release does not navigate",
+      any(e == "_holding=True" for f, e in ev) and st.get("currentScreen") == 1, str(screens(ev)))
+
+ev, st = run("land_toy", L + [T, "--pointer=click@1057,573", "--advance=1s"])
+check("1280x720: the motif's tap toy follows the art zone (nudges, never navigates)",
+      count(ev, "_coinNudge") == 1 and st.get("currentScreen") == 1, f'{count(ev, "_coinNudge")} {screens(ev)}')
+
+# 20. a live resize across the breakpoint mid-scene (ResizeProbe keys the nested
+#     Recap's width 390 -> 1100 -> 560 -> 900): same scene, no new screenChanged,
+#     the layout follows each step and settles
+ev, st = run("resize_probe", ["--artboard=ResizeProbe", "--viewport=1100x844", "--data=currentScreen=4",
+                              "--data=autoAdvanceEnabled=false", "--advance=9s"])
+flips = [e for f, e in ev if e.startswith("_landscape=")]
+check("resize across the threshold flips the layout portrait -> landscape -> portrait -> landscape",
+      flips == ["_landscape=False", "_landscape=True", "_landscape=False", "_landscape=True"], str(flips))
+check("the current scene survives every resize (scene 4, one screenChanged)",
+      st.get("currentScreen") == 4 and screens(ev) == ["currentScreen=4"] and count(ev, "_evtScreenChanged") == 1,
+      f'{screens(ev)} {count(ev, "_evtScreenChanged")}')
+late = [(f, e) for f, e in ev if f > 450 and (e.startswith("_a4") or e.startswith("_c4") or e.startswith("_mf"))]
+check("the layout settles after the last resize (no zone changes in the final 1.5 s)", not late, str(late[:4]))
 
 open(f"{OUT}/behaviour.txt", "w").write("\n".join(results) + "\n")
 print("\n".join(results))

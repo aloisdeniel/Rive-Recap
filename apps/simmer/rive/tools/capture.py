@@ -3,6 +3,7 @@
 
     python3 tools/capture.py            # everything
     python3 tools/capture.py scenes     # one group: scenes personas reduced transitions fixtures hidden checks
+    (the responsive viewport matrix is tools/responsive.py)
 
 Writes PNGs under captures/ and JSON evidence under captures/checks/.
 Variant fixtures (new user, extreme) are built into build/variants/<name>/
@@ -40,7 +41,7 @@ def variant(fixture, name):
     os.makedirs(out)
     subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), f'--first={fixture}', f'--out={out}'], check=True, capture_output=True)
     shutil.copy(os.path.join(ROOT, 'rive.yaml'), out)
-    shutil.copytree(os.path.join(ROOT, 'scripts'), os.path.join(out, 'scripts'))   # scripts + shaders
+    shutil.copytree(os.path.join(ROOT, 'scripts'), os.path.join(out, 'scripts'), dirs_exist_ok=True)   # scripts + shaders
     os.symlink(os.path.join(ROOT, 'assets'), os.path.join(out, 'assets'))
     return out
 
@@ -107,13 +108,6 @@ def hidden():
          '--pointer=click@259,792', f'--advance={SETTLED}')
 
 
-def sizes():
-    for vp in ('320x568', '430x932', '1280x800'):
-        shot(f'{CAP}/sizes/scene-02-{vp}-contain.png', f'--viewport={vp}', '--fit=contain', '--data=currentScreen=2', f'--advance={SETTLED}')
-        shot(f'{CAP}/sizes/handoff-2-to-3-{vp}-contain.png', f'--viewport={vp}', '--fit=contain', '--data=currentScreen=2',
-             f'--advance={SETTLED}', '--key=right', '--advance=480ms')
-
-
 def dump(name, *args, project=ROOT):
     path = f'{CAP}/checks/{name}.json'
     os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -123,6 +117,53 @@ def dump(name, *args, project=ROOT):
     vals = {p['name']: p.get('value') for p in d['viewModel']['properties']}
     events = [ln.split('event: ')[1] for ln in r.stdout.splitlines() + r.stderr.splitlines() if 'console' not in ln and ln.startswith('event: ')]
     return vals, events
+
+
+HARNESS_SIZES = [(0.0, 390, 844), (3.0, 1024, 768), (6.0, 390, 844), (9.0, 1280, 720)]
+
+
+def harness():
+    """A test-only variant: the recap nested in a 'Resize harness' artboard through a
+    NestedArtboardLayout whose size is keyed to cross the breakpoint mid-scene
+    (390x844 -> 1024x768 at 3 s -> 390x844 at 6 s -> 1280x720 at 9 s). The CLI has no
+    live-resize flag, so this is how a host resizing the canvas is reproduced headless.
+    Not part of the shipped .riv."""
+    import re
+    out = variant('fixture.json', 'resize-harness')
+    main = open(os.path.join(out, 'scenes', 'main.rml')).read()
+    m = re.search(r'<Artboard [^>]*name="Simmer Recap"[^>]*>', main)
+    ab_id = re.search(r' id="([^"]+)"', m.group(0)).group(1)
+    sm_id = re.search(r'defaultStateMachineId="([^"]+)"', m.group(0)).group(1)
+    def keys(prop, idx):
+        frames = ''.join(f'<KeyFrameDouble frame="{int(t * 60)}" value="{wh[idx]}" interpolationType="hold"/>' for t, *wh in HARNESS_SIZES)
+        return f'<KeyedProperty propertyKey="{prop}">{frames}</KeyedProperty>'
+    xml = f'''<!-- test-only resize harness (tools/capture.py harness) -->
+<Rive version="1" kind="fragment">
+  <Artboard width="1280" height="1024" name="Resize harness" x="0" y="3000" viewModelId="0:10" viewModelInstanceId="0:401"
+            clip="true" styleId="0:990002" defaultStateMachineId="0:990010" id="0:990001">
+    <LayoutComponentStyle name="Harness style" id="0:990002"/>
+    <NestedArtboardLayout artboardId="{ab_id}" instanceWidth="390" instanceHeight="844" name="Recap" id="0:990003">
+      <NestedStateMachine animationId="{sm_id}" name="machine" id="0:990004"/>
+    </NestedArtboardLayout>
+    <LinearAnimation name="Resize" duration="720" loopValue="oneShot" fps="60" id="0:990005">
+      <KeyedObject objectId="0:990003">{keys(663, 0)}{keys(664, 1)}</KeyedObject>
+    </LinearAnimation>
+    <StateMachine name="Harness" id="0:990010">
+      <StateMachineLayer name="Resize" id="0:990011">
+        <AnyState id="0:990012"/><ExitState id="0:990013"/>
+        <EntryState id="0:990014"><StateTransition stateToId="0:990015" duration="0"/></EntryState>
+        <AnimationState animationId="0:990005" id="0:990015"/>
+      </StateMachineLayer>
+    </StateMachine>
+  </Artboard>
+</Rive>
+'''
+    with open(os.path.join(out, 'scenes', 'harness.rml'), 'w') as f:
+        f.write(xml)
+    y = open(os.path.join(out, 'rive.yaml')).read().replace('main: Simmer Recap', 'main: Resize harness')
+    with open(os.path.join(out, 'rive.yaml'), 'w') as f:
+        f.write(y)
+    return out
 
 
 def checks():
@@ -156,13 +197,42 @@ def checks():
     rec('pot tap does not navigate', *dump('pot', '--data=currentScreen=2', '--advance=1s', '--pointer=click@195,680', '--advance=200ms'), K)
     rec('negative count clamps', *dump('negative', '--data=sharedMeals=-4', '--advance=200ms'), K + ['sharedMeals'])
     rec('unknown persona index', *dump('persona', '--data=personaIndex=7', '--advance=200ms'), K + ['personaIndex', 'personaName'])
+
+    # ---- responsive: orientation follows the real width; input uses the real width
+    O = K[:3] + ['stageWidth', 'stageHeight', 'isLandscape', 'layoutBreakpoint', 'layoutCopyScale', 'layoutStack']
+    for vp in ('390x844', '767x1024', '768x1024', '740x360', '1280x720', '2560x1080'):
+        rec(f'orientation at {vp}', *dump(f'orientation-{vp}', f'--viewport={vp}', '--advance=500ms'), O)
+    rec('layoutBreakpoint=1300 keeps 1280x720 portrait', *dump('breakpoint-1300', '--viewport=1280x720', '--data=layoutBreakpoint=1300', '--advance=500ms'), O)
+    rec('layoutBreakpoint=320 makes 390x844 landscape', *dump('breakpoint-320', '--viewport=390x844', '--data=layoutBreakpoint=320', '--advance=500ms'), O)
+    # 1280 wide: the left third ends at 426.7
+    rec('1280x720 tap at x=400 goes back (4 -> 3)', *dump('wide-tap-back', '--viewport=1280x720', '--data=currentScreen=4', '--advance=1s',
+                                                          '--pointer=click@400,360', '--advance=200ms'), O)
+    rec('1280x720 tap at x=460 goes forward (4 -> 5)', *dump('wide-tap-next', '--viewport=1280x720', '--data=currentScreen=4', '--advance=1s',
+                                                            '--pointer=click@460,360', '--advance=200ms'), O)
+    rec('1280x720 hold pauses, release does not tap', *dump('wide-hold', '--viewport=1280x720', '--advance=3s', '--pointer=down@900,360',
+                                                         '--advance=600ms', '--pointer=up@900,360', '--advance=200ms'), O)
+    rec('1920x1080 keyboard right x2', *dump('wide-keys', '--viewport=1920x1080', '--advance=500ms', '--key=right', '--advance=100ms',
+                                             '--key=right', '--advance=200ms'), O)
+    rec('1280x720 Continue button (right edge)', *dump('wide-continue', '--viewport=1280x720', '--advance=1s', '--pointer=click@1100,669',
+                                                       '--advance=200ms'), O)
+    rec('320x568 Previous button', *dump('narrow-prev', '--viewport=320x568', '--data=currentScreen=3', '--advance=1s',
+                                         '--pointer=click@46,520', '--advance=200ms'), O)
+    # ---- resize across the breakpoint mid-scene (test harness, see harness())
+    hz = harness()
+    R = O + ['motifFrameX', 'motifFrameY', 'motifFrameScale']
+    for t, label in (('2.5s', 'before (390x844)'), ('3.2s', 'just after resize to 1024x768'), ('5s', 'settled at 1024x768'),
+                     ('6.5s', 'back to 390x844'), ('10s', 'then 1280x720')):
+        rec(f'resize mid-scene 4: {label}', *dump(f'resize-{t}', '--data=currentScreen=4', '--data=autoAdvanceEnabled=false', f'--advance={t}', project=hz), R)
+    # a resize while the handoff is running (navigate at 2.8 s, resize at 3 s): settles on the new scene
+    rec('resize during handoff 4 -> 5, settled', *dump('resize-during-handoff', '--data=currentScreen=4', '--data=autoAdvanceEnabled=false',
+                                                       '--advance=2.8s', '--key=right', '--advance=2.2s', project=hz), R)
     with open(f'{CAP}/checks/report.json', 'w') as f:
         json.dump(report, f, indent=2)
     for k, v in report.items():
         print(f'{k:45s} {json.dumps(v["values"])}  events={v["events"]}')
 
 
-GROUPS = dict(scenes=scenes, personas=personas, reduced=reduced, transitions=transitions, fixtures=fixtures, hidden=hidden, sizes=sizes, checks=checks)
+GROUPS = dict(scenes=scenes, personas=personas, reduced=reduced, transitions=transitions, fixtures=fixtures, hidden=hidden, checks=checks)
 
 if __name__ == '__main__':
     todo = sys.argv[1:] or list(GROUPS)

@@ -82,12 +82,8 @@ def jobs():
         j.append((f"fixture-extreme-scene-{n:02d}", SETTLE, "extreme", [f"currentScreen={n}"]))
     # summary privacy
     j.append(("summary-share-name-on", SETTLE, None, ["currentScreen=10", "shareIncludeName=true"]))
-    # responsive validation
-    for n in (2, 10):
-        j.append((f"viewport-desktop-1280x800-contain-scene-{n:02d}", SETTLE, None, [f"currentScreen={n}"], "1280x800", "contain"))
-    for vp in ("320x568", "430x932"):
-        for n in (2, 9, 10):
-            j.append((f"viewport-{vp}-scene-{n:02d}", SETTLE, None, [f"currentScreen={n}"], vp))
+    # responsive validation: the full portrait / landscape matrix is tools/responsive.py
+    # (captures/responsive/); these are the 390 x 844 design-size stills
     # interaction: drag the hold (compress), release (rebound)
     j.append(("interaction-hold-drag", ["--advance=120", "--pointer=down@115,605", "--pointer=move@150,560",
                                         "--pointer=move@200,520", "--advance=4"], None, ["currentScreen=1"]))

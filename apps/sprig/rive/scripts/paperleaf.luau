@@ -23,6 +23,11 @@
 --
 -- The canvas re-renders only when an input changed, so a settled leaf costs one image
 -- draw. Without GPU scripting the projected outline is drawn as a flat vector leaf.
+--
+-- Responsive: `res` is bound to the piece's real on-screen scale x device pixels, so when the
+-- viewport changes the canvas is resized (with its MSAA / depth targets) and re-rendered: the
+-- paper stays sharp from a 320 pt phone to a 2560 pt desktop. Targets are shared per size and
+-- released when no piece uses that size any more.
 
 type Leaf = {
     L: Input<number>,
@@ -66,6 +71,8 @@ type Leaf = {
     msaa: Input<number>,
     -- runtime
     gpu: boolean,
+    samples: number,
+    tkey: string,
     canvas: GPUCanvas?,
     targets: Targets?,
     pipe: GPUPipeline?,
@@ -93,7 +100,8 @@ local SHARED: {
     icount: number,
     pipes: { [number]: GPUPipeline },
     targets: { [string]: Targets },
-} = { vbuf = nil, ibuf = nil, icount = 0, pipes = {}, targets = {} }
+    refs: { [string]: number },
+} = { vbuf = nil, ibuf = nil, icount = 0, pipes = {}, targets = {}, refs = {} }
 
 local function buildMesh()
     if SHARED.vbuf ~= nil then
@@ -163,8 +171,26 @@ local function pipeline(sh: Shader, samples: number): GPUPipeline
     return np
 end
 
+local function targetKey(pw: number, ph: number, samples: number): string
+    return tostring(pw) .. 'x' .. tostring(ph) .. 'x' .. tostring(samples)
+end
+
+local function release(key: string)
+    if key == '' then
+        return
+    end
+    local n = (SHARED.refs[key] or 1) - 1
+    if n <= 0 then
+        SHARED.refs[key] = nil
+        SHARED.targets[key] = nil -- the textures are freed once nothing references them
+    else
+        SHARED.refs[key] = n
+    end
+end
+
 local function targets(pw: number, ph: number, samples: number): Targets
-    local key = tostring(pw) .. 'x' .. tostring(ph) .. 'x' .. tostring(samples)
+    local key = targetKey(pw, ph, samples)
+    SHARED.refs[key] = (SHARED.refs[key] or 0) + 1
     local t = SHARED.targets[key]
     if t ~= nil then
         return t
@@ -290,17 +316,43 @@ function init(self: Leaf, context: Context): boolean
     local ubo = GPUBuffer.new({ size = UBO_SIZE, usage = 'uniform', label = 'sprig leaf' })
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
+    self.samples = samples
     local k = math.max(0.5, self.res)
     self.k = k
     local pw = math.ceil(self.halfW * 2 * k / 8) * 8
     local ph = math.ceil((self.bottom - self.top) * k / 8) * 8
     self.canvas = context:gpuCanvas({ width = pw, height = ph })
     self.targets = targets(pw, ph, samples)
+    self.tkey = targetKey(pw, ph, samples)
     self.gpu = true
     return true
 end
 
-function update(self: Leaf) end
+-- follow `res` (bound to the real on-screen pixel density): resize the canvas and swap targets
+local function fitCanvas(self: Leaf)
+    local canvas = self.canvas
+    if not self.gpu or canvas == nil then
+        return
+    end
+    local k = math.max(0.5, self.res)
+    local pw = math.ceil(self.halfW * 2 * k / 8) * 8
+    local ph = math.ceil((self.bottom - self.top) * k / 8) * 8
+    local key = targetKey(pw, ph, self.samples)
+    if key == self.tkey then
+        self.k = k
+        return
+    end
+    canvas:resize(pw, ph)
+    release(self.tkey)
+    self.targets = targets(pw, ph, self.samples)
+    self.tkey = key
+    self.k = k
+    self.lastKey = '' -- re-render at the new size
+end
+
+function update(self: Leaf)
+    fitCanvas(self)
+end
 
 function advance(self: Leaf, seconds: number): boolean
     return self.live >= 0.5
@@ -447,6 +499,8 @@ return function(): Node<Leaf>
         res = 2,
         msaa = 4,
         gpu = false,
+        samples = 1,
+        tkey = '',
         canvas = nil,
         targets = nil,
         pipe = nil,

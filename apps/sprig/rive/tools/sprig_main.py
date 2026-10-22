@@ -105,6 +105,7 @@ BTN = {}
 
 def build_chrome():
     els = []
+    cs = LY.CS_
     # brand wordmark (small) + leaf mark
     wm = text("Wordmark", ["Sprig"], font="fr", size=26, color=CREAM, wght=620, soft=100, wonk=1, x=24, y=22,
               color_id=themed(CREAM, FOREST))
@@ -138,6 +139,8 @@ def build_chrome():
     prog_id = ID()
     progress = E("LayoutComponent", row_st, *segs, x=24.0, y=72.0, width=342.0, height=3.0, styleId=row_st.id,
                  name="Progress", id=prog_id)
+    # the row spans the real width: one segment per visible scene, reflowed by the flex row
+    LY.apply(progress, "Progress", x=LY.MX, y=LY.PROG_Y, lc_w=LY.VW - 2 * LY.MX)
     BTN["progress"] = prog_id
 
     # ---- controls (44x44+ targets)
@@ -149,7 +152,7 @@ def build_chrome():
                  shape(f"{name} hit", ellipse(52, 52), fill(col(CREAM, 0.08), color_id=themed(CREAM, FOREST, 0.08, 0.07)),
                        stroke(col(CREAM, 0.55), 1.6, color_id=themed(CREAM, FOREST, 0.55, 0.5)),
                        E("FocusData", name="Focus"), semantic(label_prop), id=hit),
-                 x=x, y=790, id=ID())
+                 x=0.0, y=0.0, id=ID())
         return n, hit
 
     chev = shape("Chevron", *path_el("M5 -9 L-4 0 L5 9", closed=False),
@@ -188,7 +191,7 @@ def build_chrome():
                        shape("Head", *path_el(f"M{tip[0]:.3f} {tip[1]:.3f} L{bl[0]:.3f} {bl[1]:.3f} "
                                               f"L{br[0]:.3f} {br[1]:.3f} Z"),
                              fill(col(CREAM), color_id=themed(CREAM, FOREST))))
-    replay_n, replay_hit = circle_btn("Replay", 342 + 2000, 5, [replay_icon], "replayLabel")
+    replay_n, replay_hit = circle_btn("Replay", 0, 5, [replay_icon], "replayLabel")
 
     def pill(name, x, idx, label_prop, icon):
         hit = ID()
@@ -200,17 +203,24 @@ def build_chrome():
                  shape(f"{name} hit", rect(176, 52, 26), fill(col(APRICOT)),
                        fill(col(APRICOT_PALE, 0.6), feather=6), E("FocusData", name="Focus"),
                        semantic(label_prop), id=hit),
-                 x=x, y=790, id=ID())
+                 x=0.0, y=0.0, id=ID())
         return n, hit
     arrow = shape("Arrow", *path_el("M-6 0 L6 0 M1 -5 L6 0 L1 5", closed=False), stroke(col(FOREST), 2.2), x=62)
     cont_n, cont_hit = pill("Continue", 195, 2, "continueLabel", arrow)
     share_ic = shape("Share icon", *path_el("M0 4 L0 -7 M-5 -3 L0 -8 L5 -3", closed=False), stroke(col(FOREST), 2.2),
                      x=52)
-    share_n, share_hit = pill("Share", 195 + 2000, 4, "shareLabel", share_ic)
+    share_n, share_hit = pill("Share", 0, 4, "shareLabel", share_ic)
     BTN.update(prev=(prev_n, prev_hit), pause=(pause_n, pause_hit), cont=(cont_n, cont_hit),
                share=(share_n, share_hit), replay=(replay_n, replay_hit))
-    controls = node("Controls", prev_n, cont_n, share_n, pause_n, replay_n)
-    els = [controls, progress, year, wm, mark]
+    # control slots follow the viewport: a bottom row in portrait, a bottom-right cluster in landscape.
+    # The buttons inside are keyed (x 0 / OFF) by the Controls layer to swap Continue/Pause and Share/Replay.
+    def slot(name, x, kids):
+        return LY.place(f"{name} slot", *kids, x=x, y=LY.CTRL_Y, s=cs)
+    controls = node("Controls", slot("Previous", LY.PREV_X, [prev_n]), slot("Continue", LY.CONT_X, [cont_n, share_n]),
+                    slot("Pause", LY.PAUSE_X, [pause_n, replay_n]))
+    brand = LY.place("Brand place", wm, mark, x=LY.MX - 24 * cs, y=LY.WM_Y - 22 * cs, s=cs)
+    year_p = LY.place("Year place", year, x=LY.VW - LY.MX - 366 * cs, y=LY.WM_Y - 22 * cs, s=cs)
+    els = [controls, progress, year_p, brand]
     return node("Chrome", *els, id=ID())
 
 
@@ -233,7 +243,8 @@ def build_vine():
         n.add(bind(P("currentScreen"), 16, lconv))
         n.add(bind(P("currentScreen"), 17, lconv))
         kids.append(n)
-    return node("Story vine", *stack(*kids), id=ID())
+    vine = node("Story vine", *stack(*kids), id=ID())
+    return LY.place("Story vine place", vine, x=LY.VW - 390 * LY.SV, y=LY.VINE_TOP - 104 * LY.SV, s=LY.SV)
 
 
 # ===================================================================== state machine
@@ -373,15 +384,13 @@ def build_machine(scenes, card_anims):
     for a, on, off in ((cN, ("cont", "pause"), ("share", "replay")), (cS, ("share", "replay"), ("cont", "pause"))):
         for nm in on:
             nd = BTN[nm][0]
-            x0 = 195 if nm in ("cont", "share") else 342
-            a.key(nd.id, "x", [(0, x0, "hold")])
+            a.key(nd.id, "x", [(0, 0.0, "hold")])
             a.key(nd.id, "opacity", [(0, 0.0, "outs"), (12, 1.0)])
             a.key(nd.id, "scaleX", [(0, 0.85, "back"), (12, 1.0)])
             a.key(nd.id, "scaleY", [(0, 0.85, "back"), (12, 1.0)])
         for nm in off:
             nd = BTN[nm][0]
-            x0 = 195 if nm in ("cont", "share") else 342
-            a.key(nd.id, "x", [(0, x0 + 2000, "hold")])
+            a.key(nd.id, "x", [(0, float(OFF), "hold")])
             a.key(nd.id, "opacity", [(0, 0.0, "hold")])
     anims += [cN, cS]
     c1, c2 = ID(), ID()
@@ -625,7 +634,9 @@ def main():
                                                        interpolationType="cubic", duration=0.9,
                                                        name="Ease canopy light", id=cid))
     canopy, _ = scripted("Canopy light", "canopylight",
-                         nums={"w": W, "h": H, "paperRes": 1.5, "lightRes": 0.34, "paper": 0.62,
+                         nums={"w": (W, LY.bindx(243, LY.VW, "Canopy w")), "h": (H, LY.bindx(243, LY.VH, "Canopy h")),
+                               "dpr": (1, LY.bindx(243, LY.DPR, "Canopy dpr")),
+                               "paperRes": 1.5, "lightRes": 0.34, "paper": 0.62,
                                "dapple": (0.5, bind(P("currentScreen"), 243, CV.group("dapple", [dmap, dint], "Canopy light"))),
                                "seed": 3, "dirX": -0.6, "dirY": -0.8, "scale": 1.0, "sway": 1.0},
                          bools={"still": (False, bind(P("reducedMotion"), 245)),
@@ -633,11 +644,16 @@ def main():
                                 "held": (False, bind(P("_holdPaused"), 245))})
     surface = ID()
     BTN["surface"] = surface
-    surface_el = shape("Keyboard surface", rect(W, H), E("FocusData", name="Focus"), x=195, y=422, id=surface)
+    srect = LY.apply(rect(W, H), "Surface", rect_w=LY.VW, rect_h=LY.VH)
+    surface_el = LY.apply(shape("Keyboard surface", srect, E("FocusData", name="Focus"), x=195, y=422, id=surface),
+                          "Surface", x=LY.VW / 2, y=LY.VH / 2)
     tap_prev, tap_next = ID(), ID()
     BTN["tapPrev"], BTN["tapNext"] = tap_prev, tap_next
-    taps = [shape("Tap back region", rect(130, 656), fill(col("#000000", 0.0)), x=65, y=424, id=tap_prev),
-            shape("Tap next region", rect(260, 656), fill(col("#000000", 0.0)), x=260, y=424, id=tap_next)]
+    th, ty = LY.TAP_BOT - LY.TAP_TOP, (LY.TAP_TOP + LY.TAP_BOT) / 2
+    taps = [LY.apply(shape("Tap back region", LY.apply(rect(130, 656), "Tap", rect_w=LY.VW / 3, rect_h=th),
+                           fill(col("#000000", 0.0)), x=65, y=424, id=tap_prev), "Tap", x=LY.VW / 6, y=ty),
+            LY.apply(shape("Tap next region", LY.apply(rect(260, 656), "Tap", rect_w=LY.VW * 2 / 3, rect_h=th),
+                           fill(col("#000000", 0.0)), x=260, y=424, id=tap_next), "Tap", x=LY.VW * 2 / 3, y=ty)]
     # joystick for the bendable hero leaf
     bendx, bendy = Anim("Leaf bend X", 60), Anim("Leaf bend Y", 60)
     hb = sc1.hero_bend
@@ -646,6 +662,14 @@ def main():
     bendy.key(hb, "scaleX", [(0, 0.94, "lin"), (30, 1.0, "lin"), (60, 1.06)])
     joy = E("Joystick", posX=268.0, posY=572.0, width=260.0, height=260.0, xId=bendx.id, yId=bendy.id,
             handleSourceId=sc1.leaf_handle, name="Leaf bend joystick", id=ID())
+    jx, jy = LY.map_pt(sc1.art_t, 268, 572)
+    LY.apply(joy, "Leaf joystick", jx=jx, jy=jy, jw=260 * sc1.art_t[2], jh=260 * sc1.art_t[2])
+    # the viewport probe: a fill-sized ScriptedLayout that publishes the artboard's real size (_vw/_vh/...)
+    vst = E("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
+            widthUnitsValue="auto", heightUnitsValue="auto", name="Viewport style", id=ID())
+    probe = E("LayoutComponent", vst, E("ScriptedLayout", scriptAssetId=SCRIPTS["viewport"], name="Viewport probe",
+                                         id=ID()),
+              width=float(W), height=float(H), styleId=vst.id, name="Viewport", id=ID())
 
     sm, anims = build_machine(SC, None)
     listeners = build_listeners()
@@ -655,11 +679,18 @@ def main():
     style = E("LayoutComponentStyle", name="Artboard style", id=ID())
     roots = [r10, r9, r8, r7, r6, r5, r4, r3, r2, r1]
     art = E("Artboard", style, sm,
-            surface_el, chrome, TG["leaf"], TG["frame"], vine, canopy, *roots, *taps, clock, joy, *events,
+            surface_el, chrome, TG["leaf"], TG["frame"], vine, canopy, *roots, *taps, clock, probe, joy, *events,
             *[a.el() for a in anims], bendx.el(), bendy.el(),
             defaultStateMachineId=SM, viewModelId=VMID, viewModelInstanceId=inst_ids["Sample"], clip=True,
             width=float(W), height=float(H), styleId=style.id, name="SprigRecap", id=AB, x=0.0, y=0.0)
-    script_assets = [E("ScriptAsset", file=f"scripts/{n}.luau", name=n, id=sid) for n, sid in SCRIPTS.items()]
+    import resp
+    n_out, n_tmp = resp.write_solver(os.path.join(PROJ, "scripts", "layoutsolve.luau"))
+    print(f"layout: {len(resp.PROMOTED)} solved values ({n_tmp} shared terms), "
+          f"{sum(1 for k in CV.cache if k[0] == 'resp')} formula converters")
+    # modules register as folderPath/name, matching the type checker's path-based `require('scripts/...')`
+    script_assets = [E("ScriptAsset", file=f"scripts/{n}.luau", isModule=True if n in MODULES else None,
+                       folderPath="scripts" if n in MODULES else None, name=n, id=sid)
+                     for n, sid in SCRIPTS.items()]
     doc = E("Rive", art, card_el, card_asset, *script_assets,
             E("FontAsset", file="assets/fonts/Fraunces-Variable.ttf", name="Fraunces", id=FONT_FR),
             E("FontAsset", file="assets/fonts/DMSans-Variable.ttf", name="DM Sans", id=FONT_DM),

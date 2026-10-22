@@ -154,6 +154,8 @@ def persona_emblems():
 
 def scene9():
     sc = Scene(9, FOREST, dur=110)
+    st = LY.Stack(9, (None, None, "center"), None, (24, 104, 342, CH_DESIGN[9], "center"), (34, 340, 356, 900),
+                  art_ay=(1.0, 0.5, 0.6, 0.5), pt_bottom=836, l_boost=1.3, ts_max_l=2.6)
     label_id, name_id, desc_id, col_id = ID(), ID(), ID(), ID()
     rg, rid = word_reveal(units=0)
     copy = column("Persona copy", 24, 104, 342, [
@@ -209,7 +211,7 @@ def scene9():
     c3, ci = leaf3d("Cradle shells 3D", 195, 790, pair=1, shape=1, L=210, W=112, fold=0.0, cup=1.0, curl=0.2,
                     wave=0.0, flip=1.45, spread=0.0, gap=0, veins=0.0, glow=0.25, fibre=0.8, ambient=0.64,
                     front="#F6EBCB", back="#E8DAB2", rim="#FFFDF2", glowColor="#FBF0CF", seed=9,
-                    halfW=220, top=-280, bottom=40, res=1.6)
+                    halfW=220, top=-280, bottom=40, res=res3d(1.6, st.art_t[2], (440, 320)))
     sc.live3d(ci)
     seed_id = ID()
     seed = node("Persona seed", c3, x=0, y=0, id=seed_id)
@@ -241,12 +243,12 @@ def scene9():
     back = []
     for i, (x, y, L, r) in enumerate([(-10, 900, 300, 0.45), (400, 900, 300, -0.45)]):
         n, p = leaf(f"Frame leaf {i}", x, y, L, L * 0.5, rot=r, light=FOREST_SOFT, dark=FOREST_MID, rib_a=0.08)
-        back.append(n)
+        back.append(LY.corner(f"Frame leaf {i} place", [n], i, 1))
         sc.sway(p["node"], r, 0.03, 400, i * 200)
     content = stack(bg_rect(FOREST),
-                    shape("Glow", ellipse(520, 520), rad_grad([(0, col(LEAF, 0.2)), (1, col(LEAF, 0))], 0, 0, 260),
-                          x=195, y=560),
-                    back, stage, seed, spill, sparkles, copy)
+                    st.art_group(shape("Glow", ellipse(520, 520), rad_grad([(0, col(LEAF, 0.2)), (1, col(LEAF, 0))],
+                                                                            0, 0, 260), x=195, y=560)),
+                    back, st.art_group(*stack(stage, seed, spill, sparkles)), st.copy_group(copy))
     sc.settle.append((col_id, "y", 8.0))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
@@ -434,6 +436,9 @@ def trans(to, conds, dur=0, exit_pct=None, exit_ms=None, dur_bind=None, interp=N
 
 def scene10(card_ab, card_sm):
     sc = Scene(10, CREAM, light=True, dur=110)
+    st = LY.Stack(10, (None, None, "center"), None, (30, 100, 330, CH_DESIGN[10], "center"), (30, 250, 360, 728),
+                  art_ay=(1.0, 0.5, 0.5, 0.5), art_smax=(None, 1.0, 1.8, 1.5), l_boost=1.5,
+                  ts_max_l=2.8)
     head_id, sup_id, col_id = ID(), ID(), ID()
     rg, rid = word_reveal()
     # the headline is width-capped so English breaks after the first sentence ("A little year. / A lot of you.");
@@ -462,10 +467,13 @@ def scene10(card_ab, card_sm):
     for i, (x, y, L, r, c1, c2) in enumerate([(-4, 300, 160, 1.1, LEAF, LEAF_DARK), (396, 640, 170, -1.1, LEAF_DARK, LEAF_DEEP),
                                               (14, 690, 120, 0.7, APRICOT, APRICOT_DARK)]):
         n, p = leaf(f"Summary leaf {i}", x, y, L, L * 0.55, rot=r, light=c1, dark=c2, morph=True)
-        deco.append(n)
+        c = LY.corner(f"Summary leaf {i} place", [n], 0 if x < 195 else 1, 0 if y < 422 else 1)
+        if i == 1:   # the right-edge leaf would sit in the landscape copy column / control cluster
+            LY.apply(c, "Summary leaf 1", op=LY.by_orient(1, 0))
+        deco.append(c)
         sc.unfurl(p, 20 + i * 10, 50 + i * 10, rot=r)
         sc.sway(p["node"], r, 0.03, 360, i * 100)
-    content = stack(bg_rect(CREAM), deco, card_shadow, card, copy)
+    content = stack(bg_rect(CREAM), deco, st.art_group(*stack(card_shadow, card)), st.copy_group(copy))
     sc.settle.append((card_id, "y", 18.0))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)

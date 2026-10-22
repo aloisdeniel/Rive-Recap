@@ -9,6 +9,11 @@
 --
 -- Trail mode (copies > 1) draws the same mesh several times in one pass, as a solid
 -- head, a solid anchor and translucent ghosts between them.
+--
+-- Resolution: `px` (CruxRig) is the canvas pixels per design point for the real
+-- on-screen scale - device pixels x layout scale, at least 2 (supersampled on 1x).
+-- A canvas is allocated only while its scene is live, at that resolution, and is
+-- released when the scene leaves, so only the visible scene holds GPU memory.
 
 type Hold3D = {
     size: Input<number>,
@@ -33,6 +38,7 @@ type Hold3D = {
     trailSpin: Input<number>,
     trailShrink: Input<number>,
     ghost: Input<number>,
+    px: Input<number>,
     ctx: Context?,
     gpu: boolean,
     canvas: GPUCanvas?,
@@ -57,18 +63,20 @@ type Hold3D = {
     halfW: number,
     halfH: number,
     res: number,
+    allocPx: number,
     t: number,
     lastKey: string,
 }
 
-local RES = 2 -- canvas pixels per point: the 2x render is filtered down on 1x screens
+local MIN_RES = 2 -- canvas pixels per point: the 2x render is filtered down on 1x screens
+local MAX_RES = 4
 local MAX_COPIES = 14
 local FOV = math.rad(22)
 
--- Depth buffers are transient (cleared every pass), so holds of the same canvas
+-- Depth buffers are transient (cleared every pass), so live holds of the same canvas
 -- size share one. Keyed by pixel size.
 local DEPTH: { [string]: GPUTexture } = {}
-local MAX_PX = 1100
+local MAX_PX = 1600
 
 -- ------------------------------------------------------------------ mesh
 local function icosa(): ({ { number } }, { { number } })
@@ -287,16 +295,24 @@ function init(self: Hold3D, context: Context): boolean
             ubos = { { slot = 0, buffer = self.shadowUbos[i] } } })
     end
     buildMesh(self)
-    -- canvas in points, then pixels; very large trails trade resolution for memory
+    self.gpu = true
+    return true
+end
+
+-- (Re)allocate the canvas for the current pixel scale. Very large trails trade
+-- resolution for memory (MAX_PX per side).
+local function allocate(self: Hold3D, ctx: Context)
+    local want = math.clamp(self.px, MIN_RES, MAX_RES)
     local wPt = self.size * (if self.extentW > 0 then self.extentW else self.extent)
     local hPt = self.size * self.extent
-    local res = math.min(RES, MAX_PX / math.max(wPt, hPt))
+    local res = math.min(want, MAX_PX / math.max(wPt, hPt))
     local pw = math.max(32, math.ceil(wPt * res / 16) * 16)
     local ph = math.max(32, math.ceil(hPt * res / 16) * 16)
     self.res = res
+    self.allocPx = want
     self.halfW = pw / res * 0.5
     self.halfH = ph / res * 0.5
-    self.canvas = context:gpuCanvas({ width = pw, height = ph })
+    self.canvas = ctx:gpuCanvas({ width = pw, height = ph })
     local dk = tostring(pw) .. 'x' .. tostring(ph)
     local d = DEPTH[dk]
     if d == nil then
@@ -304,13 +320,16 @@ function init(self: Hold3D, context: Context): boolean
         DEPTH[dk] = d
     end
     self.depth = d
-    self.gpu = true
-    return true
+    self.lastKey = '' -- a fresh canvas has to be rendered
 end
 
 function advance(self: Hold3D, seconds: number): boolean
     if self.live >= 0.5 and not self.still and not self.paused and self.sway > 0 then
         self.t += seconds
+    end
+    if self.live < 0.5 and self.canvas ~= nil then
+        self.canvas = nil -- off-screen: give the GPU memory back
+        self.depth = nil
     end
     return true
 end
@@ -430,6 +449,10 @@ function draw(self: Hold3D, renderer: Renderer)
     if self.live < 0.5 then
         return -- off-screen scene: no GPU work at all
     end
+    local ctx = self.ctx
+    if self.gpu and ctx ~= nil and (self.canvas == nil or self.allocPx ~= math.clamp(self.px, MIN_RES, MAX_RES)) then
+        allocate(self, ctx)
+    end
     local canvas = self.canvas
     local vbuf = self.vbuf
     local depth = self.depth
@@ -482,6 +505,7 @@ return function(): Node<Hold3D>
         trailSpin = 0,
         trailShrink = 0,
         ghost = 0.4,
+        px = 2,
         ctx = nil,
         gpu = false,
         canvas = nil,
@@ -506,6 +530,7 @@ return function(): Node<Hold3D>
         halfW = 60,
         halfH = 60,
         res = 2,
+        allocPx = 0,
         t = 0,
         lastKey = '',
         init = init,

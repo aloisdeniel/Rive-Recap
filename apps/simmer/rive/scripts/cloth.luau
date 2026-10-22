@@ -22,6 +22,13 @@
 -- frame step, so headless captures reproduce. Reduced motion: never plays.
 -- Paused (`motionFrozen`): the simulation holds. No GPU scripting: the same
 -- simulation is drawn as flat-shaded vector quads.
+--
+-- Responsive: the simulation runs in master units (the 390 x 844 stage) on a
+-- field as wide as the real stage, and is drawn scaled by kc onto the real
+-- bottom band. kc follows the stage's size (0.6-1.5), so the cloth stays a
+-- tablecloth next to the art; the hands' path stretches with the width, so
+-- the pull still crosses the whole canvas. The canvas is allocated at the
+-- band's real size times the presenting pixel density (capped at 2x).
 
 type Rider = { i: number, j: number, launch: number, flying: boolean, x: number, y: number, z: number,
     vx: number, vy: number, vz: number, rot: number, spin: number, art: number }
@@ -37,6 +44,9 @@ type Cloth = {
     vm: ViewModel?,
     size: Vector,
     scale: number,
+    kc: number,      -- stage points per simulation unit
+    simW: number,    -- stage width in simulation units
+    xk: number,      -- the hands' path stretch (simW / 390)
     -- simulation
     px: { number }, py: { number }, pz: { number },
     qx: { number }, qy: { number }, qz: { number },
@@ -72,11 +82,11 @@ type Cloth = {
     qpaint: Paint,
 }
 
-local W = 390
+local BW, BH = 390, 844 -- the master the pull is authored on
 local NX, NY = 30, 13
 local SX, SY = 16, 15
 local BAND_TOP = 360 -- the canvas covers the stage from here down
-local BAND_H = 844 - BAND_TOP
+local BAND_H = BH - BAND_TOP
 local LIFT = 0.9
 local G = 2300
 local DRAG = 0.992
@@ -116,8 +126,8 @@ local HX = { { 0, -40, -200 }, { 0.1, -70, 0 }, { 0.45, 330, 1400 }, { 0.75, 480
 local HZ = { { 0, 6, 0 }, { 0.1, 4, 40 }, { 0.45, 104, 150 }, { 0.75, 84, -50 }, { 1.0, 150, 300 } }
 local HY = { { 0, 664, 0 }, { 0.4, 648, -40 }, { 0.7, 640, 0 }, { 1.0, 618, -80 } }
 
-local function hand(s: number): (number, number, number)
-    return hermite(HX, s), hermite(HY, s), hermite(HZ, s)
+local function hand(self: Cloth, s: number): (number, number, number)
+    return hermite(HX, s) * self.xk, hermite(HY, s), hermite(HZ, s)
 end
 
 local function buildConstraints(self: Cloth)
@@ -154,7 +164,7 @@ local function pinY(j: number): number
 end
 
 local function reset(self: Cloth)
-    local hx, hy, hz = hand(0)
+    local hx, hy, hz = hand(self, 0)
     self.hx, self.hy, self.hz = hx, hy, hz
     self.vx, self.vy, self.vz = 0, 0, 0
     self.s = 0
@@ -178,7 +188,7 @@ local function reset(self: Cloth)
 end
 
 local function step(self: Cloth, h: number, s1: number)
-    local nx, ny, nz = hand(s1)
+    local nx, ny, nz = hand(self, s1)
     local vx, vy, vz = (nx - self.hx) / h, (ny - self.hy) / h, (nz - self.hz) / h
     -- fictitious force of the accelerating frame (clamped for stability)
     local ax = math.clamp((vx - self.vx) / h, -9000, 9000)
@@ -353,8 +363,8 @@ local function allocate(self: Cloth)
     if ctx == nil or not self.gpu then
         return
     end
-    local w = math.ceil(W * self.scale)
-    local h = math.ceil(BAND_H * self.scale)
+    local w = math.ceil(self.size.x * self.scale)
+    local h = math.ceil(BAND_H * self.kc * self.scale)
     self.gc = ctx:gpuCanvas({ width = w, height = h })
     if self.samples > 1 then
         self.msaa = GPUTexture.new({ width = w, height = h, format = 'rgba8unorm', renderTarget = true,
@@ -366,12 +376,23 @@ end
 
 function resize(self: Cloth, size: Vector, scale: number)
     local sc = math.min(if scale > 0 then scale else 1, 2)
-    if self.gc ~= nil and sc == self.scale then
+    if size.x <= 0 or size.y <= 0 then
+        return
+    end
+    if self.gc ~= nil and sc == self.scale and size.x == self.size.x and size.y == self.size.y then
         return
     end
     self.size = size
     self.scale = sc
+    self.kc = math.clamp(math.min(math.sqrt(size.x * size.y / (BW * BH)), size.y / 600), 0.6, 1.5)
+    self.simW = size.x / self.kc
+    self.xk = self.simW / BW
     allocate(self)
+end
+
+-- simulation units -> stage points: the master's bottom edge sits on the stage's
+local function toStage(self: Cloth): Mat2D
+    return Mat2D.withTranslation(0, self.size.y - BH * self.kc) * Mat2D.withScale(self.kc, self.kc)
 end
 
 local function frozen(self: Cloth): boolean
@@ -423,7 +444,7 @@ end
 -- world position of particle k after mirroring for direction
 local function wx(self: Cloth, k: number): number
     local x = self.px[k] + self.hx
-    return if self.sdir >= 0 then x else W - x
+    return if self.sdir >= 0 then x else self.simW - x
 end
 
 local function writeVertices(self: Cloth)
@@ -468,9 +489,9 @@ local function drawRiders(self: Cloth, renderer: Renderer)
     end
     for _, r in self.riders do
         local art = self.arts[r.art]
-        local x = if self.sdir >= 0 then r.x else W - r.x
+        local x = if self.sdir >= 0 then r.x else self.simW - r.x
         local sy = r.y - r.z * LIFT
-        if art ~= nil and sy < 900 and x > -80 and x < W + 80 then
+        if art ~= nil and sy < 900 and x > -80 and x < self.simW + 80 then
             local sc = 0.62 + math.max(r.z, 0) * 0.0011
             renderer:save()
             renderer:modulateOpacity(fade)
@@ -515,14 +536,17 @@ function draw(self: Cloth, renderer: Renderer)
         self.ibuf, self.depth
     if not self.gpu or gc == nil or pc == nil or ps == nil or ubo == nil or g == nil or vb == nil or ib == nil
         or depth == nil then
+        renderer:save()
+        renderer:transform(toStage(self))
         fallback(self, renderer)
         drawRiders(self, renderer)
+        renderer:restore()
         return
     end
     writeVertices(self)
     vb:write(self.vstage)
     local u = self.ustage
-    local vals = { W, BAND_H, BAND_TOP, LIFT, -0.42 * self.sdir, -0.5, 0.76, 0.3, 12, 5.5, 0.26, self.scale }
+    local vals = { self.simW, BAND_H, BAND_TOP, LIFT, -0.42 * self.sdir, -0.5, 0.76, 0.3, 12, 5.5, 0.26, self.scale * self.kc }
     for i, v in vals do
         buffer.writef32(u, (i - 1) * 4, v)
     end
@@ -552,10 +576,13 @@ function draw(self: Cloth, renderer: Renderer)
     pass:drawIndexed(self.icount)
     pass:finish()
     renderer:save()
-    renderer:transform(Mat2D.withTranslation(0, BAND_TOP) * Mat2D.withScale(1 / self.scale, 1 / self.scale))
+    renderer:transform(Mat2D.withTranslation(0, self.size.y - BAND_H * self.kc) * Mat2D.withScale(1 / self.scale, 1 / self.scale))
     renderer:drawImage(gc.image, self.sampler, 'srcOver', 1)
     renderer:restore()
+    renderer:save()
+    renderer:transform(toStage(self))
     drawRiders(self, renderer)
+    renderer:restore()
 end
 
 return function(context: Context): Layout<Cloth>
@@ -568,8 +595,11 @@ return function(context: Context): Layout<Cloth>
         rider4 = late(),
         ctx = nil,
         vm = nil,
-        size = Vector.xy(0, 0),
+        size = Vector.xy(BW, BH),
         scale = 1,
+        kc = 1,
+        simW = BW,
+        xk = 1,
         px = table.create(NV, 0), py = table.create(NV, 0), pz = table.create(NV, 0),
         qx = table.create(NV, 0), qy = table.create(NV, 0), qz = table.create(NV, 0),
         ca = {}, cb = {}, cr = {},

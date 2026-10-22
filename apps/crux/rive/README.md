@@ -4,13 +4,14 @@ A ten-scene, data-bound climbing recap for the fictional app Crux, built with Ri
 
 | What | Where |
 |---|---|
-| Editable source (RML + Luau + WGSL) | `scene/*.rml`, `director.luau`, `hold3d.luau` + `hold3d.wgsl` (3D holds), `chalk.luau` + `chalk.wgsl` (chalk shader) |
-| Generator for the RML (scenes, ~60 entrance/exit timelines, ~450 transitions) | `tools/gen.py` (+ `rml.py`, `art.py`, `stage.py`, `build_stage.py`, `main_ab.py`, `model.py`, `conv.py`) |
-| Runtime file | `build/crux-recap.riv` (882 KB, unsigned local build) |
+| Editable source (RML + Luau + WGSL) | `scene/*.rml`, `director.luau`, `layout.luau` (responsive layout engine), `rigdata.luau` (generated block spec), `wall.luau` (wall texture), `hold3d.luau` + `hold3d.wgsl` (3D holds), `chalk.luau` + `chalk.wgsl` (chalk shader) |
+| Generator for the RML (scenes, ~60 entrance/exit timelines, ~450 transitions) | `tools/gen.py` (+ `rml.py`, `art.py`, `stage.py`, `build_stage.py`, `main_ab.py`, `model.py`, `conv.py`, `rig.py`) |
+| Runtime file | `build/crux-recap.riv` (900 KB, unsigned local build) |
 | Editor file `.rev` | **Not produced.** `rive . --once --rev=build/crux-recap.rev` fails with "Not logged in". Run `rive login` and then that command. |
 | Fixtures | `fixtures/fixture.json` (sample data), `new-user.json`, `extreme.json`. The same three are also authored as `UserRecap` instances named `Fixture` (the default), `NewUser` and `Extreme`. |
-| Captures | `captures/*.png` (58 stills), `captures/motion/*.mp4`, `captures/data/verify-report.json` |
-| Checks | `tools/verify.py` (32 behavioural checks, all passing), `tools/capture.py` (re-renders every capture) |
+| Captures | `captures/*.png` (50 design-size stills), `captures/responsive/*.png` (the portrait/landscape size matrix), `captures/motion/*.mp4`, `captures/data/verify-report.json` |
+| Videos | `../video.webm` (390×844 portrait walkthrough), `../video-landscape.webm` (1280×720 landscape walkthrough) |
+| Checks | `tools/verify.py` (32 behavioural + 18 responsive checks, all passing), `tools/capture.py` (re-renders the design-size captures), `tools/responsive.py` (re-renders the size matrix) |
 
 ## Preview
 
@@ -20,14 +21,15 @@ python3 tools/gen.py          # only after editing tools/*.py; scene/*.rml is al
 rive . --verify && rive inspect . --summary
 rive .                        # live previewer (layout fit: resize the window to test responsiveness)
 rive . --screenshot=out.png --data=currentScreen=9 --data=personaIndex=1 --advance=130
+rive . --screenshot=out.png --viewport=1280x720 --data=currentScreen=2 --advance=130   # landscape
 ```
 
 Any `UserRecap` field can be set with `--data=<name>=<value>`. `tools/capture.py` shows how to apply a whole fixture this way.
 
 ## Architecture
 
-- **`Crux Recap`** is the host-facing artboard. It holds the chrome as a responsive flex layout: a top bar with the wordmark, progress segments and year, and a bottom bar with Previous, Pause/Replay and Continue/Share. Behind the chrome sits the `Stage` component, a `NestedArtboardLeaf` with `fit=cover` and `alignmentY=-0.8`. The **director** script fills the canvas, and the `Recap` state machine drives buttons, keys, focus and events.
-- **`Stage`** (390×844) contains the ten scenes. Each scene has Text, Front, Mid and Back layers, which give parallax during transitions. The stage also holds the persistent acid **carrier hold** with its yank rope, the chalk occluder, and the `Story` state machine. That machine has four layers:
+- **`Crux Recap`** is the host-facing artboard. It holds the chrome as a responsive flex layout: a top bar with the wordmark, progress segments and year, and a bottom bar with Previous, Pause/Replay and Continue/Share. Behind the chrome sits the `Stage` component, a `NestedArtboardLeaf` with `fit=layout`, so the stage is resized to the real canvas. The **director** script fills the canvas, lays everything out for its size (see [Responsive layout](#responsive-layout)), and the `Recap` state machine drives buttons, keys, focus and events.
+- **`Stage`** (authored at 390×844, resized at run time) contains the ten scenes. Each scene has Text, Front, Mid and Back layers, which give parallax during transitions. The stage also holds the persistent acid **carrier hold** with its yank rope, the chalk occluder, and the `Story` state machine. That machine has four layers:
   - **Scenes:** one entrance per scene (forward, back or reduced) and one exit per scene (yank, lower-off or reduced fade), chosen by `currentScreen`, `navDirection` and `reducedMotion`. Scene 9 has four persona variants and scene 10 has two (full and new-user).
   - **Idle:** loops that start only after the scene has settled and freeze while paused.
   - **Grab Hold:** the signature interaction.
@@ -53,6 +55,7 @@ Fields added for the host:
 |---|---|---|---|
 | `personaAdapterEnabled` | bool, default true | host | When true, the in-file adapter maps `personaIndex` to `personaName`, `personaDescription` and `personaColor` using the brief's English table, writing all three in the same frame. A localizing host sets it false and writes all four fields itself, in the same frame. |
 | `shareDismissed` | trigger | host | Fire this when the platform share sheet closes. It restores the pause state that was saved when Share was tapped. |
+| `layoutBreakpoint` | number, default 768 | host | **Responsive-layout addition.** The width, in artboard points, at which the landscape layout takes over: landscape when the artboard width ≥ `layoutBreakpoint`, portrait otherwise. Read every frame, so changing it re-lays out immediately. Non-positive or non-finite values fall back to 768. |
 
 **Adapter-owned (written by `director.luau`; the host may read them):**
 
@@ -92,7 +95,7 @@ Fields added for the host:
 - Persona strings, if you localize them.
 - Stop advancing the runtime, or set `isPaused`, while the app is backgrounded.
 - Set the visibility flags. Hide absent metrics, never genuine zeros. The new-user fixture hides scenes 2–9, which yields the intro followed by a welcoming summary.
-- Show the full layout at phone sizes with Fit.layout. On desktop, use Fit.contain with centred alignment (captured as `viewport-desktop-1280x800-contain-*`).
+- Display the artboard with the runtime's layout fit at every size, phone and desktop alike, so the artboard tracks the canvas (see [Responsive layout](#responsive-layout)). Do not letterbox it with contain.
 
 ## Motion and interaction (what was built)
 
@@ -143,8 +146,8 @@ The accent panel is bound to `personaColor`.
 ## Verification
 
 - `rive . --verify`: 0 errors, 0 warnings.
-- `rive inspect . --summary`: 0 problems. Object counts are 622 (main), 24,057 (stage) and 50 (wordmark).
-- `python3 tools/verify.py`: 32/32 checks pass (re-run after the improvement pass). The results are in `captures/data/verify-report.json`. Covered:
+- `rive inspect . --summary`: 0 problems. Object counts are 656 (main), 28,930 (stage) and 50 (wordmark).
+- `python3 tools/verify.py`: 50/50 checks pass after the responsive pass: the 32 behavioural checks below at 390×844, plus 18 responsive checks (see [Responsive layout](#responsive-layout)). The results are in `captures/data/verify-report.json`. Covered:
   - Tap zones, rapid taps (settle on the last requested scene, one signal per change), and hold/release.
   - Pause freezing and resuming progress.
   - Skipping hidden scenes in both directions, the all-hidden safe path, and starting on a hidden scene.
@@ -159,7 +162,7 @@ The accent panel is bound to `personaColor`.
 - Reduced motion.
 - New-user and extreme/long-copy fixtures. The extreme fixture uses de-DE, a 50-character name, about 40% longer copy and an invalid persona index.
 - Name privacy on the share card.
-- Viewports 320×568 and 430×932, plus desktop contain.
+- The responsive size matrix (8 portrait and 8 landscape sizes) in `captures/responsive/`.
 - Intermediate transition frames, the hold drag/rebound, hold-to-pause and paused states.
 - Motion previews (`captures/motion/*.mp4`, 30 fps): the forward yank 2→3, the reverse 5→4, and the Power Mover reveal. Frames are deterministic headless renders stitched with ffmpeg.
 
@@ -197,7 +200,7 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
 - **`shareDismissed` not exercised.** `--data` cannot fire a trigger mid-run, so restoring the pause state after sharing is code-reviewed only.
 - **Event delivery not observed.** The CLI does not print events. `screenChanged`, `recapFinished` and `shareTapped` are verified through their driving signals (`screenSignal`/`finishSignal` fire exactly as expected) and through their presence in the `.riv`.
 - **Full-story video.** `apps/crux/video.webm` is the walkthrough, rendered by `scripts/render-video.py crux` from the repo root. `python3 tools/motion.py full` produces an auto-advance version.
-- **Small screens.** At 320×568 the cover-scaled stage crops about 15 px at the top and 136 px at the bottom (in stage pixels). Scene 6's support line and the bottom edge of the summary card sit close to the controls there.
+- **Small screens.** See [Responsive layout → Compromises](#compromises).
 - **Persona text is English unless the host takes over.** With `personaAdapterEnabled` true, the persona name and line are English; a localizing host must take them over. There is no right-to-left layout pass.
 - **No mid-entrance switch to reduced motion.** If `reducedMotion` changes partway through an entrance, it applies from the next navigation.
 - **Brief deviations kept as designed:**
@@ -246,8 +249,8 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
 ### How the GPU work stays bounded
 - **`live` gating.** Every 3D hold has a `live` input that each scene entrance keys: 1 for that scene's holds, 0 for every other scene's. Off-screen holds issue no passes and no draws. Only the carrier is always live.
 - **Re-render only on change.** A canvas is re-rendered only when its pose key (yaw, pitch, roll, sway clock, progress, colour) changes. A settled hold that is paused or in reduced motion costs one image draw.
-- **Canvas sizes.** Canvases are 2 px per point, capped at 1100 px. Holds with the same canvas size share one depth texture. There is no MSAA: the 2x render is filtered down.
-- **The chalk pass.** It runs only while `amount` is above 0: about 1.2 s per transition, as one full-screen triangle at 1 px per point.
+- **Canvas sizes.** Canvases are `px` pixels per design point (device scale × on-screen block scale, 2–4), capped at 1600 px a side. Holds with the same canvas size share one depth texture. There is no MSAA: the 2x render is filtered down on 1x screens.
+- **The chalk pass.** It runs only while `amount` is above 0: about 1.2 s per transition, as one full-screen triangle covering the real canvas at device resolution, capped at about 4.2 million pixels.
 - **Fallbacks.** If a runtime returns no shader, `hold3d` draws a vector silhouette and `chalk` draws vector puffs from the same keyed inputs.
 
 ### Reduced motion and the contract
@@ -259,9 +262,9 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
 
 ### New compromises and limits
 - **The flat back of a hold.** Holds have flat backs, as real ones do. In the middle of the carrier's full-turn spin, one or two frames show that back as a flat olive disc.
-- **Sharpness on Retina.** Canvases are sized at 2 px per point, not at the device scale, because a `Node` script is not told the surface scale. Holds are sharp at 1x and 2x, but slightly soft at 3x.
+- **Sharpness on Retina.** Superseded by the responsive pass: the director passes the device scale (from `resize`) times the real block scale to every hold as `px`, so canvases are allocated at device resolution (2–4 px per design point).
 - **Web needs a signed build.** `.wgsl` and `.luau` assets are unsigned in a local build. Web runtimes need `rive . --publish`, which requires login. WebGPU validation was not exercised; the native preview was.
-- **Memory.** 22 GPU canvases are allocated up front: about 0.5–4.7 MB each, plus shared depth textures. On-device GPU time was not measured.
+- **Memory.** Since the responsive pass, hold canvases are allocated only while their scene is on screen and released when it leaves (the carrier is always live). On-device GPU time was not measured.
 
 ### Performance
 `rive . --bench=600`, Apple M5 Pro, headless at 1x. Render times are CPU-side submission, not GPU time.
@@ -273,3 +276,126 @@ The fonts were downloaded from github.com/google/fonts and are embedded in the `
 | Render submission, mean / p95, scene 1 | 0.074 / 0.089 ms | 0.138 / 0.287 ms |
 | Render submission, mean / p95, scene 4 (3D stack) | — | 0.121 / 0.267 ms |
 | Wasm memory growth | +0 | +0 |
+
+## Responsive layout
+
+The recap adapts to any canvas size, with two layouts chosen by a width breakpoint. Each layout reflows continuously for every size on its side of the breakpoint; nothing is a fixed artboard scaled into letterbox bars.
+
+### The rule and `layoutBreakpoint`
+
+- **Landscape layout when the artboard width is ≥ `layoutBreakpoint`, otherwise the portrait layout.** It is a pure width rule: 768×1024 and 820×1180 get the landscape layout, 667×375 and 740×360 get the portrait layout.
+- `layoutBreakpoint` is a host-owned `UserRecap` number, default **768**, in artboard points. It is the only contract addition (see the binding contract). Non-positive or non-finite values fall back to 768.
+- The orientation is derived by the director from the real artboard width it is handed in `resize`, and re-derived on every resize and whenever `layoutBreakpoint` changes. A canvas resized across the threshold keeps its current scene, its progress and its pause state; no `screenChanged` fires. The blocks ease to the other arrangement over 0.4 s. The ease is skipped at start-up, when the artboard first reports its authored size and then the real one, and under reduced motion. Resizes within one layout follow the canvas immediately.
+
+### Mechanism
+
+- **The stage follows the canvas.** The `Stage` nested artboard uses `fit=layout`, so it is resized to the real canvas. Inside it, each scene is split into **blocks**, defined in `tools/rig.py`. Examples are the hero (the number and its unit), the copy (headline and support), the art, and scene-specific blocks: the intro title, the dial, the ledge, the summary head, the share card and the ground.
+- **Rig nodes.** Each block's content hangs under one rig node per parallax layer. The node's `x`, `y` and `scale` are bound to three numbers in **`CruxRig`**, a global view model. `CruxRig` is file-internal plumbing, not user data: the host never reads or writes it. `UserRecap` is unchanged apart from `layoutBreakpoint`.
+- **Choreography is untouched.** Every keyed animation stays in the block's own 390×844 design coordinates, so motion, reduced motion and the persona and summary variants all work at any size.
+- **The director computes the layout.** `director.luau` runs `layout.luau`, a pure-maths module, with the canvas size, the breakpoint and the device scale. It writes the results into `CruxRig`, but only when something changes: a resize, an orientation ease or a scene hand-off. The block spec reaches the runtime as `rigdata.luau`, which `tools/gen.py` generates from `tools/rig.py`.
+- **A viewport node.** It is scaled by `k` = canvas height / 844 and wraps every scene. Keyed parallax offsets, the yank and lower-off distances and the carrier's flights therefore keep their proportion to the canvas height. Rig values are written in these units.
+
+**Portrait layout (width < breakpoint).**
+- *Stack, for tall canvases.* The phone composition keeps its relative positions at a single scale, `min(width / 390, (height − top bar) / 780)`, with a floor of 0.8 so 14 pt copy never drops below 11 pt.
+  - Extra width is shared out by per-block anchors. On 600×960 and 767×1024 the copy stays left and the route art moves right; centred scenes stay centred.
+  - Extra height drops the art to the floor.
+  - On short phones, the breathing room under the top bar is trimmed first. Then the bottom art is compressed (to no less than 72%), and the share card shrinks just enough to clear the controls.
+- *Fold, when the story area is wider than 0.9 times its height.* This covers a phone on its side, such as 667×375 or 740×360. The column folds into side-by-side columns: number, copy, art.
+
+**Landscape layout (width ≥ breakpoint).** Side-by-side compositions at large-format scales. For each scene, a small solver tries the arrangements listed in `tools/rig.py`: two columns, three columns, or a single stacked column. Every column role has scale bounds: readable floors and large-format maxima. When space is short, the art gives way first. The group is centred with capped gaps, and the solver keeps the arrangement that covers most of the story area.
+- **Metric scenes.** On wide areas (aspect ≥ 1.9, for example 1280×720 or 1920×1080) the layout is the huge number, then the copy column, then the art. Otherwise it is the number over the copy, beside the art. Tall landscape canvases (768×1024, 820×1180) often take the stacked column, at tablet scale.
+- **Exceptions.**
+  - Scene 4's number stays inside the attempt-stack art, because the marks fly into it.
+  - Scene 6's number stays in the dial, and the concrete ledge runs across the whole canvas.
+  - Scenes 3 and 5 switch from centred and right-aligned text to flush-left in the columns.
+- **Persona reveal.** The emblem gets its own column first, and the persona title gets a large column beside it.
+- **Summary.** A **wide share card**, 690×300: the persona sits on the left, the five stats in a 3 + 2 grid on the right, and the route runs along the bottom. The card's parts are bound to `wide`, which eases between 0 and 1, so the card morphs between its tall and wide forms. The head (headline and support) sits beside or above the card. A tall landscape canvas keeps the tall card.
+
+**Everything else follows the real size.**
+- **Chrome.** Bar heights, bar padding and button sizes are bound to `CruxRig`, in three height tiers (≥ 700, 420–700, < 420):
+
+  | | Tall (≥ 700) | Medium (420–700) | Short (< 420) |
+  |---|---|---|---|
+  | Top bar | 64 | 56 | 44 |
+  | Bottom bar, portrait | 104 | 84 | 64 |
+  | Bottom bar, landscape | 96 | 80 | 64 |
+  | Round buttons | 52 | 48 | 44 |
+  | Pill | 56 | 50 | 44 |
+
+  Every control stays at least 44×44. On wide canvases the Continue/Share pill stops at 380 pt, and the bar spreads into [Previous, Pause] … [Continue].
+- **Progress segments.** They flex across the real width.
+- **Backgrounds bleed edge to edge.**
+  - Each wall colour is a 20,000 pt shape.
+  - The chalk speckles, and scene 3's bolt grid, are drawn by `wall.luau` over the whole canvas at any aspect.
+  - The concrete panels, the ledge and the ground lines extend past the design edges.
+  - The summary ground is pinned to the bottom of the canvas.
+- **Tap zones, hold-to-pause and the hold.**
+  - The left third (back) and the right two-thirds (next) use the real width.
+  - The chrome bands come from the rig.
+  - Scene 1's draggable hold excludes its own hit region wherever its block puts it.
+- **The carrier and the chalk.**
+  - The carrier hold lives in its scene's block space. On each entrance the director eases that space from the previous scene's over 0.5 s, so the continuity hand-offs (2→3, 6→7, 8→9) stay seamless even when the two scenes are laid out differently.
+  - The chalk cloud stays in the space it burst in, and its GPU canvas covers the whole real canvas at device resolution.
+- **3D holds.** They receive `px`: the device scale times the on-screen block scale, 2–4 px per design point. Canvases are allocated at that resolution only while their scene is on screen.
+
+### Host setup
+
+- **Use the runtime's layout fit**, so the artboard is resized to the canvas and its layout reflows. Never use contain or cover. The option names, which should be checked against the Rive runtime docs for the version in use, are:
+
+  | Runtime | Layout fit |
+  |---|---|
+  | Web | `layout: new Layout({ fit: Fit.Layout })`; call `resizeDrawingSurfaceToCanvas()` when the canvas resizes |
+  | Apple | `.layout` |
+  | Android | `Fit.LAYOUT` |
+  | Flutter | `Fit.layout` |
+  | React Native | `Fit.Layout` |
+
+- **Keep one point equal to one logical pixel.** Leave the runtime's layout scale factor at its default, so the breakpoint compares logical (CSS) pixels and phones and tablets land on the intended side.
+- **Changing the breakpoint.** Write `layoutBreakpoint` on the bound `UserRecap` instance. Nothing else is needed: `CruxRig` is internal.
+- **Global view models.** The runtime must support global view models, which carry the layout values. A runtime that ignored them would show the authored 390×844 composition, because the rig's defaults are the identity at that size.
+- **Share capture.** Snapshot after `sceneSettled`, as before. In landscape the stage shows the wide card.
+
+### Sizes tested
+
+- **Portrait:** 320×568, 360×640, 390×844, 430×932, 600×960, 767×1024, 667×375 and 740×360.
+- **Landscape:** 768×1024, 820×1180, 1024×768, 1280×720, 1440×900, 1920×1080, 2560×1080 and 1366×600.
+
+That is widths 320–2560, heights 360–1180, and aspect ratios from 0.47 to 2.37.
+
+**Contact sheets** are in `captures/responsive/`, one per job, made with `python3 tools/responsive.py`. Each sheet has two rows: the portrait row on top and the landscape row below, each in the order listed above. The jobs are:
+- all ten settled scenes;
+- personas 1–3;
+- the summary with the name shown;
+- the new-user summary;
+- three mid-transition frames: the 2→3 yank with the continuity carry at frame 20, 6→7 at frame 46, and the reverse 5→4 at frame 22;
+- reduced motion;
+- the extreme fixture on scenes 4 and 10.
+
+**Responsive checks** in `tools/verify.py`:
+- Orientation:
+  - Landscape exactly when width ≥ 768, at all 16 sizes.
+  - The short portrait canvases fold.
+  - `layoutBreakpoint` is tunable.
+- Sizes and placement:
+  - Controls are at least 44 pt.
+  - No copy, title or unit label falls below its readable scale floor, at all 16 sizes.
+  - In wide layouts, blocks never overlap, stay inside the canvas and clear the controls (a geometric check of the placed blocks).
+- Input at landscape and folded sizes:
+  - The tap zones and hold-to-pause use the real width.
+  - The Right arrow advances scenes.
+  - Dragging the relocated hold never navigates.
+- **Resize harness.** A temporary copy of the project nests the recap in an artboard whose size is keyed. Two scenarios run:
+  - 390×844 → 1100×700 mid-scene: the scene is kept, no signal fires, it stays settled, and it eases in 0.4 s.
+  - 390×844 → 1100×700 → 600×900 while the 2→3 yank is in flight: it settles on scene 3 with `enteredScreen` = `currentScreen` and exactly one signal.
+
+### Compromises
+
+- **Short portrait phones (320×568, 360×640).** The bottom art passes behind the transparent control bar, as the big hold already does at 390×844, and is compressed to no less than 72%. Scene 7's panels come close to its support line. The summary card shrinks to clear the controls, but its decorative corner hold reaches the Previous button area at 320×568.
+- **The tightest folded canvases (667×375, 740×360).** These hold three columns in about 250 pt of height. Copy is drawn at about 0.76–0.8 of its design size (≥ 10.5 pt). The art, and scene 4's number with its stack, become small.
+- **Portrait-shaped art in landscape.** Scene 2's vertical route and scene 4's stack are tall shapes. In landscape they get a narrow column, and on ultra-wide canvases (2560×1080) the composition is centred with speckled wall on both sides. Scene 4's number scales with its stack, so it is smaller than the other scenes' numbers.
+- **Stacked tall landscape.** On tablet-shaped landscape canvases the solver often stacks the blocks in one column, which is close to the portrait composition at a larger scale. That is still the landscape chrome and rules, but it is the arrangement that fits a 3:4 area best.
+- **Continuity in landscape.** When two scenes are laid out differently, the carrier glides for 0.5 s into the new composition at the hand-off, instead of staying exactly in place.
+- **Only switches between arrangements ease.** Within one arrangement, a window drag snaps every frame.
+- **Device resolution is unverified headless.** Captures run at @1x, so the device-resolution canvases (`px` > 2, the chalk at device pixels) were not seen on a Retina screen.
+- **File size.** The responsive rig (bound rig nodes, `CruxRig`, `layout.luau`, `rigdata.luau`, `wall.luau`) grows the `.riv` from 882 KB to 900 KB (881,732 → 900,331 bytes).
+- **Unchanged design-size art.** At 390×844 the composition is the original design. The new procedural speckles replace the old fixed ones, so their positions differ.

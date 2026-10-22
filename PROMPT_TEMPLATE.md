@@ -125,6 +125,35 @@ Suggested topics if I left slots blank (pick what fits the category):
 - Optional screen skipping: a bound boolean per screen so the app can hide
   screens where the user has no meaningful data (the progress bar adapts).
 
+## 5b. Responsive layout
+The experience fills whatever canvas the app gives it: phone, tablet, desktop
+or an embed. The host uses the runtime's layout fit, so the artboard is resized
+to the canvas and reflows. It is not a fixed artboard scaled with letterboxing.
+- Two layouts with a width breakpoint: **landscape when the artboard width is
+  ≥ {{BREAKPOINT}}** (default 768), **portrait** below it. Expose the breakpoint
+  as a bound number (`layoutBreakpoint`) so the app can tune it, and derive the
+  orientation from the real artboard width at runtime.
+- Because it's a width rule, each layout adapts to any height on its side: the
+  landscape layout must also hold on a tall tablet (820×1180), and the portrait
+  layout on a short phone held sideways (667×375).
+- Landscape is its own composition, e.g. hero art and the big number side by
+  side with the copy in a column. Give the persona reveal and the summary card
+  their own landscape arrangements. Don't just centre the portrait column
+  between empty bars.
+- Everything follows the real size:
+  - Backgrounds bleed edge to edge.
+  - Copy and controls keep safe margins.
+  - Text keeps a readable minimum size, and controls stay at least 44×44.
+  - Nothing overlaps.
+  - The tap zones and the progress bar use the real width.
+  - GPU 3D and shader canvases are sized to their real box at device
+    resolution.
+  - Full-screen transitions cover the whole viewport.
+- Resizing across the breakpoint mid-screen (rotating a tablet, resizing a
+  window) keeps the current screen and settles cleanly.
+- Build the reflow with the layout system (`rive docs layout`: flex, fill/hug,
+  min/max, grid), plus a script or state for the orientation switch if needed.
+
 ## 6. Edge cases to handle
 - Very long userName (truncate or scale down)
 - Zero or missing values: show {{ZERO_STATE_COPY}} instead of awkward "0" copy
@@ -132,10 +161,17 @@ Suggested topics if I left slots blank (pick what fits the category):
 - Very large numbers (e.g. 1,234,567) still fit the hero slot
 - Longest expected translated strings still fit
 - Each persona option renders correctly
+- Extreme canvas sizes on both sides of the breakpoint (very narrow, very short,
+  ultrawide), and a resize across the breakpoint mid-transition
 
 ## 7. Verify before you call it done
 - The project compiles with no errors.
 - Capture a frame of every screen (1–10) at its settled state and show me.
+- Render with `rive <project> --screenshot --viewport=WxH` across a size
+  matrix, and check screens 1, two stats, 9 and 10 settled, plus a
+  mid-transition frame in each orientation:
+  - Portrait: 320×568, 390×844, 430×932, 767×1024, 667×375.
+  - Landscape: 768×1024, 820×1180, 1280×720, 1920×1080, 2560×1080, 1366×600.
 - Drive the scene with simulated data: my example values, a zero/new user, and
   an extreme user (huge numbers, long name, longest translation). Capture those
   frames too.

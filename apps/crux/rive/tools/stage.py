@@ -1,15 +1,21 @@
 """The Stage artboard: ten scenes, the persistent carrier hold + rope, chalk occluder,
-and the scene-sequencing state machine that reads UserRecap.currentScreen."""
+and the scene-sequencing state machine that reads UserRecap.currentScreen.
+
+Responsive layout: the stage is resized to the real canvas (fit=layout). Every scene's
+content is split into blocks (tools/rig.py); each block hangs under a rig node per
+parallax layer whose x / y / scale are bound to the director's CruxRig values, so all
+keyed choreography stays in the block's own 390 x 844 design coordinates."""
 import math
 from rml import (E, nid, node, shape, poly, ellipse, rect, fill, stroke, solid, bind, Anim,
                  cond_num, cond_bool, cond_trigger, write_num, write_bool, transition,
                  CHALK, COAL, ACID, COBALT, CONCRETE, CONCRETE_D, CHALK_D, COAL_L, RNG)
 from art import (N, BASE, text, hero, headline, mono, Hold, Puff, speckles, bolt_grid, route_line,
                  arrow, alpha, WORDMARK_AB, FONT_MONO, FONT_MONO_M, FONT_XB, FONT_BLACK, hold_art,
-                 Hold3, hold3d_drawable, chalk_drawable)
+                 Hold3, hold3d_drawable, chalk_drawable, wall_drawable)
 import conv
 import model
-from model import path
+import rig
+from model import path, rig_path
 
 W, H = 390, 844
 STAGE_AB = "0:70"
@@ -25,6 +31,29 @@ CARRIER_POSE = {
     10: (352, 606, 0.55, 0.35),
 }
 
+
+def rig_node(name, kx, ky, ks, kids=()):
+    """A plain node whose transform the director drives through CruxRig."""
+    n = E("Node", name=name)
+    n.add(bind(rig_path(kx), 13), bind(rig_path(ky), 14), bind(rig_path(ks), 16), bind(rig_path(ks), 17))
+    n.add(list(kids))
+    return n
+
+
+def wide_bind(el, prop_key, a, b):
+    """Bind a property to morph from its tall (portrait) to its wide (landscape) value."""
+    el.add(bind(rig_path("wide"), prop_key, conv.lerp(a, b)))
+    return el
+
+
+def align_wide(t, tall):
+    """Text alignment: the portrait value (2 centre, 1 right) in the tall arrangement,
+    flush left (0) in the wide one, where the text sits in a column."""
+    t.add(bind(rig_path("wide"), 281, conv.formula(f"Align {tall} Then Left", [
+        ("fn", "round"), ("v", tall), ("op", "-"), ("(",), ("v", tall), ("op", "*"), ("in",), (")",), (")",)])))
+    return t
+
+
 # ------------------------------------------------------------------ globals in the stage
 HERO_DRIVER = E("CustomPropertyNumber", propertyValue=0, name="heroDriver",
                 kids=[bind(path("heroProgress"), 243, direction=True)])
@@ -32,7 +61,7 @@ HERO_DRIVER = E("CustomPropertyNumber", propertyValue=0, name="heroDriver",
 # Carrier: the persistent acid "Crux hold" that carries the story + the yank rope.
 rope_bow = E("CubicMirroredVertex", x=40, y=-520, rotation=-1.5708, distance=260, name="Bow")
 rope_path = E("PointsPath", isClosed=False, isClockwise=True, name="Rope Path", kids=[
-    E("StraightVertex", x=0, y=-30), rope_bow, E("StraightVertex", x=0, y=-1400)])
+    E("StraightVertex", x=0, y=-30), rope_bow, E("StraightVertex", x=0, y=-2800)])
 rope_twist = E("Stroke", thickness=3, cap="butt", join="round", name="Twist", kids=[
     solid(COBALT), E("DashPath", name="Twist", kids=[E("Dash", length=7, name="On"), E("Dash", length=7, name="Off")])])
 ROPE = N("Rope", [shape("Rope Line", [rope_path], [stroke(COAL, 7, cap="round"), rope_twist])], opacity=0.0)
@@ -44,47 +73,55 @@ CARRIER_PITCH = CARRIER_IN["pitch"].id
 CARRIER_ART = N("Carrier Idle", [shape("Route Dot", [ellipse(15)], [fill(CHALK), stroke(COAL, 3.5)], x=4, y=0),
                                  CARRIER_3D])
 CARRIER = N("Carrier", [ROPE, CARRIER_ART], x=CARRIER_POSE[1][0], y=CARRIER_POSE[1][1])
-
-
-def chalk_cloud():
-    rng = RNG(21)
-    kids = []
-    for i in range(12):
-        a = i / 12 * 6.283 + rng.random() * 0.4
-        d = 90 + rng.random() * 120
-        r = 130 + rng.random() * 90
-        kids.append(ellipse(round(r, 1), x=round(math.cos(a) * d, 1), y=round(math.sin(a) * d * 1.5, 1)))
-    kids.append(ellipse(330, x=0, y=0))
-    shades = [ellipse(round(e.a["width"] * 0.85, 1), x=round(e.a["x"] + 14, 1), y=round(e.a["y"] + 22, 1)) for e in kids]
-    grains = speckles("Cloud Grains", 70, -240, -420, 240, 420, color=alpha(COAL, 0.25), seed=22, rmin=1.5, rmax=4)
-    return N("Chalk Cloud", [grains, shape("Cloud", kids, [fill(CHALK)]),
-                             shape("Cloud Shade", shades, [fill(CHALK_D)])],
-             x=195, y=440, opacity=0.0, scaleX=0.35, scaleY=0.35)
-
+# The carrier's pose is keyed in its scene's block space (the rig node, bound to the
+# carrier space the director blends between scenes); the big off-screen flights of the
+# yank and the lower-off are keyed on `Carrier Fly`, in viewport units, so they always
+# clear the canvas whatever the block scale.
+CARRIER_RIG = rig_node("Carrier Rig", "carX", "carY", "carS", [CARRIER])
+CARRIER_FLY = N("Carrier Fly", [CARRIER_RIG])
 
 CHALK = CHALK  # noqa
-# The chalk occluder is a GPU shader (chalk.wgsl) keyed through script inputs.
+# The chalk occluder is a GPU shader (chalk.wgsl) keyed through script inputs; it lives
+# in the carrier's space (its origin is keyed at the carrier pose) and covers the canvas.
 CHALK_FX, CHALK_IN = chalk_drawable()
-CLOUD = CHALK_FX
+CLOUD = rig_node("Chalk Rig", "chX", "chY", "chS", [CHALK_FX])
 
 
 # ------------------------------------------------------------------ scene scaffold
+LAYER_NAMES = {"text": "Text", "front": "Front", "mid": "Mid", "back": "Back"}
+
+
 class Scene:
-    def __init__(self, k, bgc):
+    def __init__(self, k, bgc, speck=(alpha(COAL, 0.35), 2.9), grid=None):
         self.k = k
         self.text = N("Text")
         self.front = N("Front")
         self.mid = N("Mid")
         self.back = N("Back")
+        self.rigs = {}
         self.bg_color_id = nid()
-        self.wall = shape("Wall", [rect(W, H)], [E("Fill", name="Fill", kids=[
+        # the wall bleeds edge to edge at any size; the speckle texture is procedural
+        self.wall = shape("Wall", [rect(20000, 20000)], [E("Fill", name="Fill", kids=[
             E("SolidColor", colorValue=bgc, name="Wall Color", id=self.bg_color_id)])], x=W / 2, y=H / 2)
+        col, dens = speck
+        self.back.add(wall_drawable("Wall Texture", col, 100 + k, density=dens, scene=k, grid=grid))
         self.root = N(f"Scene {k}", [self.text, self.front, self.mid, self.back], opacity=0.0)
         self.variants = [0]
         self.variant_nodes = {}
         self.idle = []            # (node_id, prop, amplitude)
         self.hero_steps = [(12, 0.0, "outq"), (72, 1.0, "hold")]
         self.carrier_hook = None
+
+    def put(self, layer, block, *items):
+        """Add items to a parallax layer, inside the rig node of a layout block."""
+        assert block in rig.S[self.k]["blocks"], (self.k, block)
+        key = (layer, block)
+        if key not in self.rigs:
+            kx, ky, ks = rig.block_names(self.k, block)
+            rn = rig_node(f"{block.capitalize()} Rig ({LAYER_NAMES[layer]})", kx, ky, ks)
+            self.rigs[key] = rn
+            getattr(self, layer).add(rn)
+        self.rigs[key].add(list(items))
 
     def choreo(self, a, v):
         pass
@@ -129,9 +166,9 @@ def steps_curve(frames, ease="outq"):
 # ------------------------------------------------------------------ scenes
 def scene1():
     s = Scene(1, CHALK)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=101))
-    s.back.add(bolt_grid("Bolts", [(250 + (i % 4) * 36, 330 + (i // 4) * 44) for i in range(40) if (250 + (i % 4) * 36) > 240 - (i // 4) * 8]))
-    s.back.add(shape("Panel", [poly([(214, 300), (390, 240), (390, 844), (140, 844)])], [fill(CONCRETE)]))
+    s.put("back", "art", bolt_grid("Bolts", [(250 + (i % 4) * 36, 330 + (i // 4) * 44) for i in range(40) if (250 + (i % 4) * 36) > 240 - (i // 4) * 8]))
+    # the concrete panel bleeds right and down past the design edge
+    s.put("back", "art", shape("Panel", [poly([(214, 300), (390, 240), (2600, 240), (2600, 2400), (60, 2400), (140, 844)])], [fill(CONCRETE)]))
     # zigzag route through oversized holds
     h1 = Hold3("Sloper", "sloper", COBALT, 236, 92, 784, rot=-0.1, scene=1, sway=0.05)
     h2 = Hold3("Pyramid", "pyramid", COAL, 156, 296, 684, rot=0.15, scene=1, sway=0.06, speck=0.12)
@@ -139,7 +176,7 @@ def scene1():
     rl, trim = route_line("Route", pts, COAL, 3.5)
     dots = [shape(f"Dot {i}", [ellipse(14)], [fill(CHALK), stroke(COAL, 3.5)], x=x, y=y) for i, (x, y) in enumerate(pts[:3])]
     dotn = [N(f"Route Dot {i}", [d], x=0, y=0) for i, d in enumerate(dots)]
-    s.mid.add(dotn, rl, h2.outer, h1.outer)
+    s.put("mid", "art", dotn, rl, h2.outer, h1.outer)
     # signature interaction: draggable acid hold (squash node keyed by GrabHold layer)
     # the 3D hold draws itself; a transparent cut-out of its silhouette is the hit region
     grab_d, grab_in = hold3d_drawable("Grab Hold 3D", "jug", ACID, 104, scene=1, sway=0.05)
@@ -151,7 +188,7 @@ def scene1():
     s.grab_squash = N("Grab Squash", [hit, grab_d])
     s.grab_hold = N("Grab Hold", [s.grab_squash])
     s.grab_slot = N("Grab Slot", [s.grab_hold], x=115, y=605)
-    s.front.add(s.grab_slot)
+    s.put("front", "art", s.grab_slot)
     s.grab_home = (115, 605)
     # text
     s.wm_clip_rect = N("Wordmark Mask Grow", [shape("Mask Shape", [rect(272, 112, ox=0, oy=0)], [])], x=22, y=118,
@@ -165,9 +202,10 @@ def scene1():
     s.greet = N("Greeting Group", [greet], x=24, y=238)
     s.head = N("Headline Group", [headline("Intro Headline", "introHeadline", 0, 0, 300, 132, 64, COAL)], x=24, y=280)
     s.sup = N("Support Group", [mono("Intro Support", "introSupport", 0, 0, 250, 46, 15, COAL)], x=24, y=420)
-    s.text.add(s.wm_clip_rect, s.wm, s.greet, s.head, s.sup)
+    s.put("text", "title", s.wm_clip_rect, s.wm, s.greet)
+    s.put("text", "copy", s.head, s.sup)
     s.p = [Puff("Puff A", 95, 760, 70, 3), Puff("Puff B", 296, 700, 55, 4), Puff("Puff C", 334, 490, 60, 5)]
-    s.front.add([p.outer for p in s.p])
+    s.put("front", "art", [p.outer for p in s.p])
     s.idle = [(h1.idle.id, "rotation", 0.03), (h2.idle.id, "rotation", -0.04)]
 
     def choreo(a, v):
@@ -196,9 +234,8 @@ def scene1():
 
 def scene2():
     s = Scene(2, CHALK)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=102))
-    s.back.add(bolt_grid("Bolts", [(330 + (i % 2) * 34, 400 + (i // 2) * 46) for i in range(18)]))
-    s.back.add(shape("Concrete", [poly([(390, 300), (390, 844), (200, 844)])], [fill(CONCRETE)]))
+    s.put("back", "art", bolt_grid("Bolts", [(330 + (i % 2) * 34, 400 + (i // 2) * 46) for i in range(18)]))
+    s.put("back", "art", shape("Concrete", [poly([(390, 300), (2600, 300), (2600, 2400), (200, 2400), (200, 844)])], [fill(CONCRETE)]))
     hs = [Hold3("Sloper", "sloper", COBALT, 262, 250, 796, -0.05, scene=2, sway=0.04),
           Hold3("Acid Tri", "tri", ACID, 128, 222, 636, -0.2, scene=2, sway=0.06),
           Hold3("Coal Pyramid", "pyramid", COAL, 164, 306, 500, 0.1, scene=2, sway=0.05, speck=0.12),
@@ -207,14 +244,15 @@ def scene2():
     rl, trim = route_line("Route", pts, COAL, 3.0)
     dots = [N(f"Dot {i}", [shape("Dot", [ellipse(14)], [fill(CHALK), stroke(COAL, 3.5)])], x=x, y=y)
             for i, (x, y) in enumerate(pts[:4])]
-    s.mid.add(dots, rl, [h.outer for h in reversed(hs)])
+    s.put("mid", "art", dots, rl, [h.outer for h in reversed(hs)])
     s.p = [Puff(f"Puff {i}", h.x, h.y + 10, 46 + i * 4, 30 + i) for i, h in enumerate(hs)]
-    s.front.add([p.outer for p in s.p])
+    s.put("front", "art", [p.outer for p in s.p])
     num = N("Hero", [hero("Sessions", "sessionsDisplay", 0, 0, 268, 214, 236, COAL)], x=20, y=112)
     unit = N("Unit", [mono("Unit", "screen2Unit", 0, 0, 260, 26, 18, COAL, medium=True)], x=24, y=334)
     hd = N("Headline", [headline("Headline", "screen2Headline", 0, 0, 214, 122, 58, COAL)], x=22, y=372)
     sp = N("Support", [mono("Support", "screen2Support", 0, 0, 196, 80, 14, COAL, overflow="ellipsis")], x=24, y=506)
-    s.text.add(num, unit, hd, sp)
+    s.put("text", "hero", num, unit)
+    s.put("text", "copy", hd, sp)
     frames = [12, 24, 36, 48, 60, 72]
     s.hero_steps = steps_curve(frames)
     s.idle = [(h.idle.id, "rotation", 0.025 * (1 if i % 2 else -1)) for i, h in enumerate(hs)]
@@ -240,9 +278,8 @@ def scene2():
 
 
 def scene3():
-    s = Scene(3, COAL)
-    s.back.add(speckles("Speckle", 70, 0, 60, 390, 844, color=alpha(CHALK, 0.25), seed=103))
-    s.back.add(bolt_grid("Bolts", [(30 + (i % 8) * 47, 90 + (i // 8) * 52) for i in range(8 * 15)], color=COAL_L))
+    # the coal wall carries a full bolt grid: procedural, so it tiles any canvas
+    s = Scene(3, COAL, speck=(alpha(CHALK, 0.25), 2.3), grid=(30, 90, 47, 52, 7, COAL_L))
     pts = [(30, 772), (116, 690), (74, 606), (194, 640), (232, 548), (322, 612)]
     rl, trim = route_line("Trace", pts, ACID, 10, dash=None)
     kinds = [("crimp", CHALK), ("pinch", COBALT), ("tri", CHALK), ("jug", COBALT), ("pinch", CHALK)]
@@ -259,14 +296,18 @@ def scene3():
         shape("Badge", [rect(62, 62, r=6)], [fill(CHALK), stroke(ACID, 5)]),
     ], x=318, y=528, rotation=0.22)
     s.stamp = stamp
-    s.mid.add(stamp, [h.outer for h in hs], rl)
+    s.put("mid", "art", stamp, [h.outer for h in hs], rl)
     s.p = [Puff("Stamp Puff", 318, 540, 70, 50, CHALK)]
-    s.front.add(s.p[0].outer)
-    num = N("Hero", [hero("Sends", "sendsDisplay", 0, 0, 342, 224, 250, CHALK, align="center")], x=24, y=110)
-    unit = N("Unit", [mono("Unit", "screen3Unit", 0, 0, 342, 26, 18, ACID, align="center", medium=True)], x=24, y=336)
-    hd = N("Headline", [headline("Headline", "screen3Headline", 0, 0, 342, 64, 56, CHALK, align="center")], x=24, y=372)
-    sp = N("Support", [mono("Support", "screen3Support", 0, 0, 300, 60, 14, CHALK, align="center")], x=45, y=440)
-    s.text.add(num, unit, hd, sp)
+    s.put("front", "art", s.p[0].outer)
+    num = N("Hero", [align_wide(hero("Sends", "sendsDisplay", 0, 0, 342, 224, 250, CHALK, align="center"), 2)], x=24, y=110)
+    unit = N("Unit", [align_wide(mono("Unit", "screen3Unit", 0, 0, 342, 26, 18, ACID, align="center", medium=True), 2)], x=24, y=336)
+    hd = N("Headline", [align_wide(headline("Headline", "screen3Headline", 0, 0, 342, 64, 56, CHALK, align="center"), 2)], x=24, y=372)
+    # centred under the headline in portrait; flush left in the landscape column
+    sp_t = align_wide(mono("Support", "screen3Support", 0, 0, 300, 60, 14, CHALK, align="center"), 2)
+    wide_bind(sp_t, 13, 21, 0)
+    sp = N("Support", [sp_t], x=24, y=440)
+    s.put("text", "hero", num, unit)
+    s.put("text", "copy", hd, sp)
     frames = [10, 22, 34, 46, 58, 70]
     s.hero_steps = steps_curve(frames)
     s.idle = [(h.idle.id, "rotation", 0.03 * (1 if i % 2 else -1)) for i, h in enumerate(hs)]
@@ -295,10 +336,9 @@ def scene3():
 
 def scene4():
     s = Scene(4, CHALK)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=104))
     # tick scale
     ticks = [rect(10 if i % 3 else 18, 2, x=352 - (0 if i % 3 else 4), y=780 - i * 30) for i in range(13)]
-    s.back.add(shape("Scale", ticks + [rect(2, 372, x=358, y=600)], [fill(alpha(COAL, 0.6))]))
+    s.put("back", "art", shape("Scale", ticks + [rect(2, 372, x=358, y=600)], [fill(alpha(COAL, 0.6))]))
     # kinetic stack: one real 3D sloper drawn as a solid anchor, a tumbling trail of
     # translucent ghosts and a solid head that climbs with the count (hold3d trail mode)
     stack_d, stack_in = hold3d_drawable("Attempt Stack 3D", "sloper", COBALT, 170, scene=4, sway=0.05, speck=0.45,
@@ -319,12 +359,14 @@ def scene4():
         m = shape(f"Mark {i}", [poly([(-6, -6), (6, 6)], closed=False), poly([(6, -6), (-6, 6)], closed=False)],
                   [stroke(COAL, 2.6, cap="round")])
         marks.append(N(f"Attempt {i}", [m], x=round(x, 1), y=round(y, 1), rotation=round(rng.random(), 2)))
-    s.mid.add(marks, swoosh, stack)
+    s.put("mid", "art", marks, swoosh, stack)
     num = N("Hero", [hero("Attempts", "attemptsDisplay", 0, 0, 346, 206, 230, COAL)], x=20, y=112)
     unit = N("Unit", [mono("Unit", "screen4Unit", 0, 0, 260, 26, 18, COAL, medium=True)], x=24, y=328)
     hd = N("Headline", [headline("Headline", "screen4Headline", 0, 0, 200, 122, 58, COAL)], x=22, y=366)
     sp = N("Support", [mono("Support", "screen4Support", 0, 0, 186, 80, 14, COAL)], x=24, y=500)
-    s.text.add(num, unit, hd, sp)
+    # the number belongs to the art: the attempt marks fly into it
+    s.put("text", "art", num, unit)
+    s.put("text", "copy", hd, sp)
     s.idle = []
     s.hero_steps = [(12, 0.0, "inq"), (64, 0.86, "out"), (78, 1.0, "hold")]
 
@@ -368,9 +410,8 @@ def scene4():
 
 
 def scene5():
-    s = Scene(5, COBALT)
-    s.back.add(speckles("Speckle", 80, 0, 60, 390, 844, color=alpha(CHALK, 0.3), seed=105))
-    s.back.add(shape("Rings", [ellipse(260, x=70, y=180), ellipse(180, x=70, y=180)], [stroke(alpha(CHALK, 0.18), 2)]))
+    s = Scene(5, COBALT, speck=(alpha(CHALK, 0.3), 2.6))
+    s.put("back", "hero", shape("Rings", [ellipse(260, x=70, y=180), ellipse(180, x=70, y=180)], [stroke(alpha(CHALK, 0.18), 2)]))
     lvl_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Align Reveal")
     level = shape("Level Line", [poly([(24, 664), (366, 664)], closed=False)],
                   [E("Stroke", thickness=3, cap="square", name="Stroke", kids=[solid(CHALK), lvl_trim])])
@@ -382,12 +423,13 @@ def scene5():
     hr = Hold3("Pinch", "pinch", COAL, 116, 304, 632, 0.0, scene=5, sway=0.05, speck=0.12)
     bubble = N("Bubble", [shape("Bubble", [ellipse(18)], [fill(ACID)])], x=195, y=712)
     vial = shape("Vial", [rect(110, 26, r=13)], [stroke(CHALK, 3)], x=195, y=712)
-    s.mid.add(bubble, vial, guide, level, hr.outer, hl.outer)
-    num = N("Hero", [hero("Technique", "techniqueSessionsDisplay", 0, 0, 342, 220, 240, CHALK, align="right")], x=24, y=110)
-    unit = N("Unit", [mono("Unit", "screen5Unit", 0, 0, 342, 26, 18, ACID, align="right", medium=True)], x=24, y=334)
+    s.put("mid", "art", bubble, vial, guide, level, hr.outer, hl.outer)
+    num = N("Hero", [align_wide(hero("Technique", "techniqueSessionsDisplay", 0, 0, 342, 220, 240, CHALK, align="right"), 1)], x=24, y=110)
+    unit = N("Unit", [align_wide(mono("Unit", "screen5Unit", 0, 0, 342, 26, 18, ACID, align="right", medium=True), 1)], x=24, y=334)
     hd = N("Headline", [headline("Headline", "screen5Headline", 0, 0, 300, 122, 58, CHALK)], x=22, y=380)
     sp = N("Support", [mono("Support", "screen5Support", 0, 0, 300, 60, 14, CHALK)], x=24, y=512)
-    s.text.add(num, unit, hd, sp)
+    s.put("text", "hero", num, unit)
+    s.put("text", "copy", hd, sp)
     s.hero_steps = [(14, 0.0, "outq"), (40, 0.34, "outq"), (54, 0.67, "outq"), (68, 1.0, "hold")]
     s.idle = [(hl.idle.id, "rotation", 0.02), (hr.idle.id, "rotation", -0.02)]
 
@@ -410,10 +452,11 @@ def scene5():
         fade_in(a, hd.id, 74, 18, 30)
         fade_in(a, sp.id, 88, 16, 16)
 
-    def carrier_hook(a, sx, sy, ss, sr):
+    def carrier_hook(a, sx, sy, ss, sr, fly0):
         # the carrier is the middle articulated hold: it rotates into alignment too
         a.tw(CARRIER.id, "x", 0, 24, sx, 195, "inout")
         a.tw(CARRIER.id, "y", 0, 24, sy, 500, "out")
+        a.tw(CARRIER_FLY.id, "y", 0, 24, fly0, 0.0, "out")
         a.tw(CARRIER.id, "y", 24, 44, 500, 626, "back")
         a.tw(CARRIER.id, "scaleX", 0, 24, ss, 1.0, "out")
         a.tw(CARRIER.id, "scaleY", 0, 24, ss, 1.0, "out")
@@ -427,7 +470,6 @@ def scene5():
 
 def scene6():
     s = Scene(6, CHALK)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=106))
     cx, cy = 195, 318
     ring_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Dial Reveal")
     ring = shape("Dial Ring", [ellipse(296)], [E("Stroke", thickness=14, cap="butt", name="Stroke", kids=[solid(COAL), ring_trim])],
@@ -451,18 +493,22 @@ def scene6():
     dial = N("Dial", [arcs[0], arcs[1], ticks, ring], x=cx, y=cy)
     coil_rings = [shape(f"Coil {i}", [ellipse(124, 46)], [stroke(COBALT, 10)], x=0, y=-i * 13) for i in range(4)]
     coil = N("Coil", coil_rings[::-1], x=304, y=690)
-    # floor: the rope bag sits on a concrete ledge, its slack running to the carrier hold
-    s.back.add(shape("Floor", [poly([(0, 652), (390, 618), (390, 844), (0, 844)])], [fill(CONCRETE)]))
-    s.back.add(bolt_grid("Floor Bolts", [(36 + (i % 8) * 46, 690 + (i // 8) * 40) for i in range(16)]))
+    # floor: the rope bag sits on a concrete ledge, its slack running to the carrier hold;
+    # the ledge runs flat past both design edges so it bleeds across any canvas
+    s.put("back", "floor", shape("Floor", [poly([(-2600, 652), (0, 652), (390, 618), (2600, 618), (2600, 2400), (-2600, 2400)])],
+                                 [fill(CONCRETE)]))
+    s.put("back", "floor", bolt_grid("Floor Bolts", [(36 + (i % 8) * 46, 690 + (i // 8) * 40) for i in range(16)]))
     slack_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Slack Reveal")
     slack = shape("Slack", [poly([(262, 700), (214, 724), (160, 712), (112, 682)], closed=False)],
                   [E("Stroke", thickness=12, cap="round", join="round", name="Rope", kids=[solid(COBALT), slack_trim])])
-    s.mid.add(dial, coil, slack)
+    s.put("mid", "dial", dial)
+    s.put("mid", "floor", coil, slack)
     num = N("Hero", [hero("Minutes", "longestSessionMinutesDisplay", 0, 0, 220, 150, 160, COAL, align="center")], x=85, y=208)
     unit = N("Unit", [mono("Unit", "screen6Unit", 0, 0, 220, 26, 16, COAL, align="center", medium=True)], x=85, y=362)
     hd = N("Headline", [headline("Headline", "screen6Headline", 0, 0, 342, 60, 54, COAL)], x=22, y=490)
     sp = N("Support", [mono("Support", "screen6Support", 0, 0, 300, 44, 14, COAL)], x=24, y=548)
-    s.text.add(num, unit, hd, sp)
+    s.put("text", "dial", num, unit)
+    s.put("text", "copy", hd, sp)
     s.hero_steps = [(12, 0.0, "inout"), (74, 1.0, "hold")]
     s.idle = [(coil.id, "rotation", 0.0)]
 
@@ -487,8 +533,7 @@ def scene6():
 
 
 def scene7():
-    s = Scene(7, ACID)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, color=alpha(COAL, 0.22), seed=107))
+    s = Scene(7, ACID, speck=(alpha(COAL, 0.22), 2.9))
     # extruded wall panels: a coal face, a lit chalk cap and a shaded side, one per 4 weeks
     base_y = 722
     panels = []
@@ -510,15 +555,16 @@ def scene7():
         outlines.append(poly([(x + 20, base_y - h), (x + 20, base_y)], closed=False))
     outl = N("Panel Outlines", [shape("Outlines", outlines, [stroke(alpha(COAL, 0.7), 1.5, join="miter")], y=-base_y)],
              x=0, y=base_y)
-    ground = shape("Ground", [rect(390, 4, x=195, y=base_y + 2)], [fill(COAL)])
+    ground = shape("Ground", [rect(5200, 4, x=195, y=base_y + 2)], [fill(COAL)])
     ascent = N("Ascent", panels + [outl, ground], x=0, y=0)
     s.ascent = ascent
-    s.mid.add(ascent)
+    s.put("mid", "art", ascent)
     num = N("Hero", [hero("Weeks", "activeWeeksDisplay", 0, 0, 300, 220, 240, COAL)], x=20, y=110)
     unit = N("Unit", [mono("Unit", "screen7Unit", 0, 0, 260, 26, 18, COAL, medium=True)], x=24, y=334)
     hd = N("Headline", [headline("Headline", "screen7Headline", 0, 0, 214, 122, 58, COAL)], x=22, y=370)
     sp = N("Support", [mono("Support", "screen7Support", 0, 0, 196, 60, 14, COAL)], x=24, y=500)
-    s.text.add(num, unit, hd, sp)
+    s.put("text", "hero", num, unit)
+    s.put("text", "copy", hd, sp)
     s.hero_steps = [(14, 0.0, "inout"), (80, 1.0, "hold")]
 
     def choreo(a, v):
@@ -538,7 +584,6 @@ def scene7():
 
 def scene8():
     s = Scene(8, CHALK)
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=108))
     hub = (200, 650)
     K = [(48, 612), (116, 566), (238, 562), (322, 584), (354, 650), (334, 716), (262, 734),
          (176, 738), (96, 722), (40, 676), (350, 512), (128, 648)]
@@ -568,12 +613,13 @@ def scene8():
         outer = N(f"Knot {k}", [inner], x=x, y=y)
         outer.add(bind(path("climbingPartners"), 18, vis))
         knots.append((outer, inner))
-    s.mid.add([o for o, _ in knots], [sh for sh, _ in spokes], [sh for sh, _ in rings])
+    s.put("mid", "art", [o for o, _ in knots], [sh for sh, _ in spokes], [sh for sh, _ in rings])
     num = N("Hero", [hero("Partners", "climbingPartnersDisplay", 0, 0, 270, 220, 240, COAL)], x=20, y=110)
     unit = N("Unit", [mono("Unit", "screen8Unit", 0, 0, 300, 26, 18, COAL, medium=True)], x=24, y=334)
     hd = N("Headline", [headline("Headline", "screen8Headline", 0, 0, 290, 122, 54, COAL)], x=22, y=370)
     sp = N("Support", [mono("Support", "screen8Support", 0, 0, 260, 60, 14, COAL)], x=24, y=500)
-    s.text.add(num, unit, hd, sp)
+    s.put("text", "hero", num, unit)
+    s.put("text", "copy", hd, sp)
     s.hero_steps = [(12, 0.0, "outq"), (70, 1.0, "hold")]
     s.idle = [(inner.id, "rotation", 0.06 * (1 if i % 2 else -1)) for i, (_, inner) in enumerate(knots[::2])]
 
@@ -597,9 +643,8 @@ def scene8():
 
 
 def scene9():
-    s = Scene(9, CHALK)
+    s = Scene(9, CHALK, speck=(alpha(COAL, 0.25), 2.9))
     s.variants = [0, 1, 2, 3]
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, color=alpha(COAL, 0.25), seed=109))
     ink = {}
 
     def persona_text(nm, x, y, w, h, font, size, prop, lh):
@@ -610,12 +655,12 @@ def scene9():
     lbl = persona_text("Persona Label", 24, 118, 342, 24, FONT_MONO_M, 15, "personaLabel", 20)
     ttl = persona_text("Persona Title", 22, 146, 346, 168, FONT_XB, 88, "personaName", 78)
     dsc = persona_text("Persona Line", 24, 322, 330, 52, FONT_MONO, 17, "personaDescription", 24)
-    s.text.add(lbl, ttl, dsc)
+    s.put("text", "title", lbl, ttl, dsc)
     # anticipation scribble shared by every persona
     ant_pts = [(110, 640), (250, 600), (130, 560), (270, 520), (160, 480)]
     ant, ant_trim = route_line("Anticipation", ant_pts, COAL, 4, dash=(10, 6))
     s.ant = N("Anticipation Route", [ant])
-    s.front.add(s.ant)
+    s.put("front", "art", s.ant)
 
     def accent(geom, x, y, **kw):
         sc_id = nid()
@@ -674,7 +719,7 @@ def scene9():
     g3 = N("Persona Persistent Solver", [loop_dots, loop])
     groups[3] = g3
     s.variant_nodes = {k: g.id for k, g in groups.items()}
-    s.mid.add(g0, g1, g2, g3)
+    s.put("mid", "art", g0, g1, g2, g3)
     s.idle = [(top.id, "rotation", 0.03), (lens.id, "rotation", 0.15)]
 
     def choreo(a, v):
@@ -747,9 +792,10 @@ def scene9():
             for i, d in enumerate(loop_dots):
                 pop(a, d.id, 32 + i * 50, 14, "snap")
 
-    def carrier_hook(a, sx, sy, ss, sr):
+    def carrier_hook(a, sx, sy, ss, sr, fly0):
         a.tw(CARRIER.id, "x", 0, 22, sx, 195, "inout")
         a.tw(CARRIER.id, "y", 0, 22, sy, 600, "inout")
+        a.tw(CARRIER_FLY.id, "y", 0, 22, fly0, 0.0, "inout")
         a.tw(CARRIER.id, "scaleX", 0, 22, ss, 1.2, "out")
         a.tw(CARRIER.id, "scaleY", 0, 22, ss, 1.2, "out")
         a.tw(CARRIER.id, "scaleX", 26, 34, 1.2, 0.0, "in")
@@ -765,14 +811,20 @@ def scene9():
 def scene10():
     s = Scene(10, CHALK)
     s.variants = [0, 1]           # 0 = full summary card, 1 = new-user welcome
-    s.back.add(speckles("Speckle", 90, 0, 60, 390, 844, seed=110))
-    s.back.add(shape("Concrete", [poly([(0, 640), (390, 560), (390, 844), (0, 844)])], [fill(CONCRETE)]))
-    s.back.add(bolt_grid("Bolts", [(40 + (i % 8) * 44, 700 + (i // 8) * 44) for i in range(24)]))
-    # ----- full card
-    hd = N("Summary Headline", [headline("Summary Headline", "summaryHeadline", 0, 0, 342, 96, 46, COAL)], x=24, y=112)
-    sup = N("Summary Support", [mono("Summary Support", "summarySupport", 0, 0, 342, 40, 14, COAL)], x=24, y=212)
+    s.put("back", "ground", shape("Concrete", [poly([(-2600, 640), (0, 640), (390, 560), (2600, 560), (2600, 2400), (-2600, 2400)])],
+                                  [fill(CONCRETE)]))
+    s.put("back", "ground", bolt_grid("Bolts", [(40 + (i % 8) * 44, 700 + (i // 8) * 44) for i in range(24)]))
+    # ----- full card. Its parts are bound to `wide`: a 342 x 352 portrait card, or a
+    # 690 x 300 landscape card (persona on the left, the five stats in a 3 + 2 grid).
+    hd_t = headline("Summary Headline", "summaryHeadline", 0, 0, 342, 96, 46, COAL)
+    wide_bind(wide_bind(hd_t, 285, 342, 220), 286, 96, 110)
+    hd = N("Summary Headline", [hd_t], x=24, y=112)
+    sup_t = mono("Summary Support", "summarySupport", 0, 0, 342, 40, 14, COAL)
+    wide_bind(wide_bind(wide_bind(sup_t, 285, 342, 220), 286, 40, 60), 14, 0, 18)
+    sup = N("Summary Support", [sup_t], x=24, y=212)
     card = N("Card", [], x=24, y=262)
     cw, ch = 342, 352
+    WW, WH = 690, 300
     ys = [146, 206, 266]
     cells = []
     stats = [("sessionsDisplay", "screen2Unit"), ("sendsDisplay", "screen3Unit"), ("attemptsDisplay", "screen4Unit"),
@@ -782,15 +834,21 @@ def scene10():
         cy_ = ys[i // 2]
         val = text(f"Stat {i}", 0, 0, 150, 42, FONT_BLACK, 44, CHALK, [("0", vp, None)], overflow="fitFontSize",
                    lh=40, wrap="noWrap", valign="bottom")
-        un = text(f"Stat {i} Unit", 0, 44, 150, 16, FONT_MONO, 11, CHALK_D, [("", up, None)], overflow="ellipsis", lh=15)
-        cells.append(N(f"Stat Cell {i}", [val, un], x=cx_, y=cy_))
+        wide_bind(val, 285, 150, 116)
+        un = text(f"Stat {i} Unit", 0, 44, 150, 16, FONT_MONO, 12.5, CHALK_D, [("", up, None)], overflow="ellipsis", lh=15)
+        wide_bind(wide_bind(un, 285, 150, 116), 286, 16, 31)
+        cell = N(f"Stat Cell {i}", [val, un], x=cx_, y=cy_)
+        wide_bind(wide_bind(cell, 13, cx_, 316 + (i % 3) * 124), 14, cy_, (86, 172)[i // 3])
+        cells.append(cell)
     # 6th cell: the name (only with shareIncludeName) or a mini route motif
     name_cell = N("Name Cell", [text("Card Name", 0, 0, 150, 58, FONT_MONO_M, 13, ACID, [("", "userName", None)],
                                      overflow="ellipsis", lh=18)], x=184, y=270, opacity=0.0)
+    wide_bind(wide_bind(name_cell, 13, 184, 18), 14, 270, 160)
     motif = N("Motif Cell", [shape("Mini Route", [poly([(0, 40), (40, 20), (14, 6), (60, 0)], closed=False)],
                                    [stroke(ACID, 3, cap="round")]),
                              shape("Mini Holds", [ellipse(12, x=0, y=40), ellipse(10, x=40, y=20), ellipse(9, x=14, y=6)], [fill(CHALK)])],
                  x=200, y=272)
+    wide_bind(wide_bind(motif, 13, 200, 30), 14, 272, 166)
     s.name_cell, s.motif_cell = name_cell, motif
     # persona row
     mini = []
@@ -802,35 +860,55 @@ def scene10():
         m = N(f"Mini {k}", [sh], x=40, y=106)
         m.add(bind(path("personaSlot"), 18, conv.equals(k, "Persona is")))
         mini.append(m)
-    persona_lbl = text("Card Persona Label", 0, 0, 240, 16, FONT_MONO, 11, CHALK_D, [("", "personaLabel", None)], overflow="ellipsis", lh=15)
-    persona_name = text("Card Persona", 0, 18, 250, 40, FONT_XB, 34, CHALK, [("", "personaName", None)], overflow="fitFontSize", lh=34, wrap="noWrap")
+    persona_lbl = text("Card Persona Label", 0, 0, 240, 17, FONT_MONO, 12.5, CHALK_D, [("", "personaLabel", None)], overflow="ellipsis", lh=16)
+    persona_name = text("Card Persona", 0, 19, 250, 40, FONT_XB, 34, CHALK, [("", "personaName", None)], overflow="fitFontSize", lh=34, wrap="noWrap")
+    wide_bind(persona_name, 285, 250, 210)
     persona_row = N("Persona Row", [N("Persona Text", [persona_lbl, persona_name], x=76, y=78)] + mini)
-    header = N("Header", [
-        text("Card Year", 0, 0, 120, 24, FONT_MONO_M, 16, COAL, [("2026", "yearDisplay", None)], align="right", lh=20, sizing="fixed"),
-    ], x=206, y=18)
+    year_t = text("Card Year", 0, 0, 120, 24, FONT_MONO_M, 16, COAL, [("2026", "yearDisplay", None)], align="right", lh=20, sizing="fixed")
+    header = N("Header", [year_t], x=206, y=18)
+    wide_bind(year_t, 13, 0, WW - cw)
     header_wm = E("NestedArtboard", artboardId=WORDMARK_AB, x=16, y=12, scaleX=0.62, scaleY=0.62, name="Card Wordmark")
-    strip = N("Header Strip", [shape("Strip", [rect(cw, 56, x=cw / 2, y=28, r=18)], [fill(ACID)]),
-                               shape("Strip Fill", [rect(cw, 20, x=cw / 2, y=46)], [fill(ACID)])])
+    strip_r = rect(cw, 56, x=cw / 2, y=28, r=18)
+    strip_f = rect(cw, 20, x=cw / 2, y=46)
+    for r_ in (strip_r, strip_f):
+        wide_bind(wide_bind(r_, 20, cw, WW), 13, cw / 2, WW / 2)
+    strip = N("Header Strip", [shape("Strip", [strip_r], [fill(ACID)]), shape("Strip Fill", [strip_f], [fill(ACID)])])
     card_route, card_trim = route_line("Card Route", [(18, 338), (100, 328), (170, 340), (250, 326), (324, 336)], ACID, 3, dash=(8, 6))
-    card_panel = shape("Card Panel", [rect(cw, ch, x=cw / 2, y=ch / 2, r=20)], [fill(COAL)])
-    card_shadow = shape("Card Shadow", [rect(cw, ch, x=cw / 2 + 8, y=ch / 2 + 10, r=20)], [fill(alpha(COAL, 0.25))])
-    card.add(header, N("Header Mark", [header_wm]), persona_row, cells, name_cell, motif, card_route, strip, card_panel, card_shadow)
+    route_grp = E("Node", name="Card Route Fit", kids=[card_route])
+    wide_bind(wide_bind(wide_bind(route_grp, 13, 0, 1.4), 14, 0, -66), 16, 1.0, 0.92)
+    panel_r = rect(cw, ch, x=cw / 2, y=ch / 2, r=20)
+    shadow_r = rect(cw, ch, x=cw / 2 + 8, y=ch / 2 + 10, r=20)
+    for r_, ox, oy in ((panel_r, 0, 0), (shadow_r, 8, 10)):
+        wide_bind(wide_bind(r_, 20, cw, WW), 21, ch, WH)
+        wide_bind(wide_bind(r_, 13, cw / 2 + ox, WW / 2 + ox), 14, ch / 2 + oy, WH / 2 + oy)
+    card_panel = shape("Card Panel", [panel_r], [fill(COAL)])
+    card_shadow = shape("Card Shadow", [shadow_r], [fill(alpha(COAL, 0.25))])
+    card.add(header, N("Header Mark", [header_wm]), persona_row, cells, name_cell, motif, route_grp, strip, card_panel, card_shadow)
     corner = Hold3("Corner Hold", "sloper", COBALT, 156, 40, 644, 0.3, scene=10, sway=0.04)
-    full = N("Summary Full", [hd, sup, card, corner.outer])
+    wide_bind(corner.outer, 14, 644, 574)
+    wide_bind(wide_bind(corner.idle, 16, 1.0, 0.72), 17, 1.0, 0.72)   # a smaller corner hold on the wide card
+    full_head = N("Summary Full Head", [hd, sup])
+    full_card = N("Summary Full Card", [card, corner.outer])
     # ----- empty / new-user welcome
     e_hd = N("Empty Headline", [headline("Empty Headline", "emptyHeadline", 0, 0, 342, 140, 62, COAL)], x=24, y=120)
     e_sp = N("Empty Support", [mono("Empty Support", "emptySupport", 0, 0, 300, 44, 15, COAL)], x=24, y=274)
     e_h1 = Hold3("Start Hold", "jug", COBALT, 124, 120, 520, -0.1, scene=10, sway=0.05)
     e_h2 = Hold3("Next Hold", "tri", COAL, 94, 250, 430, 0.2, scene=10, sway=0.06, speck=0.12)
     e_route, e_trim = route_line("First Route", [(120, 520), (250, 430), (330, 330)], COAL, 3.5)
-    empty = N("Summary Empty", [e_hd, e_sp, e_route, e_h2.outer, e_h1.outer])
-    s.variant_nodes = {0: full.id, 1: empty.id}
-    s.text.add(full, empty)
+    empty_head = N("Summary Empty Head", [e_hd, e_sp])
+    empty_art = N("Summary Empty Art", [e_route, e_h2.outer, e_h1.outer])
+    s.variant_nodes = {0: [full_head.id, full_card.id], 1: [empty_head.id, empty_art.id]}
+    s.put("text", "head", full_head)
+    s.put("text", "card", full_card)
+    s.put("text", "ehead", empty_head)
+    s.put("text", "eart", empty_art)
     s.idle = [(corner.idle.id, "rotation", 0.03), (e_h1.idle.id, "rotation", 0.03)]
 
     def choreo(a, v):
-        a.hold(full.id, "opacity", 1.0 if v == 0 else 0.0)
-        a.hold(empty.id, "opacity", 1.0 if v == 1 else 0.0)
+        for nid_ in s.variant_nodes[0]:
+            a.hold(nid_, "opacity", 1.0 if v == 0 else 0.0)
+        for nid_ in s.variant_nodes[1]:
+            a.hold(nid_, "opacity", 1.0 if v == 1 else 0.0)
         if v == 0:
             fade_in(a, hd.id, 6, 16, 24)
             fade_in(a, sup.id, 14, 16, 12)

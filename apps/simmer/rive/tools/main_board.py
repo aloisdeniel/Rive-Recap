@@ -7,6 +7,8 @@ from data import P, VM_ID, SCRIPT_DIRECTOR, SCRIPT_AUDIT, SCRIPT_RISO, SCRIPT_ST
 from text import style, text
 import art
 import pot as potmod
+import stage as lay
+from stage import p as vp, vmax, INPUT
 
 W, H = 390, 844
 CTRL_Y = 792
@@ -36,24 +38,35 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     layers = []
 
     # ================================================================ header
+    # follows the stage: brand on the left margin, year on the right, progress across the real width;
+    # on short canvases the header tightens with the content top (layoutTop)
+    M_, TOP_ = vp('layoutMargin'), vp('layoutTop')
+    head_dy = (TOP_ - 92.0) * 0.5
     head_style = style('display', 25, 800, 'aub', ls=-0.5, opsz=36, name='Wordmark')
     wordmark = text('Wordmark', [(head_style, 'Simmer', None, None)], x=24, y=24)
     steam_mark = node('Wordmark steam', [
         shape(f'w{i}', smooth([(0, 0), (-3, -6), (2, -12), (-1, -17)], False), stroke('tomato', 2.4), x=i * 6) for i in range(3)
     ], x=127, y=45)
+    brand = node('Brand', [wordmark, steam_mark])
+    lay.bind_expr(brand, 13, 'Layout header left', M_ - 24.0)
+    lay.bind_expr(brand, 14, 'Layout header dy', head_dy)
     year_st = style('body', 15, 700, 'aub', name='Year')
     year = text('Year', [(year_st, '2026', 'year', CONV_INT)], x=286, y=30, width=80, sizing='fixed', height=22, align='right')
+    year_slot = node('Year slot', [year])
+    lay.bind_expr(year_slot, 13, 'Layout header right', lay.W - M_ - 366.0)
+    lay.bind_expr(year_slot, 14, 'Layout header dy', head_dy)
 
-    # progress segments: geometry derived from visibleCount, fill from currentSegment + screenProgress
-    TW, GAP, X0, PY = 342.0, 5.0, 24.0, 72.0
-    seg_w = formula('Segment width', [T_open_(), T_v(TW), T_op('-'), T_v(GAP), T_op('*'), T_open_(), T_in(), T_op('-'), T_v(1), T_close(), T_close(), T_op('/'), T_fn('max'), T_v(1), T_sep(), T_in(), T_close()])
+    # progress segments: geometry derived from visibleCount and the real width, fill from currentSegment + screenProgress
+    GAP, PY = 5.0, 72.0
+    TW, X0 = lay.W - M_ * 2.0, M_
+    n_in = INPUT
+    vc = vp('visibleCount')
+    seg_w = formula('Segment width', ((TW - GAP * (n_in - 1.0)) / vmax(1.0, n_in)).tokens())
     segs = []
     for i in range(10):
-        # x_i = X0 + i * (w + GAP)
-        cx = formula(f'Segment {i} x', [T_v(X0), T_op('+'), T_v(i), T_op('*'), T_open_(), T_open_(), T_v(TW), T_op('-'), T_v(GAP), T_op('*'), T_open_(), T_in(), T_op('-'), T_v(1), T_close(), T_close(), T_op('/'), T_fn('max'), T_v(1), T_sep(), T_in(), T_close(), T_op('+'), T_v(GAP), T_close()])
-        cop = formula(f'Segment {i} visible', [T_fn('min'), T_v(1), T_sep(), T_fn('max'), T_v(0), T_sep(), T_in(), T_op('-'), T_v(i), T_close(), T_close()])
-        cfill = formula(f'Segment {i} fill', [T_open_(), T_open_(), T_v(TW), T_op('-'), T_v(GAP), T_op('*'), T_open_(), T_p('visibleCount'), T_op('-'), T_v(1), T_close(), T_close(), T_op('/'), T_fn('max'), T_v(1), T_sep(), T_p('visibleCount'), T_close(), T_close(), T_op('*'),
-                                                   T_fn('min'), T_v(1), T_sep(), T_fn('max'), T_v(0), T_sep(), T_p('currentSegment'), T_op('+'), T_in(), T_op('-'), T_v(i), T_close(), T_close()])
+        cx = formula(f'Segment {i} x', (X0 + i * ((TW - GAP * (n_in - 1.0)) / vmax(1.0, n_in) + GAP)).tokens())
+        cop = formula(f'Segment {i} visible', lay.clamp(n_in - float(i), 0.0, 1.0).tokens())
+        cfill = formula(f'Segment {i} fill', (((TW - GAP * (vc - 1.0)) / vmax(1.0, vc)) * lay.clamp(vp('currentSegment') + n_in - float(i), 0.0, 1.0)).tokens())
         track_r = E('Rectangle', width=30.0, height=4.0, cornerRadiusTL=2.0, originX=0.0, originY=0.5, name='Path')
         track_r.add(bind(P('visibleCount'), 20, seg_w))
         fill_r = E('Rectangle', width=0.0, height=4.0, cornerRadiusTL=2.0, originX=0.0, originY=0.5, name='Path')
@@ -61,33 +74,58 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
         sg = node(f'Segment {i}', [
             shape('fill', fill_r, fill('tomato')),
             shape('track', track_r, fill('3348293D')),
-        ], x=X0 + i * 34, y=PY)
+        ], x=24 + i * 34, y=PY)
         sg.add(bind(P('visibleCount'), 13, cx))
         sg.add(bind(P('visibleCount'), 18, cop))
         segs.append(sg)
     progress = node('Progress', segs)
-    header = node('Header', [wordmark, steam_mark, year, progress])
+    lay.bind_expr(progress, 14, 'Layout progress dy', TOP_ - 92.0)
+    header = node('Header', [brand, year_slot, progress])
 
     # ================================================================ controls
-    def button(name, cx, w, label_prop, req_prop, kind='solid', icon=None, show_label=True, c='aub', tc='cream', icon_left=False):
+    # Each control is drawn around (0, 0) inside a slot node the layout places: Previous and
+    # Pause/Play at the left margin, Continue (or Share + Replay on the summary) at the right.
+    # The swap layers park hidden controls by keying the group's x far off any canvas.
+    PARK = -20000.0
+    CONT_W = vp('layoutContinueWidth')
+    rings = {}
+    parts = {}
+    # summary row: Share + Replay sit right of Pause. Where they do not fit at full size (narrow
+    # portraits, < 222 pt free) Replay becomes a 52 pt icon button and Share takes what is left.
+    SUM_AVAIL = lay.W - M_ * 2.0 - 120.0
+    COMPACT = lay.step(221.5 - SUM_AVAIL)
+    REPLAY_W = 108.0 - COMPACT * 56.0
+    SHARE_W = 112.0 - COMPACT * vmax(0.0, 112.0 - (SUM_AVAIL - 58.0))
+
+    def button(name, w, label_prop, req_prop, kind='solid', icon=None, show_label=True, c='aub', tc='cream', icon_left=False, w_expr=None):
         h = 52
         kids = []
+        label = None
         if show_label:
             lst = style('body', 18, 700, tc, name='Label')
-            kids.append(text('Label', [(lst, 'Label', label_prop, None)], x=-w / 2 + 12 + (22 if icon_left else 0), y=-12, width=w - 24 - (22 if icon else 0),
-                             height=26, sizing='fixed', align='center', overflow='ellipsis', wrap='noWrap'))
+            label = text('Label', [(lst, 'Label', label_prop, None)], x=-w / 2 + 12 + (22 if icon_left else 0), y=-12, width=w - 24 - (22 if icon else 0),
+                         height=26, sizing='fixed', align='center', overflow='ellipsis', wrap='noWrap')
+            kids.append(label)
         if icon is not None:
             kids.append(icon)
         sem = E('SemanticData', role='button', label='', name='Semantics')
         sem.add(bind(P(label_prop), 983))
         paints = [fill(c)] if kind == 'solid' else [fill('cream'), stroke('aub', 2.5)]
-        btn = E('Shape', name=name, x=float(cx), y=float(CTRL_Y), isTargetOpaque=True)
-        btn.add(sem, rect(w, h, h / 2), *paints)
-        grp = node(name + ' group', kids + [btn, shape(name + ' ink', rect(w, h, h / 2), fill('ink25'), x=cx + 3, y=CTRL_Y + 4)])
-        # labels/icons are authored relative to the button centre
-        for kd in kids:
-            kd.attrs['x'] = float(kd.attrs.get('x', 0.0)) + cx
-            kd.attrs['y'] = float(kd.attrs.get('y', 0.0)) + CTRL_Y
+        body_r = rect(w, h, h / 2)
+        ink_r = rect(w, h, h / 2)
+        btn = E('Shape', name=name, x=0.0, y=0.0, isTargetOpaque=True)
+        btn.add(sem, body_r, *paints)
+        grp = node(name + ' group', kids + [btn, shape(name + ' ink', ink_r, fill('ink25'), x=3, y=4)])
+        if w_expr is not None:
+            # a button whose width follows the layout (Continue)
+            for r_ in (body_r, ink_r):
+                lay.bind_expr(r_, 20, f'Layout {name} width', w_expr)
+            if label is not None:
+                lay.bind_expr(label, 13, f'Layout {name} label x', w_expr * -0.5 + 12.0)
+                lay.bind_expr(label, 285, f'Layout {name} label width', w_expr - 46.0)
+            if icon is not None:
+                lay.bind_expr(icon, 13, f'Layout {name} icon x', w_expr * 0.5 - 23.0)
+        parts[name] = dict(body=body_r, ink=ink_r, label=label, icon=icon)
         lis = E('StateMachineListener', targetId=btn.id, name=f'{name} press')
         lis.add(E('ListenerInputType', listenerTypeValue='click'),
                 E('ListenerInputTypeSemantic', [E('SemanticInput', actionType='tap')], listenerTypeValue='semanticAction'),
@@ -95,50 +133,78 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
         listeners.append(lis)
         return grp, btn, lis
 
+    def focus_ring(idx, w, w_expr=None):
+        rr = rect(w + 10, 62, 31)
+        if w_expr is not None:
+            lay.bind_expr(rr, 20, f'Layout focus ring {idx} width', w_expr + 10.0)
+        r_ = shape(f'Focus ring {idx}', rr, stroke('tomato', 3), op=0)
+        rings[idx] = r_
+        return r_
+
+    def slot(name, kids, x_expr):
+        sl = node(name + ' slot', kids)
+        lay.bind_expr(sl, 13, f'Layout {name} slot x', x_expr)
+        sl.add(bind(P('layoutControlsY'), 14))
+        return sl
+
     chev_l = shape('chevron', straight([(6, -10), (-4, 0), (6, 10)], False), stroke('aub', 3.2))
-    prev_g, prev_b, _ = button('Previous', 50, 52, 'previousLabel', 'navPrevRequest', kind='outline', icon=chev_l, show_label=False)
+    prev_g, prev_b, _ = button('Previous', 52, 'previousLabel', 'navPrevRequest', kind='outline', icon=chev_l, show_label=False)
     pause_icon = node('pause bars', [shape('b1', rect(5, 18, 2), fill('cream'), x=-5), shape('b2', rect(5, 18, 2), fill('cream'), x=5)])
-    pause_g, pause_b, _ = button('Pause', 112, 52, 'pauseLabel', 'pauseToggleRequest', icon=pause_icon, show_label=False)
+    pause_g, pause_b, _ = button('Pause', 52, 'pauseLabel', 'pauseToggleRequest', icon=pause_icon, show_label=False)
     play_icon = shape('play', straight([(-5, -10), (9, 0), (-5, 10)], True, radius=2), fill('cream'))
-    play_g, play_b, _ = button('Play', 112, 52, 'playLabel', 'pauseToggleRequest', icon=play_icon, show_label=False, c='tomato')
+    play_g, play_b, _ = button('Play', 52, 'playLabel', 'pauseToggleRequest', icon=play_icon, show_label=False, c='tomato')
     arrow = node('arrow', [shape('a', straight([(-8, 0), (8, 0)], False), stroke('cream', 2.6)),
                            shape('h', straight([(2, -6), (8, 0), (2, 6)], False), stroke('cream', 2.6))], x=84)
-    cont_g, cont_b, _ = button('Continue', 259, 214, 'continueLabel', 'navNextRequest', icon=arrow)
+    cont_g, cont_b, _ = button('Continue', 214, 'continueLabel', 'navNextRequest', icon=arrow, w_expr=CONT_W)
     share_icon = node('share', [shape('a', straight([(0, 7), (0, -8)], False), stroke('cream', 2.6)),
                                 shape('h', straight([(-5, -3), (0, -8), (5, -3)], False), stroke('cream', 2.6))], x=38)
-    share_g, share_b, share_l = button('Share', 200, 112, 'shareLabel', 'shareRequest', icon=share_icon, c='tomato')
-    replay_g, replay_b, _ = button('Replay', 316, 108, 'replayLabel', 'replayRequest', kind='outline', tc='aub', icon=replay_icon(), icon_left=True)
+    share_g, share_b, share_l = button('Share', 112, 'shareLabel', 'shareRequest', icon=share_icon, c='tomato')
+    replay_g, replay_b, _ = button('Replay', 108, 'replayLabel', 'replayRequest', kind='outline', tc='aub', icon=replay_icon(), icon_left=True)
     ev_share = E('Event', name='shareTapped')
     share_l.add(E('ListenerFireEvent', eventId=ev_share.id))
     share_l.add(E('ScriptedListenerAction', [E('ScriptInputString', propertyValue='shareTapped', name='label')], scriptAssetId=SCRIPT_AUDIT))
 
-    play_g.attrs['x'] = -400.0   # parked off-canvas until paused
-    share_g.attrs['x'] = -400.0
-    replay_g.attrs['x'] = -400.0
-    controls = node('Controls', [share_g, replay_g, cont_g, play_g, pause_g, prev_g])
+    for nm, w_ in (('Share', SHARE_W), ('Replay', REPLAY_W)):
+        pt = parts[nm]
+        for r_ in (pt['body'], pt['ink']):
+            lay.bind_expr(r_, 20, f'Layout {nm} width', w_)
+        lay.bind_expr(pt['label'], 285, f'Layout {nm} label width', w_ - 46.0)
+    lay.bind_expr(parts['Share']['label'], 13, 'Layout Share label x', SHARE_W * -0.5 + 12.0)
+    lay.bind_expr(parts['Share']['icon'], 13, 'Layout Share icon x', SHARE_W * 0.5 - 18.0)
+    lay.bind_expr(parts['Replay']['label'], 13, 'Layout Replay label x', REPLAY_W * -0.5 + 34.0)
+    lay.bind_expr(parts['Replay']['label'], 18, 'Layout Replay label shown', 1.0 - COMPACT)
+    lay.bind_expr(parts['Replay']['icon'], 13, 'Layout Replay icon x', (REPLAY_W * -0.5 + 18.0) * (1.0 - COMPACT))
 
-    # focus ring (keyboard focus is owned by the director; focusedControl picks the ring pose)
-    ring_r = rect(60, 60, 30)
-    ring = shape('Focus ring', ring_r, stroke('tomato', 3), x=50, y=CTRL_Y, op=0)
-    rings = {0: (50, 60, 0), 1: (50, 62, 1), 2: (112, 62, 1), 3: (259, 224, 1), 4: (200, 122, 1), 5: (316, 118, 1)}
+    play_g.attrs['x'] = PARK   # parked off-canvas until paused
+    share_g.attrs['x'] = PARK
+    replay_g.attrs['x'] = PARK
+    RIGHT = lay.W - M_
+    controls = node('Controls', [
+        slot('Share', [focus_ring(4, 112, SHARE_W), share_g], (1.0 - COMPACT) * (RIGHT - 166.0) + COMPACT * (RIGHT - 58.0 - SHARE_W * 0.5)),
+        slot('Replay', [focus_ring(5, 108, REPLAY_W), replay_g], RIGHT - 50.0 + COMPACT * 24.0),
+        slot('Continue', [focus_ring(3, 214, CONT_W), cont_g], RIGHT - CONT_W * 0.5),
+        slot('Pause', [focus_ring(2, 52), play_g, pause_g], M_ + 88.0),
+        slot('Previous', [focus_ring(1, 52), prev_g], M_ + 26.0),
+    ])
+
+    # focus ring (keyboard focus is owned by the director; focusedControl picks which ring shows)
     s_focus = []
-    for idx, (fx, fw, fo) in rings.items():
+    for idx in range(6):
         a = Anim(f'Focus {idx}', 1)
-        a.ms(ring, 'x', [(0, float(fx), 'hold')])
-        a.ms(ring, 'opacity', [(0, float(fo), 'hold')])
-        a.ms(ring_r, 'width', [(0, float(fw), 'hold')])
+        for j, r_ in rings.items():
+            a.ms(r_, 'opacity', [(0, 1.0 if j == idx else 0.0, 'hold')])
         anims.append(a)
         s_focus.append(astate(a, 200 + idx * 160, 0))
-    for s in s_focus:
+    for s_ in s_focus:
         for idx, s2 in enumerate(s_focus):
-            if s2 is not s:
-                s.add(trans(s2, [cond_num(P('focusedControl'), idx)], duration=120, ease='soft'))
+            if s2 is not s_:
+                s_.add(trans(s2, [cond_num(P('focusedControl'), idx)], duration=120, ease='soft'))
     layers.append(layer('Focus ring', s_focus[0], s_focus))
 
     # controls swap (summary shows Share + Replay; Continue retires)
     a_norm = Anim('Controls: story', ms2f(300))
     a_sum = Anim('Controls: summary', ms2f(420))
-    for g, xn, xs in ((cont_g, 0.0, -400.0), (share_g, -400.0, 0.0), (replay_g, -400.0, 0.0)):
+    for g, xn, xs in ((cont_g, 0.0, PARK), (share_g, PARK, 0.0), (replay_g, PARK, 0.0)):
         a_norm.ms(g, 'x', [(0, xn, 'hold')])
         a_sum.ms(g, 'x', [(0, xs, 'hold')])
     for g in (share_g, replay_g):
@@ -162,8 +228,8 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     # pause <-> play
     a_pl = Anim('Pause shown', 1)
     a_pa = Anim('Play shown', 1)
-    a_pl.ms(pause_g, 'x', [(0, 0.0, 'hold')]); a_pl.ms(play_g, 'x', [(0, -400.0, 'hold')])
-    a_pa.ms(pause_g, 'x', [(0, -400.0, 'hold')]); a_pa.ms(play_g, 'x', [(0, 0.0, 'hold')])
+    a_pl.ms(pause_g, 'x', [(0, 0.0, 'hold')]); a_pl.ms(play_g, 'x', [(0, PARK, 'hold')])
+    a_pa.ms(pause_g, 'x', [(0, PARK, 'hold')]); a_pa.ms(play_g, 'x', [(0, 0.0, 'hold')])
     a_pl.ms(pause_b.children[0], 'isHidden', [(0, False, 'hold')], 'Bool'); a_pl.ms(play_b.children[0], 'isHidden', [(0, True, 'hold')], 'Bool')
     a_pa.ms(pause_b.children[0], 'isHidden', [(0, True, 'hold')], 'Bool'); a_pa.ms(play_b.children[0], 'isHidden', [(0, False, 'hold')], 'Bool')
     s_pl = astate(a_pl, 200, 0)
@@ -193,6 +259,11 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     pot_hit = E('Shape', [ellipse(214, 176), fill('00FFFFFF')], name='Pot hit area', isTargetOpaque=True, y=14.0)
     pot_hit.add(E('SemanticData', role='button', label='Stir the pot', name='Semantics'))
     motif = node('Motif', [pot_hit, pot_na], x=POSES[1][0], y=POSES[1][1], sx=POSES[1][2], sy=POSES[1][2])
+    # the poses are authored in each scene's master coordinates; the frame maps them onto the
+    # current scene's art (the director eases it over the same 720 ms as the pose carry)
+    motif_frame = node('Motif frame', [motif])
+    motif_frame.add(bind(P('motifFrameX'), 13), bind(P('motifFrameY'), 14),
+                    bind(P('motifFrameScale'), 16), bind(P('motifFrameScale'), 17))
     lis = E('StateMachineListener', targetId=pot_hit.id, name='Pot tap')
     lis.add(E('ListenerInputType', listenerTypeValue='click'),
             E('ListenerInputTypeSemantic', [E('SemanticInput', actionType='tap')], listenerTypeValue='semanticAction'),
@@ -251,7 +322,10 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     # the steam ribbon is a GPU shader now (scripts/steam.luau + .wgsl): keyed progress + direction
     steam_p = E('ScriptInputNumber', propertyValue=0.0, name='progress')
     steam_d = E('ScriptInputNumber', propertyValue=1.0, name='dir')
-    steam = E('ScriptedDrawable', [steam_p, steam_d], scriptAssetId=SCRIPT_STEAM, name='Steam', x=0.0, y=0.0)
+    steam_root = E('LayoutComponent', width=float(W), height=float(H), name='Steam root')
+    steam_st = overlay_style('Steam style')
+    steam_root.attrs['styleId'] = steam_st.id
+    steam_root.add(steam_st, E('ScriptedLayout', [steam_p, steam_d], scriptAssetId=SCRIPT_STEAM, name='Steam'))
 
     # the tablecloth is a simulated 3D cloth (scripts/cloth.luau + .wgsl) in a fill-sized layout so it
     # renders at the presenting pixel density; the ingredients riding on it are small vector artboards
@@ -314,9 +388,13 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     rnd = random.Random(7)
     specks = [shape(f'speck {i}', ellipse(r, r), fill('1A48293D'), x=rnd.uniform(8, 382), y=rnd.uniform(90, 760))
               for i, r in enumerate([rnd.uniform(1.5, 3.2) for _ in range(46)])]
-    backdrop = node('Backdrop', specks + [
-        shape('Paper', rect(W, H, 0, 0, 0), fill('paper')),
-    ])
+    paper_r = rect(W, H, 0, 0, 0)
+    paper_r.add(bind(P('stageWidth'), 20), bind(P('stageHeight'), 21))
+    speck_g = node('Specks', specks)
+    cover = vmax(lay.W / 390.0, lay.H / 844.0)
+    lay.bind_expr(speck_g, 16, 'Layout cover scale', cover)
+    lay.bind_expr(speck_g, 17, 'Layout cover scale', cover)
+    backdrop = node('Backdrop', [speck_g, shape('Paper', paper_r, fill('paper'))])
 
     # ================================================================ director (input + sequencing)
     root = E('LayoutComponent', width=float(W), height=float(H), name='Director root')
@@ -357,7 +435,7 @@ def build_main(scene_boards, pot_board, pot_sm, x_stage=0):
     sm.add(*listeners)
     sm.add(*layers)
     ab.attrs['defaultStateMachineId'] = sm.id
-    ab.add(st, riso_root, ring, controls, header, motif, cloth_root, steam, scenes, backdrop, root, ev_screen, ev_fin, ev_share, sm)
+    ab.add(st, riso_root, controls, header, motif_frame, cloth_root, steam_root, scenes, backdrop, root, ev_screen, ev_fin, ev_share, sm)
     ab.add(*[a.build() for a in anims])
     return ab
 

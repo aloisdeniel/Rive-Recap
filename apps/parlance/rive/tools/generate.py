@@ -103,6 +103,24 @@ prop("_pressSide", "n", 0)
 prop("_finishedLatch", "b", False)
 prop("_mouthTap", "t", None)
 prop("_focusVisible", "n", 0)   # 1 after Tab / Shift+Tab, 0 after any pointer press: a :focus-visible ring
+# responsive layout (contract addition: layoutBreakpoint is host-writable; the rest are the file's own solver state)
+prop("layoutBreakpoint", "n", 768)  # landscape layout when the artboard is at least this wide
+prop("_vw", "n", 390)            # artboard width, written by the root layout box (computedWidth, target -> source)
+prop("_vh", "n", 844)            # artboard height
+prop("_land", "n", 0)            # 1 = landscape layout (_vw >= layoutBreakpoint)
+prop("_split", "n", 0)           # 1 = copy and art side by side (landscape, or a portrait canvas wider than tall)
+prop("_k", "n", 1)               # chrome / control scale
+prop("_m", "n", 24)              # side margin
+prop("_top", "n", 80)            # content band top (below wordmark + progress)
+prop("_bot", "n", 764)           # content band bottom (above the control bar)
+prop("_sc", "n", 1)              # copy scale of the stacked portrait arrangement
+prop("_mixA", "n", 1)            # motif A frame: 0 = scene art space, 1 = full-viewport cover space (keyed)
+prop("_mixB", "n", 1)
+prop("_motifMap", "n", 1)        # which scene's art space the motif frames use (1, 2, 3 or 9; keyed)
+prop("_mixMouth", "n", 0)        # scene 3 mouth: 0 = art space, 1 = cover space (signature 3->4)
+for _n in (1, 2, 3, 9):          # art-space frames of the scenes the motif visits (x, y, scale), shared by several frames
+    for _c in "xys":
+        prop(f"_a{_n}{_c}", "n", 1 if _c == "s" else 0)
 
 
 def V(name):
@@ -128,7 +146,10 @@ FN = {"min": 0, "max": 1, "round": 2, "ceil": 3, "floor": 4, "pow": 6}
 OPS = {"+": 0, "-": 1, "*": 2, "/": 3, "%": 4}
 
 
-def ftok(ex):
+PREC = {"+": 1, "-": 1, "*": 2, "/": 2, "%": 2}
+
+
+def ftok(ex, parent=None, right=False):
     if ex == "in":
         return [E("FormulaTokenInput")]
     if isinstance(ex, (int, float)):
@@ -143,10 +164,15 @@ def ftok(ex):
                 out.append(E("FormulaTokenArgumentSeparator"))
             out += ftok(a)
         return out + [E("FormulaTokenParenthesisClose")]
-    # binary op
+    # binary op: the evaluator uses standard precedence and left associativity, so brackets are emitted only where
+    # the tree needs them (keeps the layout formulas small)
     a, op, b = ex
-    return ([E("FormulaTokenParenthesisOpen")] + ftok(a) + [E("FormulaTokenOperation", {"operationType": OPS[op]})]
-            + ftok(b) + [E("FormulaTokenParenthesisClose")])
+    out = ftok(a, op, False) + [E("FormulaTokenOperation", {"operationType": OPS[op]})] + ftok(b, op, True)
+    if parent is not None:
+        p, q = PREC[op], PREC[parent]
+        if p < q or (p == q and (right and parent in "-/%" or "%" in (op, parent))):
+            out = [E("FormulaTokenParenthesisOpen")] + out + [E("FormulaTokenParenthesisClose")]
+    return out
 
 
 def formula(name, ex):
@@ -175,6 +201,119 @@ def floor(a):
 
 
 T = ("vm", V("_heroReveal"))
+
+
+# ---------------------------------------------------------------- responsive layout expressions
+# Ex wraps the formula AST used by ftok() with arithmetic operators and constant folding, so the layout rules
+# below read as maths. Every bind built from an Ex becomes one DataConverterFormula whose tokens read the view
+# model directly (FormulaTokenValue + DataBindContext), so it re-evaluates whenever any input changes.
+class Ex:
+    __slots__ = ("a",)
+
+    def __init__(self, a):
+        self.a = a.a if isinstance(a, Ex) else a
+
+    def num(self):
+        return self.a if isinstance(self.a, (int, float)) and not isinstance(self.a, bool) else None
+
+    def _bin(self, o, op, rev=False):
+        o = Ex(o)
+        l, r = (o, self) if rev else (self, o)
+        ln, rn = l.num(), r.num()
+        if ln is not None and rn is not None:
+            return Ex({"+": ln + rn, "-": ln - rn, "*": ln * rn, "/": ln / rn}[op])
+        if op == "+" and ln == 0:
+            return r
+        if op in "+-" and rn == 0:
+            return l
+        if op == "*" and (ln == 0 or rn == 0):
+            return Ex(0)
+        if op == "*" and ln == 1:
+            return r
+        if op in "*/" and rn == 1:
+            return l
+        return Ex((l.a, op, r.a))
+
+    def __add__(self, o): return self._bin(o, "+")
+    def __radd__(self, o): return self._bin(o, "+", True)
+    def __sub__(self, o): return self._bin(o, "-")
+    def __rsub__(self, o): return self._bin(o, "-", True)
+    def __mul__(self, o): return self._bin(o, "*")
+    def __rmul__(self, o): return self._bin(o, "*", True)
+    def __truediv__(self, o): return self._bin(o, "/")
+    def __rtruediv__(self, o): return self._bin(o, "/", True)
+    def __neg__(self): return self._bin(-1, "*")
+
+
+def xmin(a, b):
+    a, b = Ex(a), Ex(b)
+    if a.num() is not None and b.num() is not None:
+        return Ex(min(a.num(), b.num()))
+    return Ex(("fn", "min", a.a, b.a))
+
+
+def xmax(a, b):
+    a, b = Ex(a), Ex(b)
+    if a.num() is not None and b.num() is not None:
+        return Ex(max(a.num(), b.num()))
+    return Ex(("fn", "max", a.a, b.a))
+
+
+def xclamp(x, lo, hi):
+    return xmin(hi, xmax(lo, x))
+
+
+def xfloor(x):
+    return Ex(("fn", "floor", Ex(x).a))
+
+
+def xstep(x):
+    """1 when x >= 0, else 0."""
+    return xmin(1, xmax(0, xfloor(x) + 1))
+
+
+def xabs(x):
+    return xmax(x, -Ex(x))
+
+
+def xlerp(a, b, t):
+    a, b, t = Ex(a), Ex(b), Ex(t)
+    if t.num() == 0:
+        return a
+    if t.num() == 1:
+        return b
+    if a.num() is not None and b.num() is not None and a.num() == b.num():
+        return a
+    if a.num() == 0:
+        return b * t
+    return a * (1 - t) + b * t
+
+
+def xhat(x):
+    """Tent: 1 at x = 0, falling to 0 at |x| >= 1."""
+    return xmax(0, 1 - xabs(x))
+
+
+def vmx(name):
+    return Ex(("vm", V(name)))
+
+
+_FCACHE = {}
+
+
+def fx(name, e):
+    """One formula converter per distinct expression (deduplicated)."""
+    e = Ex(e)
+    key = repr(e.a)
+    if key not in _FCACHE:
+        _FCACHE[key] = formula(name, e.a if not isinstance(e.a, (int, float)) else (e.a, "+", 0))
+    return _FCACHE[key]
+
+
+def lbind(key, e, name="layout"):
+    """Bind a component property (propertyKey) to a layout expression. The source is _vw so the bind re-runs on
+    resize; the formula itself reads every input it needs."""
+    return bind(V("_vw"), key, fx(name, e))
 
 
 def tier_converters(tag, X):
@@ -422,12 +561,32 @@ def grain(name="grain", op=0.55):
 SCENES = {}
 
 
+class Parts(list):
+    """Scene parts (xml, top first), each tagged with the layout block that is current when it is added."""
+
+    def __init__(self, scene):
+        super().__init__()
+        self.scene = scene
+
+    def append(self, x):
+        super().append((self.scene.blk, x))
+
+    def insert(self, i, x):
+        super().insert(i, (self.scene.blk, x))
+
+    def __iadd__(self, xs):
+        for x in xs:
+            self.append(x)
+        return self
+
+
 class Scene:
     def __init__(self, n, bg):
         self.n = n
         self.bg = bg
         self.root = nid()
-        self.parts = []          # xml children, top first
+        self.blk = "a"           # current layout block: "t" top copy, "b" bottom copy, "a" art (see LAYOUT)
+        self.parts = Parts(self)  # (block, xml) children, top first
         self.final = {}          # (obj, prop) -> (value, kind)  settled pose
         self.enter = []          # list of (obj, prop, keys, kind) for In timeline (after cover reveal)
         self.idle = []           # idle tracks
@@ -534,6 +693,7 @@ def top_copy(sc, n, x=24, w=342, unit_y=UNIT_Y, head_y=HEAD_Y, ink=D, align=None
     """Unit (one line, fit) + headline (fixed box of head_lines lines, fit). Both boxes are bounded, so even the
     extreme fixture's copy cannot grow into the illustration zone below (~y 400-712)."""
     ids = {}
+    prev, sc.blk = sc.blk, "t"
     if unit:
         ids["unit_rng"], m = kinetic(units=0, y=0, x=-14, ease=(0.4, 0, 0.2, 1))
         ids["unit"], ids["unit_c"], t = bound_text(f"S{n} unit", x, unit_y, w, f"screen{n}Unit", size=UNIT_SIZE,
@@ -550,6 +710,7 @@ def top_copy(sc, n, x=24, w=342, unit_y=UNIT_Y, head_y=HEAD_Y, ink=D, align=None
                                                mods=[m])
     sc.parts.append(t)
     sweep(sc, ids["head_rng"], f0, 40, 0.45)
+    sc.blk = prev
     return ids
 
 
@@ -558,7 +719,9 @@ def caption(sc, n, ink=DL, align=None, f0=86, bottom=CAPTION_BOTTOM, prop=None, 
     ids["sup_rng"], m = kinetic(units=2, y=14, ease=(0.4, 0, 0.2, 1))
     ids["sup"], ids["sup_c"], t = flow_text(f"S{n} support", w, prop or f"screen{n}Support", font="body", size=16,
                                             color=ink, wght=500, lh=21, align=align, mods=[m])
+    prev, sc.blk = sc.blk, "b"
     sc.parts.append(column(f"S{n} caption", x, 0, w, [t], bottom=bottom)[1])
+    sc.blk = prev
     sweep(sc, ids["sup_rng"], f0, 30, 0.4)
     return ids
 
@@ -577,11 +740,197 @@ COVER_A = (195, 200, 2.95, 2.95, 0.04, 0)
 COVER_B = (195, 200, 2.95, 2.95, -0.04, 0)
 
 
+# Poses authored in cover space (the 390x844 frame scaled to cover the canvas) rather than in a scene's art space:
+# off-stage, the elongated cover, the swing-in of an elongation, and the points where a form leaves or is swallowed.
+COVER_SPACE = {OFF_A[:2], OFF_B[:2], COVER_A[:2], (285, 560), (105, 560), (-200, 1000), (560, 700), (195, 430)}
+
+
+def _calm(e):
+    """Ease for a frame blend: overshooting eases would extrapolate the frame, so they become a plain in-out."""
+    if e in ("back", "back2", "el", "el2", "antic") or (isinstance(e, tuple) and (min(e[1], e[3]) < 0 or max(e[1], e[3]) > 1)):
+        return "io"
+    return e
+
+
 def motif_keys(anim, ids, keys):
-    """keys: list of (frame, pose, ease)."""
+    """keys: list of (frame, pose, ease). Also keys the motif's frame blend (art space vs cover space) and, when the
+    timeline belongs to a scene with the motif on stage, which scene's art space that is."""
     for i, prop in enumerate(["x", "y", "scaleX", "scaleY", "rotation"]):
         anim.k(ids["root"], prop, [(f, pose[i], e) for f, pose, e in keys])
     anim.k(ids["face"], "opacity", [(f, pose[5], e) for f, pose, e in keys])
+    drv = MIXA_DRV if ids is MA else MIXB_DRV
+    anim.k(drv, "x", [(f, 1 if tuple(pose[:2]) in COVER_SPACE else 0, _calm(e)) for f, pose, e in keys])
+    mp = getattr(anim, "motif_map", None)
+    if mp:
+        anim.k(MAP_DRV, "x", mp)
+
+
+# ================================================================ RESPONSIVE LAYOUT
+# The host presents the artboard with the runtime's layout fit, so the artboard is resized to the canvas. A root
+# layout box that fills the artboard writes its computed size into _vw/_vh; a small solver (hidden nodes whose x
+# is bound from a formula and written back to the view model) derives the shared quantities below, and every
+# frame node in the scene binds its x / y / scale to a formula over them. Nothing is letterboxed: backgrounds,
+# covers, chrome and hit regions follow the real size, and each block of copy or art is placed and scaled on its
+# own.
+#
+#   _land  = _vw >= layoutBreakpoint                          landscape layout
+#   _split = _land or (_vw >= _vh)                            copy and art side by side
+#   portrait: stacked (top copy / art / bottom copy) or, on a canvas wider than tall, side by side
+#   landscape: always side by side (copy column + art column, persona and summary mirrored / re-proportioned)
+VW, VH = vmx("_vw"), vmx("_vh")
+BP = xmax(1, vmx("layoutBreakpoint"))
+LX = xstep(VW - BP)
+KP = xclamp(xmin(VW / 390, VH / 640), 0.85, 1.12)
+KL = xclamp(VH / 780, 0.9, 1.3)
+MP = xclamp(VW * (24 / 390), 14, 44)
+ML = xclamp(VW * 0.042, 36, 96)
+BTP = xclamp(VH * 0.095, 60, 80)   # portrait chrome band (80 at 844 tall, tighter on short canvases)
+BBP = xclamp(VH * 0.095, 64, 80)   # portrait control band
+SOLVE = {
+    "_land": LX,
+    "_split": xmax(LX, xstep(VW / xmax(1, VH) - 1)),
+    "_k": xlerp(KP, KL, LX),
+    "_m": xlerp(MP, ML, LX),
+    "_top": xlerp(KP * BTP, KL * 88, LX),
+    "_bot": VH - xlerp(KP * BBP, KL * 90, LX),
+    "_sc": xclamp(xmin((VW - 2 * MP) / 342, 0.35 + 0.65 * ((VH - KP * BBP - KP * BTP) / 684)), 0.7, 1.3),
+}
+LND, SPL, K, M, TOP, BOT, SC = (vmx(n) for n in ("_land", "_split", "_k", "_m", "_top", "_bot", "_sc"))
+WIDE = xstep(VW / xmax(1, VH) - 1)   # canvas wider than tall
+solver_xml = node("Layout solver", [
+    node(f"Solve {name}", [], binds=[lbind(13, e, f"Solve {name}"), bind(V(name), 13, None, direction=True)])
+    for name, e in SOLVE.items()])
+
+DT, DB = 80, 764          # design content band (390x844 master)
+ANCHOR_X = {"l": 24, "r": 366, "c": 195}
+# Per scene: copy blocks t (top) and b (bottom) as (design y0, y1, alignment); art = (x range, y range) of the
+# illustration used to fit it; f = copy column share when side by side; mirror = art on the left; wide = the box
+# of the wide share card (scene 10).
+LAYOUT = {
+    1: dict(t=(96, 150, "l"), b=(508, 736, "l"), art=((0, 390), (70, 570))),
+    2: dict(t=(84, 383, "l"), b=(729, 750, "l"), art=((-40, 430), (396, 720))),
+    3: dict(t=(92, 259, "l"), b=(729, 750, "l"), art=((0, 390), (384, 736))),
+    4: dict(t=(84, 383, "l"), b=(729, 750, "l"), art=((60, 390), (140, 720)), split_art=((60, 390), (120, 712))),
+    5: dict(t=(84, 383, "r"), b=(729, 750, "r"), art=((20, 380), (384, 724)), mirror=True),
+    6: dict(t=(84, 383, "l"), b=(729, 750, "l"), art=((-40, 430), (440, 724))),
+    7: dict(t=(92, 228, "l"), b=(540, 758, "l"), art=((-30, 420), (250, 560))),
+    8: dict(t=(84, 383, "c"), b=(729, 750, "c"), art=((40, 350), (350, 730))),
+    9: dict(t=(104, 300, "l"), b=None, art=((0, 390), (300, 745)), mirror=True, f=0.42),
+    10: dict(t=(90, 186, "l"), b=None, art=((24, 366), (196, 752)), wide=((0, 766), (0, 300)), f=0.4),
+}
+
+
+def stack_frames(n):
+    """Portrait, stacked: top copy under the chrome, bottom copy over the controls (both at the copy scale _sc,
+    which never drops below 0.7), and the art fitted into what is left between them."""
+    L_ = LAYOUT[n]
+    sC = SC
+    mC = xmin(M, xmax(10, (VW - 342 * sC) / 2))
+    fr = {}
+    for key in ("t", "b"):
+        b = L_.get(key)
+        if not b:
+            continue
+        y0, y1, h = b
+        Y = TOP + (y0 - DT) * sC if key == "t" else BOT - (DB - y0) * sC
+        X = {"l": mC, "r": VW - mC, "c": VW / 2}[h]
+        fr[key] = (X - sC * ANCHOR_X[h], Y - sC * y0, sC)
+    s0 = L_["t"][1] if L_.get("t") else DT
+    s1 = L_["b"][0] if L_.get("b") else DB
+    (_x0, _x1), (a0, a1) = L_["art"]
+    slotT = TOP + (s0 - DT) * sC
+    slotB = BOT - (DB - s1) * sC
+    gT, gB = a0 - s0, s1 - a1
+    avail = slotB - slotT - (gT + gB) * sC
+    sA = xclamp(xmin(VW / 390, avail / (a1 - a0)), 0.2, 1.7)
+    extra = xmax(0, avail - (a1 - a0) * sA)
+    ya0 = slotT + gT * sC + extra / 2
+    fr["a"] = (VW / 2 - sA * 195, ya0 - sA * a0, sA)
+    fr["w"] = fr["a"]
+    return fr
+
+
+def split_frames(n):
+    """Side by side: a copy column (blocks stacked, vertically centred) and an art column (illustration fitted
+    and centred). The content width is capped at 2.4x the band height so ultra-wide canvases keep a composition."""
+    L_ = LAYOUT[n]
+    band = BOT - TOP
+    Wc = xmin(VW - 2 * M, 2.4 * band)
+    x0 = (VW - Wc) / 2
+    gap = 0.05 * Wc
+    copyW = xmax(L_.get("f", 0.44) * Wc, 342 * 0.66)
+    artW = Wc - copyW - gap
+    if L_.get("mirror"):
+        artL, copyL = x0, x0 + artW + gap
+    else:
+        copyL, artL = x0, x0 + copyW + gap
+    blocks = [(k, L_[k]) for k in ("t", "b") if L_.get(k)]
+    G = 26
+    T = sum(b[1] - b[0] for _k, b in blocks) + G * (len(blocks) - 1)
+    sC = xclamp(xmin(xmin(copyW / 342, 0.9 * band / T), 1.7), 0.62, 1.7)   # 5% breathing room above and below
+    Y = TOP + (band - T * sC) / 2
+    fr, off = {}, 0
+    for k, (y0, y1, h) in blocks:
+        X = {"l": copyL, "r": copyL + copyW, "c": copyL + copyW / 2}[h]
+        fr[k] = (X - sC * ANCHOR_X[h], Y + off * sC - sC * y0, sC)
+        off += (y1 - y0) + G
+    fr["artL"] = artL
+    cx, cy = artL + artW / 2, TOP + band / 2
+    for key, box in (("a", L_.get("split_art", L_["art"])), ("w", L_.get("wide", L_["art"]))):
+        (bx0, bx1), (by0, by1) = box
+        sA = xclamp(xmin(artW / (bx1 - bx0), band / (by1 - by0)), 0.2, 2.6)
+        fr[key] = (cx - sA * (bx0 + bx1) / 2, cy - sA * (by0 + by1) / 2, sA)
+    return fr
+
+
+_FRAMES = {}
+
+
+def frames(n):
+    if n not in _FRAMES:
+        st, sp = stack_frames(n), split_frames(n)
+        _FRAMES[n] = {k: tuple(xlerp(a, b, SPL) for a, b in zip(st[k], sp[k])) for k in st}
+        _FRAMES[n]["artL"] = sp["artL"]
+    return _FRAMES[n]
+
+
+def frame_binds(fr, name):
+    x, y, s_ = fr
+    return [lbind(13, x, f"{name} x"), lbind(14, y, f"{name} y"), lbind(16, s_, f"{name} scale"),
+            lbind(17, s_, f"{name} scale")]
+
+
+SCOV = xmax(VW / 390, VH / 844)
+COVER = (VW / 2 - SCOV * 195, VH / 2 - SCOV * 422, SCOV)   # the 390x844 frame scaled to cover the canvas
+
+
+def blend(frs, ws):
+    return tuple(sum((w * f[i] for f, w in zip(frs[1:], ws[1:])), ws[0] * frs[0][i]) for i in range(3))
+
+
+ART_VM = {n: tuple(vmx(f"_a{n}{c}") for c in "xys") for n in (1, 2, 3, 9)}
+_art_solve = []
+for _n in (1, 2, 3, 9):
+    for _i, _c in enumerate("xys"):
+        _art_solve.append(node(f"Solve _a{_n}{_c}", [], binds=[lbind(13, frames(_n)["a"][_i], f"Solve _a{_n}{_c}"),
+                                                                 bind(V(f"_a{_n}{_c}"), 13, None, direction=True)]))
+solver_xml = node("Layout solver", [solver_xml] + _art_solve)
+
+
+def art(n):
+    """Scene n's art frame: from the solver's view model values for the scenes the motif visits."""
+    return ART_VM[n] if n in ART_VM else frames(n)["a"]
+
+
+def motif_frame(mix_name):
+    """Motif A / B live in one frame: the art space of the scene named by _motifMap (1, 2, 3 or 9, keyed by the
+    timelines; a carry between scenes keys it from one to the next) blended into cover space by _mixA/_mixB, so
+    the same keyed pose that sits in a scene's art also fills the whole canvas when it elongates into a cover."""
+    mp = vmx("_motifMap")
+    ks = (1, 2, 3, 9)
+    art_ = blend([art(k) for k in ks], [xhat(mp - k) for k in ks])
+    mix = vmx(mix_name)
+    return tuple(xlerp(a, c, mix) for a, c in zip(art_, COVER))
 
 
 # ================================================================ SCENES
@@ -592,9 +941,9 @@ def motif_keys(anim, ids, keys):
 
 # ---------- 1. Invitation ----------------------------------------------------
 s = Scene(1, WP)
-s.parts.append(grain())
 s.motifA = (126, 300, 1.3, 1.3, -0.12, 1)
 s.motifB = (292, 392, 1.06, 1.06, 0.1, 1)
+s.blk = "t"
 name_t = nid()
 sid, st = body(17, D, 600)
 pill_bg = E("TextStyleBackground", {"cornerRadius": 15, "name": "Pill"}, [fill(L)])
@@ -603,10 +952,11 @@ s.parts.append(text("S1 name", 24, 96, [st_pill], [run(sid, " ", []), run(sid, "
                                                    run(sid, " ", [])], id=name_t, w=280, h=26, sizing="fixed",
                     overflow="ellipsis", wrap="noWrap"))
 rise(s, name_t, 52, base_y=96, dy=14)
-per_t, _c, t_ = bound_text("S1 period", 24, 130, 342, "periodLabel", font="body", size=13, color=DL, wght=500)
+per_t, _c, t_ = bound_text("S1 period", 24, 130, 342, "periodLabel", font="body", size=14, color=DL, wght=500)
 s.parts.append(t_)
 rise(s, per_t, 60, base_y=130, dy=10)
 # wordmark (kinetic): letters stretch up out of a speech envelope
+s.blk = "b"
 wm_t = nid()
 wm_range = nid()
 sid, st = disp(86, D, 800, wdth=84, lh=86, ls=-2)
@@ -635,6 +985,7 @@ s.parts += [t1_, t2_]
 sweep(s, ih_rng, 84, 40)
 sweep(s, is_rng, 104, 30, 0.4)
 # giant punctuation sculptures behind the motif
+s.blk = "a"
 q1, q2 = nid(), nid()
 sid, st = disp(300, Y, 800)
 s.parts.append(text("S1 giant quote", 196, 80, [st], [run(sid, "“")], id=q1, rot=0.12))
@@ -653,12 +1004,13 @@ s.parts.append(ground("S1 shadow A", 190, 26, "77F6E97C", 128, 476))
 
 # ---------- 2. Conversations -------------------------------------------------
 s = Scene(2, WP)
-s.parts.append(grain())
 s.motifA = (68, 506, 1.06, 1.06, -0.06, 1)
 s.motifB = (356, 526, 0.96, 0.96, 0.06, 1)
 s.mouth_hit = (90, 520, 180, 170)
 hid, hx, hc = hero_number("S2 hero", "conversations", 24, HERO_Y, 342, HERO_SIZE, D, wdth=100, ls=-5)
+s.blk = "t"
 s.parts.append(hx)
+s.blk = "a"
 s.hero = hid
 rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
 count(s, 20, 82)
@@ -723,7 +1075,6 @@ pop(s, sh2, 18, 24, "out")
 
 # ---------- 3. Minutes practising -------------------------------------------
 s = Scene(3, L)
-s.parts.append(grain())
 s.mouth_hit = (195, 548, 330, 250)
 ids3 = top_copy(s, 3, unit_y=92, head_y=132, f0=40)
 ids3.update(caption(s, 3, ink=D))
@@ -748,7 +1099,12 @@ mouth_xml = node("S3 mouth", [node("S3 mouth breath", [node("S3 mouth elastic", 
     ], id=MOUTH["inner"]),
     shape("S3 lips", [cubic_path(LIPS, MOUTH["lipverts"])], shade_fills(P, PD, PL, 1.6), id=MOUTH["lips"]),
 ], id=MOUTH["elastic"])], id=MOUTH["breath"])], id=MOUTH["outer"], x=195, y=548)
-s.parts.append(mouth_xml)
+# the mouth's own frame: identity inside scene 3's art, blended into cover space (_mixMouth) by the signature 3->4 so
+# the lips -> bubble cover fills the whole canvas whatever its size
+_a3, _mixm = art(3), vmx("_mixMouth")
+mouth_frame = ((COVER[0] - _a3[0]) / _a3[2] * _mixm, (COVER[1] - _a3[1]) / _a3[2] * _mixm,
+               1 + (COVER[2] / _a3[2] - 1) * _mixm)
+s.parts.append(node("S3 mouth frame", [mouth_xml], binds=frame_binds(mouth_frame, "S3 mouth frame")))
 pop(s, MOUTH["outer"], 6, 40, "el2", s0=0.15)
 s.track(MOUTH["open"], "scaleY", [(0, 0.05, "hold"), (16, 0.05, "el"), (64, 1, "hold")])
 s.track(MOUTH["teeth"], "opacity", [(0, 0, "hold"), (30, 0, "lin"), (40, 1, "hold")])
@@ -771,9 +1127,10 @@ s.itrack(MOUTH["breath"], "scaleX", [(0, 1, "sine"), (60, 0.985, "sine"), (120, 
 
 # ---------- 4. Phrases saved -------------------------------------------------
 s = Scene(4, D)
-s.parts.append(grain(op=0.45))
 hid, hx, hc = hero_number("S4 hero", "phrasesSaved", 24, HERO_Y, 342, HERO_SIZE, WP, wdth=100, ls=-5)
+s.blk = "t"
 s.parts.append(hx)
+s.blk = "a"
 s.hero = hid
 rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
 count(s, 20, 82)
@@ -796,20 +1153,20 @@ for i, (word, bgc, ink, rx, ry, rr, cjk) in enumerate(WORDS):
     else:
         wpx = 26 + len(word) * 12.5
         sid, st = body(21, ink, 600)
-    s.parts.insert(1, node(f"S4 word {i}", [node(f"S4 word float {i}", [
+    s.parts.insert(0, node(f"S4 word {i}", [node(f"S4 word float {i}", [
         text(f"S4 word text {i}", 0, 0, [st], [run(sid, word)], ox=0.5, oy=0.5),
         shape(f"S4 word block {i}", [rect(wpx, 44, 13)], shade_fills(bgc, {P: PD, L: LD, Y: YD, LL: L}[bgc], bgc, 0.35)),
     ], id=inner)], id=wid, x=rx, y=ry, rot=rr))
     blk.append((wid, inner, rx, ry, rr))
 for i, (col, x, y, w_, h_, r) in enumerate(BLANKS):
     wid, inner = nid(), nid()
-    s.parts.insert(1, node(f"S4 blank {i}", [node(f"S4 blank float {i}", [
+    s.parts.insert(0, node(f"S4 blank {i}", [node(f"S4 blank float {i}", [
         shape(f"S4 blank block {i}", [rect(w_, h_, 7)], shade_fills(col, {P: PD, L: LD, Y: YD, LL: L}[col], col, 0.25))],
         id=inner)], id=wid, x=x, y=y, rot=r))
     blk.append((wid, inner, x, y, r))
 for i, (col, x, y, sz) in enumerate(CONF):
     wid, inner = nid(), nid()
-    s.parts.insert(1, node(f"S4 confetti {i}", [node(f"S4 confetti float {i}", [
+    s.parts.insert(0, node(f"S4 confetti {i}", [node(f"S4 confetti float {i}", [
         shape(f"S4 diamond {i}", [rect(sz, sz, 2)], [fill(col)], rot=0.785)], id=inner)], id=wid, x=x, y=y))
     blk.append((wid, inner, x, y, 0))
 # the cascade: everything falls in along the diagonal from top-right, lands with a tilt overshoot
@@ -825,7 +1182,7 @@ for i, (wid, inner, rx, ry, rr) in enumerate(blk):
 # a slow stream of tiny blocks keeps pouring into the quotes (idle, seamless)
 for i, col in enumerate([Y, L, P]):
     tid = nid()
-    s.parts.insert(1, shape(f"S4 pour {i}", [rect(12, 16, 4)], [fill(col)], id=tid, x=300, y=300, op=0))
+    s.parts.insert(0, shape(f"S4 pour {i}", [rect(12, 16, 4)], [fill(col)], id=tid, x=300, y=300, op=0))
     st0 = i * 70
     s.itrack(tid, "x", [(0, 330, "hold"), (st0, 330, "in"), (st0 + 90, 206, "hold"), (st0 + 92, 330, "hold"), (240, 330, "hold")])
     s.itrack(tid, "y", [(0, 250, "hold"), (st0, 250, "in"), (st0 + 90, 560, "hold"), (st0 + 92, 250, "hold"), (240, 250, "hold")])
@@ -858,9 +1215,10 @@ s.parts.append(ground("S4 shadow R", 150, 22, "CC2A1640", 288, 694))
 
 # ---------- 5. Topics explored ----------------------------------------------
 s = Scene(5, Y)
-s.parts.append(grain())
 hid, hx, hc = hero_number("S5 hero", "topicsExplored", 24, HERO_Y, 342, HERO_SIZE, D, align="right", wdth=100, ls=-5)
+s.blk = "t"
 s.parts.append(hx)
+s.blk = "a"
 s.hero = hid
 rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
 count(s, 20, 82)
@@ -924,9 +1282,10 @@ s.idle_dur = 720
 
 # ---------- 6. Languages practised ------------------------------------------
 s = Scene(6, WP)
-s.parts.append(grain())
 hid, hx, hc = hero_number("S6 hero", "languagesPractised", 24, HERO_Y, 342, HERO_SIZE, D, wdth=100, ls=-5)
+s.blk = "t"
 s.parts.append(hx)
+s.blk = "a"
 s.hero = hid
 rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
 count(s, 20, 82)
@@ -934,6 +1293,17 @@ ids6 = top_copy(s, 6)
 ids6.update(caption(s, 6))
 RIB = []
 DY6 = 104
+S6_CLIP, S7_CLIP = nid(), nid()   # art-column clips (side by side), see the scene emission
+
+
+def tails(pts, length=260):
+    """Straight bleed extensions continuing an open path's end tangents, so a band that runs off the 390 frame
+    still runs off a wider canvas (in the stacked arrangement the art is never wider than the canvas)."""
+    def ext(a, b):
+        dx, dy = a[0] - b[0], a[1] - b[1]
+        d = math.hypot(dx, dy)
+        return [(a[0] + dx / d * length, a[1] + dy / d * length), a]
+    return ext(pts[0], pts[1]), ext(pts[-1], pts[-2])
 rib_specs = [
     (P, [(-40, 400), (60, 360), (170, 420), (270, 470), (430, 420)], "hello · hola · ciao · hallo · olá · hej · ", WP, None),
     (L, [(-40, 520), (80, 450), (190, 390), (300, 430), (430, 500)], "merci · grazie · danke · obrigado · ", D, C_RIB2),
@@ -949,8 +1319,12 @@ for i, (col, pts, words, ink, opconv) in enumerate(rib_specs):
             E("TextModifierRange", {"modifyFrom": 0, "modifyTo": 1, "name": "All"}),
             E("TextFollowPathModifier", {"targetId": sid_, "orient": True, "offset": 0, "name": "Follow",
                                          "id": tmod})])])
+    tl, tr = tails(pts)
+    tail_l, tail_r = nid(), nid()
     rib = node(f"S6 ribbon {i}", [
         words_text,
+        shape(f"S6 ribbon tail L {i}", [smooth_path(tl, closed=False)], [stroke(col, 36)], id=tail_l),
+        shape(f"S6 ribbon tail R {i}", [smooth_path(tr, closed=False)], [stroke(col, 36)], id=tail_r),
         shape(f"S6 ribbon band {i}", [smooth_path(pts, closed=False, id=nid())],
               [E("Stroke", {"thickness": 36, "cap": "round", "join": "round", "name": "Band"},
                  [solid(col), E("TrimPath", {"start": 0, "end": 1, "modeValue": "sequential", "name": "Reveal",
@@ -960,6 +1334,8 @@ for i, (col, pts, words, ink, opconv) in enumerate(rib_specs):
     rib_parts.append(rib)
     f0 = 20 + i * 12
     s.track(trim, "end", [(0, 0, "hold"), (f0, 0, "io"), (f0 + 44, 1, "hold")])
+    s.track(tail_l, "opacity", [(0, 0, "hold"), (f0, 1, "hold")])
+    s.track(tail_r, "opacity", [(0, 0, "hold"), (f0 + 42, 1, "hold")])
     drift = -0.12 if i != 1 else 0.12
     s.itrack(tmod, "offset", [(0, 0, "sine"), (300, drift, "sine"), (600, 0, "hold")])
     s.itrack(rid, "y", [(0, 0, "sine"), (150 + i * 20, -8 + i * 5, "sine"), (600, 0, "hold")])
@@ -967,21 +1343,24 @@ weave = shape("S6 weave over", [smooth_path(rib_specs[2][1], closed=False)],
               [E("Stroke", {"thickness": 36, "cap": "butt", "join": "round", "name": "Band"},
                  [solid(D), E("TrimPath", {"start": 0.62, "end": 0.78, "modeValue": "sequential", "name": "Segment"})])],
               id=nid(), binds=[bind(V("languagesPractised"), 18, C_RIB3)])
-s.parts.append(node("S6 ribbons", [weave] + rib_parts, id=nid()))
+s.parts.append(node("S6 ribbons", [E("ClippingShape", {"sourceId": S6_CLIP, "name": "Art column clip"}), weave]
+                    + rib_parts, id=nid()))
 s.parts.append(ground("S6 shadow", 300, 26, "44C7B7F2", 195, 712))
 s.idle_dur = 600
 
 # ---------- 7. Day practice streak ------------------------------------------
 s = Scene(7, P)
-s.parts.append(grain())
 ids7 = top_copy(s, 7, unit=False, head_y=92, ink=DD, f0=40, head_lines=2)
 ids7["sup_rng"], m = kinetic(units=2, y=14, ease=(0.4, 0, 0.2, 1))
 ids7["sup"], ids7["sup_c"], t_ = bound_text("S7 support", 24, 92 + 2 * 39 + 14, 342, "screen7Support", font="body",
                                             size=16, color=DD, wght=500, lh=21, sizing="fixed", h=44,
                                             overflow="ellipsis", mods=[m])
+s.blk = "t"
 s.parts.append(t_)
+s.blk = "a"
 sweep(s, ids7["sup_rng"], 76, 30, 0.4)
 hid, hx, hc = hero_number("S7 hero", "longestStreakDays", 24, 540, 342, 176, DD, wdth=100, ls=-6)
+s.blk = "b"
 s.parts.append(hx)
 s.hero = hid
 rise(s, hid, 30, base_y=540, dy=34, dur=22, ease="back")
@@ -990,6 +1369,7 @@ u7rng, m = kinetic(units=0, y=0, x=-14, ease=(0.4, 0, 0.2, 1))
 u7, u7c, t_ = bound_text("S7 unit", 24, 724, 342, "screen7Unit", size=UNIT_SIZE, color=DD, wght=650, wdth=96,
                          sizing="fixed", h=34, overflow="fitFontSize", wrap="noWrap", ls=-0.3, mods=[m])
 s.parts.append(t_)
+s.blk = "a"
 sweep(s, u7rng, 50, 26, 0.3)
 LINE = nid()
 LINE_TRIM = nid()
@@ -1007,7 +1387,13 @@ for i, (ch, col) in enumerate([(".", WP), (",", DD), (";", WP), ("!", DD), ("?",
     s.itrack(bounce, "scaleY", sum([[(j * 40, 0.8, "out"), (j * 40 + 8, 1.12, "sine"), (j * 40 + 34, 1, "in")]
                                     for j in range(12)], []) + [(480, 0.8, "hold")])
     pop(s, tid, 50 + i * 8, 24, "back")
-s.parts.append(node("S7 sentence", tokens7 + [
+tl7, tr7 = tails(line_pts)
+LT7 = [nid(), nid()]
+s.parts.append(node("S7 sentence", [E("ClippingShape", {"sourceId": S7_CLIP, "name": "Art column clip"})] + tokens7 + [
+    shape("S7 line tail L", [smooth_path(tl7, closed=False)], [stroke(WP, 9)], id=LT7[0]),
+    shape("S7 line tail R", [smooth_path(tr7, closed=False)], [stroke(WP, 9)], id=LT7[1]),
+    shape("S7 line tail shadow L", [smooth_path(tl7, closed=False)], [stroke(PD, 9)], x=3, y=6),
+    shape("S7 line tail shadow R", [smooth_path(tr7, closed=False)], [stroke(PD, 9)], x=3, y=6),
     shape("S7 line", [smooth_path(line_pts, closed=False)],
           [E("Stroke", {"thickness": 9, "cap": "round", "join": "round", "name": "Line"},
              [solid(WP), E("TrimPath", {"start": 0, "end": 1, "modeValue": "sequential", "name": "Draw",
@@ -1015,13 +1401,16 @@ s.parts.append(node("S7 sentence", tokens7 + [
     shape("S7 line shadow", [smooth_path(line_pts, closed=False)], [stroke(PD, 9)], x=3, y=6),
 ], id=nid()))
 s.track(LINE_TRIM, "end", [(0, 0, "hold"), (8, 0, "io"), (70, 1, "hold")])
+s.track(LT7[0], "opacity", [(0, 0, "hold"), (8, 1, "hold")])
+s.track(LT7[1], "opacity", [(0, 0, "hold"), (68, 1, "hold")])
 s.idle_dur = 480
 
 # ---------- 8. Voice notes ---------------------------------------------------
 s = Scene(8, D)
-s.parts.append(grain(op=0.45))
 hid, hx, hc = hero_number("S8 hero", "voiceNotes", 24, HERO_Y, 342, HERO_SIZE, WP, align="center", wdth=100, ls=-5)
+s.blk = "t"
 s.parts.append(hx)
+s.blk = "a"
 s.hero = hid
 rise(s, hid, 10, base_y=HERO_Y, dy=34, dur=22, ease="back")
 count(s, 20, 82)
@@ -1069,7 +1458,6 @@ s.itrack(SPEECH, "rotation", [(0, 0, "sine"), (120, 0.04, "sine"), (240, 0, "hol
 
 # ---------- 9. Persona -------------------------------------------------------
 s = Scene(9, L)
-s.parts.append(grain())
 p9 = {}
 p9["label"], p9["label_c"], tl_ = flow_text("S9 label", 342, "personaLabel", font="body", size=16, color=D, wght=500)
 rise(s, p9["label"], 70, base_y=0, dy=10)
@@ -1079,7 +1467,9 @@ p9["title"], p9["title_c"], tt_ = flow_text("S9 title", 342, "personaName", size
 p9["desc_rng"], m = kinetic(units=2, y=18, ease=(0.4, -0.3, 0.3, 1))
 p9["desc"], p9["desc_c"], td_ = flow_text("S9 description", 342, "personaDescription", size=22, color=D, wght=600,
                                        lh=27, wdth=96, mods=[m])
+s.blk = "t"
 s.parts.append(column("S9 copy", 24, 104, 342, [tl_, tt_, td_], gap=8)[1])
+s.blk = "a"
 sweep(s, p9["title_rng"], 80, 30, 0.35)
 sweep(s, p9["desc_rng"], 104, 30, 0.4)
 STAGE_Y = 540
@@ -1296,7 +1686,6 @@ s.idle_dur = 240
 
 # ---------- 10. Summary ------------------------------------------------------
 s = Scene(10, D)
-s.parts.append(grain(op=0.45))
 sum_h = {}
 sum_h["head_rng"], m = kinetic(units=2, y=36, rot=0.08)
 # bounded: two headline lines (fit) + one support line, so long copy never reaches the card at y 196
@@ -1310,6 +1699,7 @@ sum_h["ehead"], _c, tc_ = bound_text("S10 empty headline", 0, 0, 342, "emptyHead
 sum_h["esup"], _c, td_ = bound_text("S10 empty support", 0, 74, 342, "emptySupport", **sb)
 sum_h["col"] = nid()
 sum_h["ecol"] = nid()
+s.blk = "t"
 s.parts += [node("S10 copy", [ta_, tb_], id=sum_h["col"], x=24, y=90),
             node("S10 new-user copy", [tc_, td_], id=sum_h["ecol"], x=24, y=90, op=0)]
 sweep(s, sum_h["head_rng"], 18, 36)
@@ -1317,28 +1707,46 @@ rise(s, sum_h["sup"], 40, base_y=74, dy=10)
 CARD = nid()
 CARD_SM = nid()
 CARD_AB = nid()
-s.parts.insert(1, E("NestedArtboard", {"artboardId": CARD_AB, "x": 24, "y": 196, "name": "S10 share card", "id": CARD},
+CARDW, CARDW_SM, CARDW_AB = nid(), nid(), nid()
+s.blk = "a"   # tall card: the stacked portrait arrangement
+s.parts.insert(0, E("NestedArtboard", {"artboardId": CARD_AB, "x": 24, "y": 196, "name": "S10 share card", "id": CARD},
                     [E("NestedStateMachine", {"animationId": CARD_SM, "name": "Card machine"})]))
+s.blk = "w"   # wide card: side-by-side arrangements (landscape, short portrait)
+s.parts.insert(0, E("NestedArtboard", {"artboardId": CARDW_AB, "x": 0, "y": 0, "name": "S10 share card wide",
+                                       "id": CARDW},
+                    [E("NestedStateMachine", {"animationId": CARDW_SM, "name": "Wide card machine"})]))
+s.blk = "a"
 # the card is thrown up from below, overshoots, tilts back and lands with a squash
 s.track(CARD, "y", [(0, 900, "hold"), (6, 900, (0.25, 1.25, 0.5, 1)), (40, 196, "hold")])
 s.track(CARD, "rotation", [(0, 0.35, "hold"), (6, 0.35, "back"), (48, 0, "hold")])
 s.track(CARD, "scaleY", [(0, 1.08, "hold"), (36, 1.08, "lin"), (42, 0.95, "el"), (80, 1, "hold")])
+s.track(CARDW, "y", [(0, 640, "hold"), (6, 640, (0.25, 1.25, 0.5, 1)), (40, 0, "hold")])
+s.track(CARDW, "rotation", [(0, 0.2, "hold"), (6, 0.2, "back"), (48, 0, "hold")])
+s.track(CARDW, "scaleY", [(0, 1.08, "hold"), (36, 1.08, "lin"), (42, 0.95, "el"), (80, 1, "hold")])
 count(s, 60, 120)
 
 # ================================================================ CHROME
+# Chrome follows the real canvas: wordmark and year sit in the margins, the progress row spans the real width, the
+# controls hug the bottom corners (Continue narrows on small phones, never below 150), and the tap zones split the
+# real width into thirds. _k scales it all (0.85 keeps every control at 44+).
 CH = {}
 chrome = []
+viewport_kids = []
 # top: wordmark + year
 CH["wm_c"] = nid()
 CH["dot_c"] = nid()
 sid, st = disp(21, D, 750, wdth=92, cid=CH["wm_c"], ls=-0.3)
 # concept wordmark: "Parlance" in heavy title case; the comma is a tiny persimmon speech mark
 chrome.append(node("Chrome wordmark", [
-    text("Chrome wordmark text", 0, 0, [st], [run(sid, "Parlance")])], x=24, y=30))
+    text("Chrome wordmark text", 0, 0, [st], [run(sid, "Parlance")])], x=24, y=30,
+    binds=[lbind(13, M, "chrome left"), lbind(14, TOP * (30 / 80), "wordmark y"), lbind(16, K, "k"), lbind(17, K, "k")]))
 CH["year_c"] = nid()
 sid, st = disp(15, D, 600, cid=CH["year_c"])
-chrome.append(text("Chrome year", 366, 35, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1))
-# progress segments: a flex row; hidden scenes are display:none so exactly the visible count renders
+chrome.append(text("Chrome year", 366, 35, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1,
+                   binds=[lbind(13, VW - M, "chrome right"), lbind(14, TOP * (35 / 80), "year y"), lbind(16, K, "k"),
+                          lbind(17, K, "k")]))
+# progress segments: a flex row stretched between the margins; hidden scenes are display:none so exactly the
+# visible count renders
 SEG = {}
 seg_kids = []
 for k in range(1, 11):
@@ -1355,37 +1763,59 @@ for k in range(1, 11):
             bind(V("currentScreen"), 16, C_SEG[k]),
             fill(P, cid=SEG[k]["fill_c"])]),
         fill("333D2456", cid=SEG[k]["track_c"])]))
-chrome.append(E("LayoutComponent", {"width": 342, "height": 3.5, "styleId": (PSTYLE := nid()),
-                                    "name": "Progress", "id": (PROG := nid())},
-                [E("LayoutComponentStyle", {"flexDirectionValue": "row", "gapHorizontal": 4,
-                                            "gapHorizontalUnitsValue": "points", "positionTypeValue": "absolute",
-                                            "positionLeft": 24, "positionTop": 66, "positionLeftUnitsValue": "points",
-                                            "positionTopUnitsValue": "points", "name": "Progress style", "id": PSTYLE})]
-                + seg_kids))
+viewport_kids.append(E("LayoutComponent", {"width": 342, "height": 3.5, "styleId": (PSTYLE := nid()),
+                                           "name": "Progress", "id": (PROG := nid())},
+                       [lbind(7, VW - 2 * M, "progress width"), E("LayoutComponentStyle", {"flexDirectionValue": "row", "gapHorizontal": 4,
+                                                   "gapHorizontalUnitsValue": "points", "positionTypeValue": "absolute",
+                                                   "positionLeft": 24, "positionTop": 66,
+                                                   "positionLeftUnitsValue": "points",
+                                                   "positionTopUnitsValue": "points", "name": "Progress style",
+                                                   "id": PSTYLE},
+                          [lbind(516, M, "chrome left"), lbind(518, TOP * (66 / 80), "progress y")])]
+                       + seg_kids))
 
 # bottom controls (inside a focus scope that also hosts the keyboard listeners)
 BTN = {}
+IS_SUM = xclamp(vmx("currentScreen") - 9, 0, 1)
+CTRL_Y = BOT + xmax(0.325 * (VH - BOT), 26 * K)   # 790 at 844 tall; never rides up over the content band
+CONT_W = xclamp((VW - 2 * M) / K - 118, 150, 224)     # Continue's width in button units (224 at 390 wide)
+HIDE = -3000
+CTRL_X = {   # (story mode, summary mode); HIDE takes a control off the canvas
+    "Previous": (M + 26 * K, M + 26 * K),
+    "Pause": (M + 86 * K, HIDE),
+    "Continue": (VW - M - CONT_W / 2 * K, HIDE),
+    "Replay": (HIDE, VW - M - 208 * K),
+    "Share": (HIDE, VW - M - 70 * K),
+}
 
 
-def button(key, idx, x, y, w, h, label_prop=None, icon=None, label_size=17):
+def button(key, idx, x, y, w, h, label_prop=None, icon=None, label_size=17, flex=False):
+    """flex: the width follows CONT_W (surface, focus ring, hit area, label box and arrow all bound)."""
     b = {"id": nid(), "bg_c": nid(), "ink_c": nid(), "ring": nid(), "x": x, "w": w, "focus": nid()}
+    wb = (lambda key_, e: [lbind(key_, e, f"{key} width")]) if flex else (lambda key_, e: None)
     kids = [E("FocusData", {"name": "Focus", "id": b["focus"]}),
             E("SemanticData", {"role": "button", "label": PROPS[label_prop][2], "name": "Semantics"},
               [bind(V(label_prop), 983)])]
     if label_prop and icon is None:
         sid, st = disp(label_size, WP, 700, cid=b["ink_c"])
         kids.append(text(f"{key} label", -w / 2 + 22, -12, [st], [run(sid, PROPS[label_prop][2], [bind(V(label_prop), 268)])],
-                         w=w - 64, h=26, sizing="fixed", overflow="fitFontSize", wrap="noWrap", align="center"))
-        kids.append(shape(f"{key} arrow", [smooth_path([(-8, -7), (0, 0), (-8, 7)], closed=False)], [stroke(WP, 2.6, cid=b["ink_c2"]) if False else stroke(WP, 2.6, cid=(b.setdefault("ink2_c", nid())))],
-                          x=w / 2 - 26))
-        kids.append(shape(f"{key} arrow stem", [rect(16, 2.6, 1.3)], [fill(WP, cid=b.setdefault("ink3_c", nid()))], x=w / 2 - 33))
+                         w=w - 64, h=26, sizing="fixed", overflow="fitFontSize", wrap="noWrap", align="center",
+                         binds=(wb(13, CONT_W * -0.5 + 22) or []) + (wb(285, CONT_W - 64) or [])))
+        kids.append(shape(f"{key} arrow", [smooth_path([(-8, -7), (0, 0), (-8, 7)], closed=False)],
+                          [stroke(WP, 2.6, cid=(b.setdefault("ink2_c", nid())))], x=w / 2 - 26,
+                          binds=wb(13, CONT_W * 0.5 - 26)))
+        kids.append(shape(f"{key} arrow stem", [rect(16, 2.6, 1.3)], [fill(WP, cid=b.setdefault("ink3_c", nid()))],
+                          x=w / 2 - 33, binds=wb(13, CONT_W * 0.5 - 33)))
     elif icon:
         kids += icon(b)
-    kids.append(shape(f"{key} focus ring", [rect(w + 10, h + 10, (h + 10) / 2)], [stroke(P, 3)], id=b["ring"],
-                      binds=[bind(V("_focusIndex"), 18, C_FOCUS[idx])]))
-    kids.append(shape(f"{key} surface", [rect(w, h, h / 2)], [fill(D, cid=b["bg_c"])]))
-    kids += [rect(w, h, h / 2), fill(CLEAR)]  # hit geometry of the button itself
-    xml = E("Shape", {"x": x, "y": y, "isTargetOpaque": True, "name": key, "id": b["id"]}, kids)
+    kids.append(shape(f"{key} focus ring", [rect(w + 10, h + 10, (h + 10) / 2, binds=wb(20, CONT_W + 10))],
+                      [stroke(P, 3)], id=b["ring"], binds=[bind(V("_focusIndex"), 18, C_FOCUS[idx])]))
+    kids.append(shape(f"{key} surface", [rect(w, h, h / 2, binds=wb(20, CONT_W))], [fill(D, cid=b["bg_c"])]))
+    kids += [rect(w, h, h / 2, binds=wb(20, CONT_W)), fill(CLEAR)]  # hit geometry of the button itself
+    sx_, sm_ = CTRL_X[key]
+    pos = [lbind(13, xlerp(sx_, sm_, IS_SUM), f"{key} x"), lbind(14, CTRL_Y, "controls y"), lbind(16, K, "k"),
+           lbind(17, K, "k")]
+    xml = E("Shape", {"x": x, "y": y, "isTargetOpaque": True, "name": key, "id": b["id"]}, pos + kids)
     b["xml"] = xml
     b["idx"] = idx
     BTN[key] = b
@@ -1409,40 +1839,72 @@ def icon_pause(b):
 controls = [
     button("Previous", 1, 50, 790, 52, 52, "previousLabel", icon=icon_prev),
     button("Pause", 2, 110, 790, 52, 52, "pauseLabel", icon=icon_pause),
-    button("Continue", 3, 254, 790, 224, 56, "continueLabel"),
+    button("Continue", 3, 254, 790, 224, 56, "continueLabel", flex=True),
     button("Replay", 4, -400, 790, 128, 52, "replayLabel", label_size=16),
     button("Share", 5, -400, 790, 140, 52, "shareLabel", label_size=16),
 ]
 KEYHOST = nid()
 chrome.append(E("Node", {"name": "Controls", "id": KEYHOST}, [E("FocusData", {"canFocus": False, "name": "Focus scope"})] + controls))
 
-# navigation regions (transparent but hit-testable); declared after controls so buttons win
+# navigation regions (transparent but hit-testable); declared after controls so buttons win. The left third of the
+# real width goes back, the right two-thirds go forward; both span the story area between chrome and controls.
 NAV_L, NAV_R = nid(), nid()
-chrome.append(shape("Nav back region", [rect(130, 656, 0, 0, 0)], [fill(CLEAR)], id=NAV_L, x=0, y=96))
-chrome.append(shape("Nav next region", [rect(260, 656, 0, 0, 0)], [fill(CLEAR)], id=NAV_R, x=130, y=96))
-mouth_hit_xml = E("Shape", {"x": -500, "y": -500, "isTargetOpaque": True, "name": "Mouth hit (signature interaction)",
-                            "id": MOUTH_HIT}, [rect(10, 10), fill(CLEAR)])
+NAV_Y = TOP + 16 * K
+NAV_H = BOT - 12 * K - NAV_Y
+chrome.append(shape("Nav back region", [rect(130, 656, 0, 0, 0, binds=[lbind(20, VW / 3, "third"), lbind(21, NAV_H, "nav h")])],
+                    [fill(CLEAR)], id=NAV_L, x=0, y=96, binds=[lbind(14, NAV_Y, "nav y")]))
+chrome.append(shape("Nav next region", [rect(260, 656, 0, 0, 0, binds=[lbind(20, VW * (2 / 3), "two thirds"),
+                                                                        lbind(21, NAV_H, "nav h")])],
+                    [fill(CLEAR)], id=NAV_R, x=130, y=96, binds=[lbind(13, VW / 3, "third"), lbind(14, NAV_Y, "nav y")]))
+# the mouth hit target lives in the art space of scene 2 (laughing form) or 3 (elastic mouth)
+mouth_hit_xml = node("Mouth hit frame", [E("Shape", {"x": -500, "y": -500, "isTargetOpaque": True,
+                                                     "name": "Mouth hit (signature interaction)", "id": MOUTH_HIT},
+                                           [rect(10, 10), fill(CLEAR)])],
+                     binds=frame_binds(tuple(xlerp(a, b, xclamp(vmx("currentScreen") - 2, 0, 1))
+                                             for a, b in zip(art(2), art(3))), "Mouth hit frame"))
 
-# global motif
-mA = motif_bubble("Motif A", P, PD, False, 1.0, ids=MA, morph=True)
-mB = motif_bubble("Motif B", L, LD, True, 1.0, ids=MB, tongue=P, morph=True)
+# global motif, each in its own frame (scene art space <-> cover space)
+mA = node("Motif A frame", [motif_bubble("Motif A", P, PD, False, 1.0, ids=MA, morph=True)],
+          binds=frame_binds(motif_frame("_mixA"), "Motif A frame"))
+mB = node("Motif B frame", [motif_bubble("Motif B", L, LD, True, 1.0, ids=MB, tongue=P, morph=True)],
+          binds=frame_binds(motif_frame("_mixB"), "Motif B frame"))
 # hidden drivers (two-way bound: their animated x writes the view model)
-driver_xml = node("Hero reveal driver", [], id=DRIVER, x=1, binds=[bind(V("_heroReveal"), 13, None, twoWay=True)])
+MIXA_DRV, MIXB_DRV, MAP_DRV, MIXM_DRV = nid(), nid(), nid(), nid()
+driver_xml = node("Drivers", [
+    node("Hero reveal driver", [], id=DRIVER, x=1, binds=[bind(V("_heroReveal"), 13, None, twoWay=True)]),
+    node("Motif A cover mix driver", [], id=MIXA_DRV, x=1, binds=[bind(V("_mixA"), 13, None, twoWay=True)]),
+    node("Motif B cover mix driver", [], id=MIXB_DRV, x=1, binds=[bind(V("_mixB"), 13, None, twoWay=True)]),
+    node("Motif scene map driver", [], id=MAP_DRV, x=1, binds=[bind(V("_motifMap"), 13, None, twoWay=True)]),
+    node("Mouth cover mix driver", [], id=MIXM_DRV, x=0, binds=[bind(V("_mixMouth"), 13, None, twoWay=True)]),
+])
 # aperture used by the signature transition (quote-shaped clip for scene 4)
 # One quote-shaped aperture is the clip source for every scene: a pair of commas whose 9 vertices morph from two
-# round dots (":") into a quotation mark, then open until the next scene fills the frame.
+# round dots (":") into a quotation mark, then open until the next scene fills the frame. It lives in cover space,
+# so at full size it opens past every edge of any canvas.
 APER = nid()
 APER_BLOOM = nid()
 APER_V = {"L": [nid() for _ in COMMA], "R": [nid() for _ in COMMA]}
-aperture = node("Quote aperture", [
+aperture = node("Cover frame", [node("Quote aperture", [
     shape("Aperture bloom", [ellipse(100, 100)], [], id=APER_BLOOM, sx=0.01, sy=0.01),
     shape("Aperture comma L", [cubic_path(COMMA_DOT, APER_V["L"])], [], x=-54),
     shape("Aperture comma R", [cubic_path(COMMA_DOT, APER_V["R"])], [], x=54),
-], id=APER, x=195, y=430, sx=0.01, sy=0.01)
+], id=APER, x=195, y=430, sx=0.01, sy=0.01)], binds=frame_binds(COVER, "Cover frame"))
 # the plate under every scene: the colour of the speech form that just filled the frame, seen around the
 # aperture while it opens (and around the closing quote on the way back)
 PLATE, PLATE_C = nid(), nid()
-plate_xml = shape("Transition plate", [rect(W + 40, H + 40, 0, 0, 0)], [fill(P, cid=PLATE_C)], id=PLATE, x=-20, y=-20)
+plate_xml = shape("Transition plate", [rect(W + 40, H + 40, 0, 0, 0, binds=[lbind(20, VW + 40, "bleed w"),
+                                                                            lbind(21, VH + 40, "bleed h")])],
+                  [fill(P, cid=PLATE_C)], id=PLATE, x=-20, y=-20)
+# restrained paper grain over the whole canvas (under the chrome): a 5x3 grid of the 390x844 tile around the
+# centre, scaled up only when a canvas outgrows it, so its grain size stays the same on every screen
+GRAIN_N = nid()
+grain_tiles = [E("Image", {"assetId": GRAIN, "x": i * 390, "y": j * 844, "scaleX": 2, "scaleY": 2,
+                           "blendModeValue": "overlay", "name": f"grain {i},{j}"})
+               for j in (-1, 0, 1) for i in (-2, -1, 0, 1, 2)]
+GSC = xmax(1, xmax(VW / 1950, VH / 2532))
+grain_xml = node("Grain", grain_tiles, id=GRAIN_N, op=0.55,
+                 binds=[lbind(13, VW / 2, "centre x"), lbind(14, VH / 2, "centre y"), lbind(16, GSC, "grain scale"),
+                        lbind(17, GSC, "grain scale")])
 
 # clock component placement
 CLOCK = nid()
@@ -1453,7 +1915,11 @@ clock_xml = E("NestedArtboard", {"artboardId": CLOCK_AB, "x": -100, "y": -100, "
     bind(V("isPaused"), 895),
     E("NestedStateMachine", {"animationId": CLOCK_SM, "name": "Clock machine"})])
 
-# scene backgrounds + roots
+# scene backgrounds + roots. Each scene is
+#   anchor (canvas centre) > root (keyed: opacity, handoff offsets and scale, aperture clip) > pivot (back to the
+#   canvas origin) > frames (one per layout block: copy on top, art below) + a background that bleeds 10% past
+#   every edge, so a handoff that shrinks the scene about the centre never shows a gap.
+BLOCK_ORDER = ("t", "b", "w", "a")
 scene_xml = []
 for n in range(10, 0, -1):
     sc = SCENES[n]
@@ -1463,10 +1929,38 @@ for n in range(10, 0, -1):
         bgfill = fill(L, cid=sc.bg_c, binds=[bind(V("personaColor"), 37)])
     else:
         bgfill = fill(sc.bg, cid=sc.bg_c)
-    kids = list(sc.parts) + [shape(f"S{n} background", [rect(W + 40, H + 40, 0, 0, 0)], [bgfill], id=sc.bg_id, x=-20, y=-20)]
+    fr = frames(n)
+    sc.frames = {}
+    kids = []
+    for key in BLOCK_ORDER:
+        items = [x for b_, x in sc.parts if b_ == key]
+        if not items:
+            continue
+        binds = frame_binds(art(n) if key == "a" else fr[key], f"S{n} {key}")
+        # the wide card only on canvases wider than tall; a tall landscape canvas keeps the tall card in its art
+        # column, where it can use the height
+        if n == 10 and key == "a":
+            binds.append(lbind(18, 1 - WIDE, "tall card"))
+        if n == 10 and key == "w":
+            binds.append(lbind(18, WIDE, "wide card"))
+        sc.frames[key] = nid()
+        kids.append(node(f"S{n} frame {key}", items, id=sc.frames[key], binds=binds))
+    kids.append(shape(f"S{n} background", [rect(W + 40, H + 40, 0, 0, 0, binds=[lbind(20, VW * 1.2 + 40, "bg w"),
+                                                                               lbind(21, VH * 1.2 + 40, "bg h")])],
+                      [bgfill], id=sc.bg_id, x=-20, y=-20,
+                      binds=[lbind(13, VW * -0.1 - 20, "bg x"), lbind(14, VH * -0.1 - 20, "bg y")]))
+    if n in (6, 7):
+        # side by side, bands that bleed off the canvas are cut at the art column's left edge (never under the copy)
+        cl = xlerp(-200, fr["artL"] - 12, SPL)
+        kids.append(shape(f"S{n} art column clip", [rect(W + 400, H + 400, 0, 0, 0,
+                                                         binds=[lbind(20, VW + 400 - cl, "clip w"),
+                                                                lbind(21, VH + 400, "clip h")])], [],
+                          id=S6_CLIP if n == 6 else S7_CLIP, x=-200, y=-200, binds=[lbind(13, cl, "clip x")]))
     sc.clip = nid()
     clip = [E("ClippingShape", {"sourceId": APER, "isVisible": False, "name": "Quote aperture clip", "id": sc.clip})]
-    scene_xml.append(E("Node", {"name": f"Scene {n}", "id": sc.root, "opacity": 1 if n == 1 else 0}, clip + kids))
+    pivot = node(f"Scene {n} pivot", kids, binds=[lbind(13, VW * -0.5, "-centre x"), lbind(14, VH * -0.5, "-centre y")])
+    root = E("Node", {"name": f"Scene {n}", "id": sc.root, "opacity": 1 if n == 1 else 0}, clip + [pivot])
+    scene_xml.append(node(f"Scene {n} anchor", [root], binds=[lbind(13, VW / 2, "centre x"), lbind(14, VH / 2, "centre y")]))
 
 # ================================================================ EVENTS
 EV = {k: nid() for k in ("screenChanged", "shareTapped", "recapFinished", "mouthTapped")}
@@ -1483,8 +1977,9 @@ events = [
 ANIMS = []
 
 
-def anim(name, dur, loop=None):
+def anim(name, dur, loop=None, scene=None, motif_map=None):
     a = Anim(name, dur, loop)
+    a.motif_map = motif_map or ([(0, scene, "hold")] if scene in (1, 2, 3, 9) else None)
     ANIMS.append(a)
     return a
 
@@ -1599,7 +2094,7 @@ for n in range(1, 11):
     a_pose, b_pose = sc.motifA, sc.motifB
 
     # ---- In (forward): the frame is one solid speech-form colour; the scene opens through a quote aperture ----
-    a = anim(f"{n:02d} In", 130)
+    a = anim(f"{n:02d} In", 130, scene=n)
     sc.anim_in = a
     hide_others(a, n)
     root_reset(a, sc)
@@ -1623,7 +2118,7 @@ for n in range(1, 11):
         apply_enter(a, sc, offset=8)
 
     # ---- Back-in (designed reverse): the lilac form that filled the frame deflates down-left ----
-    a = anim(f"{n:02d} Back In", 84)
+    a = anim(f"{n:02d} Back In", 84, scene=n)
     sc.anim_backin = a
     hide_others(a, n)
     root_reset(a, sc)
@@ -1639,7 +2134,7 @@ for n in range(1, 11):
     apply_enter(a, sc, offset=0, scale=0.6)
 
     # ---- Settled (reduced motion: final values + short opacity fade, no movement) ----
-    a = anim(f"{n:02d} Settled (reduced motion)", 14)
+    a = anim(f"{n:02d} Settled (reduced motion)", 14, scene=n)
     sc.anim_rm = a
     hide_others(a, n)
     root_reset(a, sc)
@@ -1651,7 +2146,7 @@ for n in range(1, 11):
     apply_final(a, sc)
 
     # ---- Out (forward handoff, generic): the next scene's speech form elongates over this one ----
-    a = anim(f"{n:02d} Out", 28)
+    a = anim(f"{n:02d} Out", 28, scene=n)
     sc.anim_out = a
     elongate(a, COVER_INTO[min(n + 1, 10)], dur=28)
     a.k(sc.root, "scaleX", [(0, 1, "antic"), (28, 0.95, "hold")])
@@ -1660,7 +2155,7 @@ for n in range(1, 11):
     a.k(sc.root, "y", [(0, 0, "antic"), (28, -30, "hold")])
 
     # ---- Out back (designed reverse): the scene closes into a quotation mark on a lilac plate ----
-    a = anim(f"{n:02d} Out Back", 30)
+    a = anim(f"{n:02d} Out Back", 30, scene=n)
     sc.anim_outback = a
     plate(a, L)
     clip(a, sc, [(0, True)])
@@ -1674,7 +2169,7 @@ for n in range(1, 11):
             motif_keys(a, M, [(0, pose, "in"), (20, (195, 430, 0.05, 0.05, pose[4], 1), "hold")])
 
     # ---- reduced-motion out: a short fade ----
-    a = anim(f"{n:02d} Out (reduced motion)", 10)
+    a = anim(f"{n:02d} Out (reduced motion)", 10, scene=n)
     sc.anim_outrm = a
     plate(a, WP)
     a.k(sc.root, "opacity", [(0, 1, "lin"), (10, 0, "hold")])
@@ -1714,7 +2209,7 @@ a.k(MB["mouth"], "scaleY", [(0, 1, "sine"), (36, 1.25, "sine"), (50, 0.5, "sine"
 # ---- special continuity transitions ----------------------------------------
 # 1 -> 2: the two speech forms are carried down into the conversation scene, landing with a squash
 s1, s2, s3, s4 = SCENES[1], SCENES[2], SCENES[3], SCENES[4]
-a = anim("01 Out (carry motif to 2)", 40)
+a = anim("01 Out (carry motif to 2)", 40, motif_map=[(0, 1, "io"), (40, 2, "hold")])
 s1.anim_out_special = a
 plate(a, WP)
 motif_pose(a, MA, [(0, s1.motifA, "antic"), (10, (s1.motifA[0] + 6, s1.motifA[1] - 30) + s1.motifA[2:], "io"), (40, s2.motifA, "hold")],
@@ -1723,7 +2218,7 @@ motif_pose(a, MB, [(0, s1.motifB, "antic"), (14, (s1.motifB[0] - 6, s1.motifB[1]
            [(0, BUB_REST, "sine"), (16, BUB_STRETCH, "sine"), (30, BUB_REST, "hold")])
 a.k(s1.root, "y", [(0, 0, "in"), (28, -60, "hold")])
 a.k(s1.root, "opacity", [(0, 1, "in"), (28, 0, "hold")])
-a = anim("02 Carry In (from 1)", 120)
+a = anim("02 Carry In (from 1)", 120, scene=2)
 s2.anim_carry = a
 hide_others(a, 2)
 root_reset(a, s2)
@@ -1736,7 +2231,7 @@ a.k(MB["elastic"], "scaleY", [(0, 1, "lin"), (12, 0.88, "el"), (46, 1, "hold")])
 apply_enter(a, s2)
 
 # 2 -> 3: persimmon speech form flies centre-stage, its mouth becomes the elastic mouth
-a = anim("02 Out (carry motif to 3)", 34)
+a = anim("02 Out (carry motif to 3)", 34, motif_map=[(0, 2, "io"), (34, 3, "hold")])
 s2.anim_out_special = a
 plate(a, L)
 motif_pose(a, MA, [(0, s2.motifA, "antic"), (34, (195, 520, 2.7, 2.7, 0, 1), "hold")],
@@ -1746,7 +2241,7 @@ a.k(MA["mouth"], "scaleY", [(0, 1, "io"), (34, 1.9, "hold")])
 a.k(MA["mouth"], "scaleX", [(0, 1, "io"), (34, 1.25, "hold")])
 a.k(MA["eyes"], "opacity", [(0, 1, "lin"), (26, 0, "hold")])
 a.k(s2.root, "opacity", [(0, 1, "in"), (26, 0, "hold")])
-a = anim("03 Carry In (from 2)", 120)
+a = anim("03 Carry In (from 2)", 120, scene=3)
 s3.anim_carry = a
 hide_others(a, 3)
 root_reset(a, s3)
@@ -1778,6 +2273,7 @@ a.k(MOUTH["outer"], "y", [(0, 548, "antic"), (24, 470, "in"), (44, 200, "hold")]
 a.k(MOUTH["outer"], "rotation", [(0, 0, "out"), (24, -0.08, "in"), (44, 0.04, "hold")])
 for key_ in ("unit", "head", "sup"):
     a.k(ids3[key_], "opacity", [(0, 1, "lin"), (12, 0, "hold")])
+a.k(MIXM_DRV, "x", [(0, 0, "hold"), (24, 0, "in"), (44, 1, "hold")])
 a = anim("04 Carry In (signature aperture)", 130)
 s4.anim_carry = a
 hide_others(a, 4)
@@ -1798,6 +2294,7 @@ for an in [s3.anim_in, s3.anim_backin, s3.anim_rm, s3.anim_carry]:
         an.hold(MOUTH["outer"], "scaleY", 1)
     an.hold(MOUTH["inner"], "scaleX", 1)
     an.hold(MOUTH["inner"], "scaleY", 1)
+    an.hold(MIXM_DRV, "x", 0)
     for key_ in ("unit", "head", "sup"):
         an.hold(ids3[key_], "opacity", 1)
 # cover used when a carry transition's target scene is hidden
@@ -1879,6 +2376,7 @@ THEMES = {}
 for tname, ink, btn_bg, btn_ink, track, fillc in [("light", D, D, WP, "333D2456", P), ("dark", WP, L, D, "55C7B7F2", P),
                                                    ("warm", DD, DD, WP, "402A1640", WP)]:
     a = anim(f"Theme {tname}", 1)
+    a.hold(GRAIN_N, "opacity", 0.45 if tname == "dark" else 0.55)
     a.k(CH["wm_c"], "colorValue", [(0, ink, "hold")], kind="c")
     a.k(CH["year_c"], "colorValue", [(0, ink, "hold")], kind="c")
     for k in range(1, 11):
@@ -1893,18 +2391,13 @@ for tname, ink, btn_bg, btn_ink, track, fillc in [("light", D, D, WP, "333D2456"
 SCENE_THEME = {1: "light", 2: "light", 3: "light", 4: "dark", 5: "light", 6: "light", 7: "warm", 8: "dark", 10: "dark"}
 
 # Chrome layout per mode
+# (positions are bound to the layout: CTRL_X picks story or summary placement from currentScreen; these timelines
+# only decide which controls can take focus)
 CH_NORMAL = anim("Controls: story", 1)
 CH_SUMMARY = anim("Controls: summary", 1)
-for b in BTN.values():
-    CH_NORMAL.hold(b["id"], "x", b["x"])
-pos_sum = {"Previous": 50, "Pause": -400, "Continue": -400, "Replay": 158, "Share": 296}
-for key_, x in pos_sum.items():
-    CH_SUMMARY.hold(BTN[key_]["id"], "x", x)
-    CH_SUMMARY.hold(BTN[key_]["focus"], "canFocus", x > 0, kind="b")
-for key_, b in BTN.items():
-    CH_NORMAL.hold(b["focus"], "canFocus", key_ not in ("Replay", "Share"), kind="b")
-CH_NORMAL.hold(BTN["Replay"]["id"], "x", -400)
-CH_NORMAL.hold(BTN["Share"]["id"], "x", -600)
+for key_ in BTN:
+    CH_SUMMARY.hold(BTN[key_]["focus"], "canFocus", key_ not in ("Pause", "Continue"), kind="b")
+    CH_NORMAL.hold(BTN[key_]["focus"], "canFocus", key_ not in ("Replay", "Share"), kind="b")
 PAUSE_ICON = anim("Pause icon: playing", 8)
 PAUSE_ICON.k(BTN["Pause"]["bars"], "opacity", [(0, 0, "lin"), (8, 1, "hold")])
 PAUSE_ICON.k(BTN["Pause"]["tri"], "opacity", [(0, 1, "lin"), (8, 0, "hold")])
@@ -2248,13 +2741,24 @@ MAIN = nid()
 MAIN_STYLE = nid()
 main_children = [E("LayoutComponentStyle", {"name": "Artboard style", "id": MAIN_STYLE})]
 STAGE, STAGE_STYLE = nid(), nid()
-# Everything lives in one fixed 390x844 stage box so absolutely positioned copy columns resolve against the
-# design frame, not against whatever size a host resizes the artboard to (hosts should use Fit.contain).
-main_children.append(E("LayoutComponent", {"width": W, "height": H, "styleId": STAGE_STYLE, "name": "Stage", "id": STAGE}, [
+VIEWPORT, VIEWPORT_STYLE = nid(), nid()
+# The viewport box fills the artboard (which the host's layout fit sizes to the canvas): its computed size is the
+# input of the whole responsive layout, and it carries the progress row, which stretches between the margins.
+main_children.append(E("LayoutComponent", {"width": W, "height": H, "clip": False, "styleId": VIEWPORT_STYLE,
+                                           "name": "Viewport", "id": VIEWPORT}, [
+    E("LayoutComponentStyle", {"layoutWidthScaleType": "fill", "layoutHeightScaleType": "fill",
+                               "name": "Viewport style", "id": VIEWPORT_STYLE}),
+    bind(V("_vw"), 810, None, direction=True),
+    bind(V("_vh"), 811, None, direction=True)] + viewport_kids))
+# Everything else lives in a 390x844 stage box at the origin: the absolutely positioned copy columns resolve against
+# this design frame, and the frame nodes above them map design coordinates onto the real canvas.
+main_children.append(E("LayoutComponent", {"width": W, "height": H, "clip": False, "styleId": STAGE_STYLE,
+                                           "name": "Stage", "id": STAGE}, [
     E("LayoutComponentStyle", {"positionTypeValue": "absolute", "positionLeft": 0, "positionTop": 0,
                                "positionLeftUnitsValue": "points", "positionTopUnitsValue": "points",
                                "name": "Stage style", "id": STAGE_STYLE}),
-    node("Stage content", chrome + [mouth_hit_xml, clock_xml, driver_xml, aperture, mA, mB] + scene_xml + [plate_xml])]))
+    node("Stage content", chrome + [grain_xml, mouth_hit_xml, clock_xml, driver_xml, solver_xml, aperture, mA, mB]
+         + scene_xml + [plate_xml])]))
 main_children += [fill(WP)] + events + [sm_xml] + [a.xml() for a in ANIMS]
 main_xml = E("Artboard", {"defaultStateMachineId": MAIN_SM, "viewModelId": VM, "viewModelInstanceId": "0:95",
                           "styleId": MAIN_STYLE, "width": W, "height": H, "clip": True, "x": 0, "y": 0,
@@ -2285,194 +2789,230 @@ clock_ab = E("Artboard", {"isComponent": True, "defaultStateMachineId": CLOCK_SM
         astate(ck["done"], ck_off_a.id, 750, 0, [fire_trigger(V("goNext"))], caption="Done: request next")])]),
     ck_off_a.xml(), ck_run_a.xml()])
 
-# ================================================================ SHARE CARD COMPONENT
-CARD_W, CARD_H = 342, 556
-cd = {"style": nid()}
-card_parts = []
-card_anims = []
-# top row
-sid, st = disp(23, D, 750, wdth=92, ls=-0.3)
-card_parts.append(node("Card wordmark", [
-    text("Card wordmark text", 0, 0, [st], [run(sid, "Parlance")])], id=(CD_WM := nid()), x=24, y=22))
-sid, st = disp(24, P, 800)
-card_parts.append(text("Card year", 318, 24, [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])], ox=1, id=(CD_YEAR := nid())))
-CD_NAME, _c, t_ = bound_text("Card name", 24, 58, 294, "userName", font="body", size=14, color=DL, wght=600,
-                             sizing="fixed", h=20, overflow="ellipsis", wrap="noWrap")
-card_parts.append(t_)
-# persona block
-CEMB = build_emblems(0.42, "CE")
-CD_EMB = nid()
-cstage_xml, CSTG = emblem_stage(CEMB, 0.42, "Card")
-card_parts.append(node("Card persona emblem", [cstage_xml], id=CD_EMB, x=171, y=140))
-CD_PT, CD_PT_C, t_ = bound_text("Card persona title", 24, 232, 294, "personaName", size=27, color=D, wght=800, lh=28,
-                                align="center", wdth=94, ls=-0.6)
-card_parts.append(t_)
-CD_PD, _c, t_ = bound_text("Card persona description", 24, 264, 294, "personaDescription", font="body", size=13,
-                           color=DL, wght=500, lh=17, align="center")
-card_parts.append(t_)
-# neutral motif (shown when persona hidden / new user)
-CD_NEUTRAL = nid()
-na, nb = {}, {}
-card_parts.append(node("Card neutral motif", [node("Card neutral A", [motif_bubble("Card motif A", P, PD, False, 0.5, ids=na)], x=-36),
-                                              node("Card neutral B", [motif_bubble("Card motif B", L, LD, True, 0.45, ids=nb)], x=44, y=10)],
-                       id=CD_NEUTRAL, x=171, y=160, op=0))
-card_parts[-1] = card_parts[-1]  # positions of the two bubbles set below via x attributes
-card_parts[-1] = card_parts[-1].replace(f'name="Card motif A" id="{na["root"]}"', f'name="Card motif A" id="{na["root"]}" x="-42"', 1) \
-    if False else card_parts[-1]
-CD_EMPTY_H, _c, t_ = bound_text("Card empty headline", 24, 300, 294, "emptyHeadline", size=26, color=D, wght=800, lh=28,
-                                align="center", op=0)
-card_parts.append(t_)
-CD_EMPTY_S, _c, t_ = bound_text("Card empty support", 24, 370, 294, "emptySupport", font="body", size=15, color=DL,
-                                wght=500, lh=20, align="center", op=0)
-card_parts.append(t_)
-# stat tiles (5 aggregates + a collectible motif tile)
-TILES = []
-tile_specs = [("conversations", "screen2Unit", P, D, 2), ("practiceMinutes", "screen3Unit", L, D, 3),
-              ("phrasesSaved", "screen4Unit", Y, D, 4), ("topicsExplored", "screen5Unit", LL, D, 5),
-              ("languagesPractised", "screen6Unit", D, WP, 6)]
-for i, (pn, un, bgc, ink, scr) in enumerate(tile_specs):
-    tx = 24 + (i % 2) * 151
-    ty = 316 + (i // 2) * 76
-    t_id = nid()
-    hn, hx_, _ = hero_number(f"Card {pn}", pn, 14 - 71, 8 - 34, 115, 30, ink, counting=True, wdth=100, ls=-1)
-    un_id, _c, ut = bound_text(f"Card {pn} label", 14 - 71, 44 - 34, 115, un, font="body", size=11, color=ink, wght=600,
-                               sizing="fixed", h=16, overflow="ellipsis", wrap="noWrap")
-    mask = nid()
-    sid, st = disp(30, ink, 800)
-    masked = text(f"Card {pn} private", 14 - 71, 8 - 34, [st], [run(sid, "—")], id=mask, op=0)
-    fly = nid()
-    TILES.append({"id": t_id, "num": hn, "mask": mask, "scr": scr, "fly": fly})
-    card_parts.append(node(f"Card tile {pn}", [node(f"Card tile fly {pn}", [
-        hx_, masked, ut, shape("tile", [rect(143, 68, 18, 0, 0)], [fill(bgc)], x=-71, y=-34)], id=fly, x=71, y=34)],
-        id=t_id, x=tx, y=ty))
-CD_MTILE = nid()
-mt_a, mt_b = {}, {}
-card_parts.append(node("Card tile motif", [
-    node("tile motif A", [motif_bubble("Tile motif A", P, PD, False, 0.22, ids=mt_a)], x=48, y=36),
-    node("tile motif B", [motif_bubble("Tile motif B", L, LD, True, 0.2, ids=mt_b)], x=96, y=38),
-    shape("tile", [rect(143, 68, 18, 0, 0)], [fill(WD)])], id=CD_MTILE, x=175, y=468))
-CD_BG = nid()
-card_parts.append(shape("Card blob", [smooth_path(bubble_pts(1.3, True))], [fill("55F6E97C")], x=250, y=150, rot=-0.3,
-                        children=[E("ClippingShape", {"sourceId": CD_BG, "name": "Clip to card"})]))
-card_parts.append(shape("Card face", [rect(CARD_W, CARD_H, 30, 0, 0)], [fill(WP)], id=CD_BG))
-card_parts.append(shape("Card shadow", [rect(CARD_W, CARD_H, 30, 0, 0)], [fill("55000000", feather=(18, 0, 14))]))
-
-# card animations
-c_rest = Anim("Card settled", 1)
-c_asm = Anim("Card assemble", 140)
-c_empty_off = Anim("Card mode: stats", 1)
-c_empty_on = Anim("Card mode: new user", 1)
-c_name_on, c_name_off = Anim("Card name shown", 1), Anim("Card name hidden", 1)
-c_sens_on, c_sens_off = Anim("Card minutes shown", 1), Anim("Card minutes private", 1)
-c_pers_on, c_pers_off = Anim("Card persona shown", 1), Anim("Card persona hidden (neutral motif)", 1)
-c_pick = [Anim(f"Card persona {k}", 1) for k in range(4)]
-# Assembly: the wordmark slides in, the year lands like a stamp, the persona emblem drops in with a squash and its
-# rings draw on, the title cascades, then the five tiles are dealt in from alternating sides (counting up) and the
-# collectible motif tile flips in last.
-def asm(obj, prop_, keys, rest):
-    c_asm.k(obj, prop_, keys)
-    c_rest.hold(obj, prop_, rest)
+# ================================================================ SHARE CARD COMPONENTS
+# Two artboards from one builder: the tall card (342x556) used by the stacked portrait arrangement, and a wide card
+# (766x300: persona on the left, the five tiles in a 3x2 grid on the right) used whenever copy and art sit side by
+# side. Each is a self-contained component a host can render alone for the share snapshot.
+CARD_SPECS = {
+    "tall": dict(W=342, H=556, name="Share Card", tag="Card", wm=(24, 22), year=(318, 24), name_box=(24, 58, 294),
+                 emb=(171, 140), title=(24, 232, 294), desc=(24, 264, 294), neutral=(171, 160),
+                 empty_h=(24, 300, 294), empty_s=(24, 370, 294),
+                 tiles=[(24 + (i % 2) * 151, 316 + (i // 2) * 76) for i in range(5)], mtile=(175, 468),
+                 blob=(250, 150)),
+    "wide": dict(W=766, H=300, name="Share Card Wide", tag="Wide card", wm=(24, 22), year=(742, 24),
+                 name_box=(24, 58, 260), emb=(150, 140), title=(10, 232, 280), desc=(10, 264, 280), neutral=(150, 160),
+                 empty_h=(300, 104, 440), empty_s=(300, 174, 440),
+                 tiles=[(296 + (i % 3) * 151, 76 + (i // 3) * 80) for i in range(5)], mtile=(598, 156),
+                 blob=(640, 80)),
+}
 
 
-for obj, f0 in [(CD_WM, 0), (CD_YEAR, 6), (CD_EMB, 12), (CD_PT, 30), (CD_PD, 38), (CD_MTILE, 84)] + \
-        [(t["id"], 44 + i * 6) for i, t in enumerate(TILES)]:
-    asm(obj, "opacity", [(0, 0, "hold"), (f0, 1, "hold")], 1)
-asm(CD_WM, "x", [(0, -80, "hold"), (0, -80, (0.25, 1.3, 0.5, 1)), (22, 24, "hold")], 24)
-asm(CD_YEAR, "scaleX", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
-asm(CD_YEAR, "scaleY", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
-asm(CD_YEAR, "rotation", [(0, -0.5, "hold"), (6, -0.5, "out"), (16, 0.04, "el"), (44, 0, "hold")], 0)
-asm(CD_EMB, "y", [(0, 30, "hold"), (12, 30, (0.5, 0, 0.9, 0.5)), (30, 140, "hold")], 140)
-asm(CD_EMB, "scaleY", [(0, 1.2, "hold"), (28, 1.2, "lin"), (32, 0.74, "el"), (74, 1, "hold")], 1)
-asm(CD_EMB, "scaleX", [(0, 0.86, "hold"), (28, 0.86, "lin"), (32, 1.22, "el"), (74, 1, "hold")], 1)
-for k, tid in enumerate(CSTG["trim"]):
-    asm(tid, "end", [(0, 0, "hold"), (32 + k * 5, 0, "io"), (64 + k * 5, 1, "hold")], 1)
-for k, si in enumerate(CSTG["sparks"]):
-    asm(si, "scaleX", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
-    asm(si, "scaleY", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
-asm(CD_PT, "y", [(0, 252, "hold"), (30, 252, "back"), (50, 232, "hold")], 232)
-asm(CD_PD, "y", [(0, 276, "hold"), (38, 276, "out"), (58, 264, "hold")], 264)
-for i, t in enumerate(TILES):
-    f0 = 44 + i * 6
-    side = -1 if i % 2 == 0 else 1
-    asm(t["fly"], "x", [(0, 71 + side * 260, "hold"), (f0, 71 + side * 260, (0.2, 1.2, 0.45, 1)), (f0 + 26, 71, "hold")], 71)
-    asm(t["fly"], "rotation", [(0, side * 0.7, "hold"), (f0, side * 0.7, "back"), (f0 + 30, 0, "hold")], 0)
-    asm(t["fly"], "scaleX", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 1.08, "el"), (f0 + 56, 1, "hold")], 1)
-    asm(t["fly"], "scaleY", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 0.9, "el"), (f0 + 56, 1, "hold")], 1)
-asm(CD_MTILE, "y", [(0, 420, "hold"), (84, 420, "back"), (104, 468, "hold")], 468)
-asm(CD_MTILE, "rotation", [(0, 0.6, "hold"), (84, 0.6, "back"), (108, 0, "hold")], 0)
-for an, empty in ((c_empty_off, False), (c_empty_on, True)):
-    for t in TILES:
-        an.hold(t["id"], "x", -900 if empty else (24 + (TILES.index(t) % 2) * 151))
-    an.hold(CD_MTILE, "x", -900 if empty else 175)
-    an.hold(CD_EMPTY_H, "opacity", 1 if empty else 0)
-    an.hold(CD_EMPTY_S, "opacity", 1 if empty else 0)
-for an, on in ((c_name_on, True), (c_name_off, False)):
-    an.hold(CD_NAME, "opacity", 1 if on else 0)
-mins = TILES[1]
-for an, on in ((c_sens_on, True), (c_sens_off, False)):
-    an.hold(mins["num"], "opacity", 1 if on else 0)
-    an.hold(mins["mask"], "opacity", 0 if on else 1)
-for an, on in ((c_pers_on, True), (c_pers_off, False)):
-    an.hold(CD_EMB, "x", 171 if on else -900)
-    an.hold(CD_PT, "x", 24 if on else -900)
-    an.hold(CD_PD, "x", 24 if on else -900)
-    an.hold(CD_NEUTRAL, "opacity", 0 if on else 1)
-for k, an in enumerate(c_pick):
-    for m, e in enumerate(CEMB):
-        an.hold(e["root"], "opacity", 1 if m == k else 0)
-        for obj, prop_, keys in e["rev"]:
-            an.hold(obj, prop_, keys[-1][1])
-    for ci, col in zip(CSTG["ring_c"], CEMB[k]["rings"]):
-        an.k(ci, "colorValue", [(0, col, "hold")], kind="c")
-    an.k(CSTG["ground_c"], "colorValue", [(0, CEMB[k]["ground"], "hold")], kind="c")
-CARD_ANIMS = [c_rest, c_asm, c_empty_off, c_empty_on, c_name_on, c_name_off, c_sens_on, c_sens_off, c_pers_on, c_pers_off] + c_pick
+def build_card(variant, ab_id, sm_id):
+    cs_ = CARD_SPECS[variant]
+    CW, CH_ = cs_["W"], cs_["H"]
+    tg = cs_["tag"]
+    cd = {"style": nid()}
+    card_parts = []
+    # top row
+    sid, st = disp(23, D, 750, wdth=92, ls=-0.3)
+    wm_id = nid()
+    card_parts.append(node(f"{tg} wordmark", [
+        text(f"{tg} wordmark text", 0, 0, [st], [run(sid, "Parlance")])], id=wm_id, x=cs_["wm"][0], y=cs_["wm"][1]))
+    sid, st = disp(24, P, 800)
+    year_id = nid()
+    card_parts.append(text(f"{tg} year", cs_["year"][0], cs_["year"][1], [st], [run(sid, "2026", [bind(V("year"), 268, C_STR0)])],
+                           ox=1, id=year_id))
+    nx, ny, nw = cs_["name_box"]
+    name_id, _c, t_ = bound_text(f"{tg} name", nx, ny, nw, "userName", font="body", size=14, color=DL, wght=600,
+                                 sizing="fixed", h=20, overflow="ellipsis", wrap="noWrap")
+    card_parts.append(t_)
+    # persona block
+    CEMB = build_emblems(0.42, "CE" if variant == "tall" else "WE")
+    emb_id = nid()
+    cstage_xml, CSTG = emblem_stage(CEMB, 0.42, tg)
+    card_parts.append(node(f"{tg} persona emblem", [cstage_xml], id=emb_id, x=cs_["emb"][0], y=cs_["emb"][1]))
+    tx_, ty_, tw_ = cs_["title"]
+    pt_id, _c, t_ = bound_text(f"{tg} persona title", tx_, ty_, tw_, "personaName", size=27, color=D, wght=800, lh=28,
+                               align="center", wdth=94, ls=-0.6)
+    card_parts.append(t_)
+    dx_, dy_, dw_ = cs_["desc"]
+    pd_id, _c, t_ = bound_text(f"{tg} persona description", dx_, dy_, dw_, "personaDescription", font="body", size=13,
+                               color=DL, wght=500, lh=17, align="center")
+    card_parts.append(t_)
+    # neutral motif (shown when persona hidden / new user)
+    neutral_id = nid()
+    na, nb = {}, {}
+    card_parts.append(node(f"{tg} neutral motif", [
+        node(f"{tg} neutral A", [motif_bubble(f"{tg} motif A", P, PD, False, 0.5, ids=na)], x=-36),
+        node(f"{tg} neutral B", [motif_bubble(f"{tg} motif B", L, LD, True, 0.45, ids=nb)], x=44, y=10)],
+        id=neutral_id, x=cs_["neutral"][0], y=cs_["neutral"][1], op=0))
+    ex_, ey_, ew_ = cs_["empty_h"]
+    empty_h, _c, t_ = bound_text(f"{tg} empty headline", ex_, ey_, ew_, "emptyHeadline", size=26, color=D, wght=800,
+                                 lh=28, align="center", op=0)
+    card_parts.append(t_)
+    ex_, ey_, ew_ = cs_["empty_s"]
+    empty_s, _c, t_ = bound_text(f"{tg} empty support", ex_, ey_, ew_, "emptySupport", font="body", size=15, color=DL,
+                                 wght=500, lh=20, align="center", op=0)
+    card_parts.append(t_)
+    # stat tiles (5 aggregates + a collectible motif tile)
+    tiles = []
+    tile_specs = [("conversations", "screen2Unit", P, D, 2), ("practiceMinutes", "screen3Unit", L, D, 3),
+                  ("phrasesSaved", "screen4Unit", Y, D, 4), ("topicsExplored", "screen5Unit", LL, D, 5),
+                  ("languagesPractised", "screen6Unit", D, WP, 6)]
+    for i, (pn, un, bgc, ink, scr) in enumerate(tile_specs):
+        tx, ty = cs_["tiles"][i]
+        t_id = nid()
+        hn, hx_, _ = hero_number(f"{tg} {pn}", pn, 14 - 71, 8 - 34, 115, 30, ink, counting=True, wdth=100, ls=-1)
+        un_id, _c, ut = bound_text(f"{tg} {pn} label", 14 - 71, 44 - 34, 115, un, font="body", size=11, color=ink,
+                                   wght=600, sizing="fixed", h=16, overflow="ellipsis", wrap="noWrap")
+        mask = nid()
+        sid, st = disp(30, ink, 800)
+        masked = text(f"{tg} {pn} private", 14 - 71, 8 - 34, [st], [run(sid, "—")], id=mask, op=0)
+        fly = nid()
+        tiles.append({"id": t_id, "num": hn, "mask": mask, "scr": scr, "fly": fly, "x": tx})
+        card_parts.append(node(f"{tg} tile {pn}", [node(f"{tg} tile fly {pn}", [
+            hx_, masked, ut, shape("tile", [rect(143, 68, 18, 0, 0)], [fill(bgc)], x=-71, y=-34)], id=fly, x=71, y=34)],
+            id=t_id, x=tx, y=ty))
+    mtile_id = nid()
+    mt_a, mt_b = {}, {}
+    mtx, mty = cs_["mtile"]
+    card_parts.append(node(f"{tg} tile motif", [
+        node("tile motif A", [motif_bubble(f"{tg} tile motif A", P, PD, False, 0.22, ids=mt_a)], x=48, y=36),
+        node("tile motif B", [motif_bubble(f"{tg} tile motif B", L, LD, True, 0.2, ids=mt_b)], x=96, y=38),
+        shape("tile", [rect(143, 68, 18, 0, 0)], [fill(WD)])], id=mtile_id, x=mtx, y=mty))
+    bg_id = nid()
+    card_parts.append(shape(f"{tg} blob", [smooth_path(bubble_pts(1.3, True))], [fill("55F6E97C")], x=cs_["blob"][0],
+                            y=cs_["blob"][1], rot=-0.3,
+                            children=[E("ClippingShape", {"sourceId": bg_id, "name": "Clip to card"})]))
+    card_parts.append(shape(f"{tg} face", [rect(CW, CH_, 30, 0, 0)], [fill(WP)], id=bg_id))
+    card_parts.append(shape(f"{tg} shadow", [rect(CW, CH_, 30, 0, 0)], [fill("55000000", feather=(18, 0, 14))]))
+
+    # card animations
+    c_rest = Anim(f"{tg} settled", 1)
+    c_asm = Anim(f"{tg} assemble", 140)
+    c_empty_off = Anim(f"{tg} mode: stats", 1)
+    c_empty_on = Anim(f"{tg} mode: new user", 1)
+    c_name_on, c_name_off = Anim(f"{tg} name shown", 1), Anim(f"{tg} name hidden", 1)
+    c_sens_on, c_sens_off = Anim(f"{tg} minutes shown", 1), Anim(f"{tg} minutes private", 1)
+    c_pers_on, c_pers_off = Anim(f"{tg} persona shown", 1), Anim(f"{tg} persona hidden (neutral motif)", 1)
+    c_pick = [Anim(f"{tg} persona {k}", 1) for k in range(4)]
+
+    # Assembly: the wordmark slides in, the year lands like a stamp, the persona emblem drops in with a squash and
+    # its rings draw on, the title cascades, then the five tiles are dealt in from alternating sides (counting up)
+    # and the collectible motif tile flips in last.
+    def asm(obj, prop_, keys, rest):
+        c_asm.k(obj, prop_, keys)
+        c_rest.hold(obj, prop_, rest)
+
+    wmx = cs_["wm"][0]
+    ey0 = cs_["emb"][1]
+    for obj, f0 in [(wm_id, 0), (year_id, 6), (emb_id, 12), (pt_id, 30), (pd_id, 38), (mtile_id, 84)] + \
+            [(t["id"], 44 + i * 6) for i, t in enumerate(tiles)]:
+        asm(obj, "opacity", [(0, 0, "hold"), (f0, 1, "hold")], 1)
+    asm(wm_id, "x", [(0, wmx - 104, "hold"), (0, wmx - 104, (0.25, 1.3, 0.5, 1)), (22, wmx, "hold")], wmx)
+    asm(year_id, "scaleX", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
+    asm(year_id, "scaleY", [(0, 2.4, "hold"), (6, 2.4, (0.6, 0, 0.9, 0.6)), (14, 0.86, "el"), (44, 1, "hold")], 1)
+    asm(year_id, "rotation", [(0, -0.5, "hold"), (6, -0.5, "out"), (16, 0.04, "el"), (44, 0, "hold")], 0)
+    asm(emb_id, "y", [(0, ey0 - 110, "hold"), (12, ey0 - 110, (0.5, 0, 0.9, 0.5)), (30, ey0, "hold")], ey0)
+    asm(emb_id, "scaleY", [(0, 1.2, "hold"), (28, 1.2, "lin"), (32, 0.74, "el"), (74, 1, "hold")], 1)
+    asm(emb_id, "scaleX", [(0, 0.86, "hold"), (28, 0.86, "lin"), (32, 1.22, "el"), (74, 1, "hold")], 1)
+    for k, tid in enumerate(CSTG["trim"]):
+        asm(tid, "end", [(0, 0, "hold"), (32 + k * 5, 0, "io"), (64 + k * 5, 1, "hold")], 1)
+    for k, si in enumerate(CSTG["sparks"]):
+        asm(si, "scaleX", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
+        asm(si, "scaleY", [(0, 0, "hold"), (40 + k * 4, 0, "back2"), (56 + k * 4, 1, "hold")], 1)
+    asm(pt_id, "y", [(0, ty_ + 20, "hold"), (30, ty_ + 20, "back"), (50, ty_, "hold")], ty_)
+    asm(pd_id, "y", [(0, dy_ + 12, "hold"), (38, dy_ + 12, "out"), (58, dy_, "hold")], dy_)
+    for i, t in enumerate(tiles):
+        f0 = 44 + i * 6
+        side = -1 if i % 2 == 0 else 1
+        asm(t["fly"], "x", [(0, 71 + side * 260, "hold"), (f0, 71 + side * 260, (0.2, 1.2, 0.45, 1)), (f0 + 26, 71, "hold")], 71)
+        asm(t["fly"], "rotation", [(0, side * 0.7, "hold"), (f0, side * 0.7, "back"), (f0 + 30, 0, "hold")], 0)
+        asm(t["fly"], "scaleX", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 1.08, "el"), (f0 + 56, 1, "hold")], 1)
+        asm(t["fly"], "scaleY", [(0, 1, "hold"), (f0 + 22, 1, "lin"), (f0 + 26, 0.9, "el"), (f0 + 56, 1, "hold")], 1)
+    asm(mtile_id, "y", [(0, mty - 48, "hold"), (84, mty - 48, "back"), (104, mty, "hold")], mty)
+    asm(mtile_id, "rotation", [(0, 0.6, "hold"), (84, 0.6, "back"), (108, 0, "hold")], 0)
+    for an, empty in ((c_empty_off, False), (c_empty_on, True)):
+        for t in tiles:
+            an.hold(t["id"], "x", -900 if empty else t["x"])
+        an.hold(mtile_id, "x", -900 if empty else mtx)
+        an.hold(empty_h, "opacity", 1 if empty else 0)
+        an.hold(empty_s, "opacity", 1 if empty else 0)
+    for an, on in ((c_name_on, True), (c_name_off, False)):
+        an.hold(name_id, "opacity", 1 if on else 0)
+    mins = tiles[1]
+    for an, on in ((c_sens_on, True), (c_sens_off, False)):
+        an.hold(mins["num"], "opacity", 1 if on else 0)
+        an.hold(mins["mask"], "opacity", 0 if on else 1)
+    for an, on in ((c_pers_on, True), (c_pers_off, False)):
+        an.hold(emb_id, "x", cs_["emb"][0] if on else -900)
+        an.hold(pt_id, "x", tx_ if on else -900)
+        an.hold(pd_id, "x", dx_ if on else -900)
+        an.hold(neutral_id, "opacity", 0 if on else 1)
+    for k, an in enumerate(c_pick):
+        for m, e in enumerate(CEMB):
+            an.hold(e["root"], "opacity", 1 if m == k else 0)
+            for obj, prop_, keys in e["rev"]:
+                an.hold(obj, prop_, keys[-1][1])
+        for ci, col in zip(CSTG["ring_c"], CEMB[k]["rings"]):
+            an.k(ci, "colorValue", [(0, col, "hold")], kind="c")
+        an.k(CSTG["ground_c"], "colorValue", [(0, CEMB[k]["ground"], "hold")], kind="c")
+    card_anims = [c_rest, c_asm, c_empty_off, c_empty_on, c_name_on, c_name_off, c_sens_on, c_sens_off, c_pers_on,
+                  c_pers_off] + c_pick
+
+    def two_state(name, a_anim, b_anim, cond_a, cond_b, cap_a, cap_b):
+        ia, ib = nid(), nid()
+        return E("StateMachineLayer", {"name": name, "id": nid()}, [
+            E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
+            E("EntryState", {"x": -200, "y": 0}, [trans(ia)]),
+            astate(ia, a_anim.id, 0, 0, [trans(ib, cond_b)], caption=cap_a),
+            astate(ib, b_anim.id, 250, 0, [trans(ia, cond_a)], caption=cap_b)])
+
+    asm_rest, asm_go = nid(), nid()
+    m_a, m_b = nid(), nid()
+    card_layers = [
+        E("StateMachineLayer", {"name": "Assemble", "id": nid()}, [
+            E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
+            E("EntryState", {"x": -200, "y": 0}, [trans(asm_rest)]),
+            astate(asm_rest, c_rest.id, 0, 0, [trans(asm_go, [cond(cs, "n", 10), RMF])], caption="Settled"),
+            astate(asm_go, c_asm.id, 250, 0, [trans(asm_rest, [cond(cs, "n", 10, "notEqual")])], reset=True,
+                   caption="Assemble (summary)")]),
+        # Mode layer (all metric scenes hidden -> new user)
+        E("StateMachineLayer", {"name": "Mode", "id": nid()}, [
+            E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
+            E("EntryState", {"x": -200, "y": 0}, [trans(m_a)]),
+            astate(m_a, c_empty_off.id, 0, 0, [trans(m_b, all_hidden)], caption="Stats"),
+            astate(m_b, c_empty_on.id, 250, 0, [trans(m_a, [cond(show(k), "b", True)]) for k in range(2, 9)],
+                   caption="New user")]),
+        two_state("Name privacy", c_name_off, c_name_on, [cond(V("shareIncludeName"), "b", False)],
+                  [cond(V("shareIncludeName"), "b", True)], "Name hidden", "Name shown"),
+        two_state("Sensitive values", c_sens_off, c_sens_on, [cond(V("shareIncludeSensitiveValues"), "b", False)],
+                  [cond(V("shareIncludeSensitiveValues"), "b", True)], "Minutes private", "Minutes shown"),
+        two_state("Persona visibility", c_pers_on, c_pers_off, [cond(show(9), "b", True)], [cond(show(9), "b", False)],
+                  "Persona shown", "Neutral motif"),
+    ]
+    pick_states, pick_any = [], []
+    first_pick = None
+    for k, an in enumerate(c_pick):
+        sid_ = nid()
+        first_pick = first_pick or sid_
+        pick_states.append(astate(sid_, an.id, k * 250, 0, caption=f"Persona {k}"))
+        for rg in idx_ranges(k):
+            pick_any.append(trans(sid_, rg))
+    card_layers.append(E("StateMachineLayer", {"name": "Persona pick", "id": nid()}, [
+        E("AnyState", {"x": -200, "y": -200}, pick_any), E("ExitState", {"x": -200, "y": -320}),
+        E("EntryState", {"x": -200, "y": 0}, [trans(first_pick)])] + pick_states))
+    ab = E("Artboard", {"isComponent": True, "defaultStateMachineId": sm_id, "viewModelId": VM,
+                        "viewModelInstanceId": "0:95", "styleId": cd["style"], "width": CW, "height": CH_,
+                        "x": 460 if variant == "tall" else 860, "y": 100, "name": cs_["name"], "id": ab_id},
+           [E("LayoutComponentStyle", {"name": f"{tg} style", "id": cd["style"]})] + card_parts +
+           [E("StateMachine", {"name": "Card", "id": sm_id}, card_layers)] + [a.xml() for a in card_anims])
+    return ab, card_anims
 
 
-def two_state(name, a_anim, b_anim, cond_a, cond_b, cap_a, cap_b):
-    ia, ib = nid(), nid()
-    return E("StateMachineLayer", {"name": name, "id": nid()}, [
-        E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
-        E("EntryState", {"x": -200, "y": 0}, [trans(ia)]),
-        astate(ia, a_anim.id, 0, 0, [trans(ib, cond_b)], caption=cap_a),
-        astate(ib, b_anim.id, 250, 0, [trans(ia, cond_a)], caption=cap_b)])
-
-
-asm_rest, asm_go = nid(), nid()
-card_layers = [
-    E("StateMachineLayer", {"name": "Assemble", "id": nid()}, [
-        E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
-        E("EntryState", {"x": -200, "y": 0}, [trans(asm_rest)]),
-        astate(asm_rest, c_rest.id, 0, 0, [trans(asm_go, [cond(cs, "n", 10), RMF])], caption="Settled"),
-        astate(asm_go, c_asm.id, 250, 0, [trans(asm_rest, [cond(cs, "n", 10, "notEqual")])], reset=True,
-               caption="Assemble (summary)")]),
-    two_state("Mode", c_empty_off, c_empty_on, [], [], "Stats", "New user"),
-    two_state("Name privacy", c_name_off, c_name_on, [cond(V("shareIncludeName"), "b", False)],
-              [cond(V("shareIncludeName"), "b", True)], "Name hidden", "Name shown"),
-    two_state("Sensitive values", c_sens_off, c_sens_on, [cond(V("shareIncludeSensitiveValues"), "b", False)],
-              [cond(V("shareIncludeSensitiveValues"), "b", True)], "Minutes private", "Minutes shown"),
-    two_state("Persona visibility", c_pers_on, c_pers_off, [cond(show(9), "b", True)], [cond(show(9), "b", False)],
-              "Persona shown", "Neutral motif"),
-]
-# Mode layer conditions (all metric scenes hidden -> new user)
-card_layers[1] = E("StateMachineLayer", {"name": "Mode", "id": nid()}, [
-    E("AnyState", {"x": -200, "y": -200}), E("ExitState", {"x": -200, "y": -320}),
-    E("EntryState", {"x": -200, "y": 0}, [trans((m_a := nid()))]),
-    astate(m_a, c_empty_off.id, 0, 0, [trans((m_b := nid()), all_hidden)], caption="Stats"),
-    astate(m_b, c_empty_on.id, 250, 0, [trans(m_a, [cond(show(k), "b", True)]) for k in range(2, 9)], caption="New user")])
-pick_states, pick_any = [], []
-for k, an in enumerate(c_pick):
-    sid_ = nid()
-    pick_states.append(astate(sid_, an.id, k * 250, 0, caption=f"Persona {k}"))
-    for rg in idx_ranges(k):
-        pick_any.append(trans(sid_, rg))
-card_layers.append(E("StateMachineLayer", {"name": "Persona pick", "id": nid()}, [
-    E("AnyState", {"x": -200, "y": -200}, pick_any), E("ExitState", {"x": -200, "y": -320}),
-    E("EntryState", {"x": -200, "y": 0}, [trans(pick_states and pick_states[0].split('id="')[-1].split('"')[0])])] + pick_states))
-card_ab = E("Artboard", {"isComponent": True, "defaultStateMachineId": CARD_SM, "viewModelId": VM, "viewModelInstanceId": "0:95",
-                         "styleId": cd["style"], "width": CARD_W, "height": CARD_H, "x": 460, "y": 100,
-                         "name": "Share Card", "id": CARD_AB},
-               [E("LayoutComponentStyle", {"name": "Card style", "id": cd["style"]})] + card_parts +
-               [E("StateMachine", {"name": "Card", "id": CARD_SM}, card_layers)] + [a.xml() for a in CARD_ANIMS])
+card_ab, CARD_ANIMS = build_card("tall", CARD_AB, CARD_SM)
+cardw_ab, CARDW_ANIMS = build_card("wide", CARDW_AB, CARDW_SM)
+CARD_ANIMS = CARD_ANIMS + CARDW_ANIMS
 
 # ================================================================ VIEW MODEL + instances
 
@@ -2509,7 +3049,8 @@ vm_xml = E("ViewModel", {"defaultInstanceId": "0:95", "name": "UserRecap", "id":
     instance("Extreme fixture", "0:97", fx_ext)])
 
 components = [E("ComponentAsset", {"artboardId": CLOCK_AB, "name": "Dwell Clock"}),
-              E("ComponentAsset", {"artboardId": CARD_AB, "name": "Share Card"})]
+              E("ComponentAsset", {"artboardId": CARD_AB, "name": "Share Card"}),
+              E("ComponentAsset", {"artboardId": CARDW_AB, "name": "Share Card Wide"})]
 
 
 def doc(children):
@@ -2517,7 +3058,7 @@ def doc(children):
 
 
 open(os.path.join(ROOT, "scene.rml"), "w").write(doc([main_xml]))
-open(os.path.join(ROOT, "components.rml"), "w").write(doc([clock_ab, card_ab] + components))
+open(os.path.join(ROOT, "components.rml"), "w").write(doc([clock_ab, card_ab, cardw_ab] + components))
 open(os.path.join(ROOT, "data.rml"), "w").write(doc([vm_xml] + CONV + FONTS))
 print("generated: %d animations, %d converters, %d view model properties" % (len(ANIMS) + len(CARD_ANIMS) + 2, len(CONV), len(PROPS)))
 

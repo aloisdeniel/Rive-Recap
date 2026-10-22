@@ -1,0 +1,1996 @@
+{
+  "schema": 1,
+  "artboard": "Switchyard Recap",
+  "stateMachine": "Recap Sequencer",
+  "viewModel": {
+    "name": "Fixture",
+    "viewModel": "UserRecap",
+    "properties": [
+      {
+        "name": "userName",
+        "path": "userName",
+        "type": "string",
+        "value": "Alex",
+        "changed": false
+      },
+      {
+        "name": "year",
+        "path": "year",
+        "type": "number",
+        "value": 2026,
+        "changed": false
+      },
+      {
+        "name": "periodLabel",
+        "path": "periodLabel",
+        "type": "string",
+        "value": "January 1–December 31, 2026",
+        "changed": false
+      },
+      {
+        "name": "locale",
+        "path": "locale",
+        "type": "string",
+        "value": "en-GB",
+        "changed": false
+      },
+      {
+        "name": "journeys",
+        "path": "journeys",
+        "type": "number",
+        "value": 624,
+        "changed": false
+      },
+      {
+        "name": "distanceKm",
+        "path": "distanceKm",
+        "type": "number",
+        "value": 3840,
+        "changed": false
+      },
+      {
+        "name": "routesExplored",
+        "path": "routesExplored",
+        "type": "number",
+        "value": 28,
+        "changed": false
+      },
+      {
+        "name": "stationsVisited",
+        "path": "stationsVisited",
+        "type": "number",
+        "value": 96,
+        "changed": false
+      },
+      {
+        "name": "ferryTrips",
+        "path": "ferryTrips",
+        "type": "number",
+        "value": 18,
+        "changed": false
+      },
+      {
+        "name": "weekendOutings",
+        "path": "weekendOutings",
+        "type": "number",
+        "value": 41,
+        "changed": false
+      },
+      {
+        "name": "activeMonths",
+        "path": "activeMonths",
+        "type": "number",
+        "value": 12,
+        "changed": false
+      },
+      {
+        "name": "personaIndex",
+        "path": "personaIndex",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "personaName",
+        "path": "personaName",
+        "type": "string",
+        "value": "City Connector",
+        "changed": false
+      },
+      {
+        "name": "personaDescription",
+        "path": "personaDescription",
+        "type": "string",
+        "value": "You make the connections.",
+        "changed": false
+      },
+      {
+        "name": "personaColor",
+        "path": "personaColor",
+        "type": "color",
+        "value": "FF1B4ED0",
+        "changed": false
+      },
+      {
+        "name": "autoAdvanceSeconds",
+        "path": "autoAdvanceSeconds",
+        "type": "number",
+        "value": 7,
+        "changed": false
+      },
+      {
+        "name": "autoAdvanceEnabled",
+        "path": "autoAdvanceEnabled",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "isPaused",
+        "path": "isPaused",
+        "type": "boolean",
+        "value": true,
+        "changed": true
+      },
+      {
+        "name": "reducedMotion",
+        "path": "reducedMotion",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "soundEnabled",
+        "path": "soundEnabled",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "currentScreen",
+        "path": "currentScreen",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "screenProgress",
+        "path": "screenProgress",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "shareIncludeName",
+        "path": "shareIncludeName",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "shareIncludeSensitiveValues",
+        "path": "shareIncludeSensitiveValues",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "continueLabel",
+        "path": "continueLabel",
+        "type": "string",
+        "value": "Continue",
+        "changed": false
+      },
+      {
+        "name": "previousLabel",
+        "path": "previousLabel",
+        "type": "string",
+        "value": "Previous",
+        "changed": false
+      },
+      {
+        "name": "pauseLabel",
+        "path": "pauseLabel",
+        "type": "string",
+        "value": "Pause",
+        "changed": false
+      },
+      {
+        "name": "playLabel",
+        "path": "playLabel",
+        "type": "string",
+        "value": "Play",
+        "changed": false
+      },
+      {
+        "name": "shareLabel",
+        "path": "shareLabel",
+        "type": "string",
+        "value": "Share",
+        "changed": false
+      },
+      {
+        "name": "replayLabel",
+        "path": "replayLabel",
+        "type": "string",
+        "value": "Replay",
+        "changed": false
+      },
+      {
+        "name": "introHeadline",
+        "path": "introHeadline",
+        "type": "string",
+        "value": "Your 2026 on Switchyard",
+        "changed": false
+      },
+      {
+        "name": "introSupport",
+        "path": "introSupport",
+        "type": "string",
+        "value": "A year, uniquely yours.",
+        "changed": false
+      },
+      {
+        "name": "summaryHeadline",
+        "path": "summaryHeadline",
+        "type": "string",
+        "value": "A little year. A lot of you.",
+        "changed": false
+      },
+      {
+        "name": "summarySupport",
+        "path": "summarySupport",
+        "type": "string",
+        "value": "Take a piece of your year with you.",
+        "changed": false
+      },
+      {
+        "name": "emptyHeadline",
+        "path": "emptyHeadline",
+        "type": "string",
+        "value": "Every story starts somewhere.",
+        "changed": false
+      },
+      {
+        "name": "emptySupport",
+        "path": "emptySupport",
+        "type": "string",
+        "value": "Your next chapter is waiting.",
+        "changed": false
+      },
+      {
+        "name": "personaLabel",
+        "path": "personaLabel",
+        "type": "string",
+        "value": "Your personal style",
+        "changed": false
+      },
+      {
+        "name": "showScreen1",
+        "path": "showScreen1",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen2",
+        "path": "showScreen2",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen3",
+        "path": "showScreen3",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen4",
+        "path": "showScreen4",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen5",
+        "path": "showScreen5",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen6",
+        "path": "showScreen6",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen7",
+        "path": "showScreen7",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen8",
+        "path": "showScreen8",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen9",
+        "path": "showScreen9",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "showScreen10",
+        "path": "showScreen10",
+        "type": "boolean",
+        "value": true,
+        "changed": false
+      },
+      {
+        "name": "screen2Headline",
+        "path": "screen2Headline",
+        "type": "string",
+        "value": "You kept the city moving.",
+        "changed": false
+      },
+      {
+        "name": "screen2Support",
+        "path": "screen2Support",
+        "type": "string",
+        "value": "A year of getting out there.",
+        "changed": false
+      },
+      {
+        "name": "screen2Unit",
+        "path": "screen2Unit",
+        "type": "string",
+        "value": "journeys",
+        "changed": false
+      },
+      {
+        "name": "screen3Headline",
+        "path": "screen3Headline",
+        "type": "string",
+        "value": "Across your own little universe.",
+        "changed": false
+      },
+      {
+        "name": "screen3Support",
+        "path": "screen3Support",
+        "type": "string",
+        "value": "Everyday journeys added up.",
+        "changed": false
+      },
+      {
+        "name": "screen3Unit",
+        "path": "screen3Unit",
+        "type": "string",
+        "value": "km travelled",
+        "changed": false
+      },
+      {
+        "name": "screen4Headline",
+        "path": "screen4Headline",
+        "type": "string",
+        "value": "You took another line.",
+        "changed": false
+      },
+      {
+        "name": "screen4Support",
+        "path": "screen4Support",
+        "type": "string",
+        "value": "Familiar streets. New connections.",
+        "changed": false
+      },
+      {
+        "name": "screen4Unit",
+        "path": "screen4Unit",
+        "type": "string",
+        "value": "routes explored",
+        "changed": false
+      },
+      {
+        "name": "screen5Headline",
+        "path": "screen5Headline",
+        "type": "string",
+        "value": "More dots on your map.",
+        "changed": false
+      },
+      {
+        "name": "screen5Support",
+        "path": "screen5Support",
+        "type": "string",
+        "value": "New corners, one stop at a time.",
+        "changed": false
+      },
+      {
+        "name": "screen5Unit",
+        "path": "screen5Unit",
+        "type": "string",
+        "value": "stations visited",
+        "changed": false
+      },
+      {
+        "name": "screen6Headline",
+        "path": "screen6Headline",
+        "type": "string",
+        "value": "A different way across.",
+        "changed": false
+      },
+      {
+        "name": "screen6Support",
+        "path": "screen6Support",
+        "type": "string",
+        "value": "Some journeys came with a view.",
+        "changed": false
+      },
+      {
+        "name": "screen6Unit",
+        "path": "screen6Unit",
+        "type": "string",
+        "value": "ferry trips",
+        "changed": false
+      },
+      {
+        "name": "screen7Headline",
+        "path": "screen7Headline",
+        "type": "string",
+        "value": "The weekend had a route.",
+        "changed": false
+      },
+      {
+        "name": "screen7Support",
+        "path": "screen7Support",
+        "type": "string",
+        "value": "You followed a little curiosity.",
+        "changed": false
+      },
+      {
+        "name": "screen7Unit",
+        "path": "screen7Unit",
+        "type": "string",
+        "value": "weekend outings",
+        "changed": false
+      },
+      {
+        "name": "screen8Headline",
+        "path": "screen8Headline",
+        "type": "string",
+        "value": "A rhythm all your own.",
+        "changed": false
+      },
+      {
+        "name": "screen8Support",
+        "path": "screen8Support",
+        "type": "string",
+        "value": "The city changed. You kept exploring.",
+        "changed": false
+      },
+      {
+        "name": "screen8Unit",
+        "path": "screen8Unit",
+        "type": "string",
+        "value": "months on the move",
+        "changed": false
+      },
+      {
+        "name": "greetingLabel",
+        "path": "greetingLabel",
+        "type": "string",
+        "value": "Hi,",
+        "changed": false
+      },
+      {
+        "name": "layoutBreakpoint",
+        "path": "layoutBreakpoint",
+        "type": "number",
+        "value": 768,
+        "changed": false
+      },
+      {
+        "name": "_navDir",
+        "path": "_navDir",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_count2",
+        "path": "_count2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count3",
+        "path": "_count3",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count4",
+        "path": "_count4",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count5",
+        "path": "_count5",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count6",
+        "path": "_count6",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count7",
+        "path": "_count7",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_count8",
+        "path": "_count8",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_personaSlot",
+        "path": "_personaSlot",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_isEmpty",
+        "path": "_isEmpty",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "_pauseButtonLabel",
+        "path": "_pauseButtonLabel",
+        "type": "string",
+        "value": "Play",
+        "changed": true
+      },
+      {
+        "name": "_personaInk",
+        "path": "_personaInk",
+        "type": "color",
+        "value": "FFF5F2E9",
+        "changed": false
+      },
+      {
+        "name": "_activeRoute",
+        "path": "_activeRoute",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_focusIndex",
+        "path": "_focusIndex",
+        "type": "number",
+        "value": 2,
+        "changed": true
+      },
+      {
+        "name": "_focusVisible",
+        "path": "_focusVisible",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_nextTapped",
+        "path": "_nextTapped",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_prevTapped",
+        "path": "_prevTapped",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_pauseTapped",
+        "path": "_pauseTapped",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_replayTapped",
+        "path": "_replayTapped",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_replay",
+        "path": "_replay",
+        "type": "trigger",
+        "changed": false
+      },
+      {
+        "name": "_idle1",
+        "path": "_idle1",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle2",
+        "path": "_idle2",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle3",
+        "path": "_idle3",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle4",
+        "path": "_idle4",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle5",
+        "path": "_idle5",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle6",
+        "path": "_idle6",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle7",
+        "path": "_idle7",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle8",
+        "path": "_idle8",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle9",
+        "path": "_idle9",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_idle10",
+        "path": "_idle10",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      },
+      {
+        "name": "_vw",
+        "path": "_vw",
+        "type": "number",
+        "value": 1280,
+        "changed": true
+      },
+      {
+        "name": "_vh",
+        "path": "_vh",
+        "type": "number",
+        "value": 720,
+        "changed": true
+      },
+      {
+        "name": "_landscape",
+        "path": "_landscape",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_cs",
+        "path": "_cs",
+        "type": "number",
+        "value": 0.860000014,
+        "changed": true
+      },
+      {
+        "name": "_scx",
+        "path": "_scx",
+        "type": "number",
+        "value": 640,
+        "changed": true
+      },
+      {
+        "name": "_scy",
+        "path": "_scy",
+        "type": "number",
+        "value": 350.540009,
+        "changed": true
+      },
+      {
+        "name": "_artClipW",
+        "path": "_artClipW",
+        "type": "number",
+        "value": 768,
+        "changed": true
+      },
+      {
+        "name": "_copyClipX",
+        "path": "_copyClipX",
+        "type": "number",
+        "value": 768,
+        "changed": true
+      },
+      {
+        "name": "_copyClipW",
+        "path": "_copyClipW",
+        "type": "number",
+        "value": 512,
+        "changed": true
+      },
+      {
+        "name": "_copyW",
+        "path": "_copyW",
+        "type": "number",
+        "value": 354.488953,
+        "changed": true
+      },
+      {
+        "name": "_rkX",
+        "path": "_rkX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_rkY",
+        "path": "_rkY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_rkS",
+        "path": "_rkS",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_mX",
+        "path": "_mX",
+        "type": "number",
+        "value": 75.1335297,
+        "changed": true
+      },
+      {
+        "name": "_mY",
+        "path": "_mY",
+        "type": "number",
+        "value": -142.062424,
+        "changed": true
+      },
+      {
+        "name": "_mS",
+        "path": "_mS",
+        "type": "number",
+        "value": 1.58393061,
+        "changed": true
+      },
+      {
+        "name": "_hdrWmX",
+        "path": "_hdrWmX",
+        "type": "number",
+        "value": 54.0930214,
+        "changed": true
+      },
+      {
+        "name": "_hdrWmY",
+        "path": "_hdrWmY",
+        "type": "number",
+        "value": 32,
+        "changed": false
+      },
+      {
+        "name": "_hdrYrX",
+        "path": "_hdrYrX",
+        "type": "number",
+        "value": 1436.27905,
+        "changed": true
+      },
+      {
+        "name": "_hdrYrY",
+        "path": "_hdrYrY",
+        "type": "number",
+        "value": 22,
+        "changed": false
+      },
+      {
+        "name": "_hdrBandW",
+        "path": "_hdrBandW",
+        "type": "number",
+        "value": 1488.37207,
+        "changed": true
+      },
+      {
+        "name": "_hdrBandH",
+        "path": "_hdrBandH",
+        "type": "number",
+        "value": 82,
+        "changed": false
+      },
+      {
+        "name": "_dockY",
+        "path": "_dockY",
+        "type": "number",
+        "value": -5.84000015,
+        "changed": true
+      },
+      {
+        "name": "_dockL",
+        "path": "_dockL",
+        "type": "number",
+        "value": 28.0930233,
+        "changed": true
+      },
+      {
+        "name": "_dockR",
+        "path": "_dockR",
+        "type": "number",
+        "value": 1070.27905,
+        "changed": true
+      },
+      {
+        "name": "_dockBtnY",
+        "path": "_dockBtnY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_dockBandW",
+        "path": "_dockBandW",
+        "type": "number",
+        "value": 1488.37207,
+        "changed": true
+      },
+      {
+        "name": "_dockBandH",
+        "path": "_dockBandH",
+        "type": "number",
+        "value": 104,
+        "changed": false
+      },
+      {
+        "name": "_s1PX",
+        "path": "_s1PX",
+        "type": "number",
+        "value": 384,
+        "changed": true
+      },
+      {
+        "name": "_s1PY",
+        "path": "_s1PY",
+        "type": "number",
+        "value": 417.065094,
+        "changed": true
+      },
+      {
+        "name": "_s1DS",
+        "path": "_s1DS",
+        "type": "number",
+        "value": 1.58393061,
+        "changed": true
+      },
+      {
+        "name": "_res1",
+        "path": "_res1",
+        "type": "number",
+        "value": 1.58393061,
+        "changed": true
+      },
+      {
+        "name": "_s1copyX",
+        "path": "_s1copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s1copyY",
+        "path": "_s1copyY",
+        "type": "number",
+        "value": -251.205109,
+        "changed": true
+      },
+      {
+        "name": "_s1copyS",
+        "path": "_s1copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s1topX",
+        "path": "_s1topX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s1topY",
+        "path": "_s1topY",
+        "type": "number",
+        "value": -29.1048508,
+        "changed": true
+      },
+      {
+        "name": "_s1topS",
+        "path": "_s1topS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s1artX",
+        "path": "_s1artX",
+        "type": "number",
+        "value": 75.1335297,
+        "changed": true
+      },
+      {
+        "name": "_s1artY",
+        "path": "_s1artY",
+        "type": "number",
+        "value": -142.062424,
+        "changed": true
+      },
+      {
+        "name": "_s1artS",
+        "path": "_s1artS",
+        "type": "number",
+        "value": 1.58393061,
+        "changed": true
+      },
+      {
+        "name": "_s2PX",
+        "path": "_s2PX",
+        "type": "number",
+        "value": 545.265381,
+        "changed": true
+      },
+      {
+        "name": "_s2PY",
+        "path": "_s2PY",
+        "type": "number",
+        "value": 199.763443,
+        "changed": true
+      },
+      {
+        "name": "_s2DS",
+        "path": "_s2DS",
+        "type": "number",
+        "value": 1.31110048,
+        "changed": true
+      },
+      {
+        "name": "_tramW",
+        "path": "_tramW",
+        "type": "number",
+        "value": 400.861877,
+        "changed": true
+      },
+      {
+        "name": "_res2",
+        "path": "_res2",
+        "type": "number",
+        "value": 1.25301087,
+        "changed": true
+      },
+      {
+        "name": "_copyW2",
+        "path": "_copyW2",
+        "type": "number",
+        "value": 354.488953,
+        "changed": true
+      },
+      {
+        "name": "_s2copyX",
+        "path": "_s2copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s2copyY",
+        "path": "_s2copyY",
+        "type": "number",
+        "value": -516.780518,
+        "changed": true
+      },
+      {
+        "name": "_s2copyS",
+        "path": "_s2copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s2tramX",
+        "path": "_s2tramX",
+        "type": "number",
+        "value": 782.727722,
+        "changed": true
+      },
+      {
+        "name": "_s2tramY",
+        "path": "_s2tramY",
+        "type": "number",
+        "value": -296.668091,
+        "changed": true
+      },
+      {
+        "name": "_s2tramS",
+        "path": "_s2tramS",
+        "type": "number",
+        "value": 1.25301087,
+        "changed": true
+      },
+      {
+        "name": "_s2artX",
+        "path": "_s2artX",
+        "type": "number",
+        "value": 128.335403,
+        "changed": true
+      },
+      {
+        "name": "_s2artY",
+        "path": "_s2artY",
+        "type": "number",
+        "value": -30.9902401,
+        "changed": true
+      },
+      {
+        "name": "_s2artS",
+        "path": "_s2artS",
+        "type": "number",
+        "value": 1.31110048,
+        "changed": true
+      },
+      {
+        "name": "_s3PX",
+        "path": "_s3PX",
+        "type": "number",
+        "value": 165.090164,
+        "changed": true
+      },
+      {
+        "name": "_s3PY",
+        "path": "_s3PY",
+        "type": "number",
+        "value": 548.018127,
+        "changed": true
+      },
+      {
+        "name": "_s3DS",
+        "path": "_s3DS",
+        "type": "number",
+        "value": 1.53083801,
+        "changed": true
+      },
+      {
+        "name": "_copyWs",
+        "path": "_copyWs",
+        "type": "number",
+        "value": 312.488953,
+        "changed": true
+      },
+      {
+        "name": "_s3copyX",
+        "path": "_s3copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s3copyY",
+        "path": "_s3copyY",
+        "type": "number",
+        "value": -376.320435,
+        "changed": true
+      },
+      {
+        "name": "_s3copyS",
+        "path": "_s3copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s3artX",
+        "path": "_s3artX",
+        "type": "number",
+        "value": 85.4865952,
+        "changed": true
+      },
+      {
+        "name": "_s3artY",
+        "path": "_s3artY",
+        "type": "number",
+        "value": -49.0087166,
+        "changed": true
+      },
+      {
+        "name": "_s3artS",
+        "path": "_s3artS",
+        "type": "number",
+        "value": 1.53083801,
+        "changed": true
+      },
+      {
+        "name": "_s3lowerX",
+        "path": "_s3lowerX",
+        "type": "number",
+        "value": 799.08374,
+        "changed": true
+      },
+      {
+        "name": "_s3lowerY",
+        "path": "_s3lowerY",
+        "type": "number",
+        "value": -251.205109,
+        "changed": true
+      },
+      {
+        "name": "_s3lowerS",
+        "path": "_s3lowerS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s4PX",
+        "path": "_s4PX",
+        "type": "number",
+        "value": 384,
+        "changed": true
+      },
+      {
+        "name": "_s4PY",
+        "path": "_s4PY",
+        "type": "number",
+        "value": 179.121094,
+        "changed": true
+      },
+      {
+        "name": "_s4DS",
+        "path": "_s4DS",
+        "type": "number",
+        "value": 1.25123286,
+        "changed": true
+      },
+      {
+        "name": "_s4copyX",
+        "path": "_s4copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s4copyY",
+        "path": "_s4copyY",
+        "type": "number",
+        "value": -401.343475,
+        "changed": true
+      },
+      {
+        "name": "_s4copyS",
+        "path": "_s4copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s4artX",
+        "path": "_s4artX",
+        "type": "number",
+        "value": 140.009583,
+        "changed": true
+      },
+      {
+        "name": "_s4artY",
+        "path": "_s4artY",
+        "type": "number",
+        "value": -26.0810966,
+        "changed": true
+      },
+      {
+        "name": "_s4artS",
+        "path": "_s4artS",
+        "type": "number",
+        "value": 1.25123286,
+        "changed": true
+      },
+      {
+        "name": "_s5PX",
+        "path": "_s5PX",
+        "type": "number",
+        "value": 549.145996,
+        "changed": true
+      },
+      {
+        "name": "_s5PY",
+        "path": "_s5PY",
+        "type": "number",
+        "value": 661.259094,
+        "changed": true
+      },
+      {
+        "name": "_s5DS",
+        "path": "_s5DS",
+        "type": "number",
+        "value": 1.22330356,
+        "changed": true
+      },
+      {
+        "name": "_s5copyX",
+        "path": "_s5copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s5copyY",
+        "path": "_s5copyY",
+        "type": "number",
+        "value": -401.343475,
+        "changed": true
+      },
+      {
+        "name": "_s5copyS",
+        "path": "_s5copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s5artX",
+        "path": "_s5artX",
+        "type": "number",
+        "value": 145.455811,
+        "changed": true
+      },
+      {
+        "name": "_s5artY",
+        "path": "_s5artY",
+        "type": "number",
+        "value": -23.7908936,
+        "changed": true
+      },
+      {
+        "name": "_s5artS",
+        "path": "_s5artS",
+        "type": "number",
+        "value": 1.22330356,
+        "changed": true
+      },
+      {
+        "name": "_s6PX",
+        "path": "_s6PX",
+        "type": "number",
+        "value": 473.491486,
+        "changed": true
+      },
+      {
+        "name": "_s6PY",
+        "path": "_s6PY",
+        "type": "number",
+        "value": 156.636185,
+        "changed": true
+      },
+      {
+        "name": "_s6DS",
+        "path": "_s6DS",
+        "type": "number",
+        "value": 1.07698667,
+        "changed": true
+      },
+      {
+        "name": "_s6copyX",
+        "path": "_s6copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s6copyY",
+        "path": "_s6copyY",
+        "type": "number",
+        "value": -228.565186,
+        "changed": true
+      },
+      {
+        "name": "_s6copyS",
+        "path": "_s6copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s6stubO",
+        "path": "_s6stubO",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_s6artX",
+        "path": "_s6artX",
+        "type": "number",
+        "value": 217.801529,
+        "changed": true
+      },
+      {
+        "name": "_s6artY",
+        "path": "_s6artY",
+        "type": "number",
+        "value": 6.63141441,
+        "changed": true
+      },
+      {
+        "name": "_s6artS",
+        "path": "_s6artS",
+        "type": "number",
+        "value": 0.852299809,
+        "changed": true
+      },
+      {
+        "name": "_s6seaX",
+        "path": "_s6seaX",
+        "type": "number",
+        "value": 342.699982,
+        "changed": true
+      },
+      {
+        "name": "_s6seaY",
+        "path": "_s6seaY",
+        "type": "number",
+        "value": -110.599319,
+        "changed": true
+      },
+      {
+        "name": "_s6seaS",
+        "path": "_s6seaS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s7PX",
+        "path": "_s7PX",
+        "type": "number",
+        "value": 384,
+        "changed": true
+      },
+      {
+        "name": "_s7PY",
+        "path": "_s7PY",
+        "type": "number",
+        "value": 239.714127,
+        "changed": true
+      },
+      {
+        "name": "_s7DS",
+        "path": "_s7DS",
+        "type": "number",
+        "value": 1.21786666,
+        "changed": true
+      },
+      {
+        "name": "_s7copyX",
+        "path": "_s7copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s7copyY",
+        "path": "_s7copyY",
+        "type": "number",
+        "value": -401.343475,
+        "changed": true
+      },
+      {
+        "name": "_s7copyS",
+        "path": "_s7copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s7artX",
+        "path": "_s7artX",
+        "type": "number",
+        "value": 146.516006,
+        "changed": true
+      },
+      {
+        "name": "_s7artY",
+        "path": "_s7artY",
+        "type": "number",
+        "value": -23.3450661,
+        "changed": true
+      },
+      {
+        "name": "_s7artS",
+        "path": "_s7artS",
+        "type": "number",
+        "value": 1.21786666,
+        "changed": true
+      },
+      {
+        "name": "_s8PX",
+        "path": "_s8PX",
+        "type": "number",
+        "value": 221.03656,
+        "changed": true
+      },
+      {
+        "name": "_s8PY",
+        "path": "_s8PY",
+        "type": "number",
+        "value": 484.532166,
+        "changed": true
+      },
+      {
+        "name": "_s8DS",
+        "path": "_s8DS",
+        "type": "number",
+        "value": 1.27487493,
+        "changed": true
+      },
+      {
+        "name": "_res8",
+        "path": "_res8",
+        "type": "number",
+        "value": 1.20713651,
+        "changed": true
+      },
+      {
+        "name": "_s8copyX",
+        "path": "_s8copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s8copyY",
+        "path": "_s8copyY",
+        "type": "number",
+        "value": -401.343475,
+        "changed": true
+      },
+      {
+        "name": "_s8copyS",
+        "path": "_s8copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s8artX",
+        "path": "_s8artX",
+        "type": "number",
+        "value": 148.608368,
+        "changed": true
+      },
+      {
+        "name": "_s8artY",
+        "path": "_s8artY",
+        "type": "number",
+        "value": -22.4651985,
+        "changed": true
+      },
+      {
+        "name": "_s8artS",
+        "path": "_s8artS",
+        "type": "number",
+        "value": 1.20713651,
+        "changed": true
+      },
+      {
+        "name": "_s9PX",
+        "path": "_s9PX",
+        "type": "number",
+        "value": 384,
+        "changed": true
+      },
+      {
+        "name": "_s9PY",
+        "path": "_s9PY",
+        "type": "number",
+        "value": 344.283844,
+        "changed": true
+      },
+      {
+        "name": "_s9DS",
+        "path": "_s9DS",
+        "type": "number",
+        "value": 1.25123286,
+        "changed": true
+      },
+      {
+        "name": "_copyWt",
+        "path": "_copyWt",
+        "type": "number",
+        "value": 358.488953,
+        "changed": true
+      },
+      {
+        "name": "_s9copyX",
+        "path": "_s9copyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s9copyY",
+        "path": "_s9copyY",
+        "type": "number",
+        "value": -373.937286,
+        "changed": true
+      },
+      {
+        "name": "_s9copyS",
+        "path": "_s9copyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s9emblemX",
+        "path": "_s9emblemX",
+        "type": "number",
+        "value": 140.009583,
+        "changed": true
+      },
+      {
+        "name": "_s9emblemY",
+        "path": "_s9emblemY",
+        "type": "number",
+        "value": -26.0810966,
+        "changed": true
+      },
+      {
+        "name": "_s9emblemS",
+        "path": "_s9emblemS",
+        "type": "number",
+        "value": 1.25123286,
+        "changed": true
+      },
+      {
+        "name": "_s10PX",
+        "path": "_s10PX",
+        "type": "number",
+        "value": 209.034485,
+        "changed": true
+      },
+      {
+        "name": "_s10PY",
+        "path": "_s10PY",
+        "type": "number",
+        "value": 463.229645,
+        "changed": true
+      },
+      {
+        "name": "_s10DS",
+        "path": "_s10DS",
+        "type": "number",
+        "value": 1.27739835,
+        "changed": true
+      },
+      {
+        "name": "_cc0X",
+        "path": "_cc0X",
+        "type": "number",
+        "value": 374,
+        "changed": true
+      },
+      {
+        "name": "_cc0Y",
+        "path": "_cc0Y",
+        "type": "number",
+        "value": -186,
+        "changed": true
+      },
+      {
+        "name": "_cc1X",
+        "path": "_cc1X",
+        "type": "number",
+        "value": 364,
+        "changed": true
+      },
+      {
+        "name": "_cc1Y",
+        "path": "_cc1Y",
+        "type": "number",
+        "value": -186,
+        "changed": true
+      },
+      {
+        "name": "_cc2X",
+        "path": "_cc2X",
+        "type": "number",
+        "value": 374,
+        "changed": true
+      },
+      {
+        "name": "_cc2Y",
+        "path": "_cc2Y",
+        "type": "number",
+        "value": -182,
+        "changed": true
+      },
+      {
+        "name": "_cc3X",
+        "path": "_cc3X",
+        "type": "number",
+        "value": 364,
+        "changed": true
+      },
+      {
+        "name": "_cc3Y",
+        "path": "_cc3Y",
+        "type": "number",
+        "value": -182,
+        "changed": true
+      },
+      {
+        "name": "_cc4X",
+        "path": "_cc4X",
+        "type": "number",
+        "value": 374,
+        "changed": true
+      },
+      {
+        "name": "_cc4Y",
+        "path": "_cc4Y",
+        "type": "number",
+        "value": -178,
+        "changed": true
+      },
+      {
+        "name": "_cardTextW",
+        "path": "_cardTextW",
+        "type": "number",
+        "value": 302,
+        "changed": false
+      },
+      {
+        "name": "_cardW",
+        "path": "_cardW",
+        "type": "number",
+        "value": 696,
+        "changed": true
+      },
+      {
+        "name": "_cardH",
+        "path": "_cardH",
+        "type": "number",
+        "value": 300,
+        "changed": true
+      },
+      {
+        "name": "_cinfoX",
+        "path": "_cinfoX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cinfoY",
+        "path": "_cinfoY",
+        "type": "number",
+        "value": -220,
+        "changed": true
+      },
+      {
+        "name": "_cperX",
+        "path": "_cperX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cperY",
+        "path": "_cperY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdiscX",
+        "path": "_cdiscX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdiscY",
+        "path": "_cdiscY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_clinesO",
+        "path": "_clinesO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_cyrX",
+        "path": "_cyrX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cyrY",
+        "path": "_cyrY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdivO",
+        "path": "_cdivO",
+        "type": "number",
+        "value": 0,
+        "changed": true
+      },
+      {
+        "name": "_cdivpX",
+        "path": "_cdivpX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cdivpY",
+        "path": "_cdivpY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_chperfO",
+        "path": "_chperfO",
+        "type": "number",
+        "value": 0,
+        "changed": true
+      },
+      {
+        "name": "_cstubX",
+        "path": "_cstubX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cstubY",
+        "path": "_cstubY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_cvperfO",
+        "path": "_cvperfO",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_shead1O",
+        "path": "_shead1O",
+        "type": "number",
+        "value": 0,
+        "changed": true
+      },
+      {
+        "name": "_shead2O",
+        "path": "_shead2O",
+        "type": "number",
+        "value": 1,
+        "changed": true
+      },
+      {
+        "name": "_s10headX",
+        "path": "_s10headX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s10headY",
+        "path": "_s10headY",
+        "type": "number",
+        "value": 120.566124,
+        "changed": true
+      },
+      {
+        "name": "_s10headS",
+        "path": "_s10headS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_ssupO",
+        "path": "_ssupO",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "_s10supX",
+        "path": "_s10supX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s10supY",
+        "path": "_s10supY",
+        "type": "number",
+        "value": -406.109802,
+        "changed": true
+      },
+      {
+        "name": "_s10supS",
+        "path": "_s10supS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s10cardX",
+        "path": "_s10cardX",
+        "type": "number",
+        "value": 16.2758617,
+        "changed": true
+      },
+      {
+        "name": "_s10cardY",
+        "path": "_s10cardY",
+        "type": "number",
+        "value": 38.172184,
+        "changed": true
+      },
+      {
+        "name": "_s10cardS",
+        "path": "_s10cardS",
+        "type": "number",
+        "value": 0.988505721,
+        "changed": true
+      },
+      {
+        "name": "_s10ecopyX",
+        "path": "_s10ecopyX",
+        "type": "number",
+        "value": 784.202209,
+        "changed": true
+      },
+      {
+        "name": "_s10ecopyY",
+        "path": "_s10ecopyY",
+        "type": "number",
+        "value": -23.6143837,
+        "changed": true
+      },
+      {
+        "name": "_s10ecopyS",
+        "path": "_s10ecopyS",
+        "type": "number",
+        "value": 1.19157445,
+        "changed": true
+      },
+      {
+        "name": "_s10eartX",
+        "path": "_s10eartX",
+        "type": "number",
+        "value": -48.7741928,
+        "changed": true
+      },
+      {
+        "name": "_s10eartY",
+        "path": "_s10eartY",
+        "type": "number",
+        "value": -803.524536,
+        "changed": true
+      },
+      {
+        "name": "_s10eartS",
+        "path": "_s10eartS",
+        "type": "number",
+        "value": 2.21935487,
+        "changed": true
+      },
+      {
+        "name": "_testW",
+        "path": "_testW",
+        "type": "number",
+        "value": 1280,
+        "changed": true
+      },
+      {
+        "name": "_testH",
+        "path": "_testH",
+        "type": "number",
+        "value": 720,
+        "changed": true
+      },
+      {
+        "name": "_testW2",
+        "path": "_testW2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_testH2",
+        "path": "_testH2",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "_testAt",
+        "path": "_testAt",
+        "type": "number",
+        "value": -1,
+        "changed": false
+      }
+    ]
+  },
+  "globals": [],
+  "nested": []
+}

@@ -17,6 +17,8 @@
 --   * draws the progress segments (one per eligible scene)
 --   * writes pointer parallax for the paper theater
 
+local Resp = require('scripts/responsive')
+
 type NumP = Property<number>
 type BoolP = Property<boolean>
 type StrP = Property<string>
@@ -52,11 +54,10 @@ type Director = {
     paths: { Path },
     track: Paint,
     ink: Paint,
+    chrome: Resp.Chrome,
+    chromeKey: string,
 }
 
-local HEADER_H = 76
-local CONTROLS_H = 104
-local PROGRESS_Y = 60
 local SETTLE = 1.8
 local SETTLE_RM = 0.25
 local COUNT_DELAY = 0.2
@@ -86,12 +87,14 @@ local NUM_NAMES = {
     'booksFinished', 'pagesRead', 'readingHours', 'genresExplored', 'passagesSaved',
     'longestStreakDays', 'bookClubChats', 'visibleScreenCount', 'visibleScreenIndex',
     '_navDir', '_parallaxX', '_parallaxY', '_personaRow',
+    'layoutBreakpoint', '_vw', '_vh', '_headerH', '_headerPadT', '_controlsH', '_controlsPadB',
+    '_marginX', '_chromeAlpha', '_controlsAlign',
 }
 local BOOL_NAMES = {
     'showScreen1', 'showScreen2', 'showScreen3', 'showScreen4', 'showScreen5',
     'showScreen6', 'showScreen7', 'showScreen8', 'showScreen9', 'showScreen10',
     'autoAdvanceEnabled', 'isPaused', 'reducedMotion', 'isSharing', 'isBackgrounded',
-    '_motionPaused', '_hasStats',
+    '_motionPaused', '_hasStats', '_landscape',
 }
 local STR_NAMES = {
     'locale', 'personaName', 'personaDescription', 'yearText',
@@ -416,6 +419,35 @@ local function announce(self: Director)
     end
 end
 
+-- ------------------------------------------------------------ responsive
+-- The chrome follows the real artboard size: orientation (width against
+-- layoutBreakpoint), header / controls heights, margins. Written into the
+-- private layout properties the header and controls are bound to.
+local function updateLayout(self: Director)
+    local w, h = self.size.x, self.size.y
+    if w <= 0 or h <= 0 then
+        return
+    end
+    local bp = Resp.breakpoint(num(self, 'layoutBreakpoint', Resp.BREAKPOINT))
+    local key = w .. 'x' .. h .. '@' .. bp
+    if key == self.chromeKey then
+        return
+    end
+    self.chromeKey = key
+    local c = Resp.chrome(w, h, bp)
+    self.chrome = c
+    setFlag(self, '_landscape', c.landscape)
+    setNum(self, '_vw', w)
+    setNum(self, '_vh', h)
+    setNum(self, '_headerH', c.headerH)
+    setNum(self, '_headerPadT', c.headerPadT)
+    setNum(self, '_controlsH', c.controlsH)
+    setNum(self, '_controlsPadB', c.controlsPadB)
+    setNum(self, '_marginX', c.marginX)
+    -- LayoutAlignmentType: centre (4) across a phone, bottom right (5) on a spread
+    setNum(self, '_controlsAlign', if c.landscape then 5 else 4)
+end
+
 -- ------------------------------------------------------------ lifecycle
 function init(self: Director, context: Context): boolean
     local vm = context:viewModel()
@@ -478,19 +510,23 @@ function init(self: Director, context: Context): boolean
     applyPersona(self)
     refreshTexts(self)
     self.ready = true
+    self.chromeKey = ''
+    updateLayout(self)
     return true
 end
 
 function resize(self: Director, size: Vector, scale: number)
     self.size = size
+    updateLayout(self)
 end
 
 local function inStage(self: Director, p: Vector): boolean
-    return p.y > HEADER_H and p.y < self.size.y - CONTROLS_H
+    return p.y > self.chrome.top and p.y < self.chrome.bottom
 end
 
+-- taps anywhere above the controls band, across the real width
 local function inTapZone(self: Director, p: Vector): boolean
-    return p.y >= 0 and p.y < self.size.y - CONTROLS_H and p.x >= 0 and p.x <= self.size.x
+    return p.y >= 0 and p.y < self.size.y - self.chrome.controlsH and p.x >= 0 and p.x <= self.size.x
 end
 
 function pointerDown(self: Director, event: PointerEvent)
@@ -519,8 +555,9 @@ function pointerMove(self: Director, event: PointerEvent)
     -- controls); outside it the theater eases home.
     if inStage(self, p) and self.size.x > 0 then
         self.tX = math.clamp((p.x / self.size.x) * 2 - 1, -1, 1)
-        local stageH = self.size.y - HEADER_H - CONTROLS_H
-        self.tY = math.clamp(((p.y - HEADER_H) / stageH) * 2 - 1, -1, 1)
+        local c = self.chrome
+        local stageH = math.max(1, c.bottom - c.top)
+        self.tY = math.clamp(((p.y - c.top) / stageH) * 2 - 1, -1, 1)
     else
         self.tX = 0
         self.tY = 0
@@ -564,6 +601,8 @@ function advance(self: Director, seconds: number): boolean
     if not self.ready then
         return true
     end
+    -- the host may retune the breakpoint at runtime
+    updateLayout(self)
 
     -- external writes to currentScreen (host jump) are validated and honoured
     local ext = math.floor(num(self, 'currentScreen', self.cur))
@@ -684,8 +723,17 @@ function draw(self: Director, renderer: Renderer)
     if n == 0 then
         return
     end
-    local left = 24
-    local width = self.size.x - 48
+    -- the segments span the real width, under the header's wordmark
+    local c = self.chrome
+    local alpha = math.clamp(num(self, '_chromeAlpha', 1), 0, 1)
+    if alpha <= 0 then
+        return
+    end
+    self.track.color = Color.rgba(0x25, 0x2E, 0x3D, math.floor(46 * alpha))
+    self.ink.color = Color.rgba(0x78, 0x2D, 0x3D, math.floor(255 * alpha))
+    local PROGRESS_Y = c.progressY
+    local left = c.marginX
+    local width = self.size.x - 2 * c.marginX
     local gap = 5
     local segW = (width - gap * (n - 1)) / n
     local prog = num(self, 'screenProgress', 0)
@@ -760,6 +808,8 @@ return function(context: Context): Layout<Director>
         paths = {},
         track = Paint.with({ color = Color.rgba(0x25, 0x2E, 0x3D, 46), style = 'fill' }),
         ink = Paint.with({ color = Color.rgba(0x78, 0x2D, 0x3D, 255), style = 'fill' }),
+        chrome = Resp.chrome(390, 844, Resp.BREAKPOINT),
+        chromeKey = '',
         init = init,
         resize = resize,
         advance = advance,

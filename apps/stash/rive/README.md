@@ -8,6 +8,172 @@ reveal and the share card. The brief is [`../PROMPT.md`](../PROMPT.md).
 The dataset is the brief's **fictional** full-year 2026 fixture; nothing here
 is measured user activity.
 
+## Responsive layout
+
+The recap fills any canvas. It has two layouts, chosen by width alone, and each
+one adapts continuously to every size on its side of the threshold. Nothing is
+letterboxed: backgrounds, panels and the handoff always bleed edge to edge.
+
+### The rule and `layoutBreakpoint`
+
+* **Landscape layout when the artboard is at least `layoutBreakpoint` points
+  wide** (default **768**), otherwise the **portrait layout**. Height plays no
+  part, so 768×1024 and 820×1180 are landscape, and 667×375 and 740×360 are
+  portrait.
+* `layoutBreakpoint` is a new `UserRecap` **Number**, owned by the host (a
+  contract addition, below). The director reads it and the real artboard width
+  every frame, so a resize, or a change of the property, switches layout on the
+  next frame, in the middle of a scene. `currentScreen`, the dwell timer,
+  progress and the playheads are untouched, and no `screenChanged` fires.
+* The director exposes the result as `_landscape` (read-only Boolean) for hosts
+  that want to match their own chrome.
+
+### Mechanism
+
+The director (`scripts/director.luau`, a full-bleed `ScriptedLayout`) gets the
+real artboard size from `resize` and recomputes the layout each frame. Data
+binding carries the result into the markup; no scene timeline changed.
+
+* **A stage of fixed height.** The stage is always 844 units tall and as wide
+  as the canvas (`_stageScale` = h / 844). Every timeline keyed in stage units
+  still lands where it should: the incoming panel riding the springs, the coin
+  flung off the top, the drop of the outgoing scene. Panels are 12,000 units
+  wide. The launch bar is stretched to the stage width (`_barSX`). The rail, the
+  right spring and the coin ride a node offset to the right edge (`_rightOff`).
+  So the signature transition covers the viewport at every size.
+* **Zones.** Each scene is split into zones, and each zone is a node whose
+  x / y / scale are bound to director numbers:
+  * `copy`: the headline, hero value, unit and support (`_c{k}x/y/s`);
+  * `art`: the illustration (`_a{k}x/y/s`);
+  * `ticket` (scene 7) and `note` (scene 10's support line): `_t7*` and `_n10*`;
+  * `backdrop`: twinkles, centred on the viewport, with wing twinkles that only
+    show when the canvas is wider than the design.
+
+  `tools/gen.py` writes each scene's design boxes (`layoutboxes.luau`). The
+  director fits copy and art separately, so type keeps a readable size while
+  the art takes the remaining space.
+* **The motif machine** stands in the current scene's art zone. Its frame
+  (`_mfx/_mfy/_mfs`) blends between scenes with the Motif layer's own 760 ms
+  curve. A resize snaps it. The tap toy's hit test follows the frame.
+* **Portrait layout**:
+  * The copy sits under the header and the art takes the rest above the
+    full-width footer. Copy and art scale with the width, and both shrink
+    together when height runs out.
+  * Each scene has floors (`minC`, `minA`) that keep its smallest text at
+    **11 px or more**.
+  * Once the canvas is wider than tall (w ≥ 0.95 h), a stack cannot hold
+    readable copy. The portrait layout then splits into a copy column and an art
+    column. It keeps the portrait chrome: the full-width footer, compact (52 pt
+    header, 48 pt buttons) when h < 600.
+* **Landscape layout**: always two columns.
+  * The copy column is on the left (42 %), with the footer under it, and the art
+    column on the right. So the hero art and the big number sit side by side.
+  * Scene 7's ticket joins the copy column; the machine stays in the art column.
+  * Scene 9 is the title column beside the spotlight and machine.
+  * Scene 10 is the headline, note and buttons beside the card.
+  * On canvases about as tall as wide (h ≥ 0.9 w, such as 768×1024), the columns
+    stagger instead: copy upper left, art lower right, each wider than half the
+    width.
+* **Two share cards.**
+  * `ShareCard` is the tall collectible, now 330×420 with 14.5 pt tile labels.
+  * `ShareCardWide` is the same card at 560×300: the header becomes a band down
+    the left, with 15.5 pt labels.
+  * Scene 10 shows the wide card (`_wideCard`) only when the tall card's labels
+    would fall under 11 px, as at 667×375 and 740×360. Both bind the same
+    instance and follow the same privacy rules.
+* **Chrome.**
+  * The header always spans the full width, so the progress segments span the
+    real width. Its height is bound to `_hdrH`.
+  * The footer's extent and height are bound to `_ftrL`, `_ftrR` and `_ftrH`, and
+    the button height to `_btnH` (54 pt, or 48 pt compact; never under 44 pt).
+  * The story tap zones (left third back, right two-thirds next) and
+    hold-to-pause use the real width, minus the header, the footer's box and the
+    toy.
+* **GPU canvases.**
+  * Every 3D coin, the jar, the CRT and the springs bind their `res` input
+    (canvas pixels per point) to `_gpuRes` / `_gpuResStage`. These are the real
+    on-screen scale × the device pixel ratio that `resize` reports, never under
+    2, capped at 4, and stepped by 0.5.
+  * The scripts `canvas:resize` when it changes, so pieces render at device
+    resolution instead of being upscaled. For example, 2560×1080 renders at 2.5×.
+  * The CRT and springs keep their WGSL. Only the target size moves.
+
+### Host setup
+
+* **Use the runtime's layout fit**, so the artboard is resized to the canvas and
+  the director sees the real size.
+  * In the CLI this is the default `--fit=layout`.
+  * In the runtimes it is the *Layout* fit: `Fit.Layout` on web and React
+    Native, `Fit.layout` in Flutter, `Fit.LAYOUT` on Android and `.layout` on
+    Apple. On the web also call `resizeDrawingSurfaceToCanvas()` on resize, and
+    pass the device pixel ratio as the layout scale factor.
+  * Check the Rive runtime docs for the exact option names in the version you
+    ship.
+* With any scaling fit (contain, cover and so on) the artboard keeps 390×844,
+  and you get the portrait design letterboxed.
+* Set `layoutBreakpoint` if your app switches at another width (in points).
+* For a share image, render `ShareCard`, or `ShareCardWide` for a landscape
+  image, with the same `UserRecap` instance.
+
+### Sizes tested
+
+All ten scenes were rendered settled at every size below. The personas,
+transitions, reduced motion, the zero user, the extreme fixture and the share
+values were rendered at 320×568, 390×844, 740×360, 820×1180, 1280×720 and
+2560×1080. Contact sheets are in `captures/responsive/`.
+
+| Layout | Sizes |
+|---|---|
+| portrait (stack) | 320×568, 360×640, 390×844, 430×932, 600×960, 767×1024 |
+| portrait (split, short) | 667×375, 740×360 |
+| landscape (columns) | 1024×768, 1280×720, 1366×600, 1440×900, 1920×1080, 2560×1080 |
+| landscape (staggered, tall) | 768×1024, 820×1180 |
+
+Walkthrough videos: `../video.webm` (390×844, portrait) and
+`../video-landscape.webm` (1280×720, landscape), both rendered by
+`scripts/render-video.py` (Right pressed every 3.5 s).
+
+A live resize is checked with `ResizeProbe`, a harness artboard that nests
+`Recap` as a `NestedArtboardLayout` and keys its width: 390 → 1100 → 560 → 900
+on scene 4 (`captures/responsive/resize-probe-scene04.png`, checks in
+`tools/behaviour.py`).
+
+Ranges this design supports:
+
+* **Height.** From about 360 pt. Below that the copy floors (11 px) win, and
+  the art can crowd the footer.
+* **Aspect.** Up to about 2.4:1. Wider canvases leave empty space between the
+  columns, because the copy and the art have caps of 1.75× and 2.1×.
+
+### Compromises
+
+* **Short portrait splits.** Short portrait canvases (667×375, 740×360) use two
+  columns, like landscape, because a stack cannot keep 11 px text in 250 px of
+  height. They keep the portrait chrome: a full-width footer and compact bars.
+* **Small type on short canvases.** On the shortest canvases the support line
+  sits close to the 11 px floor. At 740×360 a three-line headline fills its
+  column.
+* **Two-line headlines.** Copy boxes assume a headline of up to three lines
+  and a support line of up to two. Longer host copy shrinks the headline
+  (`fitFontSize`), as before.
+* **Scene 7 in columns.**
+  * The ticket moves to the copy column, so in a split it no longer rises out
+    of the machine's lid. The lid still pops.
+  * The ticket's starburst is shown only in the stack, where it hugs the ticket.
+* **Wide canvases.** The landscape columns leave empty space in the middle on
+  very wide canvases, such as 2560×1080.
+* **Scene 4's feeder pipes** run into the screen edges at 390×844, as in the
+  first pass. They now end in flanges wherever they are visible.
+* **No in-between motion on resize.** A resize re-lays the scene out at once,
+  with no animation between the two layouts. A resize mid-transition finishes
+  the transition in the new layout.
+* **Wide and tall canvases.** At 820×1180 and 2560×1080 the composition is
+  centred, with generous margins, rather than filling every pixel.
+* **More bindings.** The view model goes from 118 to 198 properties. One is
+  host-owned, `layoutBreakpoint`. The other 82 are director-owned zone
+  transforms, chrome metrics, GPU resolution and layout flags, and 3 old fit
+  properties were removed. Hosts never write them.
+
 ## Improvement pass (3D, shaders, motion, consistency)
 
 ### Critique of the first pass
@@ -172,8 +338,11 @@ is measured user activity.
   (about 180 × 960 px each) and one CRT canvas (about 390 × 296 px).
   * Static coins render exactly once.
   * Animated pieces re-render only while their pose changes.
-* **Resolution.** Pieces are rendered at 2 px per pt, so they are slightly
-  softer than vector on 3× screens.
+* **Resolution.** Pieces render at `_gpuRes` pixels per point: the real
+  on-screen scale × the device pixel ratio, at least 2 and at most 4 (see
+  *Responsive layout*). Above a 4× effective scale they are slightly softer than
+  vector. Canvases are re-allocated when the value steps (0.5 steps), not every
+  frame of a live resize.
 * **Light under rotation.** Light is fixed relative to each piece, so a
   2D-rotated pile coin rotates its highlight. Hero coins use the keyed `roll`
   instead, which keeps the light top-left.
@@ -210,9 +379,11 @@ It stays far under a 16.7 ms frame except for single first-draw frames.
 ```bash
 cd apps/stash/rive
 rive .                       # live previewer (rebuilds on save); 390×844 master
-rive . --viewport=320x568    # small phone          (layout reflows; stage scales)
-rive . --viewport=430x932    # large phone
-rive . --viewport=1440x900   # desktop: centred portrait column
+rive . --viewport=320x568    # small phone: portrait stack, copy floors at 11 px
+rive . --viewport=740x360    # phone held sideways: portrait layout, two columns
+rive . --viewport=1280x720   # landscape layout: copy column + art column
+rive . --viewport=768x1024   # landscape layout on a tall canvas: staggered columns
+rive . --artboard=ResizeProbe --viewport=1100x844   # live resize across the breakpoint
 rive . --data=personaIndex=2 --data=reducedMotion=true   # any UserRecap field
 ```
 
@@ -225,7 +396,7 @@ Builds:
 
 | Output | Command | Status |
 |---|---|---|
-| `build/stash-recap.riv` (also `export/stash-recap.riv`, an identical copy) | `rive . --once` | **built**, 1.46 MB (1,459,124 B), unsigned |
+| `build/stash-recap.riv` (also `export/stash-recap.riv`, an identical copy) | `rive . --once` | **built**, 1.52 MB (1,521,149 B; +62 KB for the responsive layout, the wide card and the probe), unsigned |
 | `build/stash-recap.rev` | `rive . --once --rev=build/stash-recap.rev` | **not produced** — the CLI requires `rive login` (“Not logged in. Run: rive login”). Run that command after logging in. |
 | signed `.riv` for shipping | `rive . --publish` | needs `rive login` (see *Limitations*: scripts) |
 
@@ -235,22 +406,23 @@ Builds:
 |---|---|
 | `a_data.rml` | `UserRecap` view model (+ `ZeroUser`, `Extreme` fixture instances), converters, font and script assets |
 | `b_recap.rml` | `Recap` artboard: chrome, stage, ten scenes, motif, overlays, the `Recap` state machine and its 116 timelines |
-| `c_components.rml` | `Coin`, `ShareCard` and `EventProbe` (test harness) artboards + their `ComponentAsset`s |
+| `c_components.rml` | `Coin`, `ShareCard`, `ShareCardWide`, `EventProbe` and `ResizeProbe` (test harnesses) artboards + their `ComponentAsset`s |
 | `scripts/coin3d.luau` + `.wgsl` | the 3D gold coin (every coin and goal token in the file) |
 | `scripts/jar3d.luau` + `.wgsl` | the motif's glass jar walls (back and front layer) |
 | `scripts/spring3d.luau` + `.wgsl` | the chrome coil springs of the signature transition |
 | `scripts/crt.luau` + `.wgsl` | the arcade-screen (CRT) pass over scene 6's month windows |
 | `motifpose.luau` | generated module: motif pose per scene + toy position (the director's toy hit test) |
+| `layoutboxes.luau` | generated module: each scene's copy / art / ticket / note design boxes and type floors (responsive fit) |
 | `scripts/director.luau` | sequencing director (ScriptedLayout, draws nothing) |
 | `scripts/progress.luau` | progress segments (ScriptedLayout, data-driven drawing) |
 | `numfmt.luau`, `scripts/fmt_*.luau` | locale formatter module + four ScriptedDataConverters |
 | `scripts/b2*.luau` | boolean → opacity converters (privacy, empty state, pause icon) |
 | `tools/gen.py`, `tools/rml.py` | generator for the three `.rml` files (see note) |
-| `tools/behaviour.py` | 29 headless behaviour checks → `captures/tests/behaviour.txt` |
+| `tools/behaviour.py` | 44 headless behaviour checks (incl. orientation and live resize) → `captures/tests/behaviour.txt` |
 | `tools/capture.py`, `tools/motion_preview.py`, `tools/grid.sh` | review captures (incl. `captures/gpu/` 2× close-ups) and an optional autoplay MP4 |
 | `fixtures/*.json` | `sample` (identical to `../sample-data.json`), `zero-user`, `extreme-long-copy` |
 | `assets/fonts/` | Rubik + Nunito Sans variable fonts and their OFL texts |
-| `captures/` | settled scenes, personas, reduced motion, fixtures, transitions, viewports, share, interaction, GPU close-ups, walkthrough MP4 |
+| `captures/` | settled scenes, personas, reduced motion, fixtures, transitions, responsive matrix, share, interaction, GPU close-ups, walkthrough MP4 |
 
 The `.rml` files are ordinary, editable RML. They are emitted by
 `python3 tools/gen.py` because the recap repeats a lot of structure (ten scene
@@ -267,7 +439,7 @@ Recap artboard (bound to UserRecap/Default)
 ├─ Header              layout row: wordmark · progress segments (script) · year · pause
 ├─ Footer: story       layout row: previous · continue
 ├─ Footer: summary     layout row: replay · share   (swapped by the Footer mode layer)
-└─ Stage               x/y/scale bound to _stageX/_stageY/_stageScale (fit 390×844)
+└─ Stage               scale bound to _stageScale (844 units tall, as wide as the canvas)
    ├─ Handoff: coin    the 3D coin of the signature transition (above the machine)
    ├─ Toy machine      the persistent motif (pose per scene): 3D glass jar, 3D coin
    │                   pile, coin path with the tap-toy coin (signature interaction)
@@ -355,7 +527,11 @@ where noted). Types are native Rive view-model types.
 | `_count1`…`_count10` | Number | director | count-up playheads (local animation state, not user data) |
 | `_navDir`, `_visibleCount`, `_visibleIndex`, `_canGoBack`, `_canGoNext`, `_isSummary`, `_emptyState`, `_personaKnown`, `_personaSlot`, `_frozen`, `_holding`, `_finished`, `_pauseButtonLabel`, `_focus` | various | director / SM | derived sequencing state — read-only for hosts |
 | `_chromeColor`, `_chromeOnColor` | Color | director | header/footer ink, eased between cream (dark scenes) and ink (light scenes) |
-| `_stageX`, `_stageY`, `_stageScale`, `_viewW`, `_viewH`, `_chromeInset` | Number | director | responsive fit |
+| `layoutBreakpoint` | Number | host | **responsive contract addition**: landscape layout when the artboard is at least this many points wide (default 768) |
+| `_landscape`, `_split`, `_wideCard` | Boolean | director | current layout (read-only): landscape, two columns, wide share card |
+| `_stageScale`, `_viewW`, `_viewH`, `_vcx`, `_rightOff`, `_barSX` | Number | director | stage scale (h / 844), real size, viewport centre and right-edge offsets in stage units |
+| `_c{k}x/y/s`, `_a{k}x/y/s` (k = 1…10), `_t7x/y/s`, `_n10x/y/s`, `_mfx/y/s` | Number | director | zone transforms (copy, art, ticket, note) and the motif frame |
+| `_hdrH`, `_ftrH`, `_ftrL`, `_ftrR`, `_btnH`, `_gpuRes`, `_gpuResStage` | Number | director | chrome metrics and GPU canvas resolution |
 | `_handoffFwd`, `_handoffBack`, `_coinNudge` | Trigger | director | drive the handoff and coin-toy layers (the director hit-tests the toy coin) |
 | `_evtScreenChanged`, `_evtRecapFinished`, `_evtShareTapped` | Trigger | state machine | mirrors fired beside each event, kept for the existing checks |
 | `_heardScreenChanged`, `_heardRecapFinished`, `_heardShareTapped` | Trigger | `EventProbe` | pulsed by a harness artboard whose listeners *hear the real Rive events* reported by the nested Recap (verification only; hosts ignore them) |
@@ -474,7 +650,8 @@ coin is still. A toy tap under reduced motion is an opacity blink.
 
 * `rive . --verify` — 0 errors, 0 warnings. `rive inspect . --summary` —
   `problems: []`.
-* `python3 tools/behaviour.py` — 29/29 pass (`captures/tests/behaviour.txt`):
+* `python3 tools/behaviour.py` — 44/44 pass (`captures/tests/behaviour.txt`).
+  The first 29 run at 390×844, unchanged:
   tap zones, rapid taps (5 taps → scene 6, one `screenChanged` per scene),
   hold/release (no nav on release), pause/resume, keyboard, hidden scenes 3/5/6
   skipped both ways with 7 segments, full auto-advance 1→10 with exactly one
@@ -484,13 +661,26 @@ coin is still. A toy tap under reduced motion is an opacity blink.
   (intro → summary, 2 segments), the motif's tap toy (nudges, never navigates),
   and the real `screenChanged` ×10 / `recapFinished` ×1 / `shareTapped` ×1
   heard through `EventProbe`.
+  The 15 responsive checks:
+  * the orientation at 390×844, 767×1024, 740×360 (portrait) and 768×1024,
+    1280×720 (landscape);
+  * `layoutBreakpoint=300` flipping 390×844 to landscape;
+  * 667×375 splitting and taking the wide card;
+  * at 1280×720: the tap zones, Right arrow, the Continue button under the copy
+    column, hold/release, and the tap toy in its moved art zone;
+  * `ResizeProbe`, a live resize 390 → 1100 → 560 → 900 on scene 4. The
+    layout flips four times, the scene stays 4 with a single `screenChanged`,
+    and no zone moves in the last 1.5 s.
 * Runtime data updates: `captures/interaction/runtime-update-*.png` (deposits
   96 → 4,321 and `locale=de-DE` → `4.321`).
 * Captures: `captures/settled` (10 scenes + sheets), `personas` (settled +
   mid-reveal for all four), `reduced-motion`, `fixtures/zero-user`,
   `fixtures/extreme-long-copy`, `transitions` (forward f26/f34 and back f24 for
   every adjacent pair + a 6-frame strip of the signature handoff),
-  `viewports` (320×568, 430×932, 1440×900), `share` (private default, name +
+  `responsive` (contact sheets: every scene across the 16-size matrix,
+  portrait and landscape sheets, personas, mid-transition frames, reduced
+  motion, zero user, extreme fixture, share values, the live-resize harness,
+  the standalone `ShareCardWide`), `share` (private default, name +
   values, standalone `ShareCard`, zero user), `interaction` (coin toy, focus
   ring, paused), `gpu` (2× close-ups: jar and pile, merged coin, goal tokens,
   arcade board, springs firing), `motion/walkthrough.mp4` (the walkthrough,
@@ -500,7 +690,7 @@ coin is still. A toy tap under reduced motion is an opacity blink.
 
 | | |
 |---|---|
-| `.riv` size | 1,459,124 B (≈ 930 KB of it is the two variable fonts, embedded); first pass 1,183,175 B |
+| `.riv` size | 1,521,149 B (≈ 930 KB of it is the two variable fonts, embedded); improvement pass 1,459,124 B; first pass 1,183,175 B |
 | objects | Recap 22.7k (state machine + keyframes dominate), Coin 22, ShareCard 465, EventProbe 24 |
 | bench | see *Improvement pass → Performance* |
 | bounded pools | ≤ 8 moving coins per scene, 36 static pile coins (each rendered once), 12 windows, 6 jars, 3 tokens; one clip per mask; offscreen scenes sit in `Hidden` (no loops) |

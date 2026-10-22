@@ -89,9 +89,14 @@ function init(self: Orb, context: Context): boolean
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
     local res = math.clamp(self.res, 0.5, 4)
-    local px = math.max(2, math.ceil(self.radius * self.ext * 2 * res))
+    local px = math.min(4096, math.max(2, math.ceil(self.radius * self.ext * 2 * res)))
     self.gc = context:gpuCanvas({ width = px, height = px })
     return true
+end
+
+local function canvasPx(self: Orb): number
+    local res = math.clamp(self.res, 0.5, 4)
+    return math.min(4096, math.max(2, math.ceil(self.radius * self.ext * 2 * res)))
 end
 
 local function moving(self: Orb): boolean
@@ -148,6 +153,12 @@ function draw(self: Orb, renderer: Renderer)
         renderer:drawPath(self.disc, self.discPaint)
         renderer:restore()
         return
+    end
+    -- `res` follows the art scale x device density: re-allocate when it changes
+    local px = canvasPx(self)
+    if px ~= gc.width then
+        gc:resize(px, px)
+        self.rendered = false
     end
     local sig = signature(self)
     local due = moving(self) and self.sinceRender >= 1 / 30

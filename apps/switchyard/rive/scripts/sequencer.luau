@@ -18,10 +18,26 @@
 --   * persona row mapping (personaIndex -> slot, colour, ink, default copy)
 --   * button triggers from the state machine (_nextTapped, _prevTapped,
 --     _pauseTapped, _replayTapped)
+--   * responsive layout: on every resize (and when layoutBreakpoint changes) it
+--     runs scripts/layout.luau for the real artboard size and writes the layout
+--     numbers the markup binds to; tap zones, hold, the progress segments, the
+--     band perforations and the landscape stub divider all use the real size
+
+local Layout = require('scripts/layout')
 
 type Seq = {
     vm: ViewModel?,
     size: Vector,
+    dpr: number,
+    layoutDirty: boolean,
+    breakpoint: number,
+    lay: Layout.Out,
+    frame: Layout.Frame?,
+    motifScene: number,
+    handles: { [string]: Property<number> },
+    testDone: boolean,
+    ink: Paint,
+    tear: Paint,
     sceneTime: number,
     settledAt: number,
     lastScreen: number,
@@ -44,6 +60,7 @@ type Seq = {
 local W = 390
 local STORY_TOP = 84
 local STORY_BOTTOM = 738
+local BREAKPOINT = 768 -- default layoutBreakpoint
 local HOLD_SECONDS = 0.35
 local SETTLE = 1.8
 local SETTLE_RM = 0.35
@@ -79,6 +96,26 @@ local function setNum(self: Seq, name: string, v: number)
     end
     local p = vm:getNumber(name)
     if p ~= nil and p.value ~= v then
+        p.value = v
+    end
+end
+
+-- layout numbers are written in bulk: cache the property handles
+local function setLayoutNum(self: Seq, name: string, v: number)
+    local vm = self.vm
+    if vm == nil then
+        return
+    end
+    local p = self.handles[name]
+    if p == nil then
+        local q = vm:getNumber(name)
+        if q == nil then
+            return
+        end
+        self.handles[name] = q
+        p = q
+    end
+    if p.value ~= v then
         p.value = v
     end
 end
@@ -171,6 +208,37 @@ local function currentScreen(self: Seq): number
     return c
 end
 
+-- ------------------------------------------------------------ responsive layout
+local function readBreakpoint(self: Seq): number
+    local bp = num(self, 'layoutBreakpoint', BREAKPOINT)
+    if bp <= 0 then
+        bp = BREAKPOINT
+    end
+    return bp
+end
+
+local function writeMotif(self: Seq)
+    Layout.motif(self.lay, self.motifScene)
+    for _, k in ipairs({ '_mX', '_mY', '_mS', '_rkX', '_rkY', '_rkS' }) do
+        setLayoutNum(self, k, self.lay[k] or 0)
+    end
+end
+
+local function applyLayout(self: Seq)
+    if self.vm == nil or self.size.x <= 0 or self.size.y <= 0 then
+        return
+    end
+    self.layoutDirty = false
+    self.breakpoint = readBreakpoint(self)
+    local o, f = Layout.compute(self.size.x, self.size.y, self.dpr, self.breakpoint)
+    Layout.motif(o, self.motifScene)
+    self.lay = o
+    self.frame = f
+    for k, v in pairs(o) do
+        setLayoutNum(self, k, v)
+    end
+end
+
 -- ------------------------------------------------------------ navigation
 local function goTo(self: Seq, target: number, dir: number)
     setNum(self, '_navDir', dir)
@@ -184,6 +252,13 @@ local function goTo(self: Seq, target: number, dir: number)
     -- scene's playhead simply stops where it is (no snap during its exit)
     self.idleT[target] = 0
     setNum(self, '_idle' .. tostring(target), -1)
+    -- the motif carries the story into the target (forward) or out of the scene
+    -- being left (back); it follows that scene's placed art
+    local ms = if dir > 0 then target else self.lastScreen
+    if ms ~= self.motifScene then
+        self.motifScene = ms
+        writeMotif(self)
+    end
     self.sceneTime = 0
     self.lastScreen = target
 end
@@ -271,6 +346,7 @@ function init(self: Seq, context: Context): boolean
         return true
     end
     self.vm = vm
+    self.layoutDirty = true
     local nt = vm:getTrigger('_nextTapped')
     if nt then
         nt:addListener(vm, function(_a)
@@ -300,6 +376,9 @@ end
 
 function resize(self: Seq, size: Vector, scale: number)
     self.size = size
+    self.dpr = if scale > 0 then scale else 1
+    self.layoutDirty = true
+    applyLayout(self)
 end
 
 local function easeOutCubic(t: number): number
@@ -312,6 +391,19 @@ function advance(self: Seq, seconds: number): boolean
         return true
     end
     self.clock += seconds
+    -- test harness only: the debug build binds the artboard size to _testW/_testH,
+    -- so a headless run can resize the canvas mid-scene like a host would
+    if not self.testDone then
+        local at = num(self, '_testAt', -1)
+        if at >= 0 and self.clock >= at then
+            self.testDone = true
+            setNum(self, '_testW', num(self, '_testW2', 0))
+            setNum(self, '_testH', num(self, '_testH2', 0))
+        end
+    end
+    if self.layoutDirty or readBreakpoint(self) ~= self.breakpoint then
+        applyLayout(self)
+    end
     if not self.initialised then
         self.initialised = true
         applyPersona(self, false)
@@ -321,6 +413,8 @@ function advance(self: Seq, seconds: number): boolean
             goTo(self, 1, 1)
         end
         self.lastScreen = currentScreen(self)
+        self.motifScene = self.lastScreen
+        writeMotif(self)
     end
     -- runtime persona change -> remap atomically in this frame
     local pidx = math.floor(num(self, 'personaIndex', 0) + 0.5)
@@ -410,10 +504,22 @@ function advance(self: Seq, seconds: number): boolean
 end
 
 -- ------------------------------------------------------------ pointer
-local function inChips(self: Seq, x: number, y: number): number
+local function storyTop(self: Seq): number
+    local f = self.frame
+    return if f then f.top + 2 else STORY_TOP
+end
+
+local function storyBottom(self: Seq): number
+    local f = self.frame
+    return if f then f.bottom - 2 else STORY_BOTTOM
+end
+
+local function inChips(self: Seq, px: number, py: number): number
     if currentScreen(self) ~= 4 then
         return 0
     end
+    -- the chips live in scene 4's placed art: hit-test in its design units
+    local x, y = Layout.toDesign(self.lay, 's4art', px, py)
     if y < 460 or y > 516 then
         return 0
     end
@@ -429,7 +535,7 @@ end
 function pointerDown(self: Seq, event: PointerEvent)
     local x, y = event.position.x, event.position.y
     setNum(self, '_focusVisible', 0) -- pointer input hides the keyboard focus ring
-    if y < STORY_TOP or y > STORY_BOTTOM or inChips(self, x, y) > 0 then
+    if y < storyTop(self) or y > storyBottom(self) or inChips(self, x, y) > 0 then
         return
     end
     self.pressing = true
@@ -456,7 +562,7 @@ function pointerUp(self: Seq, event: PointerEvent)
         setBool(self, 'isPaused', self.prevPaused)
         return
     end
-    if y < STORY_TOP or y > STORY_BOTTOM then
+    if y < storyTop(self) or y > storyBottom(self) then
         return
     end
     local w = if self.size.x > 0 then self.size.x else W
@@ -475,41 +581,107 @@ function pointerExit(self: Seq, event: PointerEvent)
     self.holding = false
 end
 
--- ------------------------------------------------------------ progress segments
+-- ------------------------------------------------------------ chrome drawing
+local function rectPath(x0: number, y0: number, x1: number, y1: number): Path
+    local p = Path.new()
+    p:moveTo(Vector.xy(x0, y0))
+    p:lineTo(Vector.xy(x1, y0))
+    p:lineTo(Vector.xy(x1, y1))
+    p:lineTo(Vector.xy(x0, y1))
+    p:close()
+    return p
+end
+
+local function circlePath(p: Path, cx: number, cy: number, r: number)
+    local k = 0.5523 * r
+    p:moveTo(Vector.xy(cx + r, cy))
+    p:cubicTo(Vector.xy(cx + r, cy + k), Vector.xy(cx + k, cy + r), Vector.xy(cx, cy + r))
+    p:cubicTo(Vector.xy(cx - k, cy + r), Vector.xy(cx - r, cy + k), Vector.xy(cx - r, cy))
+    p:cubicTo(Vector.xy(cx - r, cy - k), Vector.xy(cx - k, cy - r), Vector.xy(cx, cy - r))
+    p:cubicTo(Vector.xy(cx + k, cy - r), Vector.xy(cx + r, cy - k), Vector.xy(cx + r, cy))
+    p:close()
+end
+
+-- ticket perforation: a fine dash line (3 on, 4 off, scaled with the chrome)
+local function tearH(p: Path, x0: number, x1: number, y: number, cs: number)
+    local on, off, t = 3 * cs, 4 * cs, 0.75 * cs
+    local x = x0
+    while x < x1 do
+        local e = math.min(x + on, x1)
+        p:moveTo(Vector.xy(x, y - t))
+        p:lineTo(Vector.xy(e, y - t))
+        p:lineTo(Vector.xy(e, y + t))
+        p:lineTo(Vector.xy(x, y + t))
+        p:close()
+        x += on + off
+    end
+end
+
+local function tearV(p: Path, x: number, y0: number, y1: number, cs: number)
+    local on, off, t = 6 * cs, 6 * cs, 1.25 * cs
+    local y = y0
+    while y < y1 do
+        local e = math.min(y + on, y1)
+        p:moveTo(Vector.xy(x - t, y))
+        p:lineTo(Vector.xy(x + t, y))
+        p:lineTo(Vector.xy(x + t, e))
+        p:lineTo(Vector.xy(x - t, e))
+        p:close()
+        y += on + off
+    end
+end
+
 function draw(self: Seq, renderer: Renderer)
     if self.vm == nil then
         return
     end
+    local f = self.frame
+    local vw = if f then f.vw else W
+    local cs = if f then f.cs else 1
+    local hy = if f then f.hdrPerfY else 81
+    local dy = if f then f.dockPerfY else 741
+
+    -- band perforations and their half-punched notches, edge to edge
+    local tear = Path.new()
+    tearH(tear, 14 * cs, vw - 14 * cs, hy, cs)
+    tearH(tear, 14 * cs, vw - 14 * cs, dy, cs)
+    local notches = Path.new()
+    for _, y in ipairs({ hy, dy }) do
+        circlePath(notches, 0, y, 7 * cs)
+        circlePath(notches, vw, y, 7 * cs)
+    end
+    -- the stub divider of the side-by-side layouts: art panel | copy column
+    if f and f.divider > 0 and not (f.short and currentScreen(self) == 10) then
+        tearV(tear, f.divider, f.top + 14 * cs, f.bottom - 14 * cs, cs)
+        circlePath(notches, f.divider, f.top, 9 * cs)
+        circlePath(notches, f.divider, f.bottom, 9 * cs)
+    end
+    renderer:drawPath(tear, self.tear)
+    renderer:drawPath(notches, self.ink)
+
+    -- progress: exactly one segment per visible scene, spanning the real width
     local list = visibleList(self)
     local count = #list
     local cur = currentScreen(self)
     local idx = indexOf(list, cur)
-    local x0, x1, y, h, gap = 24, 366, 62, 4, 4
+    local x0 = if f then f.progX0 else 24
+    local x1 = if f then f.progX1 else 366
+    local y = if f then f.progY else 62
+    local h = if f then f.progH else 4
+    local gap = 4 * cs
     local segW = ((x1 - x0) - gap * (count - 1)) / count
     local prog = num(self, 'screenProgress', 0)
     for i = 1, count do
         local sx = x0 + (i - 1) * (segW + gap)
-        local p = Path.new()
-        p:moveTo(Vector.xy(sx, y))
-        p:lineTo(Vector.xy(sx + segW, y))
-        p:lineTo(Vector.xy(sx + segW, y + h))
-        p:lineTo(Vector.xy(sx, y + h))
-        p:close()
-        renderer:drawPath(p, self.track)
-        local f = 0
+        renderer:drawPath(rectPath(sx, y, sx + segW, y + h), self.track)
+        local fr = 0
         if i < idx then
-            f = 1
+            fr = 1
         elseif i == idx then
-            f = prog
+            fr = prog
         end
-        if f > 0 then
-            local q = Path.new()
-            q:moveTo(Vector.xy(sx, y))
-            q:lineTo(Vector.xy(sx + segW * f, y))
-            q:lineTo(Vector.xy(sx + segW * f, y + h))
-            q:lineTo(Vector.xy(sx, y + h))
-            q:close()
-            renderer:drawPath(q, if i < idx then self.done else self.paint)
+        if fr > 0 then
+            renderer:drawPath(rectPath(sx, y, sx + segW * fr, y + h), if i < idx then self.done else self.paint)
         end
     end
 end
@@ -518,6 +690,16 @@ return function(context: Context): Layout<Seq>
     return {
         vm = nil,
         size = Vector.xy(390, 844),
+        dpr = 1,
+        layoutDirty = true,
+        breakpoint = BREAKPOINT,
+        lay = {},
+        frame = nil,
+        motifScene = 1,
+        handles = {},
+        testDone = false,
+        ink = Paint.with({ color = Color.rgb(0x17, 0x1B, 0x20) }),
+        tear = Paint.with({ color = Color.rgba(0x17, 0x1B, 0x20, 153) }),
         sceneTime = 0,
         settledAt = 0,
         lastScreen = 1,

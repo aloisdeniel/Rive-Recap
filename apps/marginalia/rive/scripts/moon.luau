@@ -29,7 +29,7 @@ type Moon = {
     rimPaint: Paint,
 }
 
-local RES = 3 -- canvas pixels per point
+local RES = 6 -- canvas pixels per point (the moon is drawn up to ~2.6x on a wide spread)
 local SPEED = 0.07 -- radians of libration per second
 
 function init(self: Moon, context: Context): boolean

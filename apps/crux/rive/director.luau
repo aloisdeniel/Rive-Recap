@@ -8,9 +8,35 @@
 -- Reads everything else from the single UserRecap instance bound to the artboard.
 -- It never invents user data: numbers are only sanitised (negative / non-finite -> 0)
 -- and formatted.
+--
+-- Responsive layout: it also owns the layout. From the real artboard size (resize) and
+-- UserRecap.layoutBreakpoint it runs layout.luau and writes every block transform, the
+-- chrome sizes and the carrier space into the global CruxRig view model, which the stage
+-- and the chrome are bound to. Landscape = width >= layoutBreakpoint, re-derived on every
+-- resize, so a canvas resized across the threshold mid-scene keeps its scene and simply
+-- re-lays out (a 0.4 s ease between portrait and landscape arrangements).
+
+local layout = require('layout')
+
+type Snapshot = { [string]: number }
+type Space = { x: number, y: number, s: number }
 
 type Director = {
     size: Vector,
+    dpr: number,
+    rig: { [string]: Property<number> },
+    layoutKey: { number },
+    mode: number,
+    shown: Snapshot, -- what is on screen now (screen points)
+    target: Snapshot, -- the layout for the current size
+    from: Snapshot, -- where an orientation ease started
+    blend: number, -- 0..1 progress of the orientation ease (1 = done)
+    layoutAge: number, -- seconds the current layout has been on screen
+    rigDirty: boolean, -- rig values need writing
+    lastLayout: layout.Result?,
+    carScene: number,
+    carFrom: Space,
+    carT: number,
     n: { [string]: Property<number> },
     s: { [string]: Property<string> },
     b: { [string]: Property<boolean> },
@@ -34,11 +60,6 @@ type Director = {
     pending: { number },
 }
 
-local STAGE_W = 390
-local STAGE_H = 844
-local STAGE_ALIGN_Y = -0.8 -- must match the Stage NestedArtboardLeaf alignmentY
-local TOP_BAR = 64
-local BOTTOM_BAR = 104
 local HOLD_HOME_X = 115
 local HOLD_HOME_Y = 605
 local HOLD_SECONDS = 0.32
@@ -46,12 +67,14 @@ local SETTLE = 1.75
 local SETTLE_REDUCED = 0.35
 local MIN_DWELL = 3
 local MAX_DWELL = 60
+local ORIENT_EASE = 0.4 -- seconds to ease between the portrait and landscape arrangements
+local CARRIER_EASE = 0.5 -- seconds the carrier takes to move into the next scene's space
 
 local NUMBERS = {
     'year', 'sessions', 'sends', 'attempts', 'techniqueSessions', 'longestSessionMinutes',
     'activeWeeks', 'climbingPartners', 'personaIndex', 'autoAdvanceSeconds', 'currentScreen',
     'screenProgress', 'personaSlot', 'visibleScreenCount', 'visibleScreenPosition', 'progressValue',
-    'navDirection', 'enteredScreen', 'heroProgress',
+    'navDirection', 'enteredScreen', 'heroProgress', 'layoutBreakpoint',
 }
 local STRINGS = {
     'locale', 'personaName', 'personaDescription', 'pauseLabel', 'playLabel', 'pauseButtonLabel',
@@ -269,27 +292,192 @@ local function sanitize(self: Director)
     end
 end
 
-local function stageToArtboard(self: Director, x: number, y: number): (number, number, number)
-    local w = self.size.x
-    local h = self.size.y
-    local s = math.max(w / STAGE_W, h / STAGE_H)
-    local ox = (w - STAGE_W * s) * 0.5
-    local oy = (h - STAGE_H * s) * (STAGE_ALIGN_Y + 1) * 0.5
-    return ox + x * s, oy + y * s, s
+-- ------------------------------------------------------------------ layout rig
+local function blockName(k: number, b: string): string
+    return 's' .. tostring(k) .. string.upper(string.sub(b, 1, 1)) .. string.sub(b, 2)
+end
+
+local function smooth(t: number): number
+    local x = math.clamp(t, 0, 1)
+    return x * x * (3 - 2 * x)
+end
+
+-- Flatten a layout result into screen-space numbers keyed by CruxRig name.
+local function snapshot(r: layout.Result): Snapshot
+    local o: Snapshot = {}
+    for key, t in pairs(r.blocks) do
+        local sep = string.find(key, ':', 1, true) or 1
+        local k = tonumber(string.sub(key, 1, sep - 1)) or 0
+        local base = blockName(k, string.sub(key, sep + 1))
+        o[base .. 'X'] = t.x
+        o[base .. 'Y'] = t.y
+        o[base .. 'S'] = t.s
+    end
+    local ch = r.chrome
+    o.topH = ch.top
+    o.botH = ch.bot
+    o.botPad = ch.pad
+    o.barPad = ch.barPad
+    o.btn = ch.btn
+    o.btnHalf = ch.btn * 0.5
+    o.pill = ch.pill
+    o.pillHalf = ch.pill * 0.5
+    o.wide = r.wide
+    return o
+end
+
+local function blockT(snap: Snapshot, k: number, b: string): Space
+    local base = blockName(k, b)
+    return { x = snap[base .. 'X'] or 0, y = snap[base .. 'Y'] or 0, s = snap[base .. 'S'] or 1 }
+end
+
+-- The space the carrier hold lives in for scene k (its carrier block, plus the wide
+-- card's corner offset on the summary).
+local function carrierSpace(snap: Snapshot, k: number): Space
+    for _, sc in ipairs(layout.scenes) do
+        if sc.k == k then
+            local t = blockT(snap, k, sc.carrier)
+            local w = snap.wide or 0
+            return { x = t.x + sc.carrierWide[1] * w * t.s, y = t.y + sc.carrierWide[2] * w * t.s, s = t.s }
+        end
+    end
+    return { x = 0, y = 0, s = 1 }
+end
+
+local function setRig(self: Director, name: string, v: number)
+    local p = self.rig[name]
+    if p and math.abs(p.value - v) > 1e-4 then
+        p.value = v
+    end
+end
+
+local function relayout(self: Director)
+    local w, h = self.size.x, self.size.y
+    if w < 1 or h < 1 then
+        return
+    end
+    local bp = num(self, 'layoutBreakpoint')
+    local last = self.layoutKey
+    if last[1] == w and last[2] == h and last[3] == bp and last[4] == self.dpr then
+        return
+    end
+    self.layoutKey = { w, h, bp, self.dpr }
+    local r = layout.compute(w, h, bp, self.dpr)
+    local snap = snapshot(r)
+    -- (a layout that was never really on screen - the artboard's authored size reported
+    -- before the real one at start-up - snaps instead of easing)
+    if self.lastLayout ~= nil and r.mode ~= self.mode and self.blend >= 1 and self.layoutAge > 0.2
+        and not bool(self, 'reducedMotion') then
+        -- crossing between arrangements: ease from what is on screen
+        self.from = table.clone(self.shown)
+        self.blend = 0
+    elseif self.lastLayout == nil then
+        self.shown = table.clone(snap)
+        self.blend = 1
+    end
+    self.mode = r.mode
+    self.layoutAge = 0
+    self.rigDirty = true
+    self.target = snap
+    self.lastLayout = r
+    if self.blend >= 1 then
+        self.shown = table.clone(snap)
+    end
+end
+
+local function writeRig(self: Director, dt: number)
+    local r = self.lastLayout
+    if r == nil then
+        return
+    end
+    self.layoutAge += dt
+    -- nothing moves between resizes and scene hand-offs: skip the walk over every value
+    local entered = num(self, 'enteredScreen')
+    if not self.rigDirty and self.blend >= 1 and self.carT >= 1 and (entered == 0 or entered == self.carScene) then
+        return
+    end
+    self.rigDirty = self.blend < 1
+    if self.blend < 1 then
+        self.blend = math.min(1, self.blend + dt / ORIENT_EASE)
+        local e = smooth(self.blend)
+        for name, v in pairs(self.target) do
+            local a = self.from[name]
+            self.shown[name] = if a == nil then v else a + (v - a) * e
+        end
+    end
+    local w, h = self.size.x, self.size.y
+    local k = h / 844
+    setRig(self, 'k', k)
+    setRig(self, 'vw', w)
+    setRig(self, 'vh', h)
+    setRig(self, 'uw', w / k)
+    setRig(self, 'uh', h / k)
+    setRig(self, 'dpr', self.dpr)
+    setRig(self, 'px', r.px)
+    setRig(self, 'landscape', if r.landscape then 1 else 0)
+    setRig(self, 'mode', r.mode)
+    for _, name in ipairs({ 'topH', 'botH', 'botPad', 'barPad', 'btn', 'btnHalf', 'pill', 'pillHalf', 'wide' }) do
+        setRig(self, name, self.shown[name] or 0)
+    end
+    for name, v in pairs(self.shown) do
+        local last = string.sub(name, -1)
+        if string.sub(name, 1, 1) == 's' and (last == 'X' or last == 'Y' or last == 'S') and #name > 3 then
+            setRig(self, name, v / k)
+        end
+    end
+    -- the carrier moves into the entered scene's space over CARRIER_EASE; the chalk
+    -- cloud stays in the space it burst in until that hand-off is over
+    local cur = num(self, 'currentScreen')
+    if self.carScene == 0 then
+        self.carScene = if entered > 0 then entered else cur
+        self.carT = 1
+    elseif entered > 0 and entered ~= self.carScene then
+        local t = carrierSpace(self.shown, self.carScene)
+        if self.carT < 1 then
+            local to = t
+            local e = smooth(self.carT)
+            t = { x = self.carFrom.x + (to.x - self.carFrom.x) * e, y = self.carFrom.y + (to.y - self.carFrom.y) * e,
+                s = self.carFrom.s + (to.s - self.carFrom.s) * e }
+        end
+        self.carFrom = t
+        self.carScene = entered
+        self.carT = if bool(self, 'reducedMotion') then 1 else 0
+    end
+    local target = carrierSpace(self.shown, self.carScene)
+    local car = target
+    local chalk = target
+    if self.carT < 1 then
+        self.carT = math.min(1, self.carT + dt / CARRIER_EASE)
+        local e = smooth(self.carT)
+        local f = self.carFrom
+        car = { x = f.x + (target.x - f.x) * e, y = f.y + (target.y - f.y) * e, s = f.s + (target.s - f.s) * e }
+        if self.carT < 1 then
+            chalk = f
+        end
+    end
+    setRig(self, 'carX', car.x / k)
+    setRig(self, 'carY', car.y / k)
+    setRig(self, 'carS', car.s / k)
+    setRig(self, 'chX', chalk.x / k)
+    setRig(self, 'chY', chalk.y / k)
+    setRig(self, 'chS', chalk.s / k)
 end
 
 local function excluded(self: Director, x: number, y: number): boolean
-    if y < TOP_BAR or y > self.size.y - BOTTOM_BAR then
+    local top = self.shown.topH or 64
+    local bot = self.shown.botH or 104
+    if y < top or y > self.size.y - bot then
         return true -- chrome: buttons handle themselves
     end
     if bool(self, 'holdGrabbed') then
         return true
     end
     if num(self, 'currentScreen') == 1 then
-        local hx, hy, s = stageToArtboard(self, HOLD_HOME_X, HOLD_HOME_Y)
-        local dx = x - hx
-        local dy = y - hy
-        if dx * dx + dy * dy < (80 * s) * (80 * s) then
+        local t = blockT(self.shown, 1, 'art')
+        local dx = x - (t.x + HOLD_HOME_X * t.s)
+        local dy = y - (t.y + HOLD_HOME_Y * t.s)
+        local r = 80 * t.s
+        if dx * dx + dy * dy < r * r then
             return true -- the draggable hold is a distinct, non-navigating hit region
         end
     end
@@ -380,11 +568,37 @@ function init(self: Director, context: Context): boolean
         setNum(self, 'currentScreen', if f ~= 0 then f else 10)
     end
     applyPersona(self, true)
+    local g = context:globalViewModel('CruxRig')
+    if g then
+        for _, name in ipairs({ 'k', 'vw', 'vh', 'uw', 'uh', 'dpr', 'px', 'landscape', 'mode', 'topH', 'botH', 'botPad',
+            'barPad', 'btn', 'btnHalf', 'pill', 'pillHalf', 'wide', 'carX', 'carY', 'carS', 'chX', 'chY', 'chS' }) do
+            local p = g:getNumber(name)
+            if p then
+                self.rig[name] = p
+            end
+        end
+        for _, sc in ipairs(layout.scenes) do
+            for _, b in ipairs(sc.blocks) do
+                local base = blockName(sc.k, b.name)
+                for _, axis in ipairs({ 'X', 'Y', 'S' }) do
+                    local p = g:getNumber(base .. axis)
+                    if p then
+                        self.rig[base .. axis] = p
+                    end
+                end
+            end
+        end
+    end
+    relayout(self)
     return true
 end
 
 function resize(self: Director, size: Vector, scale: number)
     self.size = size
+    self.dpr = if scale > 0 then scale else 1
+    if self.ready then
+        relayout(self)
+    end
 end
 
 local function run(self: Director, code: number)
@@ -427,6 +641,8 @@ function advance(self: Director, seconds: number): boolean
     end
     sanitize(self)
     applyPersona(self, false)
+    relayout(self) -- cheap unless the size or the breakpoint changed
+    writeRig(self, dt)
     local loc = str(self, 'locale')
     local rm = bool(self, 'reducedMotion')
 
@@ -588,6 +804,20 @@ end
 return function(context: Context): Layout<Director>
     return {
         size = Vector.xy(390, 844),
+        dpr = 1,
+        rig = {},
+        layoutKey = { 0, 0, 0, 0 },
+        mode = 0,
+        shown = {},
+        target = {},
+        from = {},
+        blend = 1,
+        layoutAge = 0,
+        rigDirty = true,
+        lastLayout = nil,
+        carScene = 0,
+        carFrom = { x = 0, y = 0, s = 1 },
+        carT = 1,
         n = {},
         s = {},
         b = {},

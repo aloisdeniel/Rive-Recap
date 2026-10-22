@@ -3,11 +3,12 @@ from rml import (E, nid, Anim, cond_num, cond_bool, cond_trigger, write_num, wri
                  CHALK, COAL)
 from art import BASE
 import stage
-from stage import (CARRIER, ROPE, CLOUD, HERO_DRIVER, CARRIER_POSE, CONTINUITY, IN_DUR, rope_bow,
+from stage import (CARRIER, CARRIER_FLY, ROPE, CLOUD, HERO_DRIVER, CARRIER_POSE, CONTINUITY, IN_DUR, rope_bow,
                    STAGE_AB, STAGE_SM, W, H, CHALK_IN, CARRIER_YAW, CARRIER_PITCH, ENTRY_YAW)
 from art import LIVE
 import model
-from model import path
+from model import path, rig_path
+from rml import bind
 
 SCENES = stage.all_scenes()
 BY_K = {s.k: s for s in SCENES}
@@ -86,15 +87,19 @@ def build_in(sc, v, mode):
         a.tw(getattr(sc, attr).id, "y", 0, f1, sign * off, 0.0, ease)
         a.tw(getattr(sc, attr).id, "rotation", 0, f1 + 6, -sign * TILT[attr], 0.0, "back")
     stage.ENTRY_YAW[0] = 0.0
-    # carrier hand-off
+    # carrier hand-off. A continuity entrance starts where the previous exit left the
+    # hold; any other flies in from off-canvas on `Carrier Fly` (viewport units).
     px, py, ps, pr = CARRIER_POSE[sc.k]
+    fly0 = 0.0
     if mode == "F" and (sc.k - 1) in CONTINUITY:
         sx, sy, ss = CONTINUITY[sc.k - 1]
         sr = CARRIER_POSE[sc.k - 1][3]
     else:
-        sx, sy, ss, sr = px, py + sign * 760, ps, pr + 0.6 * sign
+        sx, sy, ss, sr = px, py, ps, pr + 0.6 * sign
+        fly0 = sign * 760.0
+    a.k(CARRIER_FLY.id, "y", 0, fly0)
     if sc.carrier_hook:
-        sc.carrier_hook(a, sx, sy, ss, sr)
+        sc.carrier_hook(a, sx, sy, ss, sr, fly0)
     else:
         # the hold keeps turning from the yank and lands square on the wall
         a.k(CARRIER_PITCH, 243, 0, 0.0)
@@ -107,6 +112,8 @@ def build_in(sc, v, mode):
         carrier_set(a, 0, sx, sy, ss, sr)
         a.k(CARRIER.id, "x", t0, sx, "inout")
         a.k(CARRIER.id, "y", t0, sy, "back")
+        a.k(CARRIER_FLY.id, "y", t0, fly0, "back")
+        a.k(CARRIER_FLY.id, "y", t1, 0.0)
         a.k(CARRIER.id, "rotation", t0, sr, "back")
         a.k(CARRIER.id, "scaleX", t0, ss, "out")
         a.k(CARRIER.id, "scaleY", t0, ss, "out")
@@ -145,6 +152,7 @@ def build_exit(sc, mode):
     if mode == "R":
         a = Anim(f"Scene {k} Out Reduced", 10)
         a.tw(sc.root.id, "opacity", 0, 9, 1.0, 0.0, "linear")
+        a.hold(CARRIER_FLY.id, "y", 0.0)
         chalk_off(a)
         a.hold(ROPE.id, "opacity", 0.0)
         a.hold(HERO_DRIVER.id, 243, 1.0)
@@ -179,6 +187,7 @@ def build_exit(sc, mode):
         carrier_set(a, 0, px, py, ps, pr)
         a.k(CARRIER.id, "y", 0, py, "out")
         a.k(CARRIER.id, "y", 8, py + 12, "in")
+        a.k(CARRIER_FLY.id, "y", 0, 0.0)
         if k in CONTINUITY:
             mx, my, ms = CONTINUITY[k]
             a.k(CARRIER.id, "x", 8, px, "inout")
@@ -187,7 +196,8 @@ def build_exit(sc, mode):
             carrier_set(a, 34, mx, my, ms, pr)
             a.k(CARRIER.id, "y", 8, py + 12, "inout")
         else:
-            a.k(CARRIER.id, "y", 34, py - 1050)
+            a.k(CARRIER_FLY.id, "y", 8, 0.0, "in")
+            a.k(CARRIER_FLY.id, "y", 34, -1050.0)
         a.k(sc.root.id, "opacity", 0, 1.0)
         a.k(sc.root.id, "opacity", 37, 1.0)
         a.k(sc.root.id, "opacity", 38, 0.0)
@@ -214,8 +224,10 @@ def build_exit(sc, mode):
         a.k(rope_bow.id, "x", 22, 140.0)
         carrier_set(a, 0, px, py, ps, pr)
         a.k(CARRIER.id, "y", 0, py, "out")
-        a.k(CARRIER.id, "y", 7, py - 16, "in")
-        a.k(CARRIER.id, "y", 36, py + 1000)
+        a.k(CARRIER.id, "y", 7, py - 16)
+        a.k(CARRIER_FLY.id, "y", 0, 0.0)
+        a.k(CARRIER_FLY.id, "y", 7, 0.0, "in")
+        a.k(CARRIER_FLY.id, "y", 36, 1000.0)
         a.k(CARRIER.id, "rotation", 0, pr, "in")
         a.k(CARRIER.id, "rotation", 36, pr - 0.8)
         a.k(sc.root.id, "opacity", 0, 1.0)
@@ -421,9 +433,14 @@ def artboard():
            name="Stage", id=STAGE_AB)
     ab.add(E("LayoutComponentStyle", name="Stage Style", id="0:72"))
     ab.add(HERO_DRIVER)
-    ab.add(CARRIER, CLOUD)
+    # Viewport: scale k = canvas height / 844, so keyed parallax offsets and the
+    # carrier's flights cover any canvas height; the director writes every rig value
+    # in these units.
+    vp = E("Node", name="Viewport", kids=[bind(rig_path("k"), 16), bind(rig_path("k"), 17)])
+    vp.add(CARRIER_FLY, CLOUD)
     for sc in SCENES:
-        ab.add(sc.root)
+        vp.add(sc.root)
+    ab.add(vp)
     ab.add(sm)
     for a in ANIMS:
         ab.add(a.el())

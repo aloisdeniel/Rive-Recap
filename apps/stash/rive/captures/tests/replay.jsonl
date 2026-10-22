@@ -1,6 +1,6 @@
 {"schema": 1, "kind": "header", "artboard": "Recap", "stateMachine": "Recap", "intervalFrames": 1}
-{"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 10}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}
-{"frame": 1, "time": 0.0166666675, "values": [{"path": "screenProgress", "value": 0.00666666683}, {"path": "_visibleIndex", "value": 10}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 10}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}, {"path": "_landscape", "value": false}, {"path": "_split", "value": false}, {"path": "_wideCard", "value": false}, {"path": "_viewW", "value": 390}, {"path": "_mfx", "value": 0}, {"path": "_mfy", "value": 0}, {"path": "_mfs", "value": 1}, {"path": "_c4s", "value": 1}, {"path": "_a4s", "value": 1}]}
+{"frame": 1, "time": 0.0166666675, "values": [{"path": "screenProgress", "value": 0.00666666683}, {"path": "_visibleIndex", "value": 10}, {"path": "_mfy", "value": 49.4000015}, {"path": "_evtScreenChanged", "fired": true}, {"path": "_c4s", "value": 0.982558131}, {"path": "_a4s", "value": 0.982558131}]}
 {"frame": 2, "time": 0.0333333351, "values": [{"path": "screenProgress", "value": 0.0133333337}]}
 {"frame": 3, "time": 0.0500000045, "values": [{"path": "screenProgress", "value": 0.0200000014}]}
 {"frame": 4, "time": 0.0666666701, "values": [{"path": "screenProgress", "value": 0.0266666673}]}
@@ -151,7 +151,52 @@
 {"frame": 149, "time": 2.48333168, "values": [{"path": "screenProgress", "value": 0.993333399}]}
 {"frame": 150, "time": 2.49999833, "values": [{"path": "screenProgress", "value": 1}]}
 {"frame": 152, "time": 2.53333163, "values": [{"path": "_finished", "value": true}, {"path": "_evtRecapFinished", "fired": true}]}
-{"frame": 183, "time": 3.04999781, "values": [{"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": -1}, {"path": "_visibleIndex", "value": 1}, {"path": "_finished", "value": false}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 183, "time": 3.04999781, "values": [{"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": -1}, {"path": "_visibleIndex", "value": 1}, {"path": "_finished", "value": false}, {"path": "_mfy", "value": 49.3773079}, {"path": "_evtScreenChanged", "fired": true}]}
+{"frame": 184, "time": 3.06666446, "values": [{"path": "_mfy", "value": 49.3062515}]}
+{"frame": 185, "time": 3.08333111, "values": [{"path": "_mfy", "value": 49.1818275}]}
+{"frame": 186, "time": 3.09999776, "values": [{"path": "_mfy", "value": 48.9982224}]}
+{"frame": 187, "time": 3.11666441, "values": [{"path": "_mfy", "value": 48.7486153}]}
+{"frame": 188, "time": 3.13333106, "values": [{"path": "_mfy", "value": 48.4249573}]}
+{"frame": 189, "time": 3.14999771, "values": [{"path": "_mfy", "value": 48.0176506}]}
+{"frame": 190, "time": 3.16666436, "values": [{"path": "_mfy", "value": 47.5151825}]}
+{"frame": 191, "time": 3.18333101, "values": [{"path": "_mfy", "value": 46.9035835}]}
+{"frame": 192, "time": 3.19999766, "values": [{"path": "_mfy", "value": 46.1657944}]}
+{"frame": 193, "time": 3.21666431, "values": [{"path": "_mfy", "value": 45.2808075}]}
+{"frame": 194, "time": 3.23333097, "values": [{"path": "_mfy", "value": 44.2226067}]}
+{"frame": 195, "time": 3.24999762, "values": [{"path": "_mfy", "value": 42.9590149}]}
+{"frame": 196, "time": 3.26666427, "values": [{"path": "_mfy", "value": 41.4506683}]}
+{"frame": 197, "time": 3.28333092, "values": [{"path": "_mfy", "value": 39.6511154}]}
+{"frame": 198, "time": 3.29999757, "values": [{"path": "_mfy", "value": 37.5103912}]}
+{"frame": 199, "time": 3.31666422, "values": [{"path": "_mfy", "value": 34.9871559}]}
+{"frame": 200, "time": 3.33333087, "values": [{"path": "_mfy", "value": 32.0764961}]}
+{"frame": 201, "time": 3.34999752, "values": [{"path": "_mfy", "value": 28.8518314}]}
+{"frame": 202, "time": 3.36666417, "values": [{"path": "_mfy", "value": 25.4866943}]}
+{"frame": 203, "time": 3.38333082, "values": [{"path": "_mfy", "value": 22.2046432}]}
+{"frame": 204, "time": 3.39999747, "values": [{"path": "_mfy", "value": 19.1824608}]}
+{"frame": 205, "time": 3.41666412, "values": [{"path": "_mfy", "value": 16.5014858}]}
+{"frame": 206, "time": 3.43333077, "values": [{"path": "_mfy", "value": 14.167614}]}
+{"frame": 207, "time": 3.44999743, "values": [{"path": "_mfy", "value": 12.1499758}]}
+{"frame": 208, "time": 3.46666408, "values": [{"path": "_mfy", "value": 10.4070034}]}
+{"frame": 209, "time": 3.48333073, "values": [{"path": "_mfy", "value": 8.89835835}]}
+{"frame": 210, "time": 3.49999738, "values": [{"path": "_mfy", "value": 7.58893061}]}
+{"frame": 211, "time": 3.51666403, "values": [{"path": "_mfy", "value": 6.44944143}]}
+{"frame": 212, "time": 3.53333068, "values": [{"path": "_mfy", "value": 5.45584774}]}
+{"frame": 213, "time": 3.54999733, "values": [{"path": "_mfy", "value": 4.58846426}]}
+{"frame": 214, "time": 3.56666398, "values": [{"path": "_mfy", "value": 3.83112097}]}
+{"frame": 215, "time": 3.58333063, "values": [{"path": "_mfy", "value": 3.17045426}]}
+{"frame": 216, "time": 3.59999728, "values": [{"path": "_mfy", "value": 2.59533834}]}
+{"frame": 217, "time": 3.61666393, "values": [{"path": "_mfy", "value": 2.09643722}]}
+{"frame": 218, "time": 3.63333058, "values": [{"path": "_mfy", "value": 1.66585457}]}
+{"frame": 219, "time": 3.64999723, "values": [{"path": "_mfy", "value": 1.29686272}]}
+{"frame": 220, "time": 3.66666389, "values": [{"path": "_mfy", "value": 0.983686447}]}
+{"frame": 221, "time": 3.68333054, "values": [{"path": "_mfy", "value": 0.721335471}]}
+{"frame": 222, "time": 3.69999719, "values": [{"path": "_mfy", "value": 0.505469918}]}
+{"frame": 223, "time": 3.71666384, "values": [{"path": "_mfy", "value": 0.332293004}]}
+{"frame": 224, "time": 3.73333049, "values": [{"path": "_mfy", "value": 0.198464707}]}
+{"frame": 225, "time": 3.74999714, "values": [{"path": "_mfy", "value": 0.101031631}]}
+{"frame": 226, "time": 3.76666379, "values": [{"path": "_mfy", "value": 0.037369594}]}
+{"frame": 227, "time": 3.78333044, "values": [{"path": "_mfy", "value": 0.00513642421}]}
+{"frame": 228, "time": 3.79999709, "values": [{"path": "_mfy", "value": 0}]}
 {"frame": 332, "time": 5.53335047, "values": [{"path": "screenProgress", "value": 0.00238095247}]}
 {"frame": 333, "time": 5.55001736, "values": [{"path": "screenProgress", "value": 0.00476190494}]}
 {"frame": 334, "time": 5.56668425, "values": [{"path": "screenProgress", "value": 0.00714285765}]}
@@ -184,4 +229,4 @@
 {"frame": 361, "time": 6.01669025, "values": [{"path": "screenProgress", "value": 0.0714285746}]}
 {"frame": 362, "time": 6.03335714, "values": [{"path": "screenProgress", "value": 0.0738095269}]}
 {"frame": 363, "time": 6.05002403, "values": [{"path": "screenProgress", "value": 0.0761904791}]}
-{"frame": 363, "time": 6.05002403, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0.0761904791}, {"path": "_navDir", "value": -1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}]}
+{"frame": 363, "time": 6.05002403, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0.0761904791}, {"path": "_navDir", "value": -1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}, {"path": "_landscape", "value": false}, {"path": "_split", "value": false}, {"path": "_wideCard", "value": false}, {"path": "_viewW", "value": 390}, {"path": "_mfx", "value": 0}, {"path": "_mfy", "value": 0}, {"path": "_mfs", "value": 1}, {"path": "_c4s", "value": 0.982558131}, {"path": "_a4s", "value": 0.982558131}]}

@@ -36,6 +36,7 @@
   "emptyHeadline": "Every story starts somewhere.",
   "emptySupport": "Your next chapter is waiting.",
   "personaLabel": "Your personal style",
+  "layoutBreakpoint": 768,
   "showScreen1": true,
   "showScreen2": false,
   "showScreen3": false,

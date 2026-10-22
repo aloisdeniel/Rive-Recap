@@ -1,14 +1,25 @@
 --!strict
--- Marginalia page stage: the signature page turn, as a real 3D paper curl.
+-- Marginalia page stage: the signature page turn, as a real 3D paper curl,
+-- and the responsive placement of every page.
 --
--- This ScriptedLayout fills the stage between the header and the controls. It
--- hosts the ten Page artboards and the Carry artboard (bookmark ribbon, moon)
--- as separate instances bound to the one UserRecap instance, contain-fits them
--- into the stage, and keeps a small model of a book:
+-- This ScriptedLayout fills the whole canvas (the header and the controls are
+-- drawn above it). It hosts the ten Page artboards and the Carry artboard
+-- (bookmark ribbon, moon) as separate instances bound to the one UserRecap
+-- instance, and keeps a small model of a book:
 --
 --   base    the flat page at the bottom of the stack (normally currentScreen)
 --   turns   leaves in flight, each easing its progress p toward 1 (turned
 --           away past the spine) or 0 (landed flat)
+--
+-- Responsive layout: a page is the full canvas. Each page's artwork is
+-- authored in a 390-unit design space and grouped into frames (Copy Frame,
+-- Art Frame, Bleed Front/Back, Paper Frame, Empty Frame); whenever the canvas
+-- size or the breakpoint changes, scripts/responsive.luau plans every page
+-- for the real size and orientation and this script moves those frames
+-- (NodeData). The Carry's Ribbon Frame glides with the scene (to the page
+-- margin in portrait, the spread's gutter in landscape) and its Moon Frame
+-- follows the illustration of scenes 4-5. The Cover's cloth, gilt frame and
+-- stamped title are placed the same way.
 --
 -- Forward: the page on top curls up from its lower-right corner, rolls over a
 -- moving cylinder and leaves past the spine, revealing the next page playing
@@ -27,6 +38,8 @@
 -- own 200 ms fades). Paused (_motionPaused): nothing advances, leaves freeze.
 -- No shader support: the leaf folds flat toward the spine instead.
 
+local Resp = require('scripts/responsive')
+
 type Turn = { page: number, p: number, target: number, slot: number, delay: number }
 
 type Slot = {
@@ -36,6 +49,27 @@ type Slot = {
     ubo: GPUBuffer?,
     group: GPUBindGroup?,
     used: boolean,
+}
+
+-- the named frames of one hosted page
+type Frames = {
+    copy: NodeData?,
+    art: NodeData?,
+    bleedF: NodeData?,
+    bleedB: NodeData?,
+    paper: NodeData?,
+    empty: NodeData?,
+    foot: NodeData?,
+    wide: NodeData?,
+    sky: NodeData?,
+}
+
+type CoverFrames = {
+    cloth: NodeData?,
+    spine: NodeData?,
+    title: NodeData?,
+    gilt: NodeData?,
+    fleurons: { NodeData },
 }
 
 type PageStage = {
@@ -52,21 +86,33 @@ type PageStage = {
     carry: Input<Artboard<Data.UserRecap>>,
     cover: Input<Artboard<Data.UserRecap>>,
     pages: { Artboard<Data.UserRecap> },
+    frames: { Frames },
     coverInst: Artboard<Data.UserRecap>?,
+    coverFrames: CoverFrames?,
     wantCover: boolean,
     ca: Artboard<Data.UserRecap>?,
+    ribbonFrame: NodeData?,
+    moonFrame: NodeData?,
     ctx: Context?,
+    vm: ViewModel?,
     cur: Property<number>?,
     navDir: Property<number>?,
     reduced: Property<boolean>?,
     paused: Property<boolean>?,
+    breakpoint: Property<number>?,
+    chromeAlpha: Property<number>?,
     size: Vector,
     scale: number,
-    -- page placement (layout points): offset and uniform scale of the 390x664 page
-    px: number,
-    py: number,
-    ps: number,
-    k: number, -- canvas pixels per page unit
+    -- the page is the whole canvas: pw x ph layout points
+    pw: number,
+    ph: number,
+    k: number, -- leaf canvas pixels per point (device density, capped)
+    -- responsive state
+    layoutKey: string,
+    chrome: Resp.Chrome?,
+    plans: { Resp.Plan },
+    ribbon: { x0: number, s0: number, x1: number, s1: number, t: number, dur: number },
+    moon: { a: Resp.Xf, b: Resp.Xf, t: number, dur: number, scene: number },
     -- the book: one flat base page, and leaves in flight above it
     lastScreen: number,
     base: number,
@@ -85,6 +131,8 @@ type PageStage = {
     vbuf: GPUBuffer?,
     ibuf: GPUBuffer?,
     icount: number,
+    gx: number,
+    gy: number,
     gpuSampler: GPUSampler?,
     staging: buffer,
     sampler: ImageSampler,
@@ -92,12 +140,14 @@ type PageStage = {
     shadePath: Path,
 }
 
-local PW, PH = 390, 664 -- page (Scenes artboard) size
-local MX, MY = 64, 88 -- GPU canvas margin around the page, page units
+local MX, MY = 64, 88 -- GPU canvas margin around the page, points
 local T_TURN = 0.84 -- seconds; the brief's 450-850 ms handoff
 local T_COVER = 1.1 -- the board cover is heavier
 local COVER_DELAY = 0.45 -- the closed book is held for a beat first
-local GX, GY = 60, 102 -- leaf mesh resolution (~6.5 px cells)
+local T_RIBBON = 0.76 -- the ribbon's pose morph (Carry state machine)
+local T_MOON = 0.82 -- the moon's carry 4 -> 5 (Carry state machine)
+local CELLS = 6100 -- leaf mesh cells (~61x100 on a phone page), kept square
+local MAX_LEAF_PX = 4.2e6 -- leaf texture budget per slot, device pixels
 local PI = math.pi
 
 -- ------------------------------------------------------------ easing
@@ -132,40 +182,51 @@ end
 -- back a touch (0.10-0.16) before the sweep; the roll radius swells to a soft,
 -- page-like bend mid-turn and tightens as the leaf leaves. Back navigation
 -- plays the same pose in reverse, so the corner settles last (follow-through).
+-- The roll is sized from the page's shorter side, so a wide landscape page
+-- turns with the same paper-like bend as a phone page.
 -- Returns axis point, unit normal toward the free edge, roll radius.
 local function pose(p: number, W: number, H: number, stiff: boolean): (number, number, number, number, number)
+    local L = math.min(W, H * 0.62)
     if stiff then
         -- the board cover: barely any curl, swings almost square to the spine
         local phi = lerp(0.16, 0.0, easeSine(p))
         local nx, ny = math.cos(phi), math.sin(phi)
-        local R = W * (0.10 + 0.42 * math.sin(PI * clamp01(p)) ^ 0.8)
+        local R = L * (0.10 + 0.42 * math.sin(PI * clamp01(p)) ^ 0.8)
         local span = W * nx + H * ny
-        local cEnd = span + R * 1.15 / nx + W * 0.03
+        local cEnd = span + R * 1.15 / nx + L * 0.03
         local c = lerp(0, cEnd, easeSine(p) * 0.92 + easeOut(p) * 0.08)
         return W - nx * c, H - ny * c, nx, ny, R
     end
-    local phi = lerp(0.52, 0.06, easeSine(p))
+    -- a wide page tilts its fold less (the corner diagonal is shallower)
+    local tilt = math.clamp(0.52 * math.sqrt(math.min(1, (H / W) / 1.7)), 0.3, 0.52)
+    local phi = lerp(tilt, 0.06, easeSine(p))
     local nx, ny = math.cos(phi), math.sin(phi)
     local q = clamp01((p - 0.06) / 0.94)
-    local R = W * (0.045 + 0.14 * math.sin(PI * q) ^ 1.2 + 0.05 * q)
+    local R = L * (0.045 + 0.14 * math.sin(PI * q) ^ 1.2 + 0.05 * q)
     local span = W * nx + H * ny
     -- done once the roll itself has cleared the spine (the flipped part lies
     -- beyond it, off the page)
-    local cEnd = span + R * 1.15 / nx + W * 0.03
+    local cEnd = span + R * 1.15 / nx + L * 0.03
     local c
     if p < 0.10 then
-        c = W * 0.075 * easeOut(p / 0.10)
+        c = L * 0.075 * easeOut(p / 0.10)
     elseif p < 0.16 then
-        c = W * (0.075 - 0.012 * math.sin(PI * 0.5 * (p - 0.10) / 0.06))
+        c = L * (0.075 - 0.012 * math.sin(PI * 0.5 * (p - 0.10) / 0.06))
     else
-        c = lerp(W * 0.063, cEnd, easeSine((p - 0.16) / 0.84))
+        c = lerp(L * 0.063, cEnd, easeSine((p - 0.16) / 0.84))
     end
     -- the leading (lower-right) corner sits c beyond the axis
     return W - nx * c, H - ny * c, nx, ny, R
 end
 
 -- ------------------------------------------------------------ GPU setup
-local function buildMesh(self: PageStage)
+-- A grid of near-square cells over the page, rebuilt when its aspect changes.
+local function buildMesh(self: PageStage, GX: number, GY: number)
+    if GX == self.gx and GY == self.gy and self.vbuf ~= nil then
+        return
+    end
+    self.gx = GX
+    self.gy = GY
     local nv = (GX + 1) * (GY + 1)
     local vb = buffer.create(nv * 8)
     local o = 0
@@ -228,57 +289,7 @@ local function initGpu(self: PageStage, context: Context)
         sampleCount = self.samples,
     })
     self.gpuSampler = GPUSampler.new({ min = 'linear', mag = 'linear', mipmap = 'nearest' })
-    buildMesh(self)
     self.gpu = true
-end
-
--- (Re)allocate every surface for the current stage size and pixel density.
--- Two leaf slots: two pages can be in flight at once (rapid navigation).
-local SLOTS = 2
-
-local function allocate(self: PageStage)
-    local ctx = self.ctx
-    if ctx == nil or self.size.x <= 0 or self.size.y <= 0 then
-        return
-    end
-    self.ps = math.min(self.size.x / PW, self.size.y / PH)
-    self.px = (self.size.x - PW * self.ps) * 0.5
-    self.py = (self.size.y - PH * self.ps) * 0.5
-    self.k = self.ps * self.scale
-    local w = math.max(1, math.ceil(PW * self.k))
-    local h = math.max(1, math.ceil(PH * self.k))
-    local gw = math.ceil((PW + 2 * MX) * self.k)
-    local gh = math.ceil((PH + 2 * MY) * self.k)
-    -- leaves in flight snap to where they were going
-    self.turns = {}
-    self.slots = {}
-    for i = 1, SLOTS do
-        local cv = ctx:canvas({ width = w, height = h })
-        local slot: Slot = { canvas = cv, gc = nil, colorView = nil, ubo = nil, group = nil, used = false }
-        local layout, smp = self.layout, self.gpuSampler
-        if self.gpu and layout ~= nil and smp ~= nil then
-            local gc = ctx:gpuCanvas({ width = gw, height = gh })
-            local ubo = GPUBuffer.new({ size = 96, usage = 'uniform', label = 'leaf uniforms' })
-            slot.gc = gc
-            slot.colorView = gc:colorView()
-            slot.ubo = ubo
-            slot.group = GPUBindGroup.new({
-                layout = layout,
-                ubos = { { slot = 0, buffer = ubo } },
-                textures = { { slot = 1, view = cv.image:view() } },
-                samplers = { { slot = 2, sampler = smp } },
-            })
-        end
-        self.slots[i] = slot
-    end
-    if self.gpu then
-        if self.samples > 1 then
-            self.msaaView = GPUTexture.new({ width = gw, height = gh, format = 'rgba8unorm', renderTarget = true,
-                sampleCount = self.samples, label = 'leaf msaa' }):view()
-        end
-        self.depthView = GPUTexture.new({ width = gw, height = gh, format = 'depth32float', renderTarget = true,
-            sampleCount = self.samples, label = 'leaf depth' }):view()
-    end
 end
 
 -- ------------------------------------------------------------ lifecycle
@@ -305,6 +316,245 @@ local function finish(self: PageStage, t: Turn)
     end
 end
 
+-- every leaf in flight lands where it was going, at once
+local function settleTurns(self: PageStage)
+    for _, t in table.clone(self.turns) do
+        t.p = t.target
+        finish(self, t)
+    end
+end
+
+-- (Re)allocate every surface for the current canvas size and pixel density.
+-- Two leaf slots: two pages can be in flight at once (rapid navigation).
+local SLOTS = 2
+
+local function allocate(self: PageStage)
+    local ctx = self.ctx
+    if ctx == nil or self.size.x <= 0 or self.size.y <= 0 then
+        return
+    end
+    -- leaves in flight land where they were going (a resize mid-turn settles
+    -- cleanly on the page the reader asked for)
+    settleTurns(self)
+    self.pw = self.size.x
+    self.ph = self.size.y
+    -- device resolution, within a per-leaf texture budget on very large canvases
+    self.k = math.min(self.scale, math.sqrt(MAX_LEAF_PX / (self.pw * self.ph)))
+    local k = self.k
+    local w = math.max(1, math.ceil(self.pw * k))
+    local h = math.max(1, math.ceil(self.ph * k))
+    local gw = math.ceil((self.pw + 2 * MX) * k)
+    local gh = math.ceil((self.ph + 2 * MY) * k)
+    self.slots = {}
+    for i = 1, SLOTS do
+        local cv = ctx:canvas({ width = w, height = h })
+        local slot: Slot = { canvas = cv, gc = nil, colorView = nil, ubo = nil, group = nil, used = false }
+        local layout, smp = self.layout, self.gpuSampler
+        if self.gpu and layout ~= nil and smp ~= nil then
+            local gc = ctx:gpuCanvas({ width = gw, height = gh })
+            local ubo = GPUBuffer.new({ size = 96, usage = 'uniform', label = 'leaf uniforms' })
+            slot.gc = gc
+            slot.colorView = gc:colorView()
+            slot.ubo = ubo
+            slot.group = GPUBindGroup.new({
+                layout = layout,
+                ubos = { { slot = 0, buffer = ubo } },
+                textures = { { slot = 1, view = cv.image:view() } },
+                samplers = { { slot = 2, sampler = smp } },
+            })
+        end
+        self.slots[i] = slot
+    end
+    if self.gpu then
+        local gx = math.max(8, math.floor(math.sqrt(CELLS * self.pw / self.ph) + 0.5))
+        local gy = math.max(8, math.floor(CELLS / gx + 0.5))
+        buildMesh(self, gx, gy)
+        if self.samples > 1 then
+            self.msaaView = GPUTexture.new({ width = gw, height = gh, format = 'rgba8unorm', renderTarget = true,
+                sampleCount = self.samples, label = 'leaf msaa' }):view()
+        end
+        self.depthView = GPUTexture.new({ width = gw, height = gh, format = 'depth32float', renderTarget = true,
+            sampleCount = self.samples, label = 'leaf depth' }):view()
+    end
+end
+
+-- ------------------------------------------------------------ responsive
+local function place(n: NodeData?, t: Resp.Xf)
+    if n ~= nil then
+        n.x = t.tx
+        n.y = t.ty
+        n.scaleX = t.sx
+        n.scaleY = t.sy
+    end
+end
+
+local function placeAt(n: NodeData?, x: number, y: number)
+    if n ~= nil then
+        n.x = x
+        n.y = y
+    end
+end
+
+local function framesOf(a: Artboard<Data.UserRecap>): Frames
+    return {
+        copy = a:node('Copy Frame'),
+        art = a:node('Art Frame'),
+        bleedF = a:node('Bleed Front'),
+        bleedB = a:node('Bleed Back'),
+        paper = a:node('Paper Frame'),
+        empty = a:node('Empty Frame'),
+        foot = a:node('Foot Frame'),
+        wide = a:node('Wide Frame'),
+        sky = a:node('Sky Frame'),
+    }
+end
+
+local function currentScene(self: PageStage): number
+    local cur = self.cur
+    return if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else self.lastScreen
+end
+
+local function setRibbon(self: PageStage, x: number, y: number, s: number)
+    local n = self.ribbonFrame
+    if n ~= nil then
+        n.x = x
+        n.y = y
+        n.scaleX = s
+        n.scaleY = s
+    end
+end
+
+-- Plan every page for the real canvas and orientation, and move the frames.
+-- Cheap (a few dozen node writes) and only when the size or breakpoint moves.
+local function relayout(self: PageStage)
+    local w, h = self.size.x, self.size.y
+    if w <= 0 or h <= 0 or #self.pages == 0 then
+        return
+    end
+    local bpp = self.breakpoint
+    local bp = Resp.breakpoint(if bpp ~= nil then bpp.value else Resp.BREAKPOINT)
+    local key = w .. 'x' .. h .. '@' .. bp
+    if key == self.layoutKey then
+        return
+    end
+    self.layoutKey = key
+    local c = Resp.chrome(w, h, bp)
+    self.chrome = c
+    for i, pg in self.pages do
+        local p = Resp.plan(i, c)
+        self.plans[i] = p
+        local f = self.frames[i]
+        if f ~= nil then
+            place(f.copy, p.copy)
+            place(f.art, p.art)
+            place(f.bleedF, p.bleed)
+            place(f.bleedB, p.bleed)
+            place(f.paper, p.paper)
+            place(f.empty, p.empty)
+            place(f.foot, p.foot)
+            place(f.wide, p.wide)
+            place(f.sky, p.sky)
+        end
+        pg:advance(0)
+    end
+    -- the ribbon and the moon snap to the new layout (a resize is not a cut)
+    local sc = currentScene(self)
+    local p = self.plans[sc]
+    if p ~= nil then
+        local r = self.ribbon
+        r.x0 = p.ribbonX
+        r.x1 = p.ribbonX
+        r.s0 = p.ribbonS
+        r.s1 = p.ribbonS
+        r.t = r.dur
+        local mp = self.plans[if sc == 5 then 5 else 4]
+        if mp ~= nil then
+            self.moon.a = mp.art
+            self.moon.b = mp.art
+            self.moon.t = self.moon.dur
+            place(self.moonFrame, mp.art)
+        end
+        setRibbon(self, p.ribbonX, Resp.ribbonFrameY(c, p.ribbonS), p.ribbonS)
+    end
+    -- the closed book: cloth to the edges, gilt frame inset, title centred
+    local cf = self.coverFrames
+    if cf ~= nil then
+        local cp = Resp.cover(c)
+        place(cf.cloth, cp.cloth)
+        place(cf.spine, cp.spine)
+        place(cf.title, cp.title)
+        placeAt(cf.gilt, w * 0.5, h * 0.5)
+        local fl = cf.fleurons
+        if #fl == 4 then
+            placeAt(fl[1], 22, 22)
+            placeAt(fl[2], w - 22, 22)
+            placeAt(fl[3], 22, h - 22)
+            placeAt(fl[4], w - 22, h - 22)
+        end
+    end
+    local ca = self.ca
+    if ca ~= nil then
+        ca:advance(0)
+    end
+end
+
+-- The ribbon glides to the new scene's place with its pose morph; the moon
+-- follows the illustration it belongs to.
+local function retargetCarry(self: PageStage, scene: number, reduced: boolean)
+    local p = self.plans[scene]
+    local c = self.chrome
+    if p == nil or c == nil then
+        return
+    end
+    local r = self.ribbon
+    local k = if r.dur > 0 then easeInOut(r.t / r.dur) else 1
+    r.x0 = lerp(r.x0, r.x1, k)
+    r.s0 = lerp(r.s0, r.s1, k)
+    r.x1 = p.ribbonX
+    r.s1 = p.ribbonS
+    r.t = if reduced then T_RIBBON else 0
+    r.dur = T_RIBBON
+    if scene == 4 or scene == 5 then
+        local m = self.moon
+        if m.scene ~= scene then
+            local km = if m.dur > 0 then easeInOut(m.t / m.dur) else 1
+            local cur: Resp.Xf = {
+                tx = lerp(m.a.tx, m.b.tx, km),
+                ty = lerp(m.a.ty, m.b.ty, km),
+                sx = lerp(m.a.sx, m.b.sx, km),
+                sy = lerp(m.a.sy, m.b.sy, km),
+            }
+            m.a = cur
+            m.b = p.art
+            m.t = if reduced or (m.scene ~= 4 and m.scene ~= 5) then T_MOON else 0
+            m.dur = T_MOON
+            m.scene = scene
+        end
+    end
+end
+
+local function stepCarry(self: PageStage, seconds: number)
+    local c = self.chrome
+    if c == nil then
+        return
+    end
+    local r = self.ribbon
+    r.t = math.min(r.dur, r.t + seconds)
+    local k = if r.dur > 0 then easeInOut(r.t / r.dur) else 1
+    local s = lerp(r.s0, r.s1, k)
+    setRibbon(self, lerp(r.x0, r.x1, k), Resp.ribbonFrameY(c, s), s)
+    local m = self.moon
+    m.t = math.min(m.dur, m.t + seconds)
+    local km = if m.dur > 0 then easeInOut(m.t / m.dur) else 1
+    place(self.moonFrame, {
+        tx = lerp(m.a.tx, m.b.tx, km),
+        ty = lerp(m.a.ty, m.b.ty, km),
+        sx = lerp(m.a.sx, m.b.sx, km),
+        sy = lerp(m.a.sy, m.b.sy, km),
+    })
+end
+
+-- ------------------------------------------------------------ navigation
 local function startTurn(self: PageStage, page: number, p: number, target: number)
     local free = 0
     for i, slot in self.slots do
@@ -327,10 +577,7 @@ end
 -- currentScreen moved from a to b.
 local function navigate(self: PageStage, a: number, b: number, dir: number, reduced: boolean)
     if reduced or #self.slots == 0 then
-        for _, t in table.clone(self.turns) do
-            t.p = t.target
-            finish(self, t)
-        end
+        settleTurns(self)
         self.fadeFrom = self.base
         self.fadeT = 0
         self.base = b
@@ -365,25 +612,60 @@ end
 
 function init(self: PageStage, context: Context): boolean
     local vm = context:viewModel()
-    if vm == nil or #self.pages > 0 then
+    if vm == nil or vm == self.vm then
         return true
     end
+    -- (re)bind: init can run again with the instance the host finally binds
+    -- (e.g. Recap hosted inside another artboard); everything follows it
+    self.vm = vm
+    self.pages = {}
+    self.frames = {}
+    self.plans = {}
+    self.turns = {}
+    for _, slot in self.slots do
+        slot.used = false
+    end
+    self.layoutKey = ''
     self.ctx = context
     for _, input in { self.page1, self.page2, self.page3, self.page4, self.page5, self.page6, self.page7,
         self.page8, self.page9, self.page10 } do
-        table.insert(self.pages, input:instance(vm))
+        local a = input:instance(vm)
+        table.insert(self.pages, a)
+        table.insert(self.frames, framesOf(a))
     end
-    self.ca = self.carry:instance(vm)
-    self.coverInst = self.cover:instance(vm)
+    local ca = self.carry:instance(vm)
+    self.ca = ca
+    self.ribbonFrame = ca:node('Ribbon Frame')
+    self.moonFrame = ca:node('Moon Frame')
+    local cover = self.cover:instance(vm)
+    self.coverInst = cover
+    local fl: { NodeData } = {}
+    for i = 0, 3 do
+        local n = cover:node('Fleuron ' .. i)
+        if n ~= nil then
+            table.insert(fl, n)
+        end
+    end
+    self.coverFrames = {
+        cloth = cover:node('Cloth'),
+        spine = cover:node('Cover Spine'),
+        title = cover:node('Cover Title'),
+        gilt = cover:node('Gilt Frame'),
+        fleurons = fl,
+    }
     self.cur = vm:getNumber('currentScreen')
     self.navDir = vm:getNumber('_navDir')
     self.reduced = vm:getBoolean('reducedMotion')
     self.paused = vm:getBoolean('_motionPaused')
+    self.breakpoint = vm:getNumber('layoutBreakpoint')
+    self.chromeAlpha = vm:getNumber('_chromeAlpha')
     local cur = self.cur
     self.lastScreen = if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else 1
     self.base = self.lastScreen
+    self.moon.scene = self.lastScreen
     initGpu(self, context)
     allocate(self)
+    relayout(self)
     -- the recap opens on the closed book: the cover swings open onto page 1
     local rm = self.reduced
     self.wantCover = self.lastScreen == 1 and (rm == nil or not rm.value)
@@ -398,6 +680,22 @@ function resize(self: PageStage, size: Vector, scale: number)
     self.size = size
     self.scale = sc
     allocate(self)
+    relayout(self)
+end
+
+-- the header and the controls fade in as the closed cover swings open
+local function updateChromeAlpha(self: PageStage)
+    local a = 1
+    local t = findTurn(self, 0)
+    if t ~= nil then
+        a = math.clamp((t.p - 0.12) / 0.45, 0, 1)
+    elseif self.wantCover then
+        a = 0
+    end
+    local cp = self.chromeAlpha
+    if cp ~= nil and cp.value ~= a then
+        cp.value = a
+    end
 end
 
 function advance(self: PageStage, seconds: number): boolean
@@ -405,26 +703,30 @@ function advance(self: PageStage, seconds: number): boolean
     if ca == nil or #self.pages == 0 then
         return true
     end
+    -- the host may retune layoutBreakpoint at any time
+    relayout(self)
     local paused = self.paused ~= nil and (self.paused :: Property<boolean>).value
     local reduced = self.reduced ~= nil and (self.reduced :: Property<boolean>).value
     if self.wantCover and #self.slots > 0 then
         self.wantCover = false
-        if not reduced then
+        -- the closed book only opens onto page 1 (a host may jump first)
+        if not reduced and currentScene(self) == 1 then
             startTurn(self, 0, 0, 1)
             self.turns[#self.turns].delay = COVER_DELAY
         end
     end
-    local cur = self.cur
-    local cs = if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else self.lastScreen
+    local cs = currentScene(self)
     if cs ~= self.lastScreen then
         local nd = self.navDir
         local dir = if nd ~= nil and nd.value < 0 then -1 else 1
         navigate(self, self.lastScreen, cs, dir, reduced)
+        retargetCarry(self, cs, reduced)
         self.lastScreen = cs
     end
     if reduced and #self.turns > 0 then
         navigate(self, cs, cs, 1, true)
     end
+    updateChromeAlpha(self)
     if paused then
         return true
     end
@@ -445,6 +747,7 @@ function advance(self: PageStage, seconds: number): boolean
             finish(self, t)
         end
     end
+    stepCarry(self, seconds)
     for _, pg in self.pages do
         pg:advance(seconds)
     end
@@ -474,12 +777,12 @@ end
 
 local function writeUniforms(self: PageStage, ubo: GPUBuffer, p: number, cover: boolean)
     local k = self.k
-    local W, H = PW * k, PH * k
+    local W, H = self.pw * k, self.ph * k
     local ax, ay, nx, ny, R = pose(p, W, H, cover)
     local b = self.staging
     local vals = {
         W, H, MX * k, MY * k, -- page
-        (PW + 2 * MX) * k, (PH + 2 * MY) * k, H * 2.2, if cover then 1 else 0, -- view: canvas, camera, endpaper
+        (self.pw + 2 * MX) * k, (self.ph + 2 * MY) * k, math.max(W, H) * 1.75, if cover then 1 else 0, -- view: canvas, camera, endpaper
         ax, ay, nx, ny, -- axis
         R, 1, 0.11, p, -- curl: radius, shadow strength, show-through, progress
         -0.38, -0.52, 0.76, 0.62, -- light dir (upper-left, toward the reader), ambient
@@ -536,9 +839,9 @@ local function drawFold(self: PageStage, r: Renderer, img: Image, p: number)
     local path = self.shadePath
     path:reset()
     path:moveTo(Vector.xy(0, 0))
-    path:lineTo(Vector.xy(PW * sx, 0))
-    path:lineTo(Vector.xy(PW * sx, PH))
-    path:lineTo(Vector.xy(0, PH))
+    path:lineTo(Vector.xy(self.pw * sx, 0))
+    path:lineTo(Vector.xy(self.pw * sx, self.ph))
+    path:lineTo(Vector.xy(0, self.ph))
     path:close()
     self.shade.color = Color.rgba(0x25, 0x2E, 0x3D, math.floor(110 * math.sin(PI * p)))
     r:drawPath(path, self.shade)
@@ -549,8 +852,6 @@ function draw(self: PageStage, renderer: Renderer)
     if ca == nil or #self.pages == 0 or #self.slots == 0 then
         return
     end
-    renderer:save()
-    renderer:transform(Mat2D.withTranslation(self.px, self.py) * Mat2D.withScale(self.ps, self.ps))
     local base = self.pages[self.base]
     if base ~= nil then
         base:draw(renderer)
@@ -567,7 +868,13 @@ function draw(self: PageStage, renderer: Renderer)
     table.sort(order, function(x: Turn, y: Turn): boolean
         return x.page > y.page
     end)
+    local carried = false
     for _, t in order do
+        if t.page == 0 and not carried then
+            -- the ribbon is page 1's bookmark: it lies under the closed cover
+            ca:draw(renderer)
+            carried = true
+        end
         local slot = self.slots[t.slot]
         local pg = if t.page == 0 then self.coverInst else self.pages[t.page]
         if slot ~= nil and pg ~= nil then
@@ -581,8 +888,9 @@ function draw(self: PageStage, renderer: Renderer)
             end
         end
     end
-    ca:draw(renderer)
-    renderer:restore()
+    if not carried then
+        ca:draw(renderer)
+    end
 end
 
 return function(context: Context): Layout<PageStage>
@@ -600,20 +908,37 @@ return function(context: Context): Layout<PageStage>
         carry = late(),
         cover = late(),
         pages = {},
+        frames = {},
         coverInst = nil,
+        coverFrames = nil,
         wantCover = false,
         ca = nil,
+        ribbonFrame = nil,
+        moonFrame = nil,
         ctx = nil,
+        vm = nil,
         cur = nil,
         navDir = nil,
         reduced = nil,
         paused = nil,
+        breakpoint = nil,
+        chromeAlpha = nil,
         size = Vector.xy(0, 0),
         scale = 1,
-        px = 0,
-        py = 0,
-        ps = 1,
+        pw = 390,
+        ph = 844,
         k = 1,
+        layoutKey = '',
+        chrome = nil,
+        plans = {},
+        ribbon = { x0 = 0, s0 = 1, x1 = 0, s1 = 1, t = 0, dur = 0 },
+        moon = {
+            a = { tx = 0, ty = 0, sx = 1, sy = 1 },
+            b = { tx = 0, ty = 0, sx = 1, sy = 1 },
+            t = 0,
+            dur = 0,
+            scene = 1,
+        },
         lastScreen = 1,
         base = 1,
         turns = {},
@@ -630,6 +955,8 @@ return function(context: Context): Layout<PageStage>
         vbuf = nil,
         ibuf = nil,
         icount = 0,
+        gx = 0,
+        gy = 0,
         gpuSampler = nil,
         staging = buffer.create(96),
         sampler = ImageSampler('clamp', 'clamp', 'bilinear'),

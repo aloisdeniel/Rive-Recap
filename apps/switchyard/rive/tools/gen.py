@@ -33,6 +33,9 @@ EXTREME = json.load(open(os.path.join(ROOT, "fixtures", "extreme-long-copy.json"
 # control signals live on the same UserRecap instance, prefixed with "_".
 ADDITIONS = {
     "greetingLabel": ("String", "Hi,"),
+    # Responsive contract addition (host-owned): artboard width at or above which the
+    # landscape layout is used; below it the portrait layout. Default 768.
+    "layoutBreakpoint": ("Number", 768),
     "_navDir": ("Number", 1),
     "_count2": ("Number", 0), "_count3": ("Number", 0), "_count4": ("Number", 0),
     "_count5": ("Number", 0), "_count6": ("Number", 0), "_count7": ("Number", 0),
@@ -102,11 +105,14 @@ def instance(name, data):
     return inst
 
 
-INST_FIXTURE = instance("Fixture", SAMPLE)
-INST_ZERO = instance("NewUser", ZERO)
-INST_EXTREME = instance("Extreme", EXTREME)
-VM.add(INST_FIXTURE, INST_ZERO, INST_EXTREME)
-VM.attrs["defaultInstanceId"] = INST_FIXTURE.id
+def add_num(name, default=0.0):
+    """A file-owned number on UserRecap (declared on first use, before the instances)."""
+    if name not in P:
+        el = E("ViewModelPropertyNumber", name=name)
+        VM.add(el)
+        P[name], PTYPE[name] = el, "Number"
+        ADDITIONS[name] = ("Number", float(default))
+    return name
 
 
 def path(name):
@@ -125,6 +131,9 @@ FONT_DISPLAY = E("FontAsset", file="assets/fonts/ArchivoBlack-Regular.ttf", name
 FONT_COND = E("FontAsset", file="assets/fonts/ArchivoCondensedBlack-Switchyard.ttf", name="Archivo Condensed Black")
 FONT_TEXT = E("FontAsset", file="assets/fonts/Inter-Switchyard.ttf", name="Inter")
 SCRIPT_FMT = E("ScriptAsset", file="scripts/formatCount.luau", name="formatCount")
+# modules first: require() only finds a module declared above the script that imports it
+SCRIPT_LDATA = E("ScriptAsset", file="scripts/layoutdata.luau", isModule=True, folderPath="scripts", name="layoutdata")
+SCRIPT_LAYOUT = E("ScriptAsset", file="scripts/layout.luau", isModule=True, folderPath="scripts", name="layout")
 SCRIPT_SEQ = E("ScriptAsset", file="scripts/sequencer.luau", name="sequencer")
 SCRIPT_P3 = E("ScriptAsset", file="scripts/poster3d.luau", name="poster3d")
 SCRIPT_FLAP = E("ScriptAsset", file="scripts/flapboard.luau", name="flapboard")
@@ -133,6 +142,10 @@ SCRIPT_PAPER = E("ScriptAsset", file="scripts/paper.luau", name="paper")
 CONV_FMT = E("ScriptedDataConverter", scriptAssetId=SCRIPT_FMT.id, name="Format count (locale grouping)")
 CONV_YEAR = E("DataConverterToString", decimals=0, round=True, name="Year to text")
 ROOTS = [CONV_FMT, CONV_YEAR]
+# -x : the inverse offset of a pivot wrapper (pivot at p, child at -p)
+CONV_NEG = E("DataConverterFormula", E("FormulaTokenInput"), E("FormulaTokenOperation", operationType=2),
+             E("FormulaTokenValue", operationValue=-1.0), name="Negate (pivot inverse)")
+ROOTS.append(CONV_NEG)
 
 COUNT_CONV = {}
 for n in range(2, 9):
@@ -245,28 +258,119 @@ BANDS = ((BLUE, 14.0, 7.0), (YEL, 14.0, 21.0), (RED, 14.0, 35.0), (BLACK, 6.0, 4
 EXPAND = (0.6, 0.0, 0.16, 1.0)   # slow start, very fast middle, long settle: a "breath"
 
 
+# ----------------------------------------------------------------------
+# Responsive layout plumbing. The artboard follows the canvas (layout fit);
+# scripts/layout.luau solves a placement for the real size and writes the
+# file-owned numbers below into UserRecap. Every wrapper bound here is never
+# keyed by a timeline, so choreography (keyed in 390 x 844 design units inside
+# the wrappers) and layout (on the wrappers) never fight.
+# ----------------------------------------------------------------------
+LAYOUT_BOXES = {}       # placed-group key -> design box (x0, y0, x1, y1), exported to layoutdata.luau
+for _k, _v in (("_vw", W), ("_vh", H), ("_landscape", 0), ("_cs", 1), ("_scx", 195), ("_scy", 411),
+               ("_artClipW", W), ("_copyClipX", 0), ("_copyClipW", W), ("_copyW", 342)):
+    add_num(_k, _v)
+
+
+def placed(key, *children, box=None, clip=None, name=None):
+    """Wrapper whose x, y and uniform scale come from the layout solver (_<key>X/Y/S).
+    Children stay in design units; `clip` restricts the group to the art panel or
+    the copy column in landscape (the clip sources cover everything in portrait)."""
+    add_num(f"_{key}X", 0.0)
+    add_num(f"_{key}Y", 0.0)
+    add_num(f"_{key}S", 1.0)
+    g = node(name or f"{key} [placed]", *children)
+    if clip is not None:
+        g.children.insert(0, E("ClippingShape", sourceId=clip.id, name="Panel clip"))
+    g.add(bind(f"_{key}X", 13), bind(f"_{key}Y", 14), bind(f"_{key}S", 16), bind(f"_{key}S", 17))
+    if box is not None:
+        LAYOUT_BOXES[key] = tuple(float(v) for v in box)
+    return g
+
+
+def offset(key, *children, name=None):
+    """Wrapper moved inside its group by the solver (_<key>X/Y, design units)."""
+    add_num(f"_{key}X", 0.0)
+    add_num(f"_{key}Y", 0.0)
+    g = node(name or f"{key} [offset]", *children)
+    g.add(bind(f"_{key}X", 13), bind(f"_{key}Y", 14))
+    return g
+
+
+def shown(key, *children, default=1.0, name=None):
+    """Wrapper whose opacity the solver sets (0/1) for one arrangement or another."""
+    add_num(f"_{key}O", default)
+    g = node(name or f"{key} [shown]", *children, opacity=float(default))
+    g.add(bind(f"_{key}O", 18))
+    return g
+
+
+def full_rect(color, name, **attrs):
+    """A rectangle that always covers the real artboard (bleeds edge to edge)."""
+    r = E("Rectangle", width=float(W), height=float(H), originX=0.0, originY=0.0, name="Path")
+    r.add(bind("_vw", 20), bind("_vh", 21))
+    return E("Shape", r, fill(color), x=0.0, y=0.0, name=name, **attrs)
+
+
+def pivot(name, child, px, py, dx, dy, scale=None):
+    """pivot(child) -> Node at (px,py) holding a keyed node whose child sits at
+    (-px,-py): scaling the keyed node then scales about the bound point."""
+    p = node(name, child, x=float(dx), y=float(dy))
+    p.add(bind(px, 13), bind(py, 14))
+    if scale:
+        p.add(bind(scale, 16), bind(scale, 17))
+    return p
+
+
+def unpivot(name, *children, px, py, dx, dy):
+    u = node(name, *children, x=-float(dx), y=-float(dy))
+    u.add(bind(px, 13, CONV_NEG), bind(py, 14, CONV_NEG))
+    return u
+
+
+# panel clip sources, in artboard coordinates: the art panel (left) and the copy
+# column (right) in landscape; both cover the whole artboard in portrait
+_acr = E("Rectangle", width=float(W), height=float(H), originX=0.0, originY=0.0, name="Path")
+_acr.add(bind("_artClipW", 20), bind("_vh", 21))
+ART_CLIP = E("Shape", _acr, x=0.0, y=0.0, name="Art panel (clip source)")
+_ccr = E("Rectangle", width=float(W), height=float(H), originX=0.0, originY=0.0, name="Path")
+_ccr.add(bind("_copyClipW", 20), bind("_vh", 21))
+COPY_CLIP = E("Shape", _ccr, x=0.0, y=0.0, name="Copy column (clip source)")
+COPY_CLIP.add(bind("_copyClipX", 13))
+
+
 class Scene:
     def __init__(self, n, ring, bg, bg_bind=None):
         self.n, self.P = n, ring
+        px, py, ds = add_num(f"_s{n}PX", ring[0]), add_num(f"_s{n}PY", ring[1]), add_num(f"_s{n}DS", 1.0)
+        # the interchange disc that clips the scene; it sits on the scene's focal
+        # point P (real coordinates) and is scaled so its full size always covers
+        # the farthest corner of the real artboard
         self.disc_path = E("Ellipse", width=FULL, height=FULL, name="Disc")
-        self.disc = E("Shape", self.disc_path, x=float(ring[0]), y=float(ring[1]),
-                      name=f"S{n} interchange disc (clip source)")
-        self.content = node("Content")
-        bgr = rect(0, 0, W, H, bg, name="Background")
+        self.disc = E("Shape", self.disc_path, x=0.0, y=0.0, name=f"S{n} interchange disc (clip source)")
+        self.disc_pivot = pivot(f"S{n} disc at P", self.disc, px, py, ring[0], ring[1], scale=ds)
+        # placed groups live here; the keyed Content node scales them about the
+        # story centre (outgoing scenes recede toward it)
+        self.items = unpivot("Placed groups", px="_scx", py="_scy", dx=CENTER[0], dy=CENTER[1])
+        self.content = node("Content", self.items)
+        content_pivot = pivot("Content pivot (story centre)", self.content, "_scx", "_scy", CENTER[0], CENTER[1])
+        bgr = full_rect(bg, "Background")
         if bg_bind:
             bgr.children[1].children[0].add(bind(bg_bind, 37))
         self.bg = bgr
         # depth shade: darkens the scene as it recedes behind the next one
-        self.shade = rect(0, 0, W, H, BLACK, name="Depth shade", opacity=0.0)
-        # camera: the incoming scene is pushed through its interchange ring
-        self.camera = node("Camera", self.shade, self.content, bgr)
+        self.shade = full_rect(BLACK, "Depth shade", opacity=0.0)
+        # camera: the incoming scene is pushed through its interchange ring (scaled about P)
+        self.camera = node("Camera", unpivot("Camera unpivot", self.shade, content_pivot, bgr, px=px, py=py,
+                                             dx=ring[0], dy=ring[1]))
+        cam_pivot = pivot("Camera pivot (P)", self.camera, px, py, ring[0], ring[1])
         self.root = node(f"Scene {n}", E("ClippingShape", sourceId=self.disc.id, name="Interchange clip"),
-                         self.camera, opacity=1.0 if n == 1 else 0.0)
+                         cam_pivot, opacity=1.0 if n == 1 else 0.0)
         self.anims = {}
         self.extra_rest = []        # (obj, prop, value) forced into Hidden/Settled
         self.hidden_only = []       # (obj, prop, value) only in Hidden
         self.sems = []              # SemanticData hidden while the scene is offscreen
         self.trail = None
+        self.focus = None           # placed-group key whose transform maps P (and the motif)
         scene_trail(self)
 
     def anim(self, name, dur, loop="oneShot"):
@@ -275,7 +379,14 @@ class Scene:
         return a
 
     def add(self, *els):
-        self.content.add(*els)
+        self.items.add(*els)
+
+    def group(self, role, *children, box, clip=None, focus=False):
+        key = f"s{self.n}{role}"
+        g = placed(key, *children, box=box, clip=clip, name=f"{role} [placed s{self.n}]")
+        if focus:
+            self.focus = key
+        return g
 
 
 SCENES = {}
@@ -289,9 +400,18 @@ for _c, _t, _off in BANDS:
     _sh = E("Shape", _el, stroke(_c, _t, "Band stroke", "butt"), x=195.0, y=400.0, name="Roundel band")
     MOTIF_RINGS.append((_sh, _el, _off))
 MOTIF_ROUNDEL = node("Interchange roundel", *[r[0] for r in reversed(MOTIF_RINGS)], x=0.0, y=0.0)
+# the roundel's bands ride the scene's clip disc, so they get the same extra
+# coverage scale about P (_rkS = disc scale / motif scale, written by the solver)
+for _k, _v in (("_rkX", 0), ("_rkY", 0), ("_rkS", 1)):
+    add_num(_k, _v)
+ROUNDEL_K = node("Interchange roundel (coverage)", MOTIF_ROUNDEL)
+ROUNDEL_K.add(bind("_rkX", 13), bind("_rkY", 14), bind("_rkS", 16), bind("_rkS", 17))
 MOTIF_TRAILS = node("Dot trails")
-MOTIF = node("Motif (persistent route dot + interchange roundel)", MOTIF_DOT, MOTIF_ROUNDEL, MOTIF_TRAILS,
+MOTIF = node("Motif (persistent route dot + interchange roundel)", MOTIF_DOT, ROUNDEL_K, MOTIF_TRAILS,
              opacity=0.0)
+# the motif is authored in design units and follows the placed group that holds
+# the focal point of the scene it is currently carrying the story into (or out of)
+MOTIF_STAGE = placed("m", MOTIF, name="Motif stage [placed]")
 TRAILS = []               # (scene, shape, trim)
 
 
@@ -329,11 +449,11 @@ def key_along(anim, obj, pts, f0, f1, ease=None):
 
 
 def scale_about(a, obj, p, frames):
-    """Key obj scale around point p (obj is an untransformed full-artboard node)."""
+    """Key obj scale. obj sits inside a pivot wrapper bound to the real point p
+    (Scene.camera about P, Scene.content about the story centre), so only the
+    scale is keyed and the pivot follows the layout."""
     for prop in ("scaleX", "scaleY"):
         a.key(obj, prop, *frames)
-    a.key(obj, "x", *[(f, p[0] * (1 - v), e) for f, v, e in frames])
-    a.key(obj, "y", *[(f, p[1] * (1 - v), e) for f, v, e in frames])
 
 
 # forward roundel timing (frames @60fps)
@@ -438,21 +558,23 @@ def wordmark(x, y, size=19, name="Wordmark"):
                 x=float(x), y=float(y))
 
 
-YEAR_TEXT = text(366, 22, None, [("2026", "year", CONV_YEAR)], 15, BLACK, weight=700, ox=1.0, name="Year")
+YEAR_TEXT = text(0, 0, None, [("2026", "year", CONV_YEAR)], 15, BLACK, weight=700, ox=1.0, name="Year")
 
-
-def perforation(y, name):
-    """Ticket perforation: a fine dashed tear line with a half-punched notch at each edge."""
-    return node(name,
-                route([(14, y), (W - 14, y)], INK60, 1.5, name="Tear line", trim=False, dash=[3, 4], cap="butt")[0],
-                circle(0.0, float(y), 14.0, BLACK, name="Notch L"), circle(float(W), float(y), 14.0, BLACK, name="Notch R"))
-
-
-HEADER = node("Header ticket band",
-              wordmark(26, 32),
-              YEAR_TEXT,
-              perforation(81, "Perforation"),
-              rect(0, 0, W, 82, WHITE, name="Band"))
+# Header ticket band. The node is scaled by the chrome scale _cs; inside it the
+# wordmark is pinned to the left safe margin and the year to the right one, and
+# the band spans the real width. The perforation, its notches and the progress
+# segments are drawn by the sequencer script at the real size.
+for _k, _v in (("_hdrWmX", 26), ("_hdrWmY", 32), ("_hdrYrX", 366), ("_hdrYrY", 22), ("_hdrBandW", W),
+               ("_hdrBandH", 82)):
+    add_num(_k, _v)
+_hdr_wm = node("Wordmark slot", wordmark(0, 0), x=26.0, y=32.0)
+_hdr_wm.add(bind("_hdrWmX", 13), bind("_hdrWmY", 14))
+_hdr_yr = node("Year slot", YEAR_TEXT, x=366.0, y=22.0)
+_hdr_yr.add(bind("_hdrYrX", 13), bind("_hdrYrY", 14))
+_hdr_band = rect(0, 0, W, 82, WHITE, name="Band")
+_hdr_band.children[0].add(bind("_hdrBandW", 20), bind("_hdrBandH", 21))
+HEADER = node("Header ticket band", _hdr_wm, _hdr_yr, _hdr_band)
+HEADER.add(bind("_cs", 16), bind("_cs", 17))
 
 BUTTONS = {}
 SEMS = {}
@@ -574,18 +696,30 @@ BTN_PAUSE = button("pause", 114, 52, 52, WHITE, "pauseLabel", BLACK, [vm_trigger
 BTN_CONT = button("continue", 259, 214, 56, BLACK, "continueLabel", WHITE, [vm_trigger_write("_nextTapped")],
                   icon=node("Arrow", chevron([(70, 0), (88, 0)], WHITE, 2.6, "Shaft"),
                             chevron([(81, -7), (88, 0), (81, 7)], WHITE, 2.6, "Head")))
-BTN_SHARE = button("share", 1158, 136, 56, RED, "shareLabel", WHITE, [E("ListenerFireEvent", eventId=SHARE_EVENT.id)],
+BTN_SHARE = button("share", 9158, 136, 56, RED, "shareLabel", WHITE, [E("ListenerFireEvent", eventId=SHARE_EVENT.id)],
                    icon=node("Share glyph", share_icon(WHITE), x=-40.0, y=1.0), icon_left=True)
-BTN_REPLAY = button("replay", 1303, 126, 56, WHITE, "replayLabel", BLACK, [vm_trigger_write("_replayTapped")],
+BTN_REPLAY = button("replay", 9303, 126, 56, WHITE, "replayLabel", BLACK, [vm_trigger_write("_replayTapped")],
                     outline=BLACK, icon=node("Replay glyph", replay_icon(BLACK), x=-36.0, y=0.0), icon_left=True)
 # Dock focus: summary-only buttons start unfocusable (keyed by the Dock layer)
 BUTTONS["share"][2].attrs["canFocus"] = False
 BUTTONS["replay"][2].attrs["canFocus"] = False
 
-DOCK = node("Dock ticket band",
-            BTN_PREV, BTN_PAUSE, BTN_CONT, BTN_SHARE, BTN_REPLAY,
-            perforation(741, "Perforation"),
-            rect(0, 740, W, 104, WHITE, name="Band"))
+# Dock ticket band, scaled by _cs and pinned to the real bottom edge. Prev/Pause
+# keep to the left safe margin, Continue (and Share/Replay on the summary) to the
+# right one; the timelines still key each button's x inside its cluster.
+for _k, _v in (("_dockY", 0), ("_dockL", 0), ("_dockR", 0), ("_dockBtnY", 0), ("_dockBandW", W),
+               ("_dockBandH", 104)):
+    add_num(_k, _v)
+DOCK_LEFT = node("Left controls", BTN_PREV, BTN_PAUSE)
+DOCK_LEFT.add(bind("_dockL", 13))
+DOCK_RIGHT = node("Right controls", BTN_CONT, BTN_SHARE, BTN_REPLAY)
+DOCK_RIGHT.add(bind("_dockR", 13))
+DOCK_BTNS = node("Controls", DOCK_LEFT, DOCK_RIGHT)
+DOCK_BTNS.add(bind("_dockBtnY", 14))
+_dock_band = rect(0, 740, W, 104, WHITE, name="Band")
+_dock_band.children[0].add(bind("_dockBandW", 20), bind("_dockBandH", 21))
+DOCK = node("Dock ticket band", DOCK_BTNS, _dock_band)
+DOCK.add(bind("_dockY", 14), bind("_cs", 16), bind("_cs", 17))
 
 # ======================================================================
 # Scene builders live in scenes.py (imported for side effects)
@@ -808,8 +942,9 @@ cont, share, replay = BUTTONS["continue"], BUTTONS["share"], BUTTONS["replay"]
 DOCK_N = Anim("Dock normal", 1)
 DOCK_S = Anim("Dock summary", 24)
 pause_b = BUTTONS["pause"]
-for a, (cx, sx, rx, px), foc in ((DOCK_N, (259, 1158, 1303, 114), (True, False, False)),
-                                 (DOCK_S, (-1000, 158, 303, -1000), (False, True, True))):
+# hidden buttons park far outside any canvas (the clusters follow the real width)
+for a, (cx, sx, rx, px), foc in ((DOCK_N, (259, 9158, 9303, 114), (True, False, False)),
+                                 (DOCK_S, (-9000, 158, 303, -9000), (False, True, True))):
     a.hold(cont[0], "x", float(cx))
     a.hold(pause_b[0], "x", float(px))
     a.key(pause_b[2], "canFocus", (0, foc[0], "hold"))
@@ -858,10 +993,10 @@ def key_listener(name, keys, *actions, mods=0):
              *actions, name=name)
 
 
-KEYROOT = node("Recap", KEYROOT_FOCUS, HEADER, DOCK, MOTIF,
+KEYROOT = node("Recap", KEYROOT_FOCUS, HEADER, DOCK, MOTIF_STAGE,
                *[SCENES[n].root for n in range(10, 0, -1)],
-               rect(0, 0, W, H, WHITE, name="Paper (under every scene)"),
-               node("Clip sources", *[SCENES[n].disc for n in range(1, 11)]))
+               full_rect(WHITE, "Paper (under every scene)"),
+               node("Clip sources", *[SCENES[n].disc_pivot for n in range(1, 11)], ART_CLIP, COPY_CLIP))
 for l in [key_listener("Key next", ["right"], vm_trigger_write("_nextTapped")),
           key_listener("Key previous", ["left"], vm_trigger_write("_prevTapped")),
           key_listener("Key pause", ["space"], vm_trigger_write("_pauseTapped")),
@@ -874,19 +1009,41 @@ for l in [key_listener("Key next", ["right"], vm_trigger_write("_nextTapped")),
 
 SM = E("StateMachine", *LISTENERS, *LAYERS, name="Recap Sequencer")
 
-ART_STYLE = E("LayoutComponentStyle", name="Artboard Style")
+# stack: the print stock and the sequencer layer share one cell, both filling the artboard
+ART_STYLE = E("LayoutComponentStyle", layoutTypeValue="stack", name="Artboard Style")
 ROOT_STYLE = E("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
                widthUnitsValue="auto", heightUnitsValue="auto", name="Style")
 SEQ = E("ScriptedLayout", E("FocusData", canFocus=False, name="No focus"), scriptAssetId=SCRIPT_SEQ.id,
         name="Sequencer (gestures, timer, progress)")
-PAPER_STYLE = E("LayoutComponentStyle", positionTypeValue="absolute", positionLeft=0.0, positionTop=0.0,
-                 positionLeftUnitsValue="points", positionTopUnitsValue="points", name="Style")
+# the print stock fills the artboard (stack cell), so it covers the real artboard
+# and its ScriptedLayout receives the real size and device scale
+PAPER_STYLE = E("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
+                widthUnitsValue="auto", heightUnitsValue="auto", name="Style")
 PAPER = E("LayoutComponent", PAPER_STYLE,
           E("ScriptedLayout", E("ScriptInputNumber", propertyValue=0.62, name="strength"),
             scriptAssetId=SCRIPT_PAPER.id, name="Print stock (paper shader)"),
           width=float(W), height=float(H), styleId=PAPER_STYLE.id, name="Print layer")
+
+# Test harness only (SWITCHYARD_DEBUG_EVENTS=1): the artboard size is bound to
+# _testW/_testH so a headless run can resize the artboard mid-scene (the
+# sequencer swaps in _testW2/_testH2 at _testAt seconds), exactly as a host's
+# layout fit does when its canvas is resized. Never in the shipped file.
+ART_BINDS = []
+if DEBUG_EVENTS:
+    for _k, _v in (("_testW", W), ("_testH", H), ("_testW2", 0), ("_testH2", 0), ("_testAt", -1)):
+        add_num(_k, _v)
+    ART_BINDS = [bind("_testW", 7), bind("_testH", 8)]
+
+# ---------------------------------------------------------------- instances (after every add_num)
+INST_FIXTURE = instance("Fixture", SAMPLE)
+INST_ZERO = instance("NewUser", ZERO)
+INST_EXTREME = instance("Extreme", EXTREME)
+VM.add(INST_FIXTURE, INST_ZERO, INST_EXTREME)
+VM.attrs["defaultInstanceId"] = INST_FIXTURE.id
+
 ARTBOARD = E("Artboard",
              ART_STYLE,
+             *ART_BINDS,
              PAPER,
              E("LayoutComponent", ROOT_STYLE, SEQ, width=float(W), height=float(H), styleId=ROOT_STYLE.id,
                name="Sequencer layer"),
@@ -898,7 +1055,35 @@ ARTBOARD = E("Artboard",
              defaultStateMachineId=SM.id, viewModelId=VM.id, viewModelInstanceId=INST_FIXTURE.id,
              styleId=ART_STYLE.id, width=float(W), height=float(H), clip=True, name="Switchyard Recap", id="0:900")
 
-doc = E("Rive", ARTBOARD, FONT_DISPLAY, FONT_COND, FONT_TEXT, SCRIPT_FMT, SCRIPT_SEQ, SCRIPT_P3, SCRIPT_FLAP, SCRIPT_PAPER, *ROOTS, VM, version=1, kind="fragment")
+
+# ---------------------------------------------------------------- layout data module
+def write_layout_data():
+    """scripts/layoutdata.luau: the design boxes of every placed group and each
+    scene's focal point, so the solver (scripts/layout.luau) and the art cannot
+    drift apart."""
+    lines = ["--!strict", "-- GENERATED by tools/gen.py - do not edit. Design units (390 x 844 master).", "",
+             "export type Box = { x0: number, y0: number, x1: number, y1: number }", "",
+             "local boxes: { [string]: Box } = {"]
+    for k in sorted(LAYOUT_BOXES):
+        x0, y0, x1, y1 = LAYOUT_BOXES[k]
+        lines.append(f"    {k} = {{ x0 = {fmt(x0)}, y0 = {fmt(y0)}, x1 = {fmt(x1)}, y1 = {fmt(y1)} }},")
+    lines += ["}", "", "-- focal point P of each scene (interchange disc, camera push) and the group that holds it",
+              "local P: { { number } } = {"]
+    for n in range(1, 11):
+        lines.append(f"    {{ {fmt(float(SCENES[n].P[0]))}, {fmt(float(SCENES[n].P[1]))} }},")
+    lines += ["}", "local focus: { string } = {"]
+    for n in range(1, 11):
+        lines.append(f"    '{SCENES[n].focus}',")
+    lines += ["}", "",
+              f"return {{ boxes = boxes, P = P, focus = focus, Q = {{ {fmt(Q[0])}, {fmt(Q[1])} }}, "
+              f"full = {fmt(FULL)}, center = {{ {fmt(CENTER[0])}, {fmt(CENTER[1])} }} }}", ""]
+    with open(os.path.join(ROOT, "scripts", "layoutdata.luau"), "w") as f:
+        f.write("\n".join(lines))
+
+
+write_layout_data()
+
+doc = E("Rive", ARTBOARD, FONT_DISPLAY, FONT_COND, FONT_TEXT, SCRIPT_FMT, SCRIPT_LDATA, SCRIPT_LAYOUT, SCRIPT_SEQ, SCRIPT_P3, SCRIPT_FLAP, SCRIPT_PAPER, *ROOTS, VM, version=1, kind="fragment")
 out = os.path.join(ROOT, "scene.rml")
 with open(out, "w") as f:
     f.write("<!-- GENERATED by tools/gen.py - edit the generator, or edit here and stop regenerating. -->\n")

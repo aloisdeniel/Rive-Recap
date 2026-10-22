@@ -158,5 +158,95 @@
   "check": "dragging the hold does not navigate",
   "pass": true,
   "detail": "1"
+ },
+ {
+  "check": "landscape exactly when width >= 768 (16 sizes, incl. 767x1024 / 768x1024)",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "short portrait canvases fold into columns (667x375, 740x360)",
+  "pass": true,
+  "detail": "['667x375', '740x360']"
+ },
+ {
+  "check": "layoutBreakpoint is tunable by the host (1300 -> 1280 wide is portrait; 1024 -> 1024 is landscape)",
+  "pass": true,
+  "detail": "(0, 1)"
+ },
+ {
+  "check": "controls are at least 44 x 44 at every size",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "copy, titles and unit labels never fall below their readable scale floor",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "wide layouts: blocks never overlap, stay inside the canvas and clear the controls",
+  "pass": true,
+  "detail": "[]"
+ },
+ {
+  "check": "1280x720: a tap at x=400 (< 1280/3) goes back",
+  "pass": true,
+  "detail": "3"
+ },
+ {
+  "check": "1280x720: a tap at x=460 (> 1280/3) advances",
+  "pass": true,
+  "detail": "5"
+ },
+ {
+  "check": "1920x1080: hold pauses",
+  "pass": true,
+  "detail": "(True, 3)"
+ },
+ {
+  "check": "1280x720: Right arrow advances scenes",
+  "pass": true,
+  "detail": "3"
+ },
+ {
+  "check": "740x360: Right arrow advances scenes",
+  "pass": true,
+  "detail": "2"
+ },
+ {
+  "check": "1280x720: dragging the relocated hold does not navigate",
+  "pass": true,
+  "detail": "1"
+ },
+ {
+  "check": "resize 390x844 -> 1100x700 mid-scene flips to landscape",
+  "pass": true,
+  "detail": "[(0, 0), (3.1, 1), (5.0, 1)]"
+ },
+ {
+  "check": "... keeps scene 3, fires no screenChanged, stays settled",
+  "pass": true,
+  "detail": "((5.0, 3), 0, (5.0, True), (5.0, 3))"
+ },
+ {
+  "check": "... eases into the landscape arrangement within 0.5 s",
+  "pass": true,
+  "detail": "(3.1, 3.5)"
+ },
+ {
+  "check": "resize across the threshold mid-transition (2 -> 3 yank in flight)",
+  "pass": true,
+  "detail": "(4.8, [(0, 0), (5.1, 1), (7.1, 0), (9.5, 0)])"
+ },
+ {
+  "check": "... settles cleanly on scene 3 (entered == current, one signal)",
+  "pass": true,
+  "detail": "((9.5, 3), (9.5, 3), 1)"
+ },
+ {
+  "check": "... the carrier space follows the entered scene",
+  "pass": true,
+  "detail": "[(9.5, 1.00510538)]"
  }
 ]

@@ -37,13 +37,28 @@ class Scene:
         self.live_inputs: list[E] = []                # script `live` inputs: 0 while the scene is hidden
         self.idle_frames = 240
 
-    # copy box: an absolute column pinned under the header
+    # copy box: an absolute column whose four insets, content alignment and scale are
+    # bound to the placement the sequencer computes from the real artboard size
+    # (portrait: pinned under the header; landscape: a column beside the art)
     def copy_box(self, *children, top=86, left=28, right=28, align="topLeft", gap=6):
         g = self.g
-        st = g.abs_style(top=top, left=left, right=right, flexDirectionValue="column", layoutHeightScaleType="hug",
+        n = self.n
+        st = g.abs_style(top=top, bottom=0, left=left, right=right, flexDirectionValue="column",
                          layoutAlignmentType=align, gapVertical=float(gap), gapVerticalUnitsValue="points",
-                         name=f"Copy {self.n} Style")
-        box = g.box(f"Copy {self.n}", st, *children, w=10, h=300)
+                         name=f"Copy {n} Style")
+        pl = "_altL" if n == 9 else "_copyL"
+        pr = {9: "_altR", 4: "_copyR4"}.get(n, "_copyR")
+        pt = {9: "_c9T", 10: "_c10T"}.get(n, "_copyT")
+        pb = "_c10B" if n == 10 else "_copyB"
+        pa = "_align10" if n == 10 else ("_alignC" if align == "topCenter" else "_alignL")
+        for prop, key in ((pl, 516), (pr, 517), (pt, 518), (pb, 519), (pa, 632)):
+            st.add(bind(g.p(prop), key))
+        box = g.box(f"Copy {n}", st, *children, w=10, h=300, clip=False)
+        box.add(bind(g.p("_copyS"), 16), bind(g.p("_copyS"), 17))
+        # centred copy (portrait) becomes a left-aligned column beside the art (landscape)
+        for t in _texts(box):
+            if t.attrs.get("alignValue") == "center":
+                t.add(bind(g.p("_textC"), 281))
         S(box, opacity=1.0, y=0.0)
         self.copy = box
         return box
@@ -59,6 +74,31 @@ class Scene:
 
     def on(self, kind, fn):
         self.hooks[kind].append(fn)
+
+
+def _texts(el):
+    for c in el.children:
+        if c.tag == "Text":
+            yield c
+        elif c.tag in ("LayoutComponent", "Node"):
+            yield from _texts(c)
+
+
+def scaled(g, t, key, base, name):
+    """bind a LayoutParticipant size to base x _bigK: short canvases shrink the display type
+    (headlines and hero numbers, through fitFontSize), never the body copy"""
+    lp = child(t, "LayoutParticipant")
+    f = g.formula(name, g.INPUT(), g.op("*"), g.tv(base))
+    lp.add(bind(g.p("_bigK"), key, f.id))
+    return t
+
+
+def art_text_floor(g, t, ratio, name):
+    """text drawn in art-stage units shrinks with the art; scale it back up so it never
+    falls under `ratio` x its authored size on screen: scale = max(1, ratio / _artScale)"""
+    f = g.formula(name, g.fn("max"), g.tv(1), g.SEP(), g.tv(ratio), g.op("/"), g.INPUT(), g.CLOSE())
+    t.add(bind(g.p("_artScale"), 16, f.id), bind(g.p("_artScale"), 17, f.id))
+    return t
 
 
 def key_reveal(a: Anim, t: E, start: int, dur: int):
@@ -147,10 +187,17 @@ def headline(sc, prop, literal, size=48, align="left", start=72):
     t = g.text(f"S{sc.n} Headline", g.serif_style(size, sc.ink, lh=size * 1.04), literal, prop=prop, align=align)
     # long or localized headlines shrink to a fixed number of lines rather than pushing into the art
     lp = child(t, "LayoutParticipant")
-    lp.attrs["maxHeight"] = float(size * 1.04 * HEAD_LINES.get(sc.n, 2) + 4)
+    mh = float(size * 1.04 * HEAD_LINES.get(sc.n, 2) + 4)
+    lp.attrs["maxHeight"] = mh
     lp.attrs["maxHeightUnitsValue"] = "points"
     t.attrs["overflowValue"] = "fitFontSize"
     t.attrs["wordBreakValue"] = "normal"   # never split a word; shrink instead
+    scaled(g, t, 501, mh, f"Headline {sc.n} Max")
+    if sc.n != 6:
+        # fitFontSize keeps the box at its max height; where the headline sits above the number,
+        # a short headline in a wide column is set at the bottom of it (landscape), so the
+        # reserved space never opens a gap between headline and number
+        t.add(bind(g.p("_headVA"), 685))
     return sc.reveal(t, start, 30)
 
 
@@ -185,6 +232,8 @@ def hero_number(sc, stat, literal, decimals=0, size=120, align="left", start=12,
         lp = child(t, "LayoutParticipant")
         lp.attrs["maxWidth"] = 230.0      # keep the numeral clear of the hero art on the right
         lp.attrs["maxWidthUnitsValue"] = "points"
+    if layout:
+        scaled(g, t, 1067, size * 1.0, f"Number {sc.n} Height")
     if not layout:
         t.attrs["width"] = 340.0
         t.attrs["height"] = float(size)
@@ -239,7 +288,11 @@ def scene1(g, sc):
     hint = g.text("Turntable Hint", hint_st, "Drag to turn", prop="turntableHint", reveal=False, layout=False,
                   x=195, y=452, origin=(0.5, 0.5))
     S(hint, opacity=1.0)
-    sc.front.add(hint)
+    art_text_floor(g, hint, 1.0, "Hint Floor")
+    # on small canvases the plinth face (and the hint on it) drops behind the footer: hide it
+    hint_holder = node("Hint Holder", 0, 0, hint)
+    hint_holder.add(bind(g.p("_hintOn"), 18))
+    sc.front.add(hint_holder)
     sc.back.add(reveal_node, disc, *rings)
 
     def enter(a):
@@ -331,6 +384,7 @@ def scene3(g, sc):
                       origin=(0.5, 0.5))
     un = unit(sc, "screen3Unit", "studio hours", size=18, align="center", layout=False, width=300, x=195, y=274,
               origin=(0.5, 0.0))
+    art_text_floor(g, un, 15.0 / 18.0, "Hours Unit Floor")
 
     def ring(name, w, h, start, end, alpha, thick, dash=None):
         tr = E("TrimPath", {"start": float(start), "end": float(end), "name": "Trim"})
@@ -522,7 +576,9 @@ def scene5(g, sc):
                 E("ScriptInputBoolean", {"propertyValue": False, "name": "still"}, bind(g.p("_frozen"), 245)),
                 E("ScriptInputNumber", {"propertyValue": 300.0, "name": "w"}),
                 E("ScriptInputNumber", {"propertyValue": 380.0, "name": "h"}),
-                E("ScriptInputNumber", {"propertyValue": 1.5, "name": "res"}))
+                E("ScriptInputNumber", {"propertyValue": 1.5, "name": "res"}),
+                E("ScriptInputNumber", {"propertyValue": 1.0, "name": "zoom"}, bind(g.p("_artScale"), 243)),
+                E("ScriptInputNumber", {"propertyValue": 1.0, "name": "dpr"}, bind(g.p("_dpr"), 243)))
     sc.live_inputs.append(live)
     band_clip = node("Kiln Chamber", 0, 0, E("ClippingShape", {"sourceId": arch.id, "name": "Clip"}), chamber,
                      *band_shapes)

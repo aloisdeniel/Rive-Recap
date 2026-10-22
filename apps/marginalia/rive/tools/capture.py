@@ -31,6 +31,14 @@ def fixture_args(name):
     return out
 
 
+def tap_points(viewport):
+    """A "next" tap (right two-thirds, above the controls) and a neutral
+    pointer rest, for any canvas size."""
+    w, h = (int(v) for v in (viewport or "390x844").split("x"))
+    y = int(h * 0.45)
+    return f"{int(w * 0.77)},{y}", f"{int(w * 0.5)},{y}"
+
+
 def run(scene, ms, out, extra=(), viewport=None, gap="900ms", fit=None):
     args = [RIVE, ROOT, f"--screenshot={out}", "--quiet"]
     for e in extra:
@@ -40,8 +48,9 @@ def run(scene, ms, out, extra=(), viewport=None, gap="900ms", fit=None):
     if fit:
         args.append(f"--fit={fit}")
     args.append("--advance=300ms")
+    tap, rest = tap_points(viewport)
     for i in range(scene - 1):
-        args += ["--pointer=click@300,420", "--pointer=move@200,420"]
+        args += [f"--pointer=click@{tap}", f"--pointer=move@{rest}"]
         if i < scene - 2:
             args.append(f"--advance={gap}")
     args.append(f"--advance={ms}ms")

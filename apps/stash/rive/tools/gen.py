@@ -89,6 +89,8 @@ ADAPTER = [
     ("navNext", "trigger", None), ("navPrev", "trigger", None), ("togglePause", "trigger", None),
     ("replay", "trigger", None), ("isSharing", "bool", False), ("appBackgrounded", "bool", False),
     ("personaAutoMap", "bool", True),
+    # responsive layout: landscape when the artboard is at least this wide (points)
+    ("layoutBreakpoint", "number", 768),
     # written by the director / state machine (read-only for hosts)
     ("_navDir", "number", 1), ("_visibleCount", "number", 10), ("_visibleIndex", "number", 1),
     ("_canGoBack", "bool", False), ("_canGoNext", "bool", True), ("_isSummary", "bool", False),
@@ -96,8 +98,14 @@ ADAPTER = [
     ("_frozen", "bool", False), ("_holding", "bool", False), ("_finished", "bool", False),
     ("_pauseButtonLabel", "string", "Pause"), ("_focus", "number", 0),
     ("_chromeColor", "color", CREAM), ("_chromeOnColor", "color", INK),
-    ("_stageX", "number", 0), ("_stageY", "number", 0), ("_stageScale", "number", 1),
-    ("_viewW", "number", W), ("_viewH", "number", H), ("_chromeInset", "number", 0),
+    # responsive layout (director): orientation, the virtual stage (844 units
+    # tall, as wide as the canvas), per-scene copy / art zones, chrome metrics
+    ("_landscape", "bool", False), ("_split", "bool", False), ("_wideCard", "bool", False),
+    ("_stageScale", "number", 1), ("_viewW", "number", W), ("_viewH", "number", H),
+    ("_vcx", "number", W / 2), ("_rightOff", "number", 0), ("_barSX", "number", 1),
+    ("_mfx", "number", 0), ("_mfy", "number", 0), ("_mfs", "number", 1),
+    ("_hdrH", "number", 64), ("_ftrH", "number", 104), ("_ftrL", "number", 0), ("_ftrR", "number", 0),
+    ("_btnH", "number", 54), ("_gpuRes", "number", 2), ("_gpuResStage", "number", 2),
     ("_handoffFwd", "trigger", None), ("_handoffBack", "trigger", None), ("_coinNudge", "trigger", None),
     # event mirrors: the CLI cannot observe Rive events, so each event also
     # fires one of these triggers on the same state/listener for verification
@@ -107,7 +115,9 @@ ADAPTER = [
     # type "event"), so headless checks observe the events themselves
     ("_heardScreenChanged", "trigger", None), ("_heardRecapFinished", "trigger", None),
     ("_heardShareTapped", "trigger", None),
-] + [(f"_count{k}", "number", 0) for k in range(1, 11)]
+] + [(f"_count{k}", "number", 0) for k in range(1, 11)] + [
+    (f"_{z}{k}{a}", "number", 1 if a == "s" else 0) for k in range(1, 11) for z in "ca" for a in "xys"
+] + [(f"_{z}{a}", "number", 1 if a == "s" else 0) for z in ("n10", "t7") for a in "xys"]
 for n, k, d in ADAPTER:
     prop(n, k, d)
 
@@ -141,6 +151,60 @@ def write_poses():
            f"M.poses = {{\n{rows},\n}} :: {{ [number]: Pose }}\n"
            "return M\n")
     with open(os.path.join(ROOT, "motifpose.luau"), "w") as f:
+        f.write(src)
+
+
+# ---------------------------------------------------------------------
+# Responsive layout boxes (design units of the 390 x 844 master). The director
+# fits these into the real canvas (layoutboxes.luau, generated below):
+#   copy     the copy zone's extent (headline slot, hero, unit, 2-line support)
+#   art      the art zone's extent, motif machine pose included
+#   artSplit art extent in a two-column split, when it differs (scene 7: the
+#            ticket leaves for the copy column, the machine stays)
+#   artWide  scene 10 with the wide card
+#   ticket / note   extra zones that join the copy column in a split
+#   stack    the vertical span the art claims under the copy in a portrait stack
+#   minC / minA     the smallest scale at which the zone's smallest text is 11 px
+# ---------------------------------------------------------------------
+MIN_PX = 11.0
+LAYOUT_BOXES = {
+    1: dict(copy=(16, 78, 370, 300), art=(37, 312, 353, 740), stack=(300, 740), minC=MIN_PX / 16),
+    2: dict(copy=(14, 55, 376, 376), art=(20, 347, 390, 764), stack=(376, 764), minC=MIN_PX / 18),
+    3: dict(copy=(14, 55, 376, 390), art=(6, 372, 390, 750), stack=(390, 752), minC=MIN_PX / 18),
+    4: dict(copy=(14, 55, 376, 434), art=(-20, 372, 410, 750), stack=(434, 752), minC=MIN_PX / 18),
+    5: dict(copy=(14, 55, 376, 378), art=(43, 368, 363, 750), stack=(378, 752), minC=MIN_PX / 18),
+    6: dict(copy=(14, 55, 376, 400), art=(43, 380, 347, 750), stack=(400, 752), minC=MIN_PX / 18),
+    7: dict(copy=(28, 55, 362, 238), ticket=(28, 280, 362, 462), art=(27, 198, 363, 762), artSplit=(78, 430, 312, 762),
+            stack=(238, 764), minC=MIN_PX / 18, minA=MIN_PX / 18),
+    8: dict(copy=(14, 55, 376, 412), art=(27, 360, 363, 750), stack=(412, 752), minC=MIN_PX / 18),
+    9: dict(copy=(15, 92, 375, 238), art=(9, 204, 381, 760), stack=(238, 762), minC=MIN_PX / 16),
+    10: dict(copy=(100, 51, 290, 152), note=(100, 612, 290, 664), art=(20, 162, 372, 612),
+             artWide=(-85, 236, 475, 548), stack=(160, 664), minC=MIN_PX / 17, minA=MIN_PX / 14.5,
+             minAWide=MIN_PX / 15.5),
+}
+
+
+def write_boxes():
+    def box(b):
+        return f"{{ x0 = {b[0]}, y0 = {b[1]}, x1 = {b[2]}, y1 = {b[3]} }}"
+    rows = []
+    for k, d in LAYOUT_BOXES.items():
+        f = [f"copy = {box(d['copy'])}", f"art = {box(d['art'])}"]
+        for opt in ("artSplit", "artWide", "ticket", "note"):
+            if opt in d:
+                f.append(f"{opt} = {box(d[opt])}")
+        f.append(f"stackTop = {d['stack'][0]}, stackBot = {d['stack'][1]}")
+        f.append(f"minC = {d.get('minC', 0):.4f}, minA = {d.get('minA', 0):.4f}, minAWide = {d.get('minAWide', 0):.4f}")
+        rows.append(f"    [{k}] = {{ " + ", ".join(f) + " }")
+    src = ("--!strict\n-- GENERATED by tools/gen.py: per-scene responsive layout boxes in design units\n"
+           "-- (390 x 844 master); the director fits them into the real canvas.\n"
+           "export type Box = { x0: number, y0: number, x1: number, y1: number }\n"
+           "export type SceneBoxes = { copy: Box, art: Box, artSplit: Box?, artWide: Box?, ticket: Box?, note: Box?,\n"
+           "    stackTop: number, stackBot: number, minC: number, minA: number, minAWide: number }\n"
+           "local M = {}\n"
+           "M.scenes = {\n" + ",\n".join(rows) + ",\n} :: { [number]: SceneBoxes }\n"
+           "return M\n")
+    with open(os.path.join(ROOT, "layoutboxes.luau"), "w") as f:
         f.write(src)
 
 
@@ -194,7 +258,8 @@ for i, (name, f, mod) in enumerate([("numfmt", "numfmt.luau", True),
                                      ("jar3d", "scripts/jar3d.luau", False),
                                      ("spring3d", "scripts/spring3d.luau", False),
                                      ("motifpose", "motifpose.luau", True),
-                                     ("crt", "scripts/crt.luau", False)]):
+                                     ("crt", "scripts/crt.luau", False),
+                                     ("layoutboxes", "layoutboxes.luau", True)]):
     SCRIPTS[name] = (f"0:{4010 + i}", f, mod)
 
 CONV = []          # root converter xml
@@ -319,8 +384,14 @@ def coin(name, x, y, s=1.0, rot=0.0, cid=None, opacity=None, sx=None):
 COIN_IN = ("size", "yaw", "pitch", "roll", "icon", "thick", "shine", "outline", "lightRoll")
 
 
+def res_input(path="_gpuRes"):
+    """canvas pixels per point for a scripted GPU drawable, bound to the director's
+    estimate of the real on-screen scale so canvases follow the layout's zoom"""
+    return el("ScriptInputNumber", {"propertyValue": 2, "name": "res"}, [bind(P(path), 243)])
+
+
 def coin3d(name, size=58, icon=0, yaw=0.0, pitch=0.32, roll=0.0, outline=3.5, shine=0.55, thick=0.13,
-           x=0, y=0, did=None, ids=None, gold=GOLD, opacity=None, light_roll=0.0):
+           x=0, y=0, did=None, ids=None, gold=GOLD, opacity=None, light_roll=0.0, res="_gpuRes"):
     """a real 3D gold coin (scripts/coin3d): ScriptedDrawable with keyable inputs.
 
     ids (dict, optional) receives the ScriptInput ids by name so timelines can key
@@ -333,6 +404,7 @@ def coin3d(name, size=58, icon=0, yaw=0.0, pitch=0.32, roll=0.0, outline=3.5, sh
         if ids is not None:
             ids[k] = iid
         ins.append(el("ScriptInputNumber", {"propertyValue": vals[k], "name": k, "id": iid}))
+    ins.append(res_input(res))
     ins.append(el("ScriptInputColor", {"propertyValue": gold, "name": "gold"}))
     ins.append(el("ScriptInputColor", {"propertyValue": INK, "name": "ink"}))
     return el("ScriptedDrawable", {"scriptAssetId": SCRIPTS["coin3d"][0], "x": x, "y": y, "opacity": opacity,
@@ -445,6 +517,7 @@ def jar3d(name, layer, x=0, y=0):
         el("ScriptInputNumber", {"propertyValue": 1, "name": "strength"}),
         el("ScriptInputNumber", {"propertyValue": 0.7, "name": "caustic"}),
         el("ScriptInputNumber", {"propertyValue": 0, "name": "sway", "id": M.setdefault(f"sway{layer}", nid())}),
+        res_input(),
         el("ScriptInputColor", {"propertyValue": MINT, "name": "glass"}),
         el("ScriptInputColor", {"propertyValue": "FF4FB98F", "name": "edge"}),
     ])
@@ -581,13 +654,26 @@ class Scene:
         self.k = k
         self.bg = bg
         self.dark = dark
-        self.items = []
+        # responsive zones: "copy" (headline, hero, unit, support), "art" (the
+        # illustration, which the motif machine joins), "note" (scene 10's support
+        # line) and "back" (backdrop twinkles); each zone is one node whose
+        # transform the director binds per viewport
+        self.zones = {"copy": [], "ticket": [], "art": [], "note": [], "back": []}
+        self.zone = "art"
         self.keys = []      # (obj, prop, kfs relative to base, kind)
         self.idle = []      # (obj, prop, kfs, kind) looped over IDLE_LEN
         self.root = nid()
         self.content = nid()
         self.sem = []       # SemanticData ids hidden while the scene is not current
         self.ink = INK if not dark else CREAM
+
+    @property
+    def items(self):
+        return self.zones[self.zone]
+
+    @items.setter
+    def items(self, value):
+        self.zones[self.zone] = value
 
     def key(self, obj, prop, kfs, kind="double"):
         self.keys.append((obj, prop, kfs, kind))
@@ -644,6 +730,7 @@ def scene_text(sc, hx, hbottom, hw, halign="center", size=36, sup=None, color=No
     copy that needs a third line (e.g. +40% translations) grows upward at its
     full size instead of shrinking; only a fourth line triggers fitFontSize."""
     color = color or sc.ink
+    prev_zone, sc.zone = sc.zone, "copy"
     rid = nid()
     hid = nid()
     head_path = {1: "introHeadline", 10: "summaryHeadline"}.get(sc.k, f"screen{sc.k}Headline")
@@ -660,17 +747,19 @@ def scene_text(sc, hx, hbottom, hw, halign="center", size=36, sup=None, color=No
         sx, sy, sw, salign = sup
         sid = nid()
         sup_path = {1: "introSupport", 10: "summarySupport"}.get(sc.k, f"screen{sc.k}Support")
-        sc.items.append(text(f"S{sc.k} support", sx, sy, [run(sup_path, "", font="nunito", size=17,
-                                                               color=color, weight=600, lh=23)],
+        sc.items.append(text(f"S{sc.k} support", sx, sy, [run(sup_path, "", font="nunito", size=18,
+                                                               color=color, weight=600, lh=24)],
                              width=sw, align=salign, ox={"left": 0, "center": 0.5, "right": 1}[salign], tid=sid,
                              extra=[sem(sc, "text", sup_path)]))
         sc.rise(sid, 62, 14, 26, y=sy)
+    sc.zone = prev_zone
     return hid
 
 
 def copy_block(sc, size, hero_color, unit_color=None, outline=None, sup_color=None, sup_w=300, gap=14):
     """the shared metric layout: centred headline, hero value, unit, support line.
     Returns the y below the block, where the scene's illustration may start."""
+    prev_zone, sc.zone = sc.zone, "copy"
     scene_text(sc, 195, HEAD_BOTTOM, 334, "center", 36, color=sc.ink)
     hy = HEAD_BOTTOM + gap + size * 0.56
     uy = hy + size * 0.56 + 8
@@ -678,10 +767,11 @@ def copy_block(sc, size, hero_color, unit_color=None, outline=None, sup_color=No
                 unit=(195, round(uy), 362, "center"), unit_color=unit_color or sc.ink)
     sy = uy + 34
     sid = nid()
-    sc.items.append(text(f"S{sc.k} support", 195, round(sy), [run(f"screen{sc.k}Support", "", font="nunito", size=17,
-                                                                  color=sup_color or sc.ink, weight=600, lh=23)],
+    sc.items.append(text(f"S{sc.k} support", 195, round(sy), [run(f"screen{sc.k}Support", "", font="nunito", size=18,
+                                                                  color=sup_color or sc.ink, weight=600, lh=24)],
                          width=sup_w, align="center", ox=0.5, tid=sid, extra=[sem(sc, "text", f"screen{sc.k}Support")]))
     sc.rise(sid, 62, 14, 26, y=round(sy))
+    sc.zone = prev_zone
     return sy + 38
 
 
@@ -714,27 +804,36 @@ def hero_number(sc, x, y, size, color, align="center", width=350, outline=None, 
 
 
 def bg_panel(sc):
-    """full-bleed scene backdrop with a chunky outlined top edge (what the spring pushes)"""
+    """full-bleed scene backdrop with a chunky outlined top edge (what the spring
+    pushes). 12000 units wide, so it bleeds past any viewport (the stage is 844
+    units tall and as wide as the canvas)."""
     return [
-        shape(f"S{sc.k} panel edge", [rect(4000, 3200, 0, y=-140, oy=0)], [fill(sc.bg)]),
-        shape(f"S{sc.k} panel lip", [rect(4000, 10, 0, y=-150, oy=0)], [fill(INK)]),
+        shape(f"S{sc.k} panel edge", [rect(12000, 3200, 0, y=-140, oy=0)], [fill(sc.bg)]),
+        shape(f"S{sc.k} panel lip", [rect(12000, 10, 0, y=-150, oy=0)], [fill(INK)]),
     ]
 
 
-def deco_bg(sc, seed, color, n=7):
-    """quiet background starbursts / dots: mid-ground depth"""
+def deco_bg(sc, seed, color, n=7, wings=10):
+    """quiet background starbursts / dots: mid-ground depth. They live in the
+    scene's backdrop zone, centred on the viewport; the `wings` beyond the 390-unit
+    design column only show when the viewport is wider than the design."""
     import random
     rnd = random.Random(seed)
     out = []
-    for i in range(n):
-        x, y = rnd.uniform(20, 370), rnd.uniform(90, 720)
+    spots = [(rnd.uniform(20, 370), rnd.uniform(90, 720)) for _ in range(n)]
+    for i in range(wings):
+        side = -1 if i % 2 == 0 else 1
+        x = 195 + side * rnd.uniform(230, 1050)
+        spots.append((x, rnd.uniform(100, 760)))
+    for i, (x, y) in enumerate(spots):
         s = rnd.uniform(8, 16)
         sid = nid()
         out.append(sparkle(f"S{sc.k} twinkle {i}", x, y, s, color, sid=sid, opacity=0.55))
         ph = rnd.randint(0, 200)
         sc.loop(sid, "scaleX", [(0, 1.0, "soft"), ((ph % 120) + 40, 0.55, "soft"), (IDLE_LEN, 1.0)])
         sc.loop(sid, "scaleY", [(0, 1.0, "soft"), ((ph % 120) + 40, 0.55, "soft"), (IDLE_LEN, 1.0)])
-    return out
+    sc.zones["back"] += out
+    return []
 
 
 BG = {1: GRAPE_D, 2: GRAPE, 3: CREAM, 4: MINT, 5: CREAM, 6: INK, 7: PEACH, 8: MINT, 9: GRAPE, 10: GRAPE_D}
@@ -750,6 +849,7 @@ def new_scene(k):
 # ---------------------------------------------------------------- 1
 def scene1():
     sc = new_scene(1)
+    sc.zone = "copy"
     tag = nid()
     sc.items.append(el("Node", {"name": "Name tag", "x": 24, "y": 96, "id": tag}, [
         sem(sc, "text", "userName"),
@@ -761,9 +861,10 @@ def scene1():
     sc.pop(tag, 0, 0.6, 1.08, 20)
     scene_text(sc, 24, 232, 342, "left", 46, sup=(24, 240, 330, "left"), color=CREAM)
     pid = nid()
-    sc.items.append(text("Period", 24, 272, [run("periodLabel", "", font="nunito", size=15, color=MINT, weight=700, lh=20)],
+    sc.items.append(text("Period", 24, 274, [run("periodLabel", "", font="nunito", size=16, color=MINT, weight=700, lh=21)],
                          width=330, tid=pid, extra=[sem(sc, "text", "periodLabel")]))
-    sc.rise(pid, 70, 10, 24, y=272)
+    sc.rise(pid, 70, 10, 24, y=274)
+    sc.zone = "art"
     sb = nid()
     sc.items.append(burst("Machine burst", 195, 470, 136, 158, 18, alpha(PEACH, 0.8), 5, bid=sb))
     sc.key(sb, "rotation", [(30, -0.4, "out"), (80, 0)])
@@ -796,15 +897,15 @@ def scene2():
     hy = HEAD_BOTTOM + 14 + 84 * 0.56
     for side, (bx, start) in enumerate(((195 - 158, 2.4), (195 + 158, -0.7))):
         b = nid()
-        sc.items.append(burst(f"Hero ticks {side}", bx, hy, 14, 28, 3, PEACH, 4.5, bid=b, sweep=1.4, start=start))
+        sc.zones["copy"].append(burst(f"Hero ticks {side}", bx, hy, 14, 28, 3, PEACH, 4.5, bid=b, sweep=1.4, start=start))
         sc.pop(b, 26, 0.2, 1.3, 18)
     # chute that feeds the jar
     chute = nid()
     sc.items.append(el("Node", {"name": "Chute", "id": chute}, [
         shape("Chute mouth", [ellipse(40, 14, x=198, y=396)], [fill(INK)]),
-        shape("Chute stripe", [poly([(440, 380), (280, 380), ("c", 220, 382, 1.3, 16), (198, 394)], closed=False)],
+        shape("Chute stripe", [poly([(1700, 380), (280, 380), ("c", 220, 382, 1.3, 16), (198, 394)], closed=False)],
               [stroke(MINT, 6)], y=-6),
-        shape("Chute", [poly([(440, 380), (280, 380), ("c", 220, 382, 1.3, 16), (198, 394)], closed=False)],
+        shape("Chute", [poly([(1700, 380), (280, 380), ("c", 220, 382, 1.3, 16), (198, 394)], closed=False)],
               [stroke(INK, 40, cap="butt"), stroke(GRAPE_L, 30, cap="butt", name="Pipe")]),
     ]))
     sc.key(chute, "x", [(0, 220, "out"), (26, 0)])
@@ -917,7 +1018,7 @@ def scene4():
     hy = HEAD_BOTTOM + 14 + 136 * 0.56
     for side, (bx, start) in enumerate(((195 - 96, 2.3), (195 + 96, -0.75))):
         b = nid()
-        sc.items.append(burst(f"Yes ticks {side}", bx, hy, 16, 32, 3, GRAPE, 5, bid=b, sweep=1.5, start=start))
+        sc.zones["copy"].append(burst(f"Yes ticks {side}", bx, hy, 16, 32, 3, GRAPE, 5, bid=b, sweep=1.5, start=start))
         sc.pop(b, 30, 0.2, 1.3, 18)
     TY = 534
     tray = nid()
@@ -936,8 +1037,10 @@ def scene4():
     ]
     # feeder rails that deliver two of the tokens; the third comes out of the machine
     for side in (-1, 1):
-        pts = [(195 + side * 250, 398), (195 + side * 150, 412), ("c", 195 + side * 128, 424, 1.2 if side < 0 else 1.94, 10)]
-        sc.items.append(el("Node", {"name": f"Feeder {side}", "id": nid()}, [
+        pts = [(195 + side * 200, 398), (195 + side * 150, 412), ("c", 195 + side * 128, 424, 1.2 if side < 0 else 1.94, 10)]
+        # sits 26 units lower than the first pass, clear of a one-line support
+        sc.items.append(el("Node", {"name": f"Feeder {side}", "y": 26, "id": nid()}, [
+            shape("Feeder flange", [rect(14, 50, 6, x=195 + side * 203, y=398)], [fill(GRAPE_D), stroke(INK, 3.5)]),
             shape("Feeder mouth", [ellipse(18, 30, x=195 + side * 128, y=426)], [fill(INK)]),
             shape("Feeder stripe", [poly(pts, closed=False)], [stroke(MINT, 5)], y=-7),
             shape("Feeder chute", [poly(pts, closed=False)], [stroke(INK, 36, cap="butt"), stroke(GRAPE_L, 26, cap="butt", name="Pipe")]),
@@ -946,8 +1049,8 @@ def scene4():
     sc.key(tray, "y", [(0, TY + 100, "out"), (20, TY - 6, "soft"), (28, TY)])
     sc.key(tray, "opacity", [(0, 0, "linear"), (8, 1)])
     lid = (POSES[4][0], POSES[4][1] - POSES[4][2] * 312)
-    starts = [(-40, 396), lid, (430, 396)]
-    peaks = [384, 430, 384]
+    starts = [(195 - 196, 424), lid, (195 + 196, 424)]
+    peaks = [408, 430, 408]
     land = TY - 26
     for i, (sx, sy) in enumerate(starts):
         t = nid()
@@ -1058,6 +1161,7 @@ def scene6():
         el("ScriptInputNumber", {"propertyValue": 1, "name": "strength"}),
         el("ScriptInputNumber", {"propertyValue": 165, "name": "halfW"}),
         el("ScriptInputNumber", {"propertyValue": 118, "name": "halfH"}),
+        res_input(),
         el("ScriptInputColor", {"propertyValue": PEACH, "name": "glow"}),
     ])
     sc.loop(band, 243, [(0, -200, "linear"), (40, -200, "linear"), (220, 190, "linear"), (IDLE_LEN, 190)])
@@ -1083,10 +1187,10 @@ def scene7():
                  width=230, align="center", ox=0.5, oy=0.5, sizing="fixed", height=70, overflow="fitFontSize",
                  wrap="noWrap", valign="middle"),
         ]),
-        text("Goal name", -22, -54, [run("completedGoalName", "", font="nunito", size=16, color=GRAPE, weight=800, lh=20)],
-             width=220, align="center", ox=0.5, oy=0.5, sizing="fixed", height=22, overflow="ellipsis", wrap="noWrap"),
-        text("S7 unit", -22, 42, [run("screen7Unit", "", font="nunito", size=15, color=INK, weight=800, lh=19)],
-             width=220, align="center", ox=0.5, oy=0.5),
+        text("Goal name", -22, -54, [run("completedGoalName", "", font="nunito", size=18, color=GRAPE, weight=800, lh=22)],
+             width=220, align="center", ox=0.5, oy=0.5, sizing="fixed", height=24, overflow="ellipsis", wrap="noWrap"),
+        text("S7 unit", -22, 44, [run("screen7Unit", "", font="nunito", size=18, color=INK, weight=800, lh=22)],
+             width=226, align="center", ox=0.5, oy=0.5, sizing="fixed", height=24, overflow="fitFontSize", wrap="noWrap"),
         sparkle("Stub star", 118, 0, 30, GRAPE),
         shape("Perforation", [poly([(84, -70), (84, 70)], closed=False)],
               [el("Stroke", {"thickness": 3, "cap": "round", "name": "Dots"}, [solid(INK), el("DashPath", {"name": "Dash"}, [
@@ -1097,6 +1201,9 @@ def scene7():
         shape("Ticket", [rect(300, 168, 18)], [fill(CREAM), stroke(INK, 5)]),
         shape("Ticket shadow", [rect(300, 168, 18, y=10)], [fill(alpha(INK, 0.25))]),
     ])
+    # the ticket (it carries the scene's number) is its own zone: it rides the art
+    # zone in a portrait stack, and joins the copy column in a two-column split
+    sc.zone = "ticket"
     sc.items.append(el("Node", {"name": "Ticket slot reveal", "id": nid()},
                        [el("ClippingShape", {"sourceId": clip, "name": "Above lid"}), ticket]))
     sc.items.append(shape("Above lid mask", [rect(800, 900, 0, y=470, oy=1)], [], sid=clip))
@@ -1106,7 +1213,11 @@ def scene7():
     sc.key(M["lid"], "y", [(0, -300, "out"), (10, -340, "soft"), (60, -340, "out"), (70, -300)])
     sc.key(M["lid"], "rotation", [(0, 0, "out"), (10, -0.3, "soft"), (60, -0.3, "out"), (70, 0)])
     b = nid()
-    sc.items.insert(0, burst("Ticket burst", 195, 366, 150, 168, 16, INK, 4, bid=b, opacity=0))
+    # the burst rings the ticket in the stack only (in a split it would reach the copy)
+    # squashed to hug the ticket, so its top ticks clear the support line
+    sc.items.insert(0, el("Node", {"name": "Ticket burst (stack)", "x": 195, "y": 370, "scaleY": 0.74, "id": nid()}, [
+        bind(P("_split"), 18, C["b2zero"]), burst("Ticket burst", 0, 0, 150, 168, 16, INK, 4, bid=b, opacity=0)]))
+    sc.zone = "art"
     sc.key(b, "opacity", [(56, 0, "linear"), (60, 1, "linear"), (80, 1, "linear"), (96, 0.5)])
     sc.key(b, "scaleX", [(56, 0.85, "out"), (80, 1.0)])
     sc.key(b, "scaleY", [(56, 0.85, "out"), (80, 1.0)])
@@ -1247,6 +1358,7 @@ def emblem_builder():
 
 def scene9():
     sc = new_scene(9)
+    sc.zone = "copy"
     lid = nid()
     sc.items.append(text("Persona label", 195, 96, [run("personaLabel", "", font="nunito", size=16, color=MINT, weight=800, lh=20)],
                          width=340, align="center", ox=0.5, tid=lid))
@@ -1264,6 +1376,7 @@ def scene9():
                                                                  weight=600, lh=24)],
                          width=352, align="center", ox=0.5, tid=ds))
     sc.rise(ds, 70, 12, 22, y=186)
+    sc.zone = "art"
     disc = nid()
     disc_parts = [el("Node", {"name": "Emblems", "id": nid(), "y": 6}, emblem_builder())] + [
         shape("Spotlight", [ellipse(250, 250)], [fill(PEACH, bind=bind(P("personaColor"), 37)), stroke(INK, 5)]),
@@ -1293,23 +1406,48 @@ def scene9():
 # ---------------------------------------------------------------- 10
 SHARE_AB = "0:3100"
 SHARE_ASSEMBLE = nid()
+SHARE_WIDE_AB = "0:3150"
+SHARE_WIDE_ASSEMBLE = nid()
+CARD_Y = 386          # the card's centre in scene 10's design space
 
 
 def scene10():
     sc = new_scene(10)
-    scene_text(sc, 195, 152, 190, "center", 30, sup=(195, 630, 300, "center"), color=CREAM)
-    card = nid()
-    remap = nid()
-    sc.items.append(el("NestedArtboard", {"artboardId": SHARE_AB, "x": 195, "y": 392, "name": "Share card", "id": card},
-                       [el("NestedRemapAnimation", {"animationId": SHARE_ASSEMBLE, "time": 1, "name": "Assemble", "id": remap})]))
-    sc.key(card, "y", [(0, 760, "rise"), (24, 380, "soft"), (34, 396, "soft"), (42, 392)])
-    sc.key(card, "rotation", [(0, 0.25, "out"), (30, -0.03, "soft"), (42, 0)])
-    sc.key(remap, "time", [(20, 0, "linear"), (92, 1)])
-    for i, (x, y) in enumerate(((44, 170), (352, 210), (36, 560), (356, 590))):
-        s = nid()
-        sc.items.append(sparkle(f"Summary star {i}", x, y, 20 + i * 3, PEACH if i % 2 else MINT, sid=s))
-        sc.pop(s, 60 + i * 6, 0, 1.3, 16)
-        sc.loop(s, "rotation", [(0, 0), (IDLE_LEN, 1.5708 * (1 if i % 2 else -1))])
+    scene_text(sc, 195, 152, 190, "center", 30, color=CREAM)
+    # the support line is its own zone: under the card in a portrait stack,
+    # under the headline in a two-column split
+    sc.zone = "note"
+    sid = nid()
+    sc.items.append(text("S10 support", 195, 616, [run("summarySupport", "", font="nunito", size=17, color=CREAM,
+                                                       weight=600, lh=23)],
+                         width=184, align="center", ox=0.5, tid=sid, extra=[sem(sc, "text", "summarySupport")]))
+    sc.rise(sid, 62, 14, 26, y=616)
+    sc.zone = "art"
+    mount, tall, wide, rt, rw = nid(), nid(), nid(), nid(), nid()
+    # two arrangements of the same card, one shown at a time (_wideCard): the tall
+    # collectible, and a wide one for canvases too short for the tall card's type
+    sc.items.append(el("Node", {"name": "Card mount", "x": 195, "y": CARD_Y, "id": mount}, [
+        el("NestedArtboard", {"artboardId": SHARE_AB, "name": "Share card", "id": tall},
+           [bind(P("_wideCard"), 18, C["b2zero"]),
+            el("NestedRemapAnimation", {"animationId": SHARE_ASSEMBLE, "time": 1, "name": "Assemble", "id": rt})]),
+        el("NestedArtboard", {"artboardId": SHARE_WIDE_AB, "name": "Share card (wide)", "id": wide},
+           [bind(P("_wideCard"), 18, C["b2one"]),
+            el("NestedRemapAnimation", {"animationId": SHARE_WIDE_ASSEMBLE, "time": 1, "name": "Assemble", "id": rw})]),
+    ]))
+    sc.key(mount, "y", [(0, 760, "rise"), (24, CARD_Y - 12, "soft"), (34, CARD_Y + 4, "soft"), (42, CARD_Y)])
+    sc.key(mount, "rotation", [(0, 0.25, "out"), (30, -0.03, "soft"), (42, 0)])
+    sc.key(rt, "time", [(20, 0, "linear"), (92, 1)])
+    sc.key(rw, "time", [(20, 0, "linear"), (92, 1)])
+    for variant, spots, conv in (("tall", ((40, 176), (352, 212), (34, 560), (356, 584)), "b2zero"),
+                                 ("wide", ((-98, 246), (488, 272), (-92, 520), (486, 508)), "b2one")):
+        stars = []
+        for i, (x, y) in enumerate(spots):
+            st = nid()
+            stars.append(sparkle(f"Summary star {variant} {i}", x, y, 20 + i * 3, PEACH if i % 2 else MINT, sid=st))
+            sc.pop(st, 60 + i * 6, 0, 1.3, 16)
+            sc.loop(st, "rotation", [(0, 0), (IDLE_LEN, 1.5708 * (1 if i % 2 else -1))])
+        sc.items.append(el("Node", {"name": f"Summary stars ({variant})", "id": nid()},
+                           [bind(P("_wideCard"), 18, C[conv])] + stars))
     sc.items += deco_bg(sc, 100, MINT, 5)
     return sc
 
@@ -1317,46 +1455,38 @@ def scene10():
 # =====================================================================
 # Share card component (also rendered on its own by the host for capture)
 # =====================================================================
-def tile(name, x, y, w, h, color, src, label_path, money=False):
+def tile(name, x, y, w, h, color, src, label_path, money=False, vsize=30, lsize=14.5):
     tid = nid()
     conv = C["fmtMoney"] if money else C["fmtCount"]
+    vh = round(vsize * 1.08)
     return tid, el("Node", {"name": name, "x": x, "y": y, "id": tid}, [
-        text(f"{name} value", -w / 2 + 14, -h / 2 + 10, [run(src, "0", conv=conv, font="rubik", size=28, color=INK,
-                                                             weight=900, lh=30, ls=-0.5)],
-             width=w - 28, sizing="fixed", height=32, overflow="fitFontSize", wrap="noWrap"),
-        text(f"{name} label", -w / 2 + 14, -h / 2 + 44, [run(label_path, "", font="nunito", size=12.5, color=INK,
-                                                             weight=800, lh=15)],
-             width=w - 28, sizing="fixed", height=h - 50, overflow="ellipsis"),
+        text(f"{name} value", -w / 2 + 14, -h / 2 + 9, [run(src, "0", conv=conv, font="rubik", size=vsize, color=INK,
+                                                            weight=900, lh=vh, ls=-0.5)],
+             width=w - 28, sizing="fixed", height=vh + 2, overflow="fitFontSize", wrap="noWrap"),
+        text(f"{name} label", -w / 2 + 14, -h / 2 + 13 + vh, [run(label_path, "", font="nunito", size=lsize, color=INK,
+                                                                   weight=800, lh=round(lsize * 1.12, 1))],
+             width=w - 28, sizing="fixed", height=h - vh - 15, overflow="ellipsis"),
         shape(f"{name} bg", [rect(w, h, 16)], [fill(color), stroke(INK, 3.5)]),
     ])
 
 
-def share_card():
-    a = Anim("Assemble", 72, aid=SHARE_ASSEMBLE)
+def card_parts(a, spec):
+    """the parts both card arrangements share, placed by `spec`; keys the
+    assembly into the Anim `a`. Returns the art list (front to back)."""
     priv, sens = [], []
-    pspec = [("Deposits", -73, 26, MINT, "deposits", "screen3Unit"), ("Goals", 73, 26, PEACH, "goalsCompleted", "screen4Unit"),
-             ("Months", -73, 134, GRAPE_L, "activeMonths", "screen6Unit"), ("Jars", 73, 134, CREAM, "goalJars", "screen8Unit")]
-    order = 0
-    for nm, x, y, c, src, lab in pspec:
-        tid, t = tile(f"Private {nm}", x, y, 140, 98, c if c != CREAM else "FFFFE9C2", src, lab)
+    for order, (nm, x, y, w, h, c, src, lab) in enumerate(spec["private"]):
+        tid, t = tile(f"Private {nm}", x, y, w, h, c, src, lab)
         priv.append(t)
         a.key(tid, "scaleX", [(10 + order * 6, 0.3, "out"), (22 + order * 6, 1.08, "soft"), (30 + order * 6, 1)])
         a.key(tid, "scaleY", [(10 + order * 6, 0.3, "out"), (22 + order * 6, 1.08, "soft"), (30 + order * 6, 1)])
         a.key(tid, "opacity", [(10 + order * 6, 0, "linear"), (16 + order * 6, 1)])
-        order += 1
-    sspec = [("Saved", 0, -2, 286, 70, PEACH, "totalSaved", "screen2Unit", True),
-             ("Roundups", -73, 82, 140, 84, MINT, "roundupsSaved", "screen5Unit", True),
-             ("Deposits", 73, 82, 140, 84, "FFFFE9C2", "deposits", "screen3Unit", False),
-             ("Goals", -73, 172, 140, 84, GRAPE_L, "goalsCompleted", "screen4Unit", False),
-             ("Months", 73, 172, 140, 84, MINT_D, "activeMonths", "screen6Unit", False)]
-    order = 0
-    for nm, x, y, w, h, c, src, lab, money in sspec:
-        tid, t = tile(f"Full {nm}", x, y, w, h, c, src, lab, money)
+    for order, (nm, x, y, w, h, c, src, lab, money) in enumerate(spec["sensitive"]):
+        tid, t = tile(f"Full {nm}", x, y, w, h, c, src, lab, money, vsize=28 if nm == "Saved" else 26,
+                      lsize=14.5)
         sens.append(t)
         a.key(tid, "scaleX", [(10 + order * 5, 0.3, "out"), (22 + order * 5, 1.08, "soft"), (30 + order * 5, 1)])
         a.key(tid, "scaleY", [(10 + order * 5, 0.3, "out"), (22 + order * 5, 1.08, "soft"), (30 + order * 5, 1)])
         a.key(tid, "opacity", [(10 + order * 5, 0, "linear"), (16 + order * 5, 1)])
-        order += 1
     chip = nid()
     a.key(chip, "x", [(4, -40, "out"), (24, 0)])
     a.key(chip, "opacity", [(4, 0, "linear"), (14, 1)])
@@ -1368,41 +1498,49 @@ def share_card():
         el("Node", {"name": "Privacy: full values", "id": nid()}, [bind(P("shareIncludeSensitiveValues"), 18, C["b2one"])] + sens),
         el("Node", {"name": "Privacy: counts only", "id": nid()}, [bind(P("shareIncludeSensitiveValues"), 18, C["b2zero"])] + priv),
     ])
-    empty = el("Node", {"name": "Empty state", "id": nid()}, [
+    ex, ey, ew = spec["empty"]
+    empty = el("Node", {"name": "Empty state", "x": ex, "y": ey, "id": nid()}, [
         bind(P("_emptyState"), 18, C["b2one"]),
         text("Empty headline", 0, 0, [run("emptyHeadline", "", font="rubik", size=26, color=INK, weight=800, lh=29)],
-             width=270, align="center", ox=0.5),
-        text("Empty support", 0, 78, [run("emptySupport", "", font="nunito", size=16, color=INK, weight=600, lh=21)],
-             width=260, align="center", ox=0.5),
-        coin("Empty coin", 0, 160, 0.9),
-        shape("Empty slot", [rect(70, 12, 6, y=196)], [fill(INK)]),
+             width=ew, align="center", ox=0.5),
+        text("Empty support", 0, 72, [run("emptySupport", "", font="nunito", size=16, color=INK, weight=600, lh=21)],
+             width=ew - 10, align="center", ox=0.5),
+        coin("Empty coin", 0, 146, 0.9),
+        shape("Empty slot", [rect(70, 12, 6, y=182)], [fill(INK)]),
     ])
+    cx, cy, cw = spec["chip"]
     chip_n = el("Node", {"name": "Persona chip", "id": chip}, [
         el("Node", {"name": "Persona chip shown", "id": nid()}, [bind(P("_personaKnown"), 18, C["b2one"]),
-            text("Chip name", -112, -62, [run("personaName", "", font="nunito", size=15, color=INK, weight=800, lh=18)],
-                 width=230, sizing="fixed", height=20, overflow="ellipsis", wrap="noWrap", oy=0.5, valign="middle"),
-            shape("Chip dot", [ellipse(18, 18, x=-128, y=-62)], [fill(MINT, bind=bind(P("personaColor"), 37)), stroke(INK, 3)]),
-            shape("Chip", [rect(286, 34, 17, y=-62)], [fill("FFFFE9C2"), stroke(INK, 3)]),
+            text("Chip name", cx - cw / 2 + 31, cy, [run("personaName", "", font="nunito", size=15, color=INK, weight=800, lh=18)],
+                 width=cw - 44, sizing="fixed", height=20, overflow="ellipsis", wrap="noWrap", oy=0.5, valign="middle"),
+            shape("Chip dot", [ellipse(18, 18, x=cx - cw / 2 + 17, y=cy)], [fill(MINT, bind=bind(P("personaColor"), 37)), stroke(INK, 3)]),
+            shape("Chip", [rect(cw, 34, 17, x=cx, y=cy)], [fill("FFFFE9C2"), stroke(INK, 3)]),
         ])])
+    nx, ny, nw = spec["name"]
+    wx, wy = spec["wordmark"]
+    yx, yy = spec["year"]
+    kx, ky = spec["coin"]
     header = [
         el("Node", {"name": "Name (opt-in)", "id": nid()}, [bind(P("shareIncludeName"), 18, C["b2one"]),
-            text("Card name", -139, -142, [run("userName", "", font="nunito", size=16, color=MINT, weight=800, lh=20)],
-                 width=170, sizing="fixed", height=22, overflow="ellipsis", wrap="noWrap")]),
-        el("Node", {"name": "Card year", "x": 140, "y": -150, "id": yr}, [
+            text("Card name", nx, ny, [run("userName", "", font="nunito", size=16, color=MINT, weight=800, lh=20)],
+                 width=nw, sizing="fixed", height=22, overflow="ellipsis", wrap="noWrap")]),
+        el("Node", {"name": "Card year", "x": yx, "y": yy, "id": yr}, [
             text("Year", 0, 0, [run("year", "2026", conv=C["toStr0"], font="rubik", size=50, color=MINT, weight=900, lh=52,
-                                    outline=(INK, 7))], ox=1, oy=0.5)]),
-        text("Card wordmark", -139, -196, [run(None, "Stash", font="rubik", size=28, color=CREAM, weight=900, lh=30)]),
-        coin("Card coin", 112, -192, 0.5),
-        shape("Header band", [rect(330, 136, 0, y=-152, radii=(30, 30, 0, 0))], [fill(GRAPE), stroke(INK, 5)]),
+                                    outline=(INK, 7))], ox=spec.get("year_ox", 1), oy=0.5)]),
+        text("Card wordmark", wx, wy, [run(None, "Stash", font="rubik", size=28, color=CREAM, weight=900, lh=30)]),
+        coin("Card coin", kx, ky, 0.5),
+        spec["band"],
     ]
-    art = [stats, empty, chip_n] + header + [
-        sparkle("Card star a", -136, 206, 14, PEACH), sparkle("Card star b", 136, 206, 14, GRAPE_L),
-        shape("Card", [rect(330, 452, 30)], [fill(CREAM), stroke(INK, 5)]),
-        shape("Card shadow", [rect(330, 452, 30, y=12)], [fill(alpha(INK, 0.35))]),
+    return [stats, empty, chip_n] + header
+
+
+def card_artboard(name, abid, aid, w, h, spec, x):
+    a = Anim("Assemble", 72, aid=aid)
+    art = card_parts(a, spec) + spec["deco"] + [
+        shape("Card", [rect(w, h, 30)], [fill(CREAM), stroke(INK, 5)]),
+        shape("Card shadow", [rect(w, h, 30, y=12)], [fill(alpha(INK, 0.35))]),
     ]
-    sm = nid()
-    lay = nid()
-    st = nid()
+    sm, lay, st, style = nid(), nid(), nid(), nid()
     settled = Anim("Settled", 1)
     machine_xml = el("StateMachine", {"name": "Card", "id": sm}, [
         el("StateMachineLayer", {"name": "Card", "id": lay}, [
@@ -1410,13 +1548,73 @@ def share_card():
             el("EntryState", {"x": 0, "y": 0}, [el("StateTransition", {"stateToId": st})]),
             el("AnimationState", {"x": 160, "y": 0, "animationId": settled.id, "id": st}),
         ])])
-    style = nid()
     return el("Artboard", {"isComponent": True, "defaultStateMachineId": sm, "styleId": style, "clip": False,
                            "viewModelId": VM, "viewModelInstanceId": VMI,
-                           "originX": 0.5, "originY": 0.5, "width": 340, "height": 470, "x": 900, "y": 0,
-                           "name": "ShareCard", "id": SHARE_AB},
-              [el("LayoutComponentStyle", {"name": "Card style", "id": style})] + art +
+                           "originX": 0.5, "originY": 0.5, "width": w + 10, "height": h + 20, "x": x, "y": 0,
+                           "name": name, "id": abid},
+              [el("LayoutComponentStyle", {"name": f"{name} style", "id": style})] + art +
               [machine_xml, settled.xml(), a.xml()])
+
+
+def share_card():
+    """the tall collectible card (330 x 420): header band, persona chip, 2x2 tiles.
+    Tile labels are 14.5 pt so they stay >= 11 px wherever the layout shows it."""
+    W2, H2 = 330, 420
+    top = -H2 / 2
+    spec = {
+        "private": [("Deposits", -73, 6, 140, 108, MINT, "deposits", "screen3Unit"),
+                    ("Goals", 73, 6, 140, 108, PEACH, "goalsCompleted", "screen4Unit"),
+                    ("Months", -73, 126, 140, 108, GRAPE_L, "activeMonths", "screen6Unit"),
+                    ("Jars", 73, 126, 140, 108, "FFFFE9C2", "goalJars", "screen8Unit")],
+        "sensitive": [("Saved", 0, -15, 286, 66, PEACH, "totalSaved", "screen2Unit", True),
+                      ("Roundups", -73, 62, 140, 80, MINT, "roundupsSaved", "screen5Unit", True),
+                      ("Deposits", 73, 62, 140, 80, "FFFFE9C2", "deposits", "screen3Unit", False),
+                      ("Goals", -73, 148, 140, 80, GRAPE_L, "goalsCompleted", "screen4Unit", False),
+                      ("Months", 73, 148, 140, 80, MINT_D, "activeMonths", "screen6Unit", False)],
+        "empty": (0, -36, 270),
+        "chip": (0, -72, 286),
+        "name": (-139, top + 70, 150),
+        "wordmark": (-139, top + 18),
+        "year": (140, top + 70),
+        "coin": (112, top + 22),
+        "band": shape("Header band", [rect(W2, 112, 0, y=top + 56, radii=(30, 30, 0, 0))], [fill(GRAPE), stroke(INK, 5)]),
+        "deco": [sparkle("Card star a", -146, 198, 12, PEACH), sparkle("Card star b", 146, 198, 12, GRAPE_L)],
+    }
+    return card_artboard("ShareCard", SHARE_AB, SHARE_ASSEMBLE, W2, H2, spec, 900)
+
+
+def share_card_wide():
+    """the wide arrangement (560 x 300) of the same card, for canvases too short
+    for the tall one: the header becomes a band down the left, the tiles a 2x2
+    grid on the right. Same bindings, same privacy rules."""
+    W2, H2 = 560, 300
+    L = -W2 / 2
+    bw = 196                       # band width
+    gx0 = L + bw + 16              # tile grid left edge
+    gw = W2 / 2 - 16 - gx0         # grid width
+    tw = (gw - 12) / 2
+    c1, c2 = gx0 + tw / 2, gx0 + tw + 12 + tw / 2
+    spec = {
+        "private": [("Deposits", c1, -62, tw, 116, MINT, "deposits", "screen3Unit"),
+                    ("Goals", c2, -62, tw, 116, PEACH, "goalsCompleted", "screen4Unit"),
+                    ("Months", c1, 62, tw, 116, GRAPE_L, "activeMonths", "screen6Unit"),
+                    ("Jars", c2, 62, tw, 116, "FFFFE9C2", "goalJars", "screen8Unit")],
+        "sensitive": [("Saved", gx0 + gw / 2, -90, gw, 64, PEACH, "totalSaved", "screen2Unit", True),
+                      ("Roundups", c1, -6, tw, 82, MINT, "roundupsSaved", "screen5Unit", True),
+                      ("Deposits", c2, -6, tw, 82, "FFFFE9C2", "deposits", "screen3Unit", False),
+                      ("Goals", c1, 84, tw, 82, GRAPE_L, "goalsCompleted", "screen4Unit", False),
+                      ("Months", c2, 84, tw, 82, MINT_D, "activeMonths", "screen6Unit", False)],
+        "empty": (gx0 + gw / 2, -108, gw - 20),
+        "chip": (L + bw / 2, 112, bw - 24),
+        "name": (L + 22, -84, bw - 40),
+        "wordmark": (L + 22, -128),
+        "year": (L + 22, 10),
+        "year_ox": 0,
+        "coin": (L + bw - 34, -112),
+        "band": shape("Side band", [rect(bw, H2, 0, x=L + bw / 2, radii=(30, 0, 0, 30))], [fill(GRAPE), stroke(INK, 5)]),
+        "deco": [sparkle("Card star a", L + bw - 30, 52, 14, PEACH), sparkle("Card star b", L + 30, 62, 12, MINT)],
+    }
+    return card_artboard("ShareCardWide", SHARE_WIDE_AB, SHARE_WIDE_ASSEMBLE, W2, H2, spec, 1300)
 
 
 def event_probe():
@@ -1431,7 +1629,7 @@ def event_probe():
            for n, i in EV.items()]
     return el("Artboard", {"defaultStateMachineId": sm, "styleId": style, "clip": True,
                            "viewModelId": VM, "viewModelInstanceId": VMI,
-                           "width": W, "height": H, "x": 1400, "y": 0, "name": "EventProbe", "id": nid()},
+                           "width": W, "height": H, "x": 2000, "y": 0, "name": "EventProbe", "id": nid()},
               [el("LayoutComponentStyle", {"name": "Probe style", "id": style}),
                el("NestedArtboard", {"artboardId": MAIN, "x": 0, "y": 0, "name": "Recap under test", "id": nest},
                   [el("NestedStateMachine", {"animationId": "0:3", "name": "Recap"})]),
@@ -1443,11 +1641,42 @@ def event_probe():
                idle.xml()])
 
 
+RESIZE_W = 1100
+
+
+def resize_probe():
+    """ResizeProbe: a verification harness, not part of the experience. It nests
+    the Recap artboard as a layout child and keys the instance's width, so a
+    headless run resizes the live recap across the layout breakpoint mid-scene
+    (390 -> 1100 at 2.5 s, -> 560 at 5 s, -> 900 at 7 s)."""
+    sm, lay, st, nest, style = nid(), nid(), nid(), nid(), nid()
+    a = Anim("Resize", 600)
+    a.key(nest, "instanceWidth", [(0, 390, "hold"), (150, RESIZE_W, "hold"), (300, 560, "hold"), (420, 900, "hold"),
+                                  (600, 900)])
+    return el("Artboard", {"defaultStateMachineId": sm, "styleId": style, "clip": True,
+                           "viewModelId": VM, "viewModelInstanceId": VMI,
+                           "width": RESIZE_W, "height": H, "x": 2500, "y": 0, "name": "ResizeProbe", "id": nid()},
+              [el("LayoutComponentStyle", {"flexDirectionValue": "row", "layoutAlignmentType": "topLeft",
+                                           "name": "Probe style", "id": style}),
+               fill("FF000000", name="Probe backdrop"),
+               el("NestedArtboardLayout", {"artboardId": MAIN, "instanceWidth": 390, "instanceHeight": H,
+                                           "name": "Recap under test", "id": nest},
+                  [el("NestedStateMachine", {"animationId": "0:3", "name": "Recap"})]),
+               el("StateMachine", {"name": "Probe", "id": sm}, [
+                   el("StateMachineLayer", {"name": "Probe", "id": lay}, [
+                       el("AnyState", {"x": 300, "y": -100}), el("ExitState", {"x": 500, "y": -100}),
+                       el("EntryState", {"x": 0, "y": 0}, [el("StateTransition", {"stateToId": st})]),
+                       el("AnimationState", {"x": 160, "y": 0, "animationId": a.id, "id": st})])]),
+               a.xml()])
+
+
 def coin_artboard():
     sm, lay, st = nid(), nid(), nid()
     idle = Anim("Rest", 1)
     style = nid()
+    # bound to UserRecap only so the 3D coin's canvas resolution follows _gpuRes
     return el("Artboard", {"isComponent": True, "defaultStateMachineId": sm, "styleId": style, "clip": False,
+                           "viewModelId": VM, "viewModelInstanceId": VMI,
                            "originX": 0.5, "originY": 0.5, "width": 64, "height": 64, "x": 800, "y": 0,
                            "name": "Coin", "id": COIN_AB},
               [el("LayoutComponentStyle", {"name": "Coin style", "id": style})] + coin_art() + [
@@ -1492,30 +1721,36 @@ def handoff():
             el("ScriptInputNumber", {"propertyValue": 2.4, "name": "outline"}),
             el("ScriptInputNumber", {"propertyValue": 0.88, "name": "mirror"}),
             el("ScriptInputNumber", {"propertyValue": 420, "name": "maxH"}),
+            res_input("_gpuResStage"),
             el("ScriptInputColor", {"propertyValue": "FFDCE6F2", "name": "steel"}),
             el("ScriptInputColor", {"propertyValue": INK, "name": "ink"}),
         ])
     # the next scene rides a launch bar carried by two chrome springs at the screen
     # edges (clear of every motif pose); the coin lands on the right-hand one
     HO["root2"] = nid()
+    right = lambda name, ch: el("Node", {"name": name, "id": nid()}, [bind(P("_rightOff"), 13)] + ch)
     HO["coin_layer"] = el("Node", {"name": "Handoff: coin", "id": HO["root2"], "opacity": 0}, [
-        el("Node", {"name": "Handoff coin", "id": HO["coin"], "x": 432, "y": 572},
-           [coin3d("Handoff coin 3D", 56, 0, 0.0, 0.25, ids=HO["coin_ids"], outline=3.5, shine=0.7)])])
+        right("Right edge (coin)", [
+            el("Node", {"name": "Handoff coin", "id": HO["coin"], "x": 432, "y": 572},
+               [coin3d("Handoff coin 3D", 56, 0, 0.0, 0.25, ids=HO["coin_ids"], outline=3.5, shine=0.7,
+                       res="_gpuResStage")])])])
     return el("Node", {"name": "Handoff: springs", "id": HO["root"], "opacity": 0}, [
-        el("Node", {"name": "Exit rail", "id": HO["rail"]}, [
+        right("Right edge (rail)", [el("Node", {"name": "Exit rail", "id": HO["rail"]}, [
             shape("Rail shine", [poly([(470, 584), (380, 600)], closed=False)], [stroke(alpha(CREAM, 0.8), 3)], y=-4),
             shape("Rail", [poly([(470, 588), (380, 604)], closed=False)], [stroke(INK, 16), stroke(PEACH, 9, name="Rail top")]),
             shape("Rail stop", [ellipse(18, 18, x=380, y=604)], [fill(PEACH), stroke(INK, 3.5)]),
-        ]),
+        ])]),
         el("Node", {"name": "Springs", "id": HO["spring"], "x": 0, "y": 1000}, [
             el("Node", {"name": "Launch bar", "id": HO["plate"], "y": -SPRING_REST - PLATE_H}, [
-                shape("Bar shine", [rect(380, 3, 1.5, x=195, y=-4)], [fill("77FFFFFF")]),
-                shape("Bar", [rect(398, 16, 8, x=195)], [fill(grad=lin([(0, GRAPE_L), (1, GRAPE)], 0, -8, 0, 8)), stroke(INK, 4)]),
+                el("Node", {"name": "Bar span", "id": nid()}, [bind(P("_vcx"), 13), bind(P("_barSX"), 16), 
+                    shape("Bar shine", [rect(380, 3, 1.5, y=-4)], [fill("77FFFFFF")]),
+                    shape("Bar", [rect(398, 16, 8)], [fill(grad=lin([(0, GRAPE_L), (1, GRAPE)], 0, -8, 0, 8)), stroke(INK, 4)]),
+                ]),
                 shape("Cap L", [rect(76, 22, 9, x=SPRING_X[0], y=2)], [fill(GRAPE_D), stroke(INK, 3.5)]),
-                shape("Cap R", [rect(76, 22, 9, x=SPRING_X[1], y=2)], [fill(GRAPE_D), stroke(INK, 3.5)]),
+                right("Right edge (cap)", [shape("Cap R", [rect(76, 22, 9, x=SPRING_X[1], y=2)], [fill(GRAPE_D), stroke(INK, 3.5)])]),
             ]),
             coil("Spring L 3D", SPRING_X[0], True),
-            coil("Spring R 3D", SPRING_X[1], False),
+            right("Right edge (spring)", [coil("Spring R 3D", SPRING_X[1], False)]),
         ]),
     ])
 
@@ -1649,9 +1884,10 @@ def box(name, bid, style_kw, children, w=0, h=0, extra_attrs=None, style_binds=N
 INSET = None
 
 
-def inset_binds():
-    # keeps the chrome a centred portrait column on wide (desktop) viewports
-    return [bind(P("_chromeInset"), 516), bind(P("_chromeInset"), 517)]
+def footer_binds():
+    # the footer's horizontal extent (director): full width in a portrait stack,
+    # capped and centred on wide portrait canvases, the copy column in landscape
+    return [bind(P("_ftrL"), 516), bind(P("_ftrR"), 517)]
 
 
 def chrome_text(name, path, txt, size, weight, font="nunito", onc=False, conv=None, participant="hug"):
@@ -1710,7 +1946,8 @@ def button(name, bid, k, label_path, sem_path, w=None, primary=False, accent=Non
     sem_ = el("SemanticData", {"role": "button", "name": "Semantics", "id": CH[f"sem_{bid}"]}, sem_ch)
     ch = [sem_, el("FocusData", {"name": "Focus"})] + paints + [focus_ring(name, k, 27)] + (children or [])
     attrs = {"fractionalWidth": weight_} if not w else {}
-    b, _ = box(name, bid, kw, ch, w=w or 0, h=54, extra_attrs=attrs)
+    # 54 pt tall, 48 pt on short canvases (never under the 44 pt minimum)
+    b, _ = box(name, bid, kw, [bind(P("_btnH"), 8)] + ch, w=w or 0, h=54, extra_attrs=attrs)
     return b
 
 
@@ -1736,7 +1973,7 @@ def chrome():
                                                  widthUnitsValue="auto", layoutHeightScaleType="fixed",
                                                  flexDirectionValue="row", layoutAlignmentType="centerLeft",
                                                  paddingLeft=18, paddingRight=10, gapHorizontal=12),
-                    [wordmark, prog_box, year, pause], h=64, style_binds=inset_binds())
+                    [bind(P("_hdrH"), 8), wordmark, prog_box, year, pause], h=64)
 
     chev_l = icon("Chevron left", [poly([(6, -8), (-2, 0), (6, 8)], closed=False)])
     chev_r = icon("Chevron right", [poly([(-3, -7), (4, 0), (-3, 7)], closed=False)], "_chromeOnColor", 3)
@@ -1768,10 +2005,11 @@ def chrome():
     fkw = dict(positionTypeValue="absolute", positionBottom=0, positionLeft=0, positionRight=0,
                widthUnitsValue="auto", layoutHeightScaleType="fixed", flexDirectionValue="row",
                layoutAlignmentType="centerLeft", paddingLeft=16, paddingRight=16, gapHorizontal=12)
-    nav, CH["nav_style"] = box("Footer: story", CH["nav"], dict(fkw), [prev, nxt], h=104, style_binds=inset_binds())
+    nav, CH["nav_style"] = box("Footer: story", CH["nav"], dict(fkw), [bind(P("_ftrH"), 8), prev, nxt], h=104,
+                               style_binds=footer_binds())
     fkw2 = dict(fkw, positionBottom=-400)
-    sm_, CH["sum_style"] = box("Footer: summary", CH["sum"], fkw2, [replay, share], h=104, extra_attrs={"opacity": 0},
-                               style_binds=inset_binds())
+    sm_, CH["sum_style"] = box("Footer: summary", CH["sum"], fkw2, [bind(P("_ftrH"), 8), replay, share], h=104,
+                               extra_attrs={"opacity": 0}, style_binds=footer_binds())
     return [header, nav, sm_]
 
 
@@ -2163,15 +2401,33 @@ def main():
     for b in builders:
         b()
     scenes_xml = []
+    def zone(name, k, z, items):
+        # one responsive zone: its transform is the director's per-scene fit
+        pre = {"note": "n10", "ticket": "t7"}.get(z, f"{z[0]}{k}")
+        if z in ("note", "ticket") and not items:
+            return None
+        return el("Node", {"name": name, "id": nid()},
+                  [bind(P(f"_{pre}x"), 13), bind(P(f"_{pre}y"), 14), bind(P(f"_{pre}s"), 16), bind(P(f"_{pre}s"), 17)]
+                  + items)
     for k in range(10, 0, -1):
         sc = SCENES[k]
-        inner = el("Node", {"name": f"S{k} art", "x": -195, "y": -422, "id": nid()}, sc.items)
-        content = el("Node", {"name": f"S{k} content", "x": 195, "y": 422, "id": sc.content}, [inner])
+        zs = sc.zones
+        parts = [zone(f"S{k} copy zone", k, "copy", zs["copy"]), zone(f"S{k} note zone", k, "note", zs["note"]),
+                 zone(f"S{k} ticket zone", k, "ticket", zs["ticket"]),
+                 zone(f"S{k} art zone", k, "art", zs["art"]),
+                 el("Node", {"name": f"S{k} backdrop", "id": nid()}, zs["back"])]
+        # design space: x 195 is the viewport's centre, y is the 844-unit stage
+        inner = el("Node", {"name": f"S{k} art", "x": -195, "y": -422, "id": nid()}, [p_ for p_ in parts if p_])
+        content = el("Node", {"name": f"S{k} content", "x": 195, "y": 422, "id": sc.content}, [bind(P("_vcx"), 13), inner])
         scenes_xml.append(el("Node", {"name": f"Scene {k}", "id": sc.root, "opacity": 0}, [content] + bg_panel(sc)))
     ho = handoff()
-    stage = el("Node", {"name": "Stage (fit by director)", "id": nid()}, [
-        bind(P("_stageX"), 13), bind(P("_stageY"), 14), bind(P("_stageScale"), 16), bind(P("_stageScale"), 17),
-        HO["coin_layer"], mach, ho] + scenes_xml)
+    # the motif machine stands in the current scene's art zone: its frame is that
+    # zone's transform in stage space, blended by the director on scene changes
+    motif_frame = el("Node", {"name": "Motif frame", "id": nid()},
+                     [bind(P("_mfx"), 13), bind(P("_mfy"), 14), bind(P("_mfs"), 16), bind(P("_mfs"), 17), mach])
+    stage = el("Node", {"name": "Stage (844 units tall, director-scaled)", "id": nid()}, [
+        bind(P("_stageScale"), 16), bind(P("_stageScale"), 17),
+        HO["coin_layer"], motif_frame, ho] + scenes_xml)
     chrome_xml = chrome()
     director_box, _ = box("Director", nid(), dict(positionTypeValue="absolute", positionTop=0, positionBottom=0,
                                                    positionLeft=0, positionRight=0, widthUnitsValue="auto",
@@ -2215,9 +2471,10 @@ def main():
               el("FocusData", {"name": "Keyboard surface", "id": nid()}),
               fill(INK, name="Backdrop"),
               director_box] + chrome_xml + [stage] + events + [sm] + [a.xml() for a in ANIMS])
-    comps = [coin_artboard(), share_card(), event_probe(),
+    comps = [coin_artboard(), share_card(), share_card_wide(), event_probe(), resize_probe(),
              el("ComponentAsset", {"artboardId": COIN_AB, "name": "Coin"}),
              el("ComponentAsset", {"artboardId": SHARE_AB, "name": "ShareCard"}),
+             el("ComponentAsset", {"artboardId": SHARE_WIDE_AB, "name": "ShareCardWide"}),
              el("ComponentAsset", {"artboardId": MAIN, "name": "Recap"})]
     assets = [el("FontAsset", {"file": "assets/fonts/Rubik-VF.ttf", "name": "Rubik", "id": F_RUBIK}),
               el("FontAsset", {"file": "assets/fonts/NunitoSans-VF.ttf", "name": "Nunito Sans", "id": F_NUNITO})]
@@ -2234,6 +2491,7 @@ def main():
     write("c_components.rml", comps)
     write_fixtures()
     write_poses()
+    write_boxes()
     print("wrote", len(ANIMS), "animations,", len(CONV), "converters,", len(PROPS), "properties")
 
 

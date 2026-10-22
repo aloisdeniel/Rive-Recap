@@ -20,6 +20,9 @@
 --   yaw, turn, turnGain base angle per scene + turntable phase (_turnPhase) x gain
 --   scene               currentScreen: each scene starts from its authored angle
 --   live                0 skips all GPU work (the node may be invisible but is still drawn)
+--   zoom, dpr           the stage scale (_artScale) and the device pixel ratio (_dpr): the
+--                       canvas follows the piece's real on-screen size, at device resolution
+--                       (res is the floor in px per point; capped at 4 px per point)
 --
 -- The canvas re-renders only when an input or the angle changed, so a still pot
 -- costs one image draw. Without GPU scripting (no shader) a flat vector silhouette
@@ -70,6 +73,8 @@ type V3 = {
     bottom: Input<number>,
     res: Input<number>,
     msaa: Input<number>,
+    zoom: Input<number>,
+    dpr: Input<number>,
     -- runtime state
     gpu: boolean,
     canvas: GPUCanvas?,
@@ -80,6 +85,8 @@ type V3 = {
     staging: buffer,
     sampler: ImageSampler,
     k: number,
+    samples: number,
+    targetKey: string,
     lastKey: string,
     lastScene: number,
     zero: number,
@@ -111,7 +118,8 @@ local SHARED: {
     icount: number,
     pipes: { [number]: GPUPipeline },
     targets: { [string]: Targets },
-} = { vbuf = nil, ibuf = nil, icount = 0, pipes = {}, targets = {} }
+    uses: { [string]: number },
+} = { vbuf = nil, ibuf = nil, icount = 0, pipes = {}, targets = {}, uses = {} }
 
 local function buildMesh()
     if SHARED.vbuf ~= nil then
@@ -182,8 +190,25 @@ local function pipeline(sh: Shader, samples: number): GPUPipeline
     return np
 end
 
+local function targetKey(pw: number, ph: number, samples: number): string
+    return tostring(pw) .. 'x' .. tostring(ph) .. 'x' .. tostring(samples)
+end
+
+-- pieces of the same pixel size share one MSAA colour + depth set; a set nobody uses
+-- any more (after a resize) is dropped
+local function release(key: string)
+    local n = (SHARED.uses[key] or 0) - 1
+    if n <= 0 then
+        SHARED.uses[key] = nil
+        SHARED.targets[key] = nil
+    else
+        SHARED.uses[key] = n
+    end
+end
+
 local function targets(pw: number, ph: number, samples: number): Targets
-    local key = tostring(pw) .. 'x' .. tostring(ph) .. 'x' .. tostring(samples)
+    local key = targetKey(pw, ph, samples)
+    SHARED.uses[key] = (SHARED.uses[key] or 0) + 1
     local t = SHARED.targets[key]
     if t ~= nil then
         return t
@@ -258,6 +283,23 @@ local function buildFallback(self: V3)
     self.bandPath = b
 end
 
+-- ------------------------------------------------------------------ resolution
+
+-- px per point of the frame: the stage scale times the device pixel ratio (never under
+-- `res`, the supersampling floor), in quarter steps so small resizes do not reallocate
+local function pixelsPerPoint(self: V3): number
+    local z = math.max(0.25, self.zoom)
+    local d = math.max(1, self.dpr)
+    local k = math.clamp(z * math.max(d, self.res), 1, 4)
+    return math.floor(k * 4 + 0.5) / 4
+end
+
+local function canvasSize(self: V3, k: number): (number, number)
+    local pw = math.ceil(self.halfW * 2 * k / 8) * 8
+    local ph = math.ceil((self.bottom - self.top) * k / 8) * 8
+    return pw, ph
+end
+
 -- ------------------------------------------------------------------ lifecycle
 
 function init(self: V3, context: Context): boolean
@@ -274,17 +316,37 @@ function init(self: V3, context: Context): boolean
     local samples = if want >= 4 and context:features().maxSamples >= 4 then 4 else 1
     local pipe = pipeline(sh, samples)
     self.pipe = pipe
+    self.samples = samples
     local ubo = GPUBuffer.new({ size = UBO_SIZE, usage = 'uniform', label = 'kiln vessel' })
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    local k = math.max(1, self.res)
+    local k = pixelsPerPoint(self)
     self.k = k
-    local pw = math.ceil(self.halfW * 2 * k / 8) * 8
-    local ph = math.ceil((self.bottom - self.top) * k / 8) * 8
+    local pw, ph = canvasSize(self, k)
     self.canvas = context:gpuCanvas({ width = pw, height = ph })
     self.targets = targets(pw, ph, samples)
+    self.targetKey = targetKey(pw, ph, samples)
     self.gpu = true
     return true
+end
+
+-- keep the canvas at the piece's real resolution when the stage is resized
+local function fitCanvas(self: V3)
+    local canvas = self.canvas
+    if not self.gpu or canvas == nil then
+        return
+    end
+    local k = pixelsPerPoint(self)
+    if k == self.k then
+        return
+    end
+    self.k = k
+    local pw, ph = canvasSize(self, k)
+    canvas:resize(pw, ph)
+    release(self.targetKey)
+    self.targets = targets(pw, ph, self.samples)
+    self.targetKey = targetKey(pw, ph, self.samples)
+    self.lastKey = '' -- re-render at the new size
 end
 
 function update(self: V3)
@@ -300,6 +362,9 @@ function advance(self: V3, seconds: number): boolean
     -- scene changes becomes the new zero. It is eased in over ~0.4 s, while the piece
     -- is still the rotation-free slab of the handoff, so the reset never reads as a jump.
     self.frames += 1
+    if self.live >= 0.5 then
+        fitCanvas(self)
+    end
     if self.frames <= 3 then
         -- bound inputs land over the first frames: start exactly on the authored angle
         self.lastScene = self.scene
@@ -462,6 +527,8 @@ return function(): Node<V3>
         bottom = 34,
         res = 2,
         msaa = 4,
+        zoom = 1,
+        dpr = 1,
         gpu = false,
         canvas = nil,
         targets = nil,
@@ -471,6 +538,8 @@ return function(): Node<V3>
         staging = buffer.create(UBO_SIZE),
         sampler = ImageSampler('clamp', 'clamp', 'bilinear'),
         k = 2,
+        samples = 1,
+        targetKey = '',
         lastKey = '',
         lastScene = -1,
         zero = 0,

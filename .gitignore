@@ -4,4 +4,6 @@ __pycache__/
 
 # MP4 copies of the WebM videos (scripts/export-mp4.sh)
 apps/*/video.mp4
+apps/*/video-landscape.mp4
 apps/showcase.mp4
+apps/showcase-landscape.mp4

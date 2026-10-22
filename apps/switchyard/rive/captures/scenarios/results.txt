@@ -11,3 +11,10 @@ PASS zero user :: intro -> 10 empty=True
 PASS unknown persona index falls back to row 0 :: slot=0 name=City Connector
 PASS route chip isolated :: screen=4 activeRoute=1
 PASS reduced motion :: screen=2 count playhead=1
+PASS breakpoint rule :: 767x1024=0 768x1024=1 667x375=0 1280x720=1 820x1180=1 1280 with breakpoint 1300=0
+PASS landscape taps / keys / dock :: screen=4 (expect 4) screenChanged x8 (expect 8)
+PASS landscape hold-to-pause :: held=True released=False screen=1
+PASS landscape route chip isolated :: chip at (323, 585): screen=4 activeRoute=2
+PASS resize portrait -> landscape mid-scene :: screen=3 landscape=1 vw=1280 screenChanged x3 progress=0.176; then Right -> 4
+PASS resize landscape -> portrait mid-transition :: screen=5 landscape=0 vw=600 screenChanged x5
+PASS resize on the summary keeps it settled :: screen=10 recapFinished x1 landscape=0

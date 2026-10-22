@@ -117,6 +117,8 @@ V.prop("yearText", "string", str(_d("year", 2026)), "derived")
 V.prop("a11yAnnouncement", "string", "", "derived: one sentence per scene for screen readers")
 V.prop("primaryA11yLabel", "string", _d("continueLabel"), "derived: Continue / Share")
 V.prop("secondaryA11yLabel", "string", _d("pauseLabel"), "derived: Pause / Play / Replay")
+V.prop("layoutBreakpoint", "number", _d("layoutBreakpoint", 768),
+       "host-tunable: the landscape layout applies when the artboard is at least this wide")
 V.prop("visibleScreenCount", "number", 10, "derived")
 V.prop("visibleScreenIndex", "number", 1, "derived")
 # internal runtime state (underscore = private, not user data)
@@ -127,6 +129,12 @@ for name, kind, dv in [
     ("_cmdSecondary", "trigger", None), ("_cmdPause", "trigger", None), ("_evtScreen", "trigger", None), ("_evtShare", "trigger", None),
     ("_evtFinished", "trigger", None), ("_focus", "number", 0),
     ("_dbgScreenEvents", "number", 0), ("_dbgShareEvents", "number", 0), ("_dbgFinishedEvents", "number", 0),
+    # responsive layout, written by the Director from the real artboard size
+    # (scripts/responsive.luau) and bound by the chrome
+    ("_landscape", "bool", False), ("_vw", "number", RW), ("_vh", "number", RH),
+    ("_headerH", "number", HEADER_H), ("_headerPadT", "number", 22), ("_controlsH", "number", CONTROLS_H),
+    ("_controlsPadB", "number", 22), ("_marginX", "number", 24), ("_controlsAlign", "number", 4),
+    ("_chromeAlpha", "number", 1),
 ]:
     V.prop(name, kind, dv)
 
@@ -176,8 +184,22 @@ class Scene:
         self.idle_ms = 6000
         self.enter_ms = 1800
         self.extra_hidden: list[tuple] = []
+        # Art functions add the "Copy" node and the parallax groups to
+        # `content`; build_group sorts them into frames. Frames are plain
+        # Nodes that are never keyed: the Page Stage script places them for the
+        # real canvas (scripts/responsive.luau), the choreography inside them
+        # stays in the 390-unit design space.
         self.content = N("Node", x=0, y=0, name="Content")
+        self.copy_frame = node("Copy Frame").ensure()
+        self.art_frame = node("Art Frame").ensure()
+        self.bleed_front = node("Bleed Front").ensure()   # bands edge to edge, above the art
+        self.bleed_back = node("Bleed Back").ensure()     # bands edge to edge, behind the art
+        self.empty_frame = node("Empty Frame").ensure()   # scene 10's zero-user page
+        self.foot_frame = node("Foot Frame").ensure()     # scene 3's rule + support
+        self.wide_frame = node("Wide Frame").ensure()     # scene 10's wide (spread) card
+        self.sky_frame = node("Sky Frame").ensure()       # scene 10's skyline, on the floor
         self.paper = shape("Paper", rect(SW + 40, SH + 240, x=SW / 2, y=SH / 2), fill(PARCH))
+        self.paper_frame = node("Paper Frame", self.paper).ensure()
         self.group = N("Node", x=0, y=0, opacity=0, name=f"Scene {n} - {title}").ensure()
 
     # choreography
@@ -188,8 +210,11 @@ class Scene:
         self.idle.append((obj, prop, keys))
 
     def build_group(self) -> N:
+        for c in self.content.children:
+            (self.copy_frame if c.attrs.get("name") == "Copy" else self.art_frame).add(c)
         # first child draws on top
-        self.group.add(self.content, self.paper)
+        self.group.add(self.copy_frame, self.foot_frame, self.empty_frame, self.bleed_front, self.wide_frame,
+                       self.art_frame, self.sky_frame, self.bleed_back, self.paper_frame)
         return self.group
 
     def anims(self) -> dict[str, Anim]:
@@ -314,7 +339,7 @@ def metric_copy(sc: Scene, stat: str, layout: str = "center", top: float = 8,
     num = text("Hero Number", x0, top, [(num_st, f"{int(_d(stat, 0)):,}", bind(f"{stat}Text", 268))],
                w=w, h=num_size * 1.05, align=al, overflow="fitFontSize", wrap="noWrap",
                valign="middle")
-    unit_st = sans(14.5, INK, 500, ls=1.6, lh=18)
+    unit_st = sans(15, INK, 500, ls=1.5, lh=18)
     uy = top + num_size * 1.05 + 2
     # fixed boxes: unit/support ellipsize after two lines; the headline keeps two
     # lines and only shrinks (fitFontSize) when expanded copy would need a third
@@ -328,7 +353,7 @@ def metric_copy(sc: Scene, stat: str, layout: str = "center", top: float = 8,
     hh = head_size * 1.08 * 2 + 4
     head = text("Headline", hx, ry + 12, [(head_st, _d(f"screen{n}Headline"), bind(f"screen{n}Headline", 268))],
                 w=hw, h=hh, align=al, wrap="wrap", overflow="fitFontSize")
-    sup_st = sans(14, INK2, 400, lh=19)
+    sup_st = sans(15, INK2, 400, lh=20)
     sup = text("Support", x0, ry + 12 + hh + 6,
                [(sup_st, _d(f"screen{n}Support"), bind(f"screen{n}Support", 268))],
                w=w, h=40, align=al, wrap="wrap", overflow="ellipsis")
@@ -406,12 +431,33 @@ def main():
 
     # --- Recap root
     recap, recap_extra = build_root(page_abs, carry_ab, cover_ab)
+    recap.attrs["isComponent"] = True   # so the resize harness can host it
 
-    roots = [recap, *page_abs, carry_ab, cover_ab, card_ab,
+    # --- Resize Harness: a test fixture, not part of the experience. It hosts
+    # Recap (same UserRecap instance) and resizes it mid-run, the way a host's
+    # layout fit does on a window resize or a rotation (see README, checks).
+    h_script = N("ScriptAsset", file="scripts/resize_harness.luau", name="resize_harness").ensure()
+    h_style = N("LayoutComponentStyle", name="Harness Style").ensure()
+    h_sm = N("StateMachine", name="Harness").ensure()
+    h_root_st = N("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
+                  name="Harness Root Style").ensure()
+    harness = N("Artboard", h_style, h_sm,
+                N("LayoutComponent", h_root_st,
+                  N("ScriptedLayout", N("ScriptInputArtboard", artboardId=recap.id, name="recap"),
+                    N("ScriptInputNumber", propertyValue=1.5, name="at"),
+                    scriptAssetId=h_script.id, name="Harness"),
+                  width=1280, height=720, styleId=h_root_st.id, name="Harness Root"),
+                viewModelId=V.el.id, viewModelInstanceId=V.inst.id, width=1280, height=720,
+                styleId=h_style.id, defaultStateMachineId=h_sm.id, clip=True,
+                x=-1500, y=0, name="Resize Harness").ensure()
+    recap_extra.append(h_script)
+
+    roots = [recap, *page_abs, carry_ab, cover_ab, card_ab, harness,
              *[N("ComponentAsset", artboardId=ab.id, name=ab.attrs["name"]) for ab in page_abs],
              N("ComponentAsset", artboardId=carry_ab.id, name="Carry"),
              N("ComponentAsset", artboardId=cover_ab.id, name="Cover"),
              N("ComponentAsset", artboardId=card_ab.id, name="ShareCard"),
+             N("ComponentAsset", artboardId=recap.id, name="Recap"),
              *FONTS, *recap_extra, ctx_global()["moon_script"], *CONVERTERS, V.finish()]
     out = K.doc(*roots)
     os.makedirs(os.path.join(ROOT, "rml"), exist_ok=True)
@@ -443,6 +489,8 @@ def button(name, w, h, label_style=None, label=None, label_prop=None, icon=None,
     st = N("LayoutComponentStyle", layoutWidthScaleType="fill" if grow else "fixed",
            layoutHeightScaleType="fixed", layoutAlignmentType="center", layoutTypeValue="stack",
            cornerRadiusTL=radius if radius is not None else h / 2, name=f"{name} Style").ensure()
+    if grow:   # the primary grows with the row, up to a comfortable width
+        st.attrs.update(maxWidth=340, maxWidthUnitsValue="points")
     lc = N("LayoutComponent", width=w, height=h, styleId=st.id, name=name).ensure()
     lc.add(N("SemanticData", N("DataBindContext", sourcePathIds=V.path(a11y_prop), propertyKey=983)
              if a11y_prop else None, role="button", label=_d(a11y_prop) if a11y_prop else label,
@@ -477,6 +525,9 @@ def build_root(page_abs: list, carry_ab: N, cover_ab: N):
               positionBottomUnitsValue="points", layoutWidthScaleType="fixed",
               layoutHeightScaleType="fixed", widthUnitsValue="percent", heightUnitsValue="percent",
               name="Overlay Style").ensure()
+    # the responsive layout rules, shared by the Director and the Page Stage;
+    # a module must be declared before the scripts that require it
+    resp = N("ScriptAsset", file="scripts/responsive.luau", isModule=True, folderPath="scripts", name="responsive").ensure()
     script = N("ScriptAsset", file="scripts/director.luau", name="director").ensure()
     overlay = N("LayoutComponent", in_st, N("ScriptedLayout", scriptAssetId=script.id, name="Director"),
                 width=100, height=100, styleId=in_st.id, name="Director Overlay")
@@ -495,12 +546,22 @@ def build_root(page_abs: list, carry_ab: N, cover_ab: N):
               sizing="autoWidth")
     yr.add(N("LayoutParticipant", layoutWidthScaleType="hug", layoutHeightScaleType="hug", name="LP"))
     h_st.attrs.update(widthUnitsValue="percent", layoutWidthScaleType="fixed")
-    header = N("LayoutComponent", h_st, wm, yr, width=100, height=HEADER_H, styleId=h_st.id,
-               name="Header")
+    # responsive: height, padding and margins follow the real canvas (the
+    # Director writes them from scripts/responsive.luau); it fades in as the
+    # closed cover opens (_chromeAlpha)
+    h_st.add(bind("_headerPadT", 514), bind("_marginX", 512), bind("_marginX", 513))
+    header = N("LayoutComponent", h_st, bind("_headerH", 8), bind("_chromeAlpha", 18), wm, yr, width=100,
+               height=HEADER_H, styleId=h_st.id, name="Header")
 
     # stage
-    s_st = N("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
-             marginTop=HEADER_H, marginBottom=CONTROLS_H, name="Stage Style").ensure()
+    # the stage is the whole canvas: pages bleed edge to edge under the header
+    # and the controls, and every page turn covers the full viewport
+    s_st = N("LayoutComponentStyle", positionTypeValue="absolute", positionLeft=0,
+             positionLeftUnitsValue="points", positionTop=0, positionTopUnitsValue="points",
+             positionRight=0, positionRightUnitsValue="points", positionBottom=0,
+             positionBottomUnitsValue="points", layoutWidthScaleType="fixed",
+             layoutHeightScaleType="fixed", widthUnitsValue="percent", heightUnitsValue="percent",
+             name="Stage Style").ensure()
     # The stage is drawn by the Page Stage script: it hosts the ten Page
     # artboards and Carry (all bound to the same UserRecap instance),
     # contain-fits them, and renders every page turn as a lit 3D paper curl.
@@ -512,7 +573,7 @@ def build_root(page_abs: list, carry_ab: N, cover_ab: N):
              scriptAssetId=pt_script.id, name="Page Stage").ensure()
     stage_sem = N("SemanticData", N("DataBindContext", sourcePathIds=V.path("a11yAnnouncement"), propertyKey=983),
                   role="text", isLiveRegion=True, label="", name="Scene Announcement")
-    stage = N("LayoutComponent", s_st, stage_sem, leaf, width=RW, height=SH, styleId=s_st.id, name="Stage")
+    stage = N("LayoutComponent", s_st, stage_sem, leaf, width=100, height=100, styleId=s_st.id, name="Stage")
 
     # controls
     c_st = N("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fixed",
@@ -559,8 +620,12 @@ def build_root(page_abs: list, carry_ab: N, cover_ab: N):
     secondary = button("Secondary", 48, 48, icon=[pause_ic, play_ic, replay_ic], a11y_prop="secondaryA11yLabel")
     sec_sem = [c for c in secondary.children if c.tag == "SemanticData"][0]
     c_st.attrs.update(widthUnitsValue="percent", layoutWidthScaleType="fixed")
-    controls = N("LayoutComponent", c_st, prev, primary, secondary, width=100, height=CONTROLS_H,
-                 styleId=c_st.id, name="Controls")
+    # orientation: the landscape layout keeps the controls together at the
+    # bottom right of the spread (centerRight = 5); portrait centres them (4)
+    c_st.add(bind("_controlsPadB", 515), bind("_marginX", 512), bind("_marginX", 513),
+             bind("_controlsAlign", 632))
+    controls = N("LayoutComponent", c_st, bind("_controlsH", 8), bind("_chromeAlpha", 18), prev, primary,
+                 secondary, width=100, height=CONTROLS_H, styleId=c_st.id, name="Controls")
     # focus rings (one per control), toggled by the Focus layer
     rings = {}
     for b, nm in ((prev, "prev"), (primary, "primary"), (secondary, "secondary")):
@@ -699,7 +764,7 @@ def build_root(page_abs: list, carry_ab: N, cover_ab: N):
                  targetId=ab.id, listenerTypeValue="event", eventId=ev.id, name=f"Count {ev.attrs['name']}"))
     for a in anims:
         ab.add(a.build())
-    return ab, [script, pt_script, paper_script]
+    return ab, [resp, script, pt_script, paper_script]
 
 
 if __name__ == "__main__":

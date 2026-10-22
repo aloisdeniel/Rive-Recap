@@ -53,6 +53,20 @@ ADDITIONS = [
     # signals written by the director, consumed by state machines / event listeners
     ('handoffForward', 'trigger', None), ('handoffBack', 'trigger', None),
     ('recapFinishedSignal', 'trigger', None),
+    # responsive layout (see README "Responsive layout"): the host may tune the breakpoint;
+    # everything after it is written by the director from the artboard's real size and only read
+    # by bindings (formulas in scenes/converters.rml). Defaults are the 390 x 844 portrait master.
+    ('layoutBreakpoint', 'number', 768),
+    ('stageWidth', 'number', 390), ('stageHeight', 'number', 844),
+    ('isLandscape', 'bool', False),
+    ('layoutMargin', 'number', 24), ('layoutTop', 'number', 92), ('layoutBottom', 'number', 770),
+    ('layoutControlsY', 'number', 792), ('layoutContinueWidth', 'number', 214),
+    ('layoutCopyScale', 'number', 1), ('layoutCopyWidth', 'number', 342), ('layoutCopyAvail', 'number', 0),
+    ('layoutCopyXa', 'number', 24), ('layoutCopyXb', 'number', 24),
+    ('layoutArtX0a', 'number', 0), ('layoutArtX1a', 'number', 390),
+    ('layoutArtX0b', 'number', 0), ('layoutArtX1b', 'number', 390),
+    ('layoutStack', 'number', 1), ('layoutSide', 'number', 0),
+    ('motifFrameX', 'number', 0), ('motifFrameY', 'number', 0), ('motifFrameScale', 'number', 1),
 ]
 
 PROPS = {}
@@ -141,6 +155,8 @@ SCRIPT_RISO = '0:514'
 SCRIPT_STEAM = '0:515'
 SCRIPT_CLOTH = '0:516'
 SCRIPT_LETTERS = '0:517'
+SCRIPT_STAGE_BOXES = '0:518'
+SCRIPT_STAGE = '0:519'
 CONV_FORMAT = '0:521'
 CONV_INT = '0:522'
 
@@ -150,6 +166,9 @@ def assets():
         E('FontAsset', file='assets/fonts/BricolageGrotesque.ttf', name='Bricolage Grotesque', id=FONT_DISPLAY),
         E('FontAsset', file='assets/fonts/SourceSans3.ttf', name='Source Sans 3', id=FONT_BODY),
         E('FontAsset', file='assets/fonts/Caveat.ttf', name='Caveat', id=FONT_HAND),
+        # modules first: `require` only finds a module declared above the script that imports it
+        E('ScriptAsset', file='scripts/stageBoxes.luau', isModule=True, folderPath='scripts', name='stageBoxes', id=SCRIPT_STAGE_BOXES),
+        E('ScriptAsset', file='scripts/stage.luau', isModule=True, folderPath='scripts', name='stage', id=SCRIPT_STAGE),
         E('ScriptAsset', file='scripts/director.luau', name='director', id=SCRIPT_DIRECTOR),
         E('ScriptAsset', file='scripts/formatCount.luau', name='formatCount', id=SCRIPT_FORMAT),
         E('ScriptAsset', file='scripts/eventAudit.luau', name='eventAudit', id=SCRIPT_AUDIT),
@@ -193,7 +212,7 @@ def T_op(o):
 
 
 def T_fn(f):
-    return E('FormulaTokenFunction', functionType={'min': 0, 'max': 1, 'round': 2, 'sqrt': 5, 'pow': 6}[f])
+    return E('FormulaTokenFunction', functionType={'min': 0, 'max': 1, 'round': 2, 'ceil': 3, 'floor': 4, 'sqrt': 5, 'pow': 6}[f])
 
 
 def T_sep():

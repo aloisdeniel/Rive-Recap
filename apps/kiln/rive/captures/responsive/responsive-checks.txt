@@ -1,0 +1,115 @@
+# orientation by width (landscape when width >= layoutBreakpoint, default 768)
+
+== 320x568
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=0.535  _artX=55.606  _copyS=1  _bigK=0.568  _cardScale=0.5  _chromeS=1
+
+== 360x640
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=0.657  _artX=51.97  _copyS=1  _bigK=0.704  _cardScale=0.603  _chromeS=1
+
+== 390x844
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1  _artX=0  _copyS=1  _bigK=1  _cardScale=1  _chromeS=1
+
+== 430x932
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1.148  _artX=-8.889  _copyS=1.103  _bigK=1  _cardScale=1.12  _chromeS=1
+
+== 600x960
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1.15  _artX=75.75  _copyS=1.137  _bigK=1  _cardScale=1.12  _chromeS=1
+
+== 767x1024
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1.15  _artX=159.25  _copyS=1.213  _bigK=1  _cardScale=1.12  _chromeS=1
+
+== 667x375
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=0  _artScale=0.449  _artX=418.114  _copyS=1  _bigK=0.49  _cardScale=0.643  _chromeS=1
+
+== 740x360
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=0  _artScale=0.419  _artX=477.814  _copyS=1  _bigK=0.45  _cardScale=0.609  _chromeS=1
+
+== 768x1024
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.041  _artX=342.94  _copyS=1  _bigK=1  _cardScale=1.25  _chromeS=1
+
+== 820x1180
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.139  _artX=356.017  _copyS=1  _bigK=1  _cardScale=1.367  _chromeS=1
+
+== 1024x768
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.164  _artX=495.011  _copyS=1.179  _bigK=1  _cardScale=1.396  _chromeS=1
+
+== 1280x720
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== 1440x900
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.369  _artX=748.324  _copyS=1.658  _bigK=1  _cardScale=1.642  _chromeS=1.125
+
+== 1920x1080
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.626  _artX=981.643  _copyS=1.8  _bigK=1  _cardScale=1.952  _chromeS=1.5
+
+== 2560x1080
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.626  _artX=1308.843  _copyS=1.8  _bigK=1  _cardScale=1.952  _chromeS=1.5
+
+== 1366x600
+  currentScreen=2  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=0.886  _artX=790.27  _copyS=1.113  _bigK=1  _cardScale=1.063  _chromeS=1
+
+# the host can tune the breakpoint
+
+== 1280x720, layoutBreakpoint=1400 -> portrait (short, side by side)
+  currentScreen=1  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=0  _artScale=1.118  _artX=623.903  _copyS=1  _bigK=1  _cardScale=1.427  _chromeS=1
+
+== 767x1024, layoutBreakpoint=700 -> landscape
+  currentScreen=1  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.039  _artX=342.933  _copyS=1  _bigK=1  _cardScale=1.247  _chromeS=1
+
+# landscape 1280x720: tap zones use the real width (left third < 426.7), hold, keys
+
+== tap x=420 from scene 3 (expect 2, dir -1)
+  currentScreen=2  _navDir=-1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== tap x=440 from scene 3 (expect 4)
+  currentScreen=4  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== tap x=1200 from scene 3 (expect 4)
+  currentScreen=4  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== hold 1.5s at x=900 then release (expect 3)
+  currentScreen=3  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== keys right right left (expect 2)
+  currentScreen=2  _navDir=-1  _screenChangedCount=4  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== continue button bottom-right (expect 2)
+  currentScreen=2  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=690.962  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== 1920x1080 continue button, chrome x1.5 (expect 2)
+  currentScreen=2  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.626  _artX=981.643  _copyS=1.8  _bigK=1  _cardScale=1.952  _chromeS=1.5
+
+# landscape persona: the art crosses to the left of the spread on a spring
+
+== 1280x720 8 -> 9, 10 frames in (_artX gliding)
+  currentScreen=9  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=458.224  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== 1280x720 8 -> 9, 90 frames in (_artX settled left)
+  currentScreen=9  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=166.497  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== 1280x720 9 -> 10, 90 frames in (_artX back right)
+  currentScreen=10  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=690.627  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+== reduced motion 8 -> 9, 1 frame in (_artX snaps)
+  currentScreen=9  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.084  _artX=166.162  _copyS=1.421  _bigK=1  _cardScale=1.301  _chromeS=1
+
+# resize across the breakpoint while the recap runs (KilnRecap nested in ResizeHarness:
+# width 390 until frame 150, 1280 until frame 330, then 390 again)
+
+== scene 4, frame 120: portrait
+  currentScreen=4  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1  _artX=0  _copyS=1  _bigK=1  _cardScale=1  _chromeS=1
+
+== scene 4, frame 160: just resized to 1280 (expect landscape, scene 4, 1 event)
+  currentScreen=4  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.289  _artX=650.995  _copyS=1.474  _bigK=1  _cardScale=1.547  _chromeS=1
+
+== scene 4, frame 300: settled landscape
+  currentScreen=4  _navDir=1  _screenChangedCount=1  _landscape=1  _stack=0  _artScale=1.289  _artX=650.995  _copyS=1.474  _bigK=1  _cardScale=1.547  _chromeS=1
+
+== scene 4, frame 480: back to 390 (expect portrait, scene 4, 1 event)
+  currentScreen=4  _navDir=1  _screenChangedCount=1  _landscape=0  _stack=1  _artScale=1  _artX=0  _copyS=1  _bigK=1  _cardScale=1  _chromeS=1
+
+== mid-transition: tap next at frame 140, resize at 150, frame 160 (expect 3, 2 events)
+  currentScreen=3  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.289  _artX=650.995  _copyS=1.474  _bigK=1  _cardScale=1.547  _chromeS=1
+
+== mid-transition: same, frame 320 (settled on 3, landscape, 2 events)
+  currentScreen=3  _navDir=1  _screenChangedCount=2  _landscape=1  _stack=0  _artScale=1.289  _artX=650.995  _copyS=1.474  _bigK=1  _cardScale=1.547  _chromeS=1

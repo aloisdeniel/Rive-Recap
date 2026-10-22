@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 ROOT="$PWD"
 R="${RIVE:-$HOME/.rive/bin/rive}"
 C="$ROOT/captures"
-J="${JOBS:-8}"
+J="${JOBS:-3}"
 SECTIONS="${*:-settled personas transitions reduced fixtures responsive card focus firing video}"
 mkdir -p "$C"
 NEXT="--pointer=click@372,300"
@@ -61,10 +61,23 @@ fixtures)
   throttle; shot "$C/fixtures/locale-de-DE-clay-1234.5.png" --data=currentScreen=6 --data=locale=de-DE --data=clayReclaimedKg=1234.5 --advance=260 &
   wait; rm -rf "$NU" "$EX" ;;
 responsive)
-  for vp in 320x568 430x932; do for n in 1 2 4 9 10; do throttle
-    shot "$C/responsive/$vp-scene-$(printf %02d $n).png" --viewport=$vp --data=currentScreen=$n --advance=260 & done; done
-  throttle; shot "$C/responsive/desktop-1280x800-contain-scene-02.png" --viewport=1280x800 --fit=contain --data=currentScreen=2 --advance=260 &
-  wait ;;
+  # the viewport matrix: portrait (< layoutBreakpoint 768) and landscape (>= 768), each scene
+  # settled plus one mid-transition frame per size (forward 2->3 at f20, and 8->9 at f24, where
+  # the landscape art crosses the spread), then one contact sheet per scene across all sizes
+  RS="$C/responsive"; rm -rf "$RS"; mkdir -p "$RS/frames"
+  PORTRAIT="320x568 360x640 390x844 430x932 600x960 767x1024 667x375 740x360"
+  LANDSCAPE="768x1024 820x1180 1024x768 1280x720 1440x900 1920x1080 2560x1080 1366x600"
+  for vp in $PORTRAIT $LANDSCAPE; do
+    for n in 1 2 4 5 9 10; do throttle
+      shot "$RS/frames/scene-$(printf %02d $n)/$vp.png" --viewport=$vp --data=currentScreen=$n --advance=260 & done
+    throttle; shot "$RS/frames/transition-02-03-f20/$vp.png" --viewport=$vp --data=currentScreen=2 --advance=200 --key=right --advance=20 &
+    throttle; shot "$RS/frames/transition-08-09-f24/$vp.png" --viewport=$vp --data=currentScreen=8 --advance=200 --key=right --advance=24 &
+  done; wait
+  for d in "$RS"/frames/*/; do name="$(basename "$d")"; files=()
+    for vp in $PORTRAIT $LANDSCAPE; do files+=("$d$vp.png"); done
+    python3 tools/contact_sheet.py "$RS/$name.png" --height 300 --cols 8 "${files[@]}"
+  done
+  rm -rf "$RS/frames" ;;
 card)
   shot "$C/share-card/sharecard-standalone-default-private.png" --artboard=ShareCard --advance=2 &
   shot "$C/share-card/sharecard-standalone-public.png" --artboard=ShareCard --data=shareIncludeName=true --data=shareIncludeSensitiveValues=true --advance=2 &

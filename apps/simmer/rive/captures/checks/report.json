@@ -324,5 +324,330 @@
       "personaName": "Flavor Explorer"
     },
     "events": []
+  },
+  "orientation at 390x844": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 390,
+      "stageHeight": 844,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1,
+      "layoutStack": 1
+    },
+    "events": []
+  },
+  "orientation at 767x1024": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 767,
+      "stageHeight": 1024,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.39526069,
+      "layoutStack": 1
+    },
+    "events": []
+  },
+  "orientation at 768x1024": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 768,
+      "stageHeight": 1024,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.10526311,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "orientation at 740x360": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 740,
+      "stageHeight": 360,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 0.720000029,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "orientation at 1280x720": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "orientation at 2560x1080": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 2560,
+      "stageHeight": 1080,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.57894742,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "layoutBreakpoint=1300 keeps 1280x720 portrait": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": false,
+      "layoutBreakpoint": 1300,
+      "layoutCopyScale": 0.981042683,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "layoutBreakpoint=320 makes 390x844 landscape": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 390,
+      "stageHeight": 844,
+      "isLandscape": true,
+      "layoutBreakpoint": 320,
+      "layoutCopyScale": 1.10526311,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "1280x720 tap at x=400 goes back (4 -> 3)": {
+    "values": {
+      "currentScreen": 3,
+      "currentSegment": 2,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "1280x720 tap at x=460 goes forward (4 -> 5)": {
+    "values": {
+      "currentScreen": 5,
+      "currentSegment": 4,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "1280x720 hold pauses, release does not tap": {
+    "values": {
+      "currentScreen": 1,
+      "currentSegment": 0,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0
+    },
+    "events": []
+  },
+  "1920x1080 keyboard right x2": {
+    "values": {
+      "currentScreen": 3,
+      "currentSegment": 2,
+      "visibleCount": 10,
+      "stageWidth": 1920,
+      "stageHeight": 1080,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.57894742,
+      "layoutStack": 0
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "1280x720 Continue button (right edge)": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "320x568 Previous button": {
+    "values": {
+      "currentScreen": 2,
+      "currentSegment": 1,
+      "visibleCount": 10,
+      "stageWidth": 320,
+      "stageHeight": 568,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 0.773933649,
+      "layoutStack": 1
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
+  },
+  "resize mid-scene 4: before (390x844)": {
+    "values": {
+      "currentScreen": 4,
+      "currentSegment": 3,
+      "visibleCount": 10,
+      "stageWidth": 390,
+      "stageHeight": 844,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1,
+      "layoutStack": 1,
+      "motifFrameX": 0,
+      "motifFrameY": 0,
+      "motifFrameScale": 1
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "resize mid-scene 4: just after resize to 1024x768": {
+    "values": {
+      "currentScreen": 4,
+      "currentSegment": 3,
+      "visibleCount": 10,
+      "stageWidth": 1024,
+      "stageHeight": 768,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.07789469,
+      "layoutStack": 0,
+      "motifFrameX": 450.559998,
+      "motifFrameY": -399.506653,
+      "motifFrameScale": 1.36533332
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "resize mid-scene 4: settled at 1024x768": {
+    "values": {
+      "currentScreen": 4,
+      "currentSegment": 3,
+      "visibleCount": 10,
+      "stageWidth": 1024,
+      "stageHeight": 768,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.07789469,
+      "layoutStack": 0,
+      "motifFrameX": 450.559998,
+      "motifFrameY": -399.506653,
+      "motifFrameScale": 1.36533332
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "resize mid-scene 4: back to 390x844": {
+    "values": {
+      "currentScreen": 4,
+      "currentSegment": 3,
+      "visibleCount": 10,
+      "stageWidth": 390,
+      "stageHeight": 844,
+      "isLandscape": false,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1,
+      "layoutStack": 1,
+      "motifFrameX": 0,
+      "motifFrameY": 0,
+      "motifFrameScale": 1
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "resize mid-scene 4: then 1280x720": {
+    "values": {
+      "currentScreen": 4,
+      "currentSegment": 3,
+      "visibleCount": 10,
+      "stageWidth": 1280,
+      "stageHeight": 720,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.34736848,
+      "layoutStack": 0,
+      "motifFrameX": 632,
+      "motifFrameY": -417.66153,
+      "motifFrameScale": 1.35384619
+    },
+    "events": [
+      "screenChanged"
+    ]
+  },
+  "resize during handoff 4 -> 5, settled": {
+    "values": {
+      "currentScreen": 5,
+      "currentSegment": 4,
+      "visibleCount": 10,
+      "stageWidth": 1024,
+      "stageHeight": 768,
+      "isLandscape": true,
+      "layoutBreakpoint": 768,
+      "layoutCopyScale": 1.07789469,
+      "layoutStack": 0,
+      "motifFrameX": 40.9599991,
+      "motifFrameY": -399.506653,
+      "motifFrameScale": 1.36533332
+    },
+    "events": [
+      "screenChanged",
+      "screenChanged"
+    ]
   }
 }

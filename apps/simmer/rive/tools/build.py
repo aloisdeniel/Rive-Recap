@@ -20,6 +20,7 @@ from data import load_fixture, instance, view_model, assets, CONVERTERS
 import pot
 import main_board
 import scenes
+import stage
 
 ROOT = data.ROOT
 
@@ -77,6 +78,7 @@ def main():
           wrap(pot_ab, E('ComponentAsset', artboardId=pot_ab.id, name='Pot motif'),
                *[b for b, _ in extra_boards], *[E('ComponentAsset', artboardId=b.id, name=b.attrs['name']) for b, _ in extra_boards]))
     write(os.path.join(args.out, 'scenes', 'converters.rml'), wrap(*CONVERTERS))
+    stage.write_luau(os.path.join(args.out, 'scripts'))
     print('generated', len(CONVERTERS), 'converters')
 
 

@@ -27,6 +27,8 @@ def formula(name, toks):
             f.add(E("FormulaTokenValue", operationValue=t[1]))
         elif kind == "b":
             f.add(E("FormulaTokenValue", operationValue=0, kids=[bind(model.path(t[1]), 777)]))
+        elif kind == "rb":
+            f.add(E("FormulaTokenValue", operationValue=0, kids=[bind(model.rig_path(t[1]), 777)]))
         elif kind == "op":
             f.add(E("FormulaTokenOperation", operationType=OPS[t[1]]))
         elif kind == "fn":
@@ -68,6 +70,19 @@ def step_visible(c, name):
 def hidden_after(j, name):
     """displayValue for progress slot j: 0 (flex) when j <= input, 1 (none) otherwise."""
     return formula(name, clamp01([("v", j), ("op", "-"), ("in",)]))
+
+
+def lerp(a, b):
+    """a + (b - a) * input: bound to the rig's `wide` (0 tall .. 1 wide) it morphs a value
+    between the portrait (tall) and the landscape (wide) arrangement."""
+    a, b = round(float(a), 2), round(float(b), 2)
+    return formula(f"Lerp {a} {b}", [("v", a), ("op", "+"), ("(",), ("v", round(b - a, 2)), ("op", "*"), ("in",), (")",)])
+
+
+def affine(mul, add, name=None):
+    """input * mul + add."""
+    mul, add = round(float(mul), 4), round(float(add), 2)
+    return formula(name or f"Affine {mul} {add}", [("(",), ("in",), ("op", "*"), ("v", mul), (")",), ("op", "+"), ("v", add)])
 
 
 def scaled_progress(div, offset, name):

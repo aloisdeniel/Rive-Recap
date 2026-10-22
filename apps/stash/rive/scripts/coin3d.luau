@@ -49,6 +49,7 @@ type Coin3D = {
     k: number,
     ext: number,
     px: number,
+    samples: number,
     lastKey: string,
     -- fallback
     rimPath: Path,
@@ -202,7 +203,30 @@ local function setup(self: Coin3D, context: Context)
     self.px = px
     self.canvas = context:gpuCanvas({ width = px, height = px })
     self.targets = targets(px, samples)
+    self.samples = samples
     self.gpu = true
+end
+
+-- `res` (canvas pixels per point) is bound to the director's _gpuRes, which
+-- follows the real on-screen scale (viewport x zone scale x device pixel ratio),
+-- so the canvas is re-sized when the layout zooms the coin, not upscaled
+local function applyRes(self: Coin3D)
+    local canvas = self.canvas
+    if canvas == nil then
+        return
+    end
+    local k = math.clamp(self.res, 1, 4)
+    if math.abs(k - self.k) < 0.01 then
+        return
+    end
+    self.k = k
+    local px = math.ceil(self.size * self.ext * k / 8) * 8
+    if px ~= self.px then
+        self.px = px
+        canvas:resize(px, px)
+        self.targets = targets(px, self.samples)
+    end
+    self.lastKey = ''
 end
 
 function init(self: Coin3D, context: Context): boolean
@@ -295,6 +319,7 @@ function draw(self: Coin3D, renderer: Renderer)
         renderer:drawPath(self.facePath, self.facePaint)
         return
     end
+    applyRes(self)
     local key = stateKey(self)
     if key ~= self.lastKey then
         self.lastKey = key
@@ -336,6 +361,7 @@ return function(): Node<Coin3D>
         k = 2,
         ext = EXTENT,
         px = 128,
+        samples = 1,
         lastKey = '',
         rimPath = Path.new(),
         facePath = Path.new(),

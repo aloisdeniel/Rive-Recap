@@ -8,10 +8,18 @@
 -- only when `light` has moved visibly, so a settled medallion costs one image
 -- draw. Reduced-motion reveals key light = 1 at once (static). Runtimes without
 -- shaders draw nothing here and the vector disc underneath shows instead.
+--
+-- `res` (canvas pixels per point) is bound to the stage script: the device
+-- density times the medallion's largest on-screen scale, so the cushion stays
+-- sharp when a large canvas scales scene 9 up. The canvas is reallocated when
+-- it changes.
 
 type Medallion = {
     size: Input<number>,
     light: Input<number>,
+    res: Input<number>,
+    ctx: Context?,
+    rpx: number,
     pipe: GPUPipeline?,
     ubo: GPUBuffer?,
     group: GPUBindGroup?,
@@ -22,12 +30,28 @@ type Medallion = {
     sampler: ImageSampler,
 }
 
-local RES = 2 -- canvas pixels per point (a ScriptedDrawable gets no pixel density)
+local function resOf(self: Medallion): number
+    return math.clamp(self.res, 1, 4)
+end
+
+local function allocate(self: Medallion)
+    local ctx = self.ctx
+    if ctx == nil then
+        return
+    end
+    local r = resOf(self)
+    local px = math.ceil((self.size + 4) * r)
+    self.px = px
+    self.rpx = r
+    self.gc = ctx:gpuCanvas({ width = px, height = px })
+    self.drawn = -1
+end
 
 function init(self: Medallion, context: Context): boolean
     if self.pipe ~= nil then
         return true
     end
+    self.ctx = context
     local sh = context:shader('shaders/medallion')
     if sh == nil then
         return true
@@ -42,10 +66,7 @@ function init(self: Medallion, context: Context): boolean
     self.pipe = pipe
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    local px = math.ceil((self.size + 4) * RES)
-    self.px = px
-    self.gc = context:gpuCanvas({ width = px, height = px })
-    self.drawn = -1
+    allocate(self)
     return true
 end
 
@@ -58,7 +79,7 @@ local function render(self: Medallion, gc: GPUCanvas, pipe: GPUPipeline, ubo: GP
     local lx, ly = math.cos(az) * 0.8, math.sin(az) * 0.8
     local b = self.staging
     local vals = {
-        self.px, RES, self.size, 4.2,
+        self.px, self.rpx, self.size, 4.2,
         lx, ly, el, 0.52,
         0.10 + 0.30 * math.sin(math.pi * e), 0.5, 0, 0,
     }
@@ -77,6 +98,9 @@ local function render(self: Medallion, gc: GPUCanvas, pipe: GPUPipeline, ubo: GP
 end
 
 function draw(self: Medallion, renderer: Renderer)
+    if self.pipe ~= nil and math.abs(resOf(self) - self.rpx) > 0.05 then
+        allocate(self)
+    end
     local gc, pipe, ubo, group = self.gc, self.pipe, self.ubo, self.group
     if gc == nil or pipe == nil or ubo == nil or group == nil then
         return
@@ -85,9 +109,10 @@ function draw(self: Medallion, renderer: Renderer)
         self.drawn = self.light
         render(self, gc, pipe, ubo, group)
     end
-    local half = self.px / RES * 0.5
+    local r = self.rpx
+    local half = self.px / r * 0.5
     renderer:save()
-    renderer:transform(Mat2D.withTranslation(-half, -half) * Mat2D.withScale(1 / RES, 1 / RES))
+    renderer:transform(Mat2D.withTranslation(-half, -half) * Mat2D.withScale(1 / r, 1 / r))
     renderer:drawImage(gc.image, self.sampler, 'srcOver', 1)
     renderer:restore()
 end
@@ -96,6 +121,9 @@ return function(): Node<Medallion>
     return {
         size = 290,
         light = 1,
+        res = 2,
+        ctx = nil,
+        rpx = 2,
         pipe = nil,
         ubo = nil,
         group = nil,

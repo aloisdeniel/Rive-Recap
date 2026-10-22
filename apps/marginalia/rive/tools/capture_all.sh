@@ -19,11 +19,6 @@ echo "$C 10 400 captures/reduced-motion/scene-10.png reducedMotion=true"
 echo "$C 1 3000 captures/fixtures/zero-scene-01.png --fixture=zero"
 echo "$C 2 3000 captures/fixtures/zero-summary.png --fixture=zero"
 for s in 1 2 3 4 6 9 10; do n=$(printf %02d $s); echo "$C $s 3200 captures/fixtures/extreme-scene-$n.png --fixture=extreme"; done
-echo "$C 2 3200 captures/responsive/320x568-scene-02.png --viewport=320x568"
-echo "$C 9 3200 captures/responsive/320x568-scene-09.png --viewport=320x568"
-echo "$C 2 3200 captures/responsive/430x932-scene-02.png --viewport=430x932"
-echo "$C 10 3200 captures/responsive/430x932-scene-10.png --viewport=430x932"
-echo "$C 2 3200 captures/responsive/desktop-1280x800-contain.png --viewport=1280x800 --fit=contain"
 } | xargs -P 4 -I{} sh -c "{}"
 # back transitions and interaction states (custom gesture sequences)
 R="$HOME/.rive/bin/rive ."
@@ -44,4 +39,6 @@ $R --quiet --screenshot=captures/interaction/focus-after-tab.png --advance=1500m
 $R --quiet --screenshot=captures/interaction/runtime-update-booksFinished-77.png --data=booksFinished=77 --advance=300ms --pointer=click@300,420 --advance=3s &
 $R --quiet --screenshot=captures/interaction/hidden-screens-2-3-progress.png --data=showScreen2=false --data=showScreen3=false --advance=300ms --pointer=click@300,420 --advance=3s &
 wait
+# the responsive matrix (16 sizes, one contact sheet per scene; needs Pillow)
+python3 tools/capture_responsive.py
 echo done

@@ -15,8 +15,8 @@ PAUSE = "--pointer=click@320,780"
 AWAY = "--pointer=move@380,20"
 
 
-def run(*flags):
-    cmd = [RIVE, ".", "--data-dump=-", "--quiet"] + list(flags)
+def run(*flags, project=None):
+    cmd = [RIVE, project or ".", "--data-dump=-", "--quiet"] + list(flags)
     r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     if r.returncode:
         raise RuntimeError(r.stderr[-2000:])
@@ -196,6 +196,121 @@ def summary_slots_are_share_and_replay():
     a = run("--advance=10", "--advance=30")
     ok = ok and a["primaryA11yLabel"] == "Continue" and a["secondaryA11yLabel"] == "Pause"
     return ok, f"centre press on summary keeps screen={v['currentScreen']}; labels {v['primaryA11yLabel']}/{v['secondaryA11yLabel']} (intro {a['primaryA11yLabel']}/{a['secondaryA11yLabel']})"
+
+
+# ---------------------------------------------------------------- responsive layout (README "Responsive layout")
+VP_L = "--viewport=1280x720"
+
+
+def near(a, b, eps=0.5):
+    return abs(a - b) <= eps
+
+
+@case
+def orientation_follows_width_only():
+    got = {}
+    for vp in ("767x1024", "768x1024", "667x375", "1280x720", "390x844", "1366x600"):
+        v = run(f"--viewport={vp}", "--advance=5")
+        got[vp] = (v["isLandscape"], v["isSideBySide"], int(v["layoutWidth"]))
+    ok = got["767x1024"][:2] == (False, False) and got["768x1024"][:2] == (True, True) and \
+        got["667x375"][:2] == (False, True) and got["1280x720"][:2] == (True, True) and \
+        got["390x844"][:2] == (False, False) and got["1366x600"][:2] == (True, True) and \
+        all(got[k][2] == int(k.split("x")[0]) for k in got)
+    return ok, " ".join(f"{k}:{'L' if a else 'P'}{'/side' if b else ''}" for k, (a, b, _) in got.items())
+
+
+@case
+def breakpoint_is_host_tunable():
+    a = run(VP_L, "--data=layoutBreakpoint=1300", "--advance=5")
+    b = run("--viewport=700x900", "--data=layoutBreakpoint=600", "--advance=5")
+    ok = not a["isLandscape"] and b["isLandscape"]
+    return ok, f"1280 wide with breakpoint 1300 -> landscape={a['isLandscape']}; 700 wide with 600 -> {b['isLandscape']}"
+
+
+@case
+def portrait_defaults_reproduce_design():
+    v = run("--advance=5")
+    keys = dict(layArtX=0, layArtY=0, layArtS=1, layCopyX=0, layCopyY=0, layCopyS=1, layCardY=0, layCardS=1, layNumBox=116,
+                layPrimX=195, layPrimY=780, layTapTop=104, layTapH=650, layProgW=334)
+    bad = [k for k, want in keys.items() if not near(v[k], want, 0.01)]
+    return not bad, "390x844 lays out exactly as the authored design" if not bad else f"differs: {bad}"
+
+
+@case
+def landscape_keyboard_taps_and_rail():
+    v0 = run(VP_L, "--advance=5")
+    kb = run(VP_L, "--advance=10", *(["--key=right", "--advance=20"] * 3), "--advance=10")
+    tp = run(VP_L, "--advance=10", "--pointer=click@1000,400", "--advance=20", "--pointer=move@5,5", "--advance=2",
+             "--pointer=click@1000,400", "--advance=20", "--pointer=move@5,5", "--advance=2",
+             "--pointer=click@150,400", "--advance=20")
+    px, py = int(v0["layPrimX"]), int(v0["layPrimY"])
+    sx, sy = int(v0["laySecX"]), int(v0["laySecY"])
+    btn = run(VP_L, "--advance=10", f"--pointer=click@{px},{py}", "--advance=20", "--pointer=move@5,5", "--advance=2",
+              f"--pointer=click@{sx},{sy}", "--advance=10")
+    hold = run(VP_L, "--advance=10", "--pointer=down@900,400", "--advance=60")
+    ok = kb["currentScreen"] == 4 and tp["currentScreen"] == 2 and btn["currentScreen"] == 2 and btn["isPaused"] and \
+        hold["isHolding"] and hold["currentScreen"] == 1
+    return ok, (f"Right x3 -> {kb['currentScreen']}; taps right,right,left -> {tp['currentScreen']}; rail Continue@{px},{py} "
+                f"+ Pause -> screen {btn['currentScreen']} paused={btn['isPaused']}; hold -> {hold['isHolding']}")
+
+
+@case
+def tap_zones_span_real_width():
+    out = []
+    for vp in ("320x568", "1280x720", "2560x1080", "667x375"):
+        W, H = (int(x) for x in vp.split("x"))
+        v = run(f"--viewport={vp}", "--advance=5")
+        zone = v["layTapNextX"] + v["layTapNextW"]
+        rail = v["layPrimX"] if v["isSideBySide"] and W / H >= 1.2 else None
+        ok = near(v["layTapPrevW"], zone / 3, 1) and (near(zone, W, 1) if rail is None else zone < rail)
+        out.append((vp, ok, round(zone)))
+    return all(o for _, o, _ in out), " ".join(f"{vp}:zone 0..{z}" for vp, _, z in out)
+
+
+def _probe_project(spec):
+    """A copy of the project generated with NOCTURNE_RESIZE_PROBE: the layout script re-lays out mid-run as if the
+    canvas had been resized (the CLI cannot resize a headless run)."""
+    import shutil, tempfile
+    tmp = tempfile.mkdtemp(prefix="nocturne-resize-")
+    for item in ("rive.yaml", "clock.luau", "layout.luau", "scripts", "shaders", "assets", "tools"):
+        src = os.path.join(ROOT, item)
+        (shutil.copytree if os.path.isdir(src) else shutil.copy)(src, os.path.join(tmp, item))
+    os.makedirs(os.path.join(tmp, "rml"))
+    env = dict(os.environ, NOCTURNE_RESIZE_PROBE=spec)
+    subprocess.run([sys.executable, os.path.join(tmp, "tools", "generate.py")], env=env, check=True, capture_output=True)
+    shutil.rmtree(os.path.join(tmp, "fixtures"), ignore_errors=True)
+    return tmp
+
+
+@case
+def resize_across_threshold_mid_scene():
+    # landscape 1280 -> portrait 700 wide while scene 3 is showing, and again in the middle of the 3 -> 4 iris
+    import shutil
+    projects = [_probe_project("6.0:700x900"), _probe_project("5.4:700x900"), _probe_project("6.0:1280x720:700x900")]
+    try:
+        a = run("--viewport=1280x900", "--advance=10", "--key=right", "--advance=150", "--key=right", "--advance=200",
+                "--advance=240", project=projects[0])
+        # the Right press lands at 5.17 s; at 5.4 s the stage iris is shut over the 3 -> 4 cut
+        b = run("--viewport=1280x900", "--advance=10", "--key=right", "--advance=150", "--key=right", "--advance=150",
+                "--key=right", "--advance=170", project=projects[1])
+        c = run("--viewport=1280x900", "--advance=10", "--key=right", "--advance=150", "--key=right", "--advance=200",
+                "--advance=240", project=projects[2])
+        before = run("--viewport=1280x900", "--advance=10", "--key=right", "--advance=150", "--key=right", "--advance=30",
+                     project=projects[2])
+        before_a = run("--viewport=1280x900", "--advance=10", "--key=right", "--advance=150", "--key=right", "--advance=30",
+                       project=projects[0])
+    finally:
+        for pr in projects:
+            shutil.rmtree(pr, ignore_errors=True)
+
+    def settled(v, screen, land):
+        return v["currentScreen"] == screen and v["motifPose"] == screen and v["isLandscape"] == land and \
+            near(v["layHeroX"], v["layArtX"], 0.01) and near(v["layHeroS"], v["layArtS"], 0.001)
+    ok = settled(a, 3, False) and settled(b, 4, False) and settled(c, 3, True) and \
+        before["isLandscape"] is False and before_a["isLandscape"] is True
+    return ok, (f"L->P on scene 3: screen={a['currentScreen']} pose={a['motifPose']} landscape={a['isLandscape']}; "
+                f"mid-iris 3->4: screen={b['currentScreen']} pose={b['motifPose']}; P->L: screen={c['currentScreen']} "
+                f"landscape={c['isLandscape']}; hero frame settled on the art frame")
 
 
 def main():

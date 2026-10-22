@@ -13,8 +13,18 @@ def hills(name, back, front, y0=690, y1=748, dark=True):
 
 
 # ===================================================================== 1  Invitation
+def res3d(base, s, dims):
+    """A 3D canvas's pixels-per-unit, bound to its real on-screen scale x device pixels (at least the
+    authored supersampling), capped so the canvas stays <= 2048 px."""
+    cap = min(3.0, 2048.0 / max(dims))
+    return (float(base), LY.bindx(243, LY.clamp(s * LY.xmax(LY.DPR, base), 1, cap), "3D canvas res"))
+
+
 def scene1():
     sc = Scene(1, FOREST, dur=118)
+    st = LY.Stack(1, (None, None, "center"), None, (24, 104, 342, CH_DESIGN[1], "center"), (40, 336, 352, 742),
+                  l_boost=1.3, ts_max_l=2.6, extra_h=36)
+    sc.stack = st
     glow_id = ID()
     glow = shape("Glow", ellipse(600, 600), rad_grad([(0, col(LEAF, 0.30)), (0.55, col(LEAF, 0.08)), (1, col(LEAF, 0))],
                                                     0, 0, 300), x=195, y=610, id=glow_id)
@@ -27,7 +37,8 @@ def scene1():
         back_leaves.append(n)
         sc.sway(p["node"], r, 0.025, 420, i * 90)
     bl_id = ID()
-    back = node("Back foliage", *stack(*back_leaves), id=bl_id)
+    back = node("Back foliage", *stack(LY.corner("Back foliage BL", stack(back_leaves[0], back_leaves[2]), 0, 1),
+                                       LY.corner("Back foliage BR", [back_leaves[1]], 1, 1)), id=bl_id)
     sc.key(bl_id, "y", [(0, 60, "hold"), (0, 60, "soft"), (60, 0)])
 
     # --- jungle that grows out of the seed (hero)
@@ -65,7 +76,7 @@ def scene1():
     s3, si = leaf3d("Seed shells 3D", 0, 6, pair=1, shape=1, L=160, W=64, fold=0.0, cup=1.1, curl=0.25, wave=0.0,
                     flip=1.45, spread=0.0, gap=0, veins=0.0, glow=0.25, fibre=0.8, ambient=0.66,
                     front=CREAM, back="#E6D8B0", rim="#FFFDF2", glowColor="#F8EED0", seed=7,
-                    halfW=150, top=-210, bottom=40, res=2)
+                    halfW=150, top=-210, bottom=40, res=res3d(2, st.art_t[2], (300, 250)))
     sc.live3d(si)
     sc.k3(si, "flip", [(0, 1.45, "hold"), (12, 1.45, "back"), (40, 1.12)])
     sc.k3(si, "spread", [(0, 0.0, "hold"), (12, 0.0, "back"), (42, 0.64)])
@@ -108,6 +119,13 @@ def scene1():
     period_id = ID()
     period = text("Period", [("January 1–December 31, 2026", P("periodLabel"))], font="dm", size=14, color=CREAM,
                   wght=500, ls=1.1, x=24, y=742, w=342, align="center", op=0.7, id=period_id)
+    # the period line: above the controls in the tall portrait, under the copy column everywhere else
+    ps = LY.clamp(st.ts, 0.85, 1.4)
+    pcx = st.copy_left + st.copy_w * st.ts / 2
+    period_place = LY.place("Period place", period,
+                            x=LY.sel(LY.VW / 2 - 195 * ps, pcx - 195 * ps, pcx - 195 * ps, pcx - 195 * ps),
+                            y=LY.sel(LY.P_CB - 18 - 742 * ps, st.copy_bottom + 14 - 742 * ps,
+                                     st.copy_bottom + 22 - 742 * ps, st.copy_bottom + 22 - 742 * ps), s=ps)
     sc.key(period_id, "opacity", [(0, 0.0, "hold"), (96, 0.0, "outs"), (116, 0.7)])
 
     sc.key(glow_id, "scaleX", [(0, 0.2, "hold"), (8, 0.2, "outs"), (70, 1.0)])
@@ -124,8 +142,10 @@ def scene1():
     handle = node("Leaf handle", x=268, y=572, id=handle_id)
     sc.hits.append((hit_id, 268))
 
-    content = stack(bg_rect(FOREST), glow, back, hb, hf, seed_shadow, jungle, shells, wordmark, wm_leaf, copy, period,
-                    handle, hit)
+    sc.art_t = st.art_t
+    content = stack(bg_rect(FOREST), st.art_group(glow), back, LY.bottom_band("Hills", stack(hb, hf)),
+                    st.art_group(*stack(seed_shadow, jungle, shells, wordmark, wm_leaf, handle, hit)),
+                    st.copy_group(copy), period_place)
     root = build_scene_root(sc, content, clip=False)
     sc.ef.key(sc.root, "opacity", [(0, 1.0, "hold")])
     return sc, root
@@ -137,6 +157,7 @@ VINE2 = "M98 732 C 150 690 252 702 286 626 C 318 548 252 506 300 444 C 334 400 3
 
 def scene2():
     sc = Scene(2, FOREST)
+    st = LY.Stack(2, (195, 118, "center"), 270, (32, 300, 300, CH_DESIGN[2], "left"), (52, 286, 392, 782))
     glow = shape("Glow", ellipse(520, 420), rad_grad([(0, col(CREAM, 0.07)), (1, col(CREAM, 0))], 0, 0, 260), x=195,
                  y=190)
     hb, hf = hills("Hill", FOREST_MID, "#12352A", 730, 786)
@@ -147,7 +168,7 @@ def scene2():
         back.append(n)
         sc.sway(p["node"], r, 0.02, 400, i * 120)
     back_id = ID()
-    backn = node("Back foliage", *stack(*back), id=back_id)
+    backn = node("Back foliage", LY.corner("Back foliage BL", stack(*back), 0, 1), id=back_id)
     sc.key(back_id, "x", [(0, -40, "hold"), (6, -40, "soft"), (70, 0)])
     sc.settle.append((back_id, "x", -14.0))
 
@@ -156,7 +177,7 @@ def scene2():
     c3, ci = leaf3d("Carried seed 3D", 0, 6, pair=1, shape=1, L=160, W=64, fold=0.0, cup=1.1, curl=0.25, wave=0.0,
                     flip=1.12, spread=0.64, gap=6, veins=0.0, glow=0.25, fibre=0.8, ambient=0.66,
                     front=CREAM, back="#E6D8B0", rim="#FFFDF2", glowColor="#F8EED0", seed=7,
-                    halfW=150, top=-210, bottom=40, res=2)
+                    halfW=150, top=-210, bottom=40, res=res3d(2, st.art_t[2], (300, 250)))
     sc.live3d(ci)
     sc.k3(ci, "spread", [(0, 0.64, "hold"), (2, 0.64, "fold"), (42, 0.72)])
     seed = node("Carried seed", c3, x=92, y=744, sx=0.5, sy=0.5, id=carry_id)
@@ -203,7 +224,9 @@ def scene2():
 
     hero, unit, copy = metric_text(sc, dict(x=24, y=118, w=342, size=124, align="center"), (32, 300), 300, "left",
                                    unit_kw=dict(x=24, y=250, w=342, align="center"))
-    content = stack(bg_rect(FOREST), glow, backn, hb, hf, vine, vine_hi, leaves, drops, loop_drop, seed, hero, unit, copy)
+    content = stack(bg_rect(FOREST), st.num_group(glow), backn, LY.bottom_band("Hills", stack(hb, hf)),
+                    st.art_group(*stack(vine, vine_hi, leaves, drops, loop_drop, seed)),
+                    st.num_group(*stack(hero, unit)), st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
@@ -230,6 +253,7 @@ def plant_tuft(i, s=1.0):
 
 def scene3():
     sc = Scene(3, FOREST_DEEP)
+    st = LY.Stack(3, (28, 102, "left"), 310, (30, 340, 330, CH_DESIGN[3], "left"), (36, 486, 364, 770))
     layers = []
     specs = [  # y0, colour, shade: three sheets of green paper, lightest at the back (aerial depth)
         (556, "#4E8A69", FOREST_PALE),
@@ -238,13 +262,19 @@ def scene3():
     ]
     for i, (y0, c, s) in enumerate(specs):
         lid = ID()
-        d = (f"M-30 {y0+30} C 40 {y0-24} 120 {y0+18} 196 {y0-6} C 270 {y0-28} 340 {y0+10} 420 {y0-14} L420 900 L-30 900 Z"
-             if i % 2 == 0 else
-             f"M-30 {y0-10} C 60 {y0+20} 140 {y0-30} 220 {y0+4} C 300 {y0+30} 360 {y0-20} 420 {y0+6} L420 900 L-30 900 Z")
+        # the sheets run far past the design edges (and down) so they still reach the viewport edges
+        # when the art is scaled down or sits in one half of a wide canvas
+        ridge = (f"C -1240 {y0+10} -620 {y0-30} -30 {y0+30} C 40 {y0-24} 120 {y0+18} 196 {y0-6} "
+                 f"C 270 {y0-28} 340 {y0+10} 420 {y0-14} C 980 {y0-50} 1500 {y0+20} 2100 {y0-10}"
+                 if i % 2 == 0 else
+                 f"C -1240 {y0-30} -620 {y0+20} -30 {y0-10} C 60 {y0+20} 140 {y0-30} 220 {y0+4} "
+                 f"C 300 {y0+30} 360 {y0-20} 420 {y0+6} C 980 {y0+40} 1500 {y0-24} 2100 {y0+6}")
+        start = f"M-1900 {y0}"
+        d = f"{start} {ridge} L2100 1700 L-1900 1700 Z"
         lyr = node(f"Paper layer {i}", *stack(
                    poly("Shadow", d, "#05130E", a=0.35, y=-8, feather=14),
                    poly("Paper", d, c),
-                   line("Edge light", d.split(" L420")[0], LEAF_PALE, 1.6, 0.55)),
+                   line("Edge light", f"{start} {ridge}", LEAF_PALE, 1.6, 0.55)),
                    id=lid)
         layers.append(lyr)
         sc.key(lid, "y", [(0, 160 + 60 * i, "hold"), (2 + i * 6, 160 + 60 * i, "out"), (40 + i * 6, 0)])
@@ -273,10 +303,11 @@ def scene3():
                                    unit_kw=dict(x=34, y=290, w=330, align="left"))
     # paper landscape interleaves with pots (back layer, back pots, mid layer, mid pots, front layer, front pots)
     content = stack(bg_rect(FOREST_DEEP),
-                    shape("Glow", ellipse(500, 360), rad_grad([(0, col(LEAF, 0.12)), (1, col(LEAF, 0))], 0, 0, 250),
-                          x=300, y=520),
-                    layers[0], pots_sorted[0:4], layers[1], pots_sorted[4:7], layers[2], pots_sorted[7:],
-                    hero, unit, copy)
+                    st.art_group(*stack(
+                        shape("Glow", ellipse(500, 360), rad_grad([(0, col(LEAF, 0.12)), (1, col(LEAF, 0))], 0, 0, 250),
+                              x=300, y=520),
+                        layers[0], pots_sorted[0:4], layers[1], pots_sorted[4:7], layers[2], pots_sorted[7:])),
+                    st.num_group(*stack(hero, unit)), st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
@@ -298,6 +329,8 @@ def fern(name, x, y, L, rot, n=7, c1=LEAF_DARK, c2=LEAF_DEEP, s=1.0):
 
 def scene4():
     sc = Scene(4, CREAM, light=True)
+    st = LY.Stack(4, (195, 100, "center"), 250, (32, 268, 326, CH_DESIGN[4], "center"), (8, 318, 382, 840),
+                  art_ay=(1.0, 0.5, 0.75, 0.5))
     # --- the sunrise inside the opened leaves
     sun_id, disc_id = ID(), ID()
     sun = shape("Sun glow", ellipse(420, 420), rad_grad([(0, col(APRICOT_PALE, 0.95)), (0.45, col(APRICOT_PALE, 0.55)),
@@ -344,7 +377,7 @@ def scene4():
                     tipCurl=0.5, twist=0.4, wave=0.6, gap=8, spread=0.0, flip=-0.2, pitch=0.0, persp=1500,
                     front="#7FA850", back="#F2EBD3", glowColor="#E6F2B8", rim="#FFFBEA", glow=0.6, veins=0.9,
                     ambient=0.5, shadow=0.2, shadowX=0, shadowY=16, shadowBlur=30, seed=4,
-                    halfW=275, top=-530, bottom=20, res=1.6)
+                    halfW=275, top=-530, bottom=20, res=res3d(1.6, st.art_t[2], (550, 550)))
     sc.live3d(gi)
     # closed: a tall paper bud. It shivers (anticipation), then falls open, twisting its cream inner faces out
     sc.k3(gi, "spread", [(0, 0.0, "hold"), (16, 0.0, "io"), (21, -0.018, "io"), (26, 0.022, "antic"), (32, 0.0, "backs"),
@@ -368,7 +401,8 @@ def scene4():
                                 (96 + i * 8, x)])
         sc.key(p["node"], "rotation", [(0, r - 3, "hold"), (40 + i * 8, r - 3, "outs"), (96 + i * 8, r)])
     ground = shape("Ground shadow", ellipse(420, 90), fill(col("#B7A77A", 0.3), feather=26), x=195, y=800)
-    content = stack(bg_rect(CREAM), sun, disc, back, g3, mid, ground, front, flutter, hero, unit, copy)
+    content = stack(bg_rect(CREAM), st.art_group(*stack(sun, disc, back, g3, mid, ground, front, flutter)),
+                    st.num_group(*stack(hero, unit)), st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
@@ -377,6 +411,7 @@ def scene4():
 # ===================================================================== 5  Cuttings rooted
 def scene5():
     sc = Scene(5, FOREST)
+    st = LY.Stack(5, (362, 104, "right"), 252, (30, 290, 330, CH_DESIGN[5], "left"), (96, 436, 332, 782))
     JX, JY = 214, 650   # jar centre (clear of the controls)
     jar_id = ID()
     water_id = ID()
@@ -438,9 +473,9 @@ def scene5():
     hero, unit, copy = metric_text(sc, dict(x=24, y=104, w=338, size=124, align="right"), (30, 290), 330, "left",
                                    unit_kw=dict(x=30, y=232, w=332, align="right"))
     content = stack(bg_rect(FOREST),
-                    shape("Glow", ellipse(460, 460), rad_grad([(0, col(LEAF, 0.16)), (1, col(LEAF, 0))], 0, 0, 230),
-                          x=JX, y=JY),
-                    jar, hero, unit, copy, cl)
+                    st.art_group(*stack(shape("Glow", ellipse(460, 460), rad_grad([(0, col(LEAF, 0.16)), (1, col(LEAF, 0))],
+                                                                                   0, 0, 230), x=JX, y=JY), jar)),
+                    st.num_group(*stack(hero, unit)), st.copy_group(copy), st.art_group(cl))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
@@ -453,6 +488,7 @@ VINE6 = ("M28 512 C 140 500 260 524 330 512 C 386 502 386 602 330 594 C 250 582 
 
 def scene6():
     sc = Scene(6, LEAF, light=True)
+    st = LY.Stack(6, (195, 104, "center"), 256, (32, 274, 326, CH_DESIGN[6], "center"), (16, 462, 374, 724))
     k = 6
     paper_id = ID()
     paper = node("Calendar paper", *stack(
@@ -490,24 +526,25 @@ def scene6():
     deco = []
     for i, (x, y, L, r) in enumerate([(-6, 860, 230, 0.5), (396, 870, 210, -0.55)]):
         n, p = leaf(f"Corner leaf {i}", x, y, L, L * 0.5, rot=r, light=LEAF_DARK, dark=LEAF_DEEP, rib_a=0.25)
-        deco.append(n)
+        deco.append(LY.corner(f"Corner leaf {i} place", [n], i, 1))
         sc.sway(p["node"], r, 0.03, 380, i * 150)
         sc.key(p["node"], "y", [(0, y + 120, "hold"), (6, y + 120, "out"), (50, y)])
     content = stack(bg_rect(LEAF),
-                    shape("Glow", ellipse(500, 380), rad_grad([(0, col(LEAF_PALE, 0.8)), (1, col(LEAF_PALE, 0))],
-                                                              0, 0, 250), x=195, y=200),
-                    deco, paper, vine, knots, sprigs, hero, unit, copy)
+                    st.num_group(shape("Glow", ellipse(500, 380), rad_grad([(0, col(LEAF_PALE, 0.8)), (1, col(LEAF_PALE, 0))],
+                                                                           0, 0, 250), x=195, y=200)),
+                    deco, st.art_group(*stack(paper, vine, knots, sprigs)), st.num_group(*stack(hero, unit)),
+                    st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
 
 
 # ===================================================================== 7  Plants shared
-HAND_D = ("M-260 -24 L-20 -26 C 0 -27 14 -36 30 -48 C 42 -57 54 -50 50 -40 C 46 -31 38 -26 46 -22 "
+HAND_D = ("M-1400 -24 L-20 -26 C 0 -27 14 -36 30 -48 C 42 -57 54 -50 50 -40 C 46 -31 38 -26 46 -22 "
           "L 112 -20 C 126 -19 126 -6 112 -5 L 64 -2 C 86 0 110 2 118 6 C 130 12 124 24 110 22 "
-          "L 70 18 C 84 22 96 26 98 32 C 100 40 88 42 80 38 L 40 26 C 20 28 0 26 -20 24 L -260 24 Z")
-HAND_SHADE_D = ("M-260 4 L-20 6 C 4 8 26 6 46 4 L 118 6 C 130 12 124 24 110 22 L 70 18 C 84 22 96 26 98 32 "
-                "C 100 40 88 42 80 38 L 40 26 C 20 28 0 26 -20 24 L -260 24 Z")
+          "L 70 18 C 84 22 96 26 98 32 C 100 40 88 42 80 38 L 40 26 C 20 28 0 26 -20 24 L -1400 24 Z")
+HAND_SHADE_D = ("M-1400 4 L-20 6 C 4 8 26 6 46 4 L 118 6 C 130 12 124 24 110 22 L 70 18 C 84 22 96 26 98 32 "
+                "C 100 40 88 42 80 38 L 40 26 C 20 28 0 26 -20 24 L -1400 24 Z")
 
 
 def hand(name, sgn, colours, id=None):
@@ -524,6 +561,8 @@ def hand(name, sgn, colours, id=None):
 
 def scene7():
     sc = Scene(7, CREAM, light=True)
+    st = LY.Stack(7, (30, 96, "left"), 246, (30, 268, 330, CH_DESIGN[7], "left"), (0, 380, 390, 844),
+                  art_ay=(1.0, 1.0, 1.0, 1.0))
     win_id = ID()
     arch = "M-70 0 L-70 -150 C -70 -200 -36 -230 0 -230 C 36 -230 70 -200 70 -150 L70 0 Z"
     window = node("Windowsill", *stack(
@@ -589,9 +628,10 @@ def scene7():
         sc.idle.key(sid, "rotation", [(0, 0.0, "lin"), (360, 6.2831855)])
     hero, unit, copy = metric_text(sc, dict(x=30, y=96, w=330, size=124, align="left", color=FOREST), (30, 268), 330,
                                    "left", unit_kw=dict(x=34, y=226, w=330, align="left"))
-    content = stack(bg_rect(CREAM),
-                    shape("Floor", rect(W + 40, 160), fill(col(CREAM_SHADE)), x=195, y=800),
-                    window, trail, rhand, lhand, cutting, sparks, hero, unit, copy)
+    floor = LY.bottom_band("Floor place", [shape("Floor", rect(W + 40, 160), fill(col(CREAM_SHADE)), x=195, y=800)])
+    art = st.art_group(*stack(window, trail, rhand, lhand, cutting, sparks))
+    content = stack(bg_rect(CREAM), floor, LY.panel(st, art, CREAM_SHADE), st.num_group(*stack(hero, unit)),
+                    st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root
@@ -600,6 +640,7 @@ def scene7():
 # ===================================================================== 8  Active months
 def scene8():
     sc = Scene(8, FOREST)
+    st = LY.Stack(8, (195, 100, "center"), 252, (32, 270, 326, CH_DESIGN[8], "center"), (40, 468, 350, 780))
     k = 8
     CX, CY, R = 195, 624, 114
     src = P(METRIC[k])
@@ -663,9 +704,10 @@ def scene8():
     hero, unit, copy = metric_text(sc, dict(x=24, y=100, w=342, size=124, align="center"), (32, 270), 326, "center",
                                    unit_kw=dict(x=24, y=232, w=342, align="center"))
     content = stack(bg_rect(FOREST),
-                    shape("Glow", ellipse(420, 420), rad_grad([(0, col(LEAF, 0.18)), (1, col(LEAF, 0))], 0, 0, 210),
-                          x=CX, y=CY),
-                    ring, ticks, plant, orbit, hero, unit, copy)
+                    st.art_group(*stack(shape("Glow", ellipse(420, 420), rad_grad([(0, col(LEAF, 0.18)), (1, col(LEAF, 0))],
+                                                                                0, 0, 210), x=CX, y=CY),
+                                        ring, ticks, plant, orbit)),
+                    st.num_group(*stack(hero, unit)), st.copy_group(copy))
     root = build_scene_root(sc, content)
     scene_wipe_in(sc)
     return sc, root

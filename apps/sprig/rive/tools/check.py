@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Headless behaviour checks for the Sprig recap (run from apps/sprig/rive: python3 tools/check.py).
 
+The first fourteen run at the design size (390 x 844); the responsive ones lay the artboard out at other
+viewports (--viewport, layout fit) and, for the mid-scene resize, drive an instance from a throwaway
+harness project (tools/harness/harness.luau, built under build/harness).
+
 Each check drives the built scene with the CLI (--key / --pointer / --advance / --data) and reads the
 bound view model back with --data-dump. Exit status 1 if any check fails.
 """
@@ -170,6 +174,148 @@ def hold_pauses_and_release_does_not_navigate():
                "--pointer=up@300,400", "--advance=30")
     ok = held is True and v2.get("currentScreen") == 1 and v2.get("_holdPaused") is False
     return ok, f"hold -> _holdPaused={held}; release -> screen {v2.get('currentScreen')}, held={v2.get('_holdPaused')}"
+
+
+# ---------------------------------------------------------------- responsive layout
+
+ORIENT_KEYS = ["_vw", "_vh", "_landscape", "_tall", "currentScreen"]
+
+
+def at_viewport(w, h, *args):
+    """View model after `args`, laid out at w x h (the CLI's default layout fit resizes the artboard)."""
+    doc = json.loads(subprocess.run([RIVE, PROJ, "--quiet", "--data-dump=-", f"--viewport={w}x{h}"] + list(args),
+                                    capture_output=True, text=True, check=True).stdout)
+    return {p["path"]: p.get("value") for p in doc["viewModel"]["properties"]}
+
+
+@check
+def orientation_follows_width():
+    rows = []
+    ok = True
+    for w, h, want in ((767, 1024, False), (768, 1024, True), (740, 360, False), (1366, 600, True),
+                       (390, 844, False), (820, 1180, True)):
+        v = at_viewport(w, h, NO_AUTO, "--advance=4")
+        good = v.get("_landscape") is want and v.get("_vw") == w and v.get("_vh") == h
+        ok &= good
+        rows.append(f"{w}x{h}->{'L' if v.get('_landscape') else 'P'}")
+    return ok, " ".join(rows)
+
+
+@check
+def breakpoint_is_tunable():
+    v = at_viewport(1024, 768, NO_AUTO, "--data=layoutBreakpoint=1100", "--advance=4")
+    v2 = at_viewport(700, 900, NO_AUTO, "--data=layoutBreakpoint=600", "--advance=4")
+    ok = v.get("_landscape") is False and v2.get("_landscape") is True
+    return ok, f"1024 wide @1100 -> landscape={v.get('_landscape')}; 700 wide @600 -> landscape={v2.get('_landscape')}"
+
+
+@check
+def right_arrow_and_tap_zones_at_other_sizes():
+    out = []
+    ok = True
+    for w, h in ((1280, 720), (740, 360), (320, 568), (820, 1180)):
+        v = at_viewport(w, h, NO_AUTO, "--advance=30", "--key=right", "--advance=60", "--key=right", "--advance=60")
+        # tap the right two-thirds (next, at its far edge: clear of the hero-leaf hold region) and the left third (back)
+        t = at_viewport(w, h, NO_AUTO, "--advance=30", f"--pointer=click@{int(w * 0.97)},{int(h * 0.45)}",
+                        "--advance=60", f"--pointer=click@{int(w * 0.97)},{int(h * 0.45)}", "--advance=60",
+                        f"--pointer=click@{int(w * 0.12)},{int(h * 0.45)}", "--advance=60")
+        good = v.get("currentScreen") == 3 and t.get("currentScreen") == 2
+        ok &= good
+        out.append(f"{w}x{h}: Right x2->{v.get('currentScreen')}, tap next x2 + back->{t.get('currentScreen')}")
+    return ok, "; ".join(out)
+
+
+@check
+def hold_pauses_on_real_width():
+    out, ok = [], True
+    for w, h in ((1280, 720), (740, 360)):
+        x, y = int(w * 0.97), int(h * 0.45)
+        v = at_viewport(w, h, "--data=autoAdvanceSeconds=3", "--advance=200", f"--pointer=down@{x},{y}", "--advance=60")
+        v2 = at_viewport(w, h, "--data=autoAdvanceSeconds=3", "--advance=200", f"--pointer=down@{x},{y}", "--advance=60",
+                         f"--pointer=up@{x},{y}", "--advance=30")
+        good = v.get("_holdPaused") is True and v2.get("currentScreen") == 1 and v2.get("_holdPaused") is False
+        ok &= good
+        out.append(f"{w}x{h}: hold -> paused={v.get('_holdPaused')}, release -> screen {v2.get('currentScreen')}")
+    return ok, "; ".join(out)
+
+
+def build_harness():
+    """A throwaway project: scene.rml + a ResizeHarness artboard whose script instances SprigRecap and
+    resizes it mid-run (tools/harness/harness.luau). Lives in build/harness, never in the shipped file."""
+    import re
+    hd = os.path.join(PROJ, "build", "harness")
+    shutil.rmtree(hd, ignore_errors=True)
+    os.makedirs(os.path.join(hd, "scripts"))
+    for f in os.listdir(os.path.join(PROJ, "scripts")):
+        shutil.copy(os.path.join(PROJ, "scripts", f), os.path.join(hd, "scripts", f))
+    shutil.copy(os.path.join(PROJ, "tools", "harness", "harness.luau"), os.path.join(hd, "scripts", "harness.luau"))
+    os.symlink(os.path.join(PROJ, "assets"), os.path.join(hd, "assets"))
+    shutil.copy(os.path.join(PROJ, "rive.yaml"), os.path.join(hd, "rive.yaml"))
+    src = open(os.path.join(PROJ, "scene.rml")).read()
+    head = re.search(r'<Artboard [^>]*name="SprigRecap" id="[^"]+"', src).group(0)
+    ab = re.search(r' id="([^"]+)"$', head).group(1)
+    vmid = re.search(r'viewModelId="([^"]+)"', head).group(1)
+    inst = re.search(r'viewModelInstanceId="([^"]+)"', head).group(1)
+    harness = f"""
+  <Artboard defaultStateMachineId="0:99010" width="1280" height="900" styleId="0:99002" viewModelId="{vmid}" viewModelInstanceId="{inst}" name="ResizeHarness" id="0:99001" x="2000" y="0">
+    <LayoutComponentStyle name="Harness style" id="0:99002"/>
+    <ScriptedDrawable scriptAssetId="0:99020" name="Harness" id="0:99003">
+      <ScriptInputArtboard artboardId="{ab}" name="recap" id="0:99004"/>
+    </ScriptedDrawable>
+    <StateMachine name="Harness machine" id="0:99010">
+      <StateMachineLayer name="Layer" id="0:99011">
+        <AnyState x="200" y="-120"/>
+        <ExitState x="400" y="-120"/>
+        <EntryState/>
+      </StateMachineLayer>
+    </StateMachine>
+  </Artboard>
+  <ScriptAsset file="scripts/harness.luau" name="harness" id="0:99020"/>
+"""
+    i = src.rindex("</Rive>")
+    open(os.path.join(hd, "scene.rml"), "w").write(src[:i] + harness + src[i:])
+    return hd
+
+
+def harness_run(png=None):
+    hd = build_harness()
+    cmd = [RIVE, hd, "--artboard=ResizeHarness", f"--screenshot={png or os.path.join(hd, 'harness.png')}",
+           "--advance=470"]
+    r = subprocess.run(cmd, capture_output=True, text=True)
+    rows = {}
+    for line in (r.stdout + r.stderr).splitlines():
+        if "RESIZE " in line:
+            parts = line[line.index("RESIZE "):].split()
+            rows[parts[1]] = dict(p.split("=", 1) for p in parts[2:] if "=" in p)
+    return rows, r
+
+
+@check
+def resize_across_threshold_mid_scene():
+    rows, r = harness_run()
+    if not all(k in rows for k in "ABCD"):
+        return False, f"harness incomplete: {sorted(rows)}; {(r.stdout + r.stderr)[-400:]}"
+    A, B, C, M, D = rows["A"], rows["B"], rows["C"], rows["M"], rows["D"]
+    ok = (A["cs"] == "2" and A["land"] == "true" and B["cs"] == "2" and B["land"] == "false" and C["cs"] == "2"
+          and C["land"] == "false" and C["vw"] == "600.0" and D["cs"] == "3" and D["land"] == "true")
+    # the applied placement equals the solved one right after the switch, and the scene is settled (no recede)
+    ok &= all(abs(float(X["artx"]) - float(X["artx_solved"])) < 0.05 for X in (B, C, D))
+    ok &= abs(float(C["content_scale"]) - 1) < 1e-3 and abs(float(D["content_scale"]) - 1) < 1e-3
+    # a mid-scene resize ends in exactly the layout a fresh start at that size has
+    s600 = at_viewport(600, 900, NO_AUTO, "--advance=30", "--key=right", "--advance=170")
+    s1280 = at_viewport(1280, 800, NO_AUTO, "--advance=30", "--key=right", "--advance=60", "--key=right",
+                        "--advance=170")
+    diffs = []
+    for X, S in ((C, s600), (D, s1280)):
+        for k, val in X.items():
+            if k.startswith("_l") and k in S and abs(float(val) - float(S[k])) > 0.01:
+                diffs.append(f"{k} {val} vs {S[k]}")
+    ok &= not diffs
+    msg = (f"scene 2 at 1280x800 (landscape) -> 600x900 mid-scene: still scene {C['cs']}, landscape={C['land']}, "
+           f"art x {C['artx']} = solved; Continue then resize back mid-transition -> scene {D['cs']}, "
+           f"landscape={D['land']}; {len([k for k in C if k.startswith('_l')])} solved values match fresh starts"
+           + (f"; DIFF {diffs[:3]}" if diffs else ""))
+    return ok, msg
 
 
 def main():

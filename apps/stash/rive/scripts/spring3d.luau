@@ -42,6 +42,7 @@ type Spring3D = {
     bottom: number,
     pw: number,
     ph: number,
+    samples: number,
     lastKey: string,
     zig: Path,
     zigPaint: Paint,
@@ -149,7 +150,31 @@ local function setup(self: Spring3D, context: Context)
     end
     self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
         sampleCount = samples, label = 'stash spring depth' })
+    self.samples = samples
     self.gpu = true
+end
+
+-- `res` follows the director's _gpuResStage (viewport scale x device pixel
+-- ratio): the canvas and its MSAA / depth targets are re-made at that size
+local function applyRes(self: Spring3D, canvas: GPUCanvas)
+    local k = math.clamp(self.res, 1, 4)
+    if math.abs(k - self.k) < 0.01 then
+        return
+    end
+    self.k = k
+    local pw = math.ceil(self.halfW * 2 * k / 8) * 8
+    local ph = math.ceil((self.bottom - self.top) * k / 8) * 8
+    self.pw = pw
+    self.ph = ph
+    canvas:resize(pw, ph)
+    local samples = self.samples
+    if samples > 1 then
+        self.color = GPUTexture.new({ width = pw, height = ph, format = 'rgba8unorm', renderTarget = true,
+            sampleCount = samples, label = 'stash spring msaa' })
+    end
+    self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
+        sampleCount = samples, label = 'stash spring depth' })
+    self.lastKey = ''
 end
 
 function init(self: Spring3D, context: Context): boolean
@@ -229,6 +254,7 @@ function draw(self: Spring3D, renderer: Renderer)
         renderer:drawPath(self.zig, self.zigPaint)
         return
     end
+    applyRes(self, canvas)
     local key = string.format('%.2f|%.3f|%.3f|%d', self.height, self.twist, self.tilt, self.steel)
     if key ~= self.lastKey then
         self.lastKey = key
@@ -276,6 +302,7 @@ return function(): Node<Spring3D>
         bottom = 20,
         pw = 100,
         ph = 400,
+        samples = 1,
         lastKey = '',
         zig = Path.new(),
         zigPaint = Paint.with({ color = Color.rgb(214, 226, 240), style = 'stroke', thickness = 6 }),

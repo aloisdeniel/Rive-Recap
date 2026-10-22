@@ -231,14 +231,26 @@ def wordmark_asset():
 # --------------------------------------------------------------- GPU 3D holds + chalk (improvement pass)
 HOLD3D_ASSET = "0:84"
 CHALK_ASSET = "0:85"
+WALL_ASSET = "0:86"
+LAYOUT_ASSET = "0:87"
+RIGDATA_ASSET = "0:88"
 KIND3D = {"jug": 0, "pyramid": 1, "sloper": 2, "pinch": 3, "crimp": 4, "stone": 5, "tri": 6, "volume": 6}
 SIZE3D = {"jug": 0.86, "pyramid": 0.92, "sloper": 0.86, "pinch": 0.86, "crimp": 0.84, "stone": 0.9, "tri": 1.0}
 LIVE = {}          # scene k -> [live input ids]; build_stage keys them per entrance
 
 
 def script_assets():
-    return [E("ScriptAsset", file="hold3d.luau", name="hold3d", id=HOLD3D_ASSET),
-            E("ScriptAsset", file="chalk.luau", name="chalk", id=CHALK_ASSET)]
+    # modules first: `require` only finds a module declared above its importer
+    return [E("ScriptAsset", file="rigdata.luau", name="rigdata", isModule=True, id=RIGDATA_ASSET),
+            E("ScriptAsset", file="layout.luau", name="layout", isModule=True, id=LAYOUT_ASSET),
+            E("ScriptAsset", file="hold3d.luau", name="hold3d", id=HOLD3D_ASSET),
+            E("ScriptAsset", file="chalk.luau", name="chalk", id=CHALK_ASSET),
+            E("ScriptAsset", file="wall.luau", name="wall", id=WALL_ASSET)]
+
+
+def rig_input(name, rig_name, v=0.0):
+    """A script number input bound to one CruxRig value."""
+    return E("ScriptInputNumber", propertyValue=v, name=name, kids=[bind(model.rig_path(rig_name), 243)])
 
 
 def _num(name, v):
@@ -268,6 +280,7 @@ def hold3d_drawable(name, kind, color, size, scene=None, roll=0.0, bolt=0.13, sp
     add(_num("live", 1.0 if live is None else live))
     add(E("ScriptInputBoolean", propertyValue=False, name="still", kids=[bind(model.path("reducedMotion"), 245)]))
     add(E("ScriptInputBoolean", propertyValue=False, name="paused", kids=[bind(model.path("isPaused"), 245)]))
+    add(rig_input("px", "px", 2.0))   # canvas pixels per design point, from the real on-screen scale
     if trail:
         for k, v in trail.items():
             add(_num(k, v))
@@ -304,8 +317,33 @@ def chalk_drawable():
     d = E("ScriptedDrawable", scriptAssetId=CHALK_ASSET, name="Chalk Burst")
     ins = {}
     for nm, v in (("amount", 0.0), ("clear", 0.0), ("originX", 195.0), ("originY", 500.0), ("drift", 0.0),
-                  ("seed", 1.0), ("direction", 1.0), ("width", 390.0), ("height", 844.0)):
+                  ("seed", 1.0), ("direction", 1.0)):
         el = _num(nm, v)
         d.add(el)
         ins[nm] = el.id
+    # the cloud covers the whole canvas: it maps the viewport into its own (carrier) space
+    for nm, rn, v in (("rigX", "chX", 0.0), ("rigY", "chY", 0.0), ("rigS", "chS", 1.0), ("k", "k", 1.0),
+                      ("vw", "vw", 390.0), ("vh", "vh", 844.0), ("dpr", "dpr", 1.0)):
+        d.add(rig_input(nm, rn, v))
     return d, ins
+
+
+def wall_drawable(name, color, seed, density=2.9, dmin=1.0, dmax=2.6, scene=None, grid=None):
+    """Procedural wall texture (wall.luau): chalk speckles, and optionally a bolt grid,
+    over the whole canvas whatever its size. `density` = dots per 10,000 square points."""
+    d = E("ScriptedDrawable", scriptAssetId=WALL_ASSET, name=name)
+    d.add(E("ScriptInputColor", propertyValue=color, name="color"))
+    for nm, v in (("seed", seed), ("density", density), ("dmin", dmin), ("dmax", dmax)):
+        d.add(_num(nm, v))
+    if grid:
+        gx, gy, step_x, step_y, dia, gcol = grid
+        for nm, v in (("gridX", gx), ("gridY", gy), ("gridStepX", step_x), ("gridStepY", step_y), ("gridD", dia)):
+            d.add(_num(nm, v))
+        d.add(E("ScriptInputColor", propertyValue=gcol, name="gridColor"))
+    d.add(rig_input("w", "uw", 390.0))
+    d.add(rig_input("h", "uh", 844.0))
+    live = _num("live", 1.0 if scene is None else 0.0)
+    d.add(live)
+    if scene is not None:
+        LIVE.setdefault(scene, []).append(live.id)
+    return d

@@ -96,6 +96,30 @@ P("_finishedLatch", "Boolean", False)
 P("_thanksOpen", "Boolean", False)
 P("_focusIndex", "Number", 0)
 P("_noActivity", "Boolean", False)
+# ---- responsive layout (see README "Responsive layout")
+# public: the width breakpoint between the portrait and landscape layouts
+P("layoutBreakpoint", "Number", 768)
+# private: written by scripts/stage.luau from the real artboard size; the markup
+# is bound to these. Defaults are the 390 x 844 portrait master.
+LAYOUT_DEFAULTS = dict(
+    _vw=W, _vh=H, _dpr=1,
+    _ui=1, _hdrL=24, _hdrLogo=34, _hdrWord=50, _hdrR=366, _hdrY=38, _progX=24, _progY=64, _progW=342,
+    _ctlY=772, _ctlL=44, _ctlR=346, _ctlM=195, _contW=196, _shareW=118, _replayW=106, _shareX=139, _replayX=259,
+    _navY=92, _navH=644, _navSplit=130, _navRW=260,
+    _cAlign=2, _cOrigin=0.5, _panX=0, _panY=0, _panW=10, _panH=10, _panelOn=0, _copyOn=1,
+    _nx=0, _ny=0, _ns=1, _c9dx=0, _c9dy=0, _carryP=1, _s10T=1,
+    _bloomX=195, _bloomY=500, _bloomS=4.2, _embX=91, _embY=284, _embS=0.3, _medRes=2,
+    _cardX=27, _cardY=148, _cardW=336, _cardH=540,
+)
+for _n in range(1, 11):
+    LAYOUT_DEFAULTS.update({f"_h{_n}x": 0, f"_h{_n}y": 0, f"_h{_n}s": 1})
+for _k in range(1, 5):
+    LAYOUT_DEFAULTS.update({f"_c{_k}x": 195, f"_c{_k}y": 0, f"_c{_k}s": 1, f"_c{_k}w": 330})
+for _k, _v in LAYOUT_DEFAULTS.items():
+    P(_k, "Number", _v)
+P("_landscape", "Boolean", False)
+P("_split", "Boolean", False)
+P("_cardWide", "Boolean", False)
 
 STAT = {2: "volunteerHours", 3: "projectsJoined", 4: "communityDays", 5: "gardenSessions",
         6: "repairItems", 7: "welcomeSessions", 8: "activeMonths"}
@@ -208,6 +232,63 @@ def seg_fill(k):
                    tok_v(k), op(0), tok_b("screenProgress"), close(), close())
 
 
+# ---- responsive bindings ----------------------------------------------------
+# Property keys: x 13, y 14, scaleX 16, scaleY 17, opacity 18, Rectangle/Ellipse
+# width 20 / height 21, Text alignValue 281, width 285, height 286, originX 366,
+# LayoutComponent width 7, ScriptInput propertyValue 243.
+K_X, K_Y, K_SX, K_SY, K_OP, K_RW, K_RH = 13, 14, 16, 17, 18, 20, 21
+K_TALIGN, K_TW, K_TH, K_TOX, K_LW, K_IN = 281, 285, 286, 366, 7, 243
+_affine_cache = {}
+
+
+def affine(a_, b_=0.0):
+    """value * a + b, as a range mapper with slope a (no clamping)."""
+    if a_ == 1 and b_ == 0:
+        return None
+    key = (round(a_, 6), round(b_, 6))
+    if key not in _affine_cache:
+        _affine_cache[key] = C(el("DataConverterRangeMapper", minInput=0, maxInput=1, minOutput=b_, maxOutput=a_ + b_,
+                                  name=f"x{a_:g}{b_:+g}"))
+    return _affine_cache[key]
+
+
+_bool_affine_cache = {}
+
+
+def bool_affine(a_, b_=0.0):
+    """boolean -> (0/1) * a + b."""
+    key = (round(a_, 6), round(b_, 6))
+    if key not in _bool_affine_cache:
+        aff = affine(a_, b_)
+        _bool_affine_cache[key] = group(f"bool x{a_:g}{b_:+g}", TO_NUM, aff) if aff else TO_NUM
+    return _bool_affine_cache[key]
+
+
+def bn(prop, key, a_=1.0, b_=0.0):
+    """Bind a number property (optionally value * a + b) to `key`."""
+    return bind(vm, prop, key, conv=affine(a_, b_))
+
+
+def bb(prop, key, a_=1.0, b_=0.0):
+    """Bind a boolean property as 0/1 (* a + b) to `key`."""
+    return bind(vm, prop, key, conv=bool_affine(a_, b_))
+
+
+def xform(prefix):
+    """x, y, uniform scale bound to <prefix>x/y/s."""
+    return [bn(prefix + "x", K_X), bn(prefix + "y", K_Y), bn(prefix + "s", K_SX), bn(prefix + "s", K_SY)]
+
+
+def pose(name, dx, dy, flag, *kids):
+    """A node offset by (dx, dy) when the boolean `flag` is true (a discrete pose)."""
+    n_ = node(name, *kids)
+    if dx:
+        n_.add(bb(flag, K_X, dx))
+    if dy:
+        n_.add(bb(flag, K_Y, dy))
+    return n_
+
+
 def focus_ring(k):
     return formula(f"Focus ring {k}", fn(1), tok_v(0), sep(), tok_v(1), op(1), el("FormulaTokenParenthesisOpen"),
                    el("FormulaTokenInput"), op(1), tok_v(k), el("FormulaTokenParenthesisClose"), op(2),
@@ -266,12 +347,38 @@ def text(name, x, y, w, size, font, color, prop=None, lit="", align="center", lh
     return t
 
 
+def copy_text(name, slot, size, font, color, prop, w, h, lh=None, rise=14, ls=None, conv=None):
+    """A copy line placed by the stage script: its node follows copy slot `slot`
+    (x, y, type scale), its width follows the slot's measure, and its alignment
+    is centred in the portrait stack and ranged left in a column."""
+    t = text(name, 0, 0, w, size, font, color, prop=prop, reveal=True, lh=lh, h=h, overflow="fitFontSize", ls=ls,
+             rise=rise, conv=conv)
+    t.el.attrs["verticalAlignValue"] = "top"
+    t.el.add(bn("_cAlign", K_TALIGN), bn("_cOrigin", K_TOX), bn(f"_c{slot}w", K_TW))
+    t.node = node(name + " slot", t.el)
+    t.node.add(*xform(f"_c{slot}"))
+    return t
+
+
+# Per-scene layout spec, emitted as scripts/layout_spec.luau for the stage script.
+# items: copy lines (slot, local height h, design width w, box item?, box origin
+#        bx0/by0, stack offset ty, split offset sty, split height delta sh, split gap)
+# blocks: the portrait stack, top to bottom: (item index or 0 for the hero, design top, height)
+# hero / shero: the hero's essential box in the stack / split arrangements
+# sorder: split column order (0 = the hero number group); num: (ax, ay, w, h, gap)
+LAYOUT = {}
+
+
+def item(slot, h, w, box=False, bx0=0.0, by0=0.0, ty=0.0, sty=0.0, sh=0.0, gap=14.0):
+    return dict(slot=slot, h=h, w=w, box=box, bx0=bx0, by0=by0, ty=ty, sty=sty, sh=sh, gap=gap)
+
+
 def reveal_keys(anim, t, f0, f1, ease="out"):
     anim.tween(t.range.id, 327, f0, -0.35, f1, 1.0, ease)
     anim.tween(t.range.id, 317, f0, 0.0, f1, 1.35, ease)
 
 
-def hero_num(name, prop, x, y, w, size, color, stitch=OAT, align="center"):
+def hero_num(name, prop, x, y, w, size, color, stitch=OAT, align="center", follow_align=False):
     """Count-up numeral with locale digit grouping.
 
     Three run tiers share one Text; the tiers that do not apply collapse to a
@@ -303,6 +410,9 @@ def hero_num(name, prop, x, y, w, size, color, stitch=OAT, align="center"):
     t.el = el("Text", sM, sK, s1, *runs, x=x, y=y, width=w, height=size * 1.15, originX=ox, originY=0.5,
               sizingValue="fixed", overflowValue="fitFontSize", alignValue=align, verticalAlignValue="middle",
               wrapValue="noWrap", name=name)
+    if follow_align:
+        # centred in the portrait stack, ranged left when it moves into the copy column
+        t.el.add(bn("_cAlign", K_TALIGN))
     return t
 
 
@@ -315,7 +425,10 @@ AMB_SWAY = Anim("ambient_sway", 240, loop="pingPong")
 AMB_FLOW = Anim("ambient_flow", 240, loop="loop")
 REST_SWAY = Anim("ambient_rest", 1)
 HERO_CP = el("CustomPropertyNumber", bind(vm, "_heroT", 243, direction=True), propertyValue=0, name="heroCount")
-HERO_DRIVER = node("Count driver", el("CustomPropertyGroup", HERO_CP, name="Count"))
+# keyed progress of the two continuity carries, written back for the stage script
+CARRY_CP = el("CustomPropertyNumber", bind(vm, "_carryP", 243, direction=True), propertyValue=1, name="carry8to9")
+S10T_CP = el("CustomPropertyNumber", bind(vm, "_s10T", 243, direction=True), propertyValue=1, name="carry9to10")
+HERO_DRIVER = node("Count driver", el("CustomPropertyGroup", HERO_CP, CARRY_CP, S10T_CP, name="Count"))
 
 
 def sway(obj, prop, rest, amp, ease="inout", flow=False):
@@ -343,17 +456,46 @@ class Scene:
         return an
 
 
-def scene_text_block(sc, an, headline_prop, support_prop, hy=104, sy=694, dark=False, hsize=30, ssize=17, h_at=(66, 100),
-                     s_at=(84, 110), hw=330, sdark=None):
+def scene_text_block(sc, an, headline_prop, support_prop, dark=False, hsize=30, ssize=17, h_at=(66, 100),
+                     s_at=(84, 110), sdark=None, plate=False):
+    """Headline (copy slot 1) and support line (slot 2). With `plate`, the support
+    sits on a cream plate in the portrait stack (it crosses hills/soil there); the
+    landscape page replaces the plate."""
     col = OAT if dark else IND
     sdark = dark if sdark is None else sdark
     scol = a(OAT, 0.92) if sdark else IND_D
-    th = text(f"S{sc.n} headline", W / 2, hy, hw, hsize, "bree", col, prop=headline_prop, reveal=True, lh=hsize * 1.12)
-    ts = text(f"S{sc.n} support", W / 2, sy, 320, ssize, "atk", scol, prop=support_prop, reveal=True, lh=ssize * 1.3,
-              rise=8)
+    th = copy_text(f"S{sc.n} headline", 1, hsize, "bree", col, headline_prop, 330, 76, lh=hsize * 1.12)
+    ts = copy_text(f"S{sc.n} support", 2, ssize, "atk", scol, support_prop, 320, 48, lh=ssize * 1.3, rise=8)
     reveal_keys(an, th, *h_at)
     reveal_keys(an, ts, *s_at)
+    if plate:
+        p = shape(f"S{sc.n} copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)),
+                  x=0, y=24)
+        p.children[0].add(bn("_c2w", K_RW, 1, 20))
+        p.add(bb("_split", K_OP, -1, 1))
+        ts.node.add(p)
     return th, ts
+
+
+def copy_page(sc, anims, color=None, stitch=None, fade_at=(2, 18)):
+    """The landscape (split) fabric page behind the copy column and controls: a
+    stitched cloth panel. Off in the portrait stack; it fades in with the scene."""
+    color = color or a(CREAM, 0.96)
+    stitch = stitch or a(TER, 0.6)
+    body = shape(f"S{sc.n} page cloth", rect(10, 10, r=16, ox=0, oy=0), fill(color))
+    body.children[0].add(bn("_panW", K_RW), bn("_panH", K_RH))
+    st_ = shape(f"S{sc.n} page stitch", rect(10, 10, r=11, ox=0, oy=0), stroke(stitch, 1.5, dash=(7, 5)), x=7, y=7)
+    st_.children[0].add(bn("_panW", K_RW, 1, -14), bn("_panH", K_RH, 1, -14))
+    sh_ = shape(f"S{sc.n} page shadow", rect(10, 10, r=18, ox=0, oy=0),
+                el("Fill", solid(a(IND_D, 0.28)), el("Feather", strength=14, offsetY=8, name="Soft"), fillRule="clockwise",
+                   name="Shadow"))
+    sh_.children[0].add(bn("_panW", K_RW), bn("_panH", K_RH))
+    fade = node(f"S{sc.n} page fade", st_, body, sh_)
+    for an in (anims if isinstance(anims, list) else [anims]):
+        an.seq(fade.id, "opacity", [(0, 0.0), (fade_at[0], 0.0, "out"), (fade_at[1], 1.0)])
+    pg = node(f"S{sc.n} copy page", fade)
+    pg.add(bn("_panX", K_X), bn("_panY", K_Y), bn("_panelOn", K_OP))
+    return pg
 
 
 def pop(an, obj, f0, f1, ease="cloth", s0=0.0, s1=1.0):
@@ -365,18 +507,41 @@ def count_keys(an, f0=14, f1=72, ease="thread"):
     an.tween(HERO_CP.id, "propertyValue", f0, 0.0, f1, 1.0, ease)
 
 
+BLEED_W, BLEED_H = 3000, 1800  # grounds and quilting cover any canvas up to this size
+
+
 def bg(color, name="Ground"):
-    return shape(name, rect(W + 80, H + 80, ox=0, oy=0), fill(color), x=-40, y=-40)
+    """Full-bleed ground in artboard space (it never scales), so it reaches every edge."""
+    return shape(name, rect(BLEED_W + 2000, BLEED_H + 2000, ox=0, oy=0), fill(color), x=-1000, y=-1000)
 
 
 def quilt_lines(color, step=48, name="Quilting"):
-    """Faint diagonal quilting lines across the background (one shape, many paths)."""
+    """Faint diagonal quilting lines across the background (one shape, many paths),
+    at a constant spacing in artboard space, covering the bleed area."""
     paths = []
-    for i in range(-10, 20):
+    k = 900 / 920
+    y0, y1 = -60, BLEED_H
+    i0 = int(math.floor((-60 - k * (y1 - y0)) / step))
+    i1 = int(math.ceil((BLEED_W + 60) / step))
+    for i in range(i0, i1 + 1):
         x0 = i * step
-        paths.append(el("PointsPath", el("StraightVertex", x=x0, y=-40), el("StraightVertex", x=x0 + 900, y=880),
+        paths.append(el("PointsPath", el("StraightVertex", x=x0, y=y0), el("StraightVertex", x=x0 + k * (y1 - y0), y=y1),
                         isClosed=False, name=f"L{i}"))
     return shape(name, *paths, stroke(color, 1.0, dash=(6, 6)))
+
+
+def hero_group(sc, *kids):
+    """The scene's hero art, in master (390 x 844) coordinates, placed and scaled by the stage script."""
+    g = node(f"S{sc.n} hero", *kids)
+    g.add(*xform(f"_h{sc.n}"))
+    return g
+
+
+def number_group(sc, *kids):
+    """The hero numeral + unit: follows the hero in the stack, moves into the copy column in split."""
+    g = node(f"S{sc.n} number", *kids)
+    g.add(*xform("_n"))
+    return g
 
 
 # =====================================================================
@@ -451,8 +616,10 @@ def build_s1():
     sway(banner_in.id, "rotation", -0.012, 0.024)
     # running thread around the quilt
     thread_trim = el("TrimPath", start=0, end=0, name="Draw")
-    tpath = curve_path([(-30, 520, -0.4, 50), (44, 470, -1.4, 50), (52, 270, -1.7, 50), (195, 206, 0.0, 70),
-                        (338, 270, 1.6, 50), (342, 470, 1.5, 40), (420, 520, 0.4, 40)])
+    # the thread runs on past the master's edges so wider canvases never see its ends
+    tpath = curve_path([(-560, 640, -0.2, 120), (-30, 520, -0.4, 50), (44, 470, -1.4, 50), (52, 270, -1.7, 50),
+                        (195, 206, 0.0, 70), (338, 270, 1.6, 50), (342, 470, 1.5, 40), (420, 520, 0.4, 40),
+                        (950, 640, 0.2, 120)])
     thread = shape("S1 thread", tpath, el("Stroke", solid(TER), el("DashPath", el("Dash", length=7, name="on"),
                                                                     el("Dash", length=5, name="off"), name="Running stitch"),
                                           thread_trim, thickness=2.2, cap="round", name="Thread"))
@@ -465,19 +632,27 @@ def build_s1():
     tag_txt.el.attrs["originY"] = 0
     tag = node("S1 name tag", tag_txt.el,
                shape("Tag stitch", rect(236, 40, r=6), stroke(a(OAT, 0.95), 1.3, dash=(5, 4))),
-               shape("Tag cloth", fabric_quad(250, 52, j=1.5), fill(ROSE)), x=cx, y=146)
-    period = text("S1 period", cx, 180, 320, 14, "atk", IND_D, prop="periodLabel", reveal=True)
-    head = text("S1 headline", cx, 552, 330, 32, "bree", IND, prop="introHeadline", reveal=True, lh=36)
-    sup = text("S1 support", cx, 640, 320, 17, "atk", IND_D, prop="introSupport", reveal=True)
-    an.seq(tag.id, "y", [(0, 110, "antic"), (10, 100, "cloth"), (40, 146)])
+               shape("Tag cloth", fabric_quad(250, 52, j=1.5), fill(ROSE)))
+    tag_slot = node("S1 name tag slot", tag)
+    tag_slot.add(*xform("_c1"))
+    period = copy_text("S1 period", 2, 14, "atk", IND_D, "periodLabel", 320, 20)
+    head = copy_text("S1 headline", 3, 32, "bree", IND, "introHeadline", 330, 76, lh=36)
+    sup = copy_text("S1 support", 4, 17, "atk", IND_D, "introSupport", 320, 48, lh=22)
+    an.seq(tag.id, "y", [(0, -36, "antic"), (10, -46, "cloth"), (40, 0)])
     an.tween(tag.id, "rotation", 6, -0.22, 54, 0.0, (0.3, 1.6, 0.5, 1.0))
     an.tween(tag.id, "opacity", 4, 0.0, 12, 1.0, "linear")
     reveal_keys(an, period, 40, 76)
     reveal_keys(an, head, 72, 104)
     reveal_keys(an, sup, 88, 116)
     an.key(HERO_CP.id, "propertyValue", 0, 1.0)
-    sc.root.add(tag, period.el, banner, *[p[0] for p in reversed(patches)], thread, head.el, sup.el,
+    hero = hero_group(sc, banner, *[p[0] for p in reversed(patches)], thread)
+    sc.root.add(tag_slot, period.node, head.node, sup.node, copy_page(sc, an), hero,
                 quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
+    LAYOUT[1] = dict(
+        items=[item(1, 52, 250, box=True, bx0=-125, by0=-26, gap=10), item(2, 20, 320, gap=22), item(3, 76, 330, gap=14),
+               item(4, 48, 320)],
+        blocks=[(1, 120, 52), (2, 180, 20), (0, 202, 320), (3, 552, 76), (4, 640, 48)],
+        hero=(45, 202, 345, 522), shero=(40, 198, 350, 530), sorder=[1, 2, 3, 4], num=None)
     return sc
 
 
@@ -524,7 +699,7 @@ def build_s2():
         an.seq(outer.id, "rotation", [(0, sx * 0.8), (f0, sx * 0.8, "back"), (f0 + 30, sx * sy * 0.06)])
         sway(body.id, "rotation", -0.02 * sx, 0.04 * sx)
     num = hero_num("S2 hours", "volunteerHours", 0, -12, 180, 96, IND)
-    unit = text("S2 unit", 0, 50, 176, 15, "atkb", IND, prop="screen2Unit", oy=0.5, h=40, overflow="fitFontSize", wrap=True, lh=17)
+    unit = text("S2 unit", 0, 50, 176, 17, "atkb", IND, prop="screen2Unit", oy=0.5, h=40, overflow="fitFontSize", wrap=True, lh=19)
     card = node("S2 card", num.el, unit.el,
                 shape("Card stitch", rect(card_w - 16, card_h - 16, r=4), stroke(a(TER, 0.8), 1.4, dash=(6, 4))),
                 shape("Card cloth", fabric_quad(card_w, card_h, j=1.5), fill(CREAM)),
@@ -535,9 +710,7 @@ def build_s2():
     an.tween(card.id, "opacity", 0, 0.0, 6, 1.0, "linear")
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen2Headline", "screen2Support", hy=104, sy=686)
-    # the quilt field starts at y 204: long (3+ line) headlines shrink to fit above it
-    th.el.attrs.update(sizingValue="fixed", height=92, overflowValue="fitFontSize", verticalAlignValue="top")
+    th, ts = scene_text_block(sc, an, "screen2Headline", "screen2Support")
     # the star block sits in a full-bleed quilt: diamond-in-square half-square
     # triangles (the same piecing as the fold's 3D sheet) assemble in a wave
     # rippling out from the block, as in the art-direction reference
@@ -546,7 +719,7 @@ def build_s2():
     f_light = [OAT_D, ROSE_D, OAT_DD, TER_L]
     field = node("S2 quilt field")
     for r in range(ROWS):
-        for c in range(6):
+        for c in range(-8, 16):  # the master's 6 columns plus bleed on both sides
             x0, y0 = c * FC, FY0 + r * FC
             bi, bj = c // 2, (r + 1) // 2
             dark = f_dark[(bi * 2 + bj * 3) % len(f_dark)]
@@ -566,13 +739,17 @@ def build_s2():
             an.seq(cell.id, "scaleY", [(0, 0.3), (f0, 0.3, "back"), (f0 + 20, 1.0)])
             an.seq(cell.id, "rotation", [(0, 0.6 if (r + c) % 2 else -0.6), (f0, 0.6 if (r + c) % 2 else -0.6, "back"),
                                          (f0 + 24, 0.0)])
-    bind_top = shape("S2 field binding top", rect(W + 20, 8, ox=0, oy=0.5), fill(IND),
-                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-10, y=FY0)
-    bind_bot = shape("S2 field binding bottom", rect(W + 20, 8, ox=0, oy=0.5), fill(IND),
-                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-10, y=FY0 + ROWS * FC)
+    bind_top = shape("S2 field binding top", rect(24 * FC, 8, ox=0, oy=0.5), fill(IND),
+                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-8 * FC, y=FY0)
+    bind_bot = shape("S2 field binding bottom", rect(24 * FC, 8, ox=0, oy=0.5), fill(IND),
+                     stroke(a(CREAM, 0.8), 1.2, dash=(5, 4)), x=-8 * FC, y=FY0 + ROWS * FC)
     for bnd in (bind_top, bind_bot):
         an.seq(bnd.id, "scaleX", [(0, 0.0), (4, 0.0, "out"), (40, 1.0)])
-    sc.root.add(th.el, card, *tri, *corners, ts.el, bind_top, bind_bot, field, quilt_lines(a(OAT_DD, 0.4)), bg(OAT))
+    hero = hero_group(sc, card, *tri, *corners, bind_top, bind_bot, field)
+    sc.root.add(th.node, ts.node, copy_page(sc, an), hero, quilt_lines(a(OAT_DD, 0.4)), bg(OAT))
+    LAYOUT[2] = dict(items=[item(1, 76, 330, gap=16), item(2, 48, 320)],
+                     blocks=[(1, 104, 76), (0, 200, 464), (2, 686, 48)],
+                     hero=(15, 200, 375, 664), shero=(15, 200, 375, 664), sorder=[1, 2], num=None)
     return sc
 
 
@@ -625,8 +802,12 @@ def build_s3():
     an.seq(num.el.id, "x", [(0, 34, "antic"), (12, 22, "cloth"), (40, 34)])
     an.tween(num.el.id, "opacity", 0, 0.0, 10, 1.0, "linear")
     count_keys(an, 12, 62, (0.3, 0.1, 0.4, 1.0))
-    th, ts = scene_text_block(sc, an, "screen3Headline", "screen3Support", hy=104, sy=686)
-    sc.root.add(th.el, num.el, unit.el, grid, ts.el, quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
+    th, ts = scene_text_block(sc, an, "screen3Headline", "screen3Support")
+    sc.root.add(th.node, ts.node, number_group(sc, num.el, unit.el), copy_page(sc, an), hero_group(sc, grid),
+                quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
+    LAYOUT[3] = dict(items=[item(1, 76, 330, gap=16), item(2, 48, 320)],
+                     blocks=[(1, 104, 76), (0, 182, 473), (2, 686, 48)],
+                     hero=(30, 182, 362, 655), shero=(55, 420, 365, 662), sorder=[0, 1, 2], num=(34, 182, 200, 190, 18))
     return sc
 
 
@@ -650,11 +831,18 @@ def build_s4():
         clouds.append(c)
         sway(c.id, "x", x - 6, 12)
     hills = [
-        shape("S4 hill back", curve_path([(-40, 560, 0, 0), (60, 500, 0.3, 60), (200, 540, 0.0, 70), (330, 480, -0.2, 60),
-                                          (440, 520, 0, 0), (440, 900, 0, 0), (-40, 900, 0, 0)], closed=True),
+        # the master's hills (x -40..440) carry on as gentle swells on both sides and
+        # reach far down, so the ground bleeds at any canvas size
+        shape("S4 hill back", curve_path([(-1500, 520, 0, 0), (-1100, 560, 0.1, 150), (-650, 500, -0.1, 150),
+                                          (-300, 550, 0.0, 120), (-40, 560, 0, 0), (60, 500, 0.3, 60), (200, 540, 0.0, 70),
+                                          (330, 480, -0.2, 60), (440, 520, 0, 0), (800, 560, 0.1, 140),
+                                          (1200, 500, -0.1, 140), (1700, 530, 0, 0), (1700, 2400, 0, 0),
+                                          (-1500, 2400, 0, 0)], closed=True),
               fill(TEAL_L), stroke(a(OAT, 0.7), 1.3, dash=(5, 4))),
-        shape("S4 hill front", curve_path([(-40, 640, 0, 0), (120, 590, 0.1, 70), (260, 640, 0.2, 60), (440, 600, 0, 0),
-                                           (440, 900, 0, 0), (-40, 900, 0, 0)], closed=True),
+        shape("S4 hill front", curve_path([(-1500, 610, 0, 0), (-1000, 650, 0.1, 150), (-500, 600, -0.1, 150),
+                                           (-40, 640, 0, 0), (120, 590, 0.1, 70), (260, 640, 0.2, 60), (440, 600, 0, 0),
+                                           (850, 650, 0.1, 150), (1300, 600, -0.1, 150), (1700, 630, 0, 0),
+                                           (1700, 2400, 0, 0), (-1500, 2400, 0, 0)], closed=True),
               fill(TEAL_D), stroke(a(OAT, 0.6), 1.3, dash=(5, 4))),
     ]
     # fabric strips unrolling from the calendar like a scarf
@@ -665,7 +853,7 @@ def build_s4():
         off = (i - 2) * 30
         trim = el("TrimPath", start=0, end=0, name="Unroll")
         pth = curve_path([(196 + off, 440, 1.57, 30), (150 + off * 0.8, 560, 2.2, 50), (60 + off * 0.6, 640, 2.0, 50),
-                          (-30 + off * 0.4, 760, 2.4, 40)])
+                          (-30 + off * 0.4, 760, 2.4, 40), (-330 + off * 0.3, 1060, 2.4, 90)])
         stitch_trim = el("TrimPath", start=0, end=0, name="Unroll stitch")
         piece_trim = el("TrimPath", start=0, end=0, name="Unroll piecing")
         # paints: later draws on top -> ribbon, then its pieced patches, then the stitch
@@ -685,7 +873,7 @@ def build_s4():
     # calendar
     cw, chh = 222, 252
     num = hero_num("S4 days", "communityDays", 0, -40, 180, 92, IND)
-    unit = text("S4 unit", 0, 20, 190, 15, "atkb", IND, prop="screen4Unit", oy=0.5, h=36, overflow="fitFontSize", wrap=True, lh=17)
+    unit = text("S4 unit", 0, 20, 190, 17, "atkb", IND, prop="screen4Unit", oy=0.5, h=40, overflow="fitFontSize", wrap=True, lh=19)
     days = []
     marks = {3: ROSE, 8: TEAL, 10: TER, 16: IND, 19: ROSE}
     for d in range(21):
@@ -712,11 +900,12 @@ def build_s4():
     an.tween(cal.id, "opacity", 0, 0.0, 6, 1.0, "linear")
     an.tween(unit.el.id, "opacity", 50, 0.0, 68, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen4Headline", "screen4Support", hy=104, sy=704, sdark=False)
-    ts.el.attrs["originY"] = 0.5
+    th, ts = scene_text_block(sc, an, "screen4Headline", "screen4Support", sdark=False, plate=True)
     sway(cal.id, "rotation", 0.05, 0.02)
-    plate = shape("S4 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=704)
-    sc.root.add(th.el, ts.el, plate, cal, *strips, *hills, *clouds, sun, bg(sky))
+    sc.root.add(th.node, ts.node, copy_page(sc, an), hero_group(sc, cal, *strips, *hills, *clouds, sun), bg(sky))
+    LAYOUT[4] = dict(items=[item(1, 76, 330, gap=16), item(2, 58, 320, ty=5, sh=-10)],
+                     blocks=[(1, 104, 76), (0, 186, 336), (2, 675, 58)],
+                     hero=(25, 186, 365, 522), shero=(25, 180, 365, 560), sorder=[1, 2], num=None)
     return sc
 
 
@@ -730,8 +919,12 @@ def build_s5():
     bcols = [TER, ROSE_D, IND, TEAL_L]
     for i, col in enumerate(bcols):
         y0 = 500 + i * 62
-        pth = curve_path([(-40, y0 + 10, 0, 0), (90, y0 - 12 + (i % 2) * 18, 0.1, 60), (220, y0 + 8, -0.1, 60),
-                          (430, y0 - 6, 0, 0), (430, 900, 0, 0), (-40, 900, 0, 0)], closed=True)
+        # the master's bands (x -40..430) continue as soft furrows both ways and deep
+        # below, so the cloth soil bleeds at any canvas size
+        pth = curve_path([(-1500, y0 + 4, 0, 0), (-1000, y0 - 10 + (i % 2) * 16, 0.1, 150), (-500, y0 + 8, -0.1, 150),
+                          (-40, y0 + 10, 0, 0), (90, y0 - 12 + (i % 2) * 18, 0.1, 60), (220, y0 + 8, -0.1, 60),
+                          (430, y0 - 6, 0, 0), (800, y0 + 8, 0.1, 150), (1250, y0 - 8 + (i % 2) * 14, -0.1, 150),
+                          (1700, y0, 0, 0), (1700, 2400, 0, 0), (-1500, 2400, 0, 0)], closed=True)
         b = shape(f"S5 soil {i}", pth, fill(col), stroke(a(OAT, 0.75), 1.4, dash=(6, 4)))
         bands.append(b)
         f0 = 6 + i * 5
@@ -763,16 +956,19 @@ def build_s5():
     an.seq(bloom.id, "scaleY", [(0, 0.0), (78, 0.0, "back"), (96, 1.0)])
     an.seq(bloom.id, "rotation", [(0, -1.0), (78, -1.0, "out"), (100, 0.0)])
     sway(bloom.id, "rotation", -0.06, 0.12)
-    num = hero_num("S5 garden", "gardenSessions", 116, 360, 200, 150, TER, align="center")
+    num = hero_num("S5 garden", "gardenSessions", 116, 360, 200, 150, TER, align="center", follow_align=True)
     unit = text("S5 unit", 116, 440, 190, 17, "atkb", IND, prop="screen5Unit", wrap=True)
+    unit.el.add(bn("_cAlign", K_TALIGN))
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     an.seq(num.el.id, "y", [(0, 380, "antic"), (12, 392, "cloth"), (40, 360)])
     an.tween(num.el.id, "opacity", 0, 0.0, 12, 1.0, "linear")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen5Headline", "screen5Support", hy=104, sy=704, sdark=False)
-    ts.el.attrs["originY"] = 0.5
-    plate = shape("S5 copy plate", rect(340, 58, r=14), fill(a(CREAM, 0.94)), stroke(a(TER, 0.5), 1.2, dash=(5, 4)), x=W / 2, y=704)
-    sc.root.add(th.el, ts.el, plate, num.el, unit.el, bloom, *leaves, stem, *seeds, *reversed(bands), bg("FFF6E3DC"))
+    th, ts = scene_text_block(sc, an, "screen5Headline", "screen5Support", sdark=False, plate=True)
+    sc.root.add(th.node, ts.node, number_group(sc, num.el, unit.el), copy_page(sc, an),
+                hero_group(sc, bloom, *leaves, stem, *seeds, *reversed(bands)), bg("FFF6E3DC"))
+    LAYOUT[5] = dict(items=[item(1, 76, 330, gap=16), item(2, 58, 320, ty=5, sh=-10)],
+                     blocks=[(1, 104, 76), (0, 214, 316), (2, 675, 58)],
+                     hero=(16, 214, 360, 530), shero=(150, 205, 400, 640), sorder=[0, 1, 2], num=(16, 274, 200, 190, 18))
     return sc
 
 
@@ -829,7 +1025,7 @@ def build_s6():
     weave = shape("Darning", *lines, el("Stroke", solid(a(TER, 0.25)), wtrim, thickness=6, cap="round", name="Weave"))
     an.tween(wtrim.id, "end", 8, 0.0, 56, 1.0, "out")
     num = hero_num("S6 repairs", "repairItems", 0, -14, 150, 78, IND)
-    unit = text("S6 unit", 0, 44, 140, 14, "atkb", IND, prop="screen6Unit", oy=0.5, h=34, overflow="fitFontSize", wrap=True, lh=16)
+    unit = text("S6 unit", 0, 44, 140, 16, "atkb", IND, prop="screen6Unit", oy=0.5, h=38, overflow="fitFontSize", wrap=True, lh=18)
     darn = node("S6 darning patch", num.el, unit.el, weave,
                 shape("Ring stitch", ellipse(178, 178), stroke(a(TER, 0.8), 1.5, dash=(6, 4))),
                 shape("Disc", ellipse(196, 196), fill(CREAM)), shape("Disc shade", ellipse(196, 196), fill(SHADOW), x=3, y=5),
@@ -838,10 +1034,14 @@ def build_s6():
     an.seq(darn.id, "scaleY", [(0, 0.0), (4, 0.0, "cloth"), (34, 1.0)])
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen6Headline", "screen6Support", hy=104, sy=686)
+    th, ts = scene_text_block(sc, an, "screen6Headline", "screen6Support")
     sway(L.id, "rotation", 0.0, -0.015)
     sway(R.id, "rotation", 0.0, 0.015)
-    sc.root.add(th.el, darn, *xs, seam, R, L, ts.el, quilt_lines(a(OAT, 0.35)), bg(ROSE))
+    sc.root.add(th.node, ts.node, copy_page(sc, an), hero_group(sc, darn, *xs, seam, R, L), quilt_lines(a(OAT, 0.35)),
+                bg(ROSE))
+    LAYOUT[6] = dict(items=[item(1, 76, 330, gap=16), item(2, 48, 320)],
+                     blocks=[(1, 104, 76), (0, 190, 462), (2, 686, 48)],
+                     hero=(55, 190, 335, 652), shero=(55, 190, 335, 652), sorder=[1, 2], num=None)
     return sc
 
 
@@ -868,7 +1068,7 @@ def build_s7():
     frame = shape("Arch frame", rect(dw + 28, dh + 14, linkCornerRadius=False, cornerRadiusTL=(dw + 28) / 2, cornerRadiusTR=(dw + 28) / 2),
                   fill(TER_D), stroke(a(OAT, 0.7), 1.4, dash=(6, 4)), x=dx, y=dy - 7)
     num = hero_num("S7 welcome", "welcomeSessions", dx, dy - 30, 150, 110, IND)
-    unit = text("S7 unit", dx, dy + 46, 150, 15, "atkb", IND, prop="screen7Unit", wrap=True)
+    unit = text("S7 unit", dx, dy + 46, 150, 17, "atkb", IND, prop="screen7Unit", wrap=True)
     doors = []
     for side, col in ((-1, TEAL), (1, ROSE)):
         hw = dw / 2
@@ -922,10 +1122,14 @@ def build_s7():
         sway(s.id, "opacity", 0.4 + 0.1 * (i % 3), 0.5)
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen7Headline", "screen7Support", hy=104, sy=686, dark=True)
-    floor = shape("S7 floor", rect(W + 80, 140, ox=0, oy=0), fill(IND_D), x=-40, y=dy + dh / 2)
-    sc.root.add(th.el, *people, mat, *doors, num.el, unit.el, light, frame, rays, ts.el, floor, *stars,
+    th, ts = scene_text_block(sc, an, "screen7Headline", "screen7Support", dark=True)
+    floor = shape("S7 floor", rect(3200, 2000, ox=0, oy=0), fill(IND_D), x=-1400, y=dy + dh / 2)
+    sc.root.add(th.node, ts.node, copy_page(sc, an, color=a(IND_D, 0.94), stitch=a(TER_L, 0.6)),
+                hero_group(sc, *people, mat, *doors, num.el, unit.el, light, frame, rays, floor, *stars),
                 quilt_lines(a(IND_L, 0.35)), bg(IND))
+    LAYOUT[7] = dict(items=[item(1, 76, 330, gap=16), item(2, 48, 320)],
+                     blocks=[(1, 104, 76), (0, 222, 418), (2, 686, 48)],
+                     hero=(40, 222, 370, 640), shero=(40, 222, 370, 640), sorder=[1, 2], num=None)
     return sc
 
 
@@ -955,27 +1159,33 @@ def build_s8():
         sway(body.id, "y", -2 if i % 2 else 2, 4 if i % 2 else -4)
     # the single thread: loop over/under every patch
     order = [5, 0, 1, 6, 7, 2, 3, 8, 9, 4]
-    verts = [(-20, 520, 0.0, 30)]
+    verts = [(-700, 560, 0.0, 120), (-20, 520, 0.0, 30)]
     for k, idx in enumerate(order):
         x, y = S8_POS[idx]
         verts.append((x, y + (14 if k % 2 else -14), 0.2 if k % 2 else -0.2, 30))
     verts.append((420, 500, 0.0, 30))
+    verts.append((1100, 470, 0.0, 120))  # runs on past the master's edges
     trim = el("TrimPath", start=0, end=0, name="Thread through")
     dash = el("DashPath", el("Dash", length=8, name="on"), el("Dash", length=6, name="off"), name="Running stitch")
     thread = shape("S8 thread", curve_path(verts), el("Stroke", solid(TER), dash, trim, thickness=2.6, cap="round", name="Thread"))
     an.tween(trim.id, "end", 10, 0.0, 92, 1.0, "inout")
     AMB_FLOW.tween(dash.id, 690, 0, 0.0, 240, 14.0 * 6, "linear")
     REST_SWAY.key(dash.id, 690, 0, 0.0)
-    num = hero_num("S8 months", "activeMonths", 195, 262, 240, 130, IND)
+    num = hero_num("S8 months", "activeMonths", 195, 262, 240, 130, IND, follow_align=True)
     unit = text("S8 unit", 195, 332, 240, 17, "atkb", TER_D, prop="screen8Unit", wrap=True)
+    unit.el.add(bn("_cAlign", K_TALIGN))
     an.tween(unit.el.id, "opacity", 50, 0.0, 70, 1.0, "out")
     an.seq(num.el.id, "scaleX", [(0, 0.9, "antic"), (10, 0.86, "cloth"), (36, 1.0)])
     an.seq(num.el.id, "scaleY", [(0, 0.9, "antic"), (10, 0.86, "cloth"), (36, 1.0)])
     an.tween(num.el.id, "opacity", 0, 0.0, 10, 1.0, "linear")
     count_keys(an)
-    th, ts = scene_text_block(sc, an, "screen8Headline", "screen8Support", hy=104, sy=686)
+    th, ts = scene_text_block(sc, an, "screen8Headline", "screen8Support")
     sc.thread_verts = verts
-    sc.root.add(th.el, num.el, unit.el, thread, *patches, ts.el, quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
+    sc.root.add(th.node, ts.node, number_group(sc, num.el, unit.el), copy_page(sc, an), hero_group(sc, thread, *patches),
+                quilt_lines(a(OAT_DD, 0.35)), bg(OAT))
+    LAYOUT[8] = dict(items=[item(1, 76, 330, gap=16), item(2, 48, 320)],
+                     blocks=[(1, 104, 76), (0, 186, 442), (2, 686, 48)],
+                     hero=(20, 186, 370, 628), shero=(15, 395, 375, 630), sorder=[0, 1, 2], num=(75, 187, 240, 167, 16))
     return sc
 
 
@@ -1048,7 +1258,9 @@ SCRIPT_MEDALLION = new_id()
 def medallion(name, light=1.0):
     """GPU quilted cushion (scripts/medallion.luau); the vector Disc under it is the fallback."""
     return el("ScriptedDrawable", el("ScriptInputNumber", propertyValue=290, name="size"),
-              el("ScriptInputNumber", propertyValue=light, name="light"), scriptAssetId=SCRIPT_MEDALLION, name=name)
+              el("ScriptInputNumber", propertyValue=light, name="light"),
+              el("ScriptInputNumber", bn("_medRes", K_IN), propertyValue=2, name="res"),
+              scriptAssetId=SCRIPT_MEDALLION, name=name)
 
 
 def build_s9():
@@ -1077,14 +1289,15 @@ def build_s9():
     for i, ((x, y), col) in enumerate(zip(S8_POS, S8_COLS)):
         cp, _ = patch(f"S9 carry {i}", 58, 58, col, motif=S8_MOT[i](), x=x, y=y, rot=((i * 13) % 5 - 2) * 0.05)
         carry.append(cp)
-    lbl = text("S9 label", 195, 112, 320, 15, "atkb", TER_D, prop="personaLabel", reveal=True, ls=0.6)
-    name = text("S9 title", 195, 136, 350, 40, "bree", IND, prop="personaName", reveal=True, lh=42, rise=24, h=92,
-                overflow="fitFontSize")
-    desc = text("S9 description", 195, 238, 320, 19, "atk", IND_D, prop="personaDescription", reveal=True, lh=24, h=52,
-                overflow="fitFontSize")
+    lbl = copy_text("S9 label", 1, 15, "atkb", TER_D, "personaLabel", 320, 20, ls=0.6)
+    name = copy_text("S9 title", 2, 40, "bree", IND, "personaName", 350, 92, lh=42, rise=24)
+    desc = copy_text("S9 description", 3, 19, "atk", IND_D, "personaDescription", 320, 52, lh=24)
+    name.el.attrs["verticalAlignValue"] = "middle"
+    desc.el.attrs["verticalAlignValue"] = "middle"
     thr = shape("S9 thread echo", curve_path(SCENES[8].thread_verts), stroke(TER, 2.6, dash=(8, 6)))
     for k, an in enumerate(anims):
         an.tween(thr.id, "opacity", 0, 1.0, 14, 0.0, "out")
+        an.tween(CARRY_CP.id, "propertyValue", 4, 0.0, 46, 1.0, "linear")
         for i, cp in enumerate(carry):
             x, y = S8_POS[i]
             ang = i * 2 * math.pi / 10 + k * 0.4
@@ -1142,26 +1355,50 @@ def build_s9():
     for i, f in enumerate(p["folks"]):
         a3.seq(f.id, "y", [(0, 160), (78 + i * 6, 160, "back"), (98 + i * 6, 78)])
         a3.seq(f.id, "opacity", [(0, 0.0), (78 + i * 6, 0.0, "linear"), (86 + i * 6, 1.0)])
-    sc.root.add(lbl.el, name.el, desc.el, *carry, esolo, disc, thr, bg(OAT))
+    # the carried patches live in scene 8's frame (so they start exactly where scene
+    # 8 left them) and drift, by a stage-computed offset, onto this scene's disc
+    carry_frame = node("S9 carry in scene 8 frame", *carry)
+    carry_frame.add(*xform("_h8"))
+    carry_drift = node("S9 carry drift", carry_frame)
+    carry_drift.add(bn("_c9dx", K_X), bn("_c9dy", K_Y))
+    thr_frame = node("S9 thread in scene 8 frame", thr)
+    thr_frame.add(*xform("_h8"))
+    sc.root.add(lbl.node, name.node, desc.node, copy_page(sc, anims), carry_drift, hero_group(sc, esolo, disc), thr_frame,
+                bg(OAT))
+    LAYOUT[9] = dict(items=[item(1, 20, 320, gap=6), item(2, 92, 350, gap=10), item(3, 52, 320)],
+                     blocks=[(1, 112, 20), (2, 136, 92), (3, 238, 52), (0, 340, 320)],
+                     hero=(35, 340, 355, 660), shero=(35, 340, 355, 660), sorder=[1, 2, 3], num=None)
     return sc
 
 
 # =====================================================================
 # Scene 10 — Summary and share card
 # =====================================================================
+WIDE_CARD = (780, 340)          # the landscape share card ("postcard"); the portrait card is 336 x 540
+TALL_SLOT = (-104, -134, 0.3)    # emblem centre + scale on the card, card-local
+WIDE_SLOT = (-244, -30, 0.32)
+
+
 def build_s10():
     sc = Scene(10, "Summary", frames=120, dark=True)
     an = sc.new_anim()
     card_x, card_y, cw, ch = 195, 418, 336, 540
+    wcw, wch = WIDE_CARD
+    WIDE = "_cardWide"
+
+    def sized(r_el, w0, h0, w1, h1):
+        r_el.add(bb(WIDE, K_RW, w1 - w0, w0), bb(WIDE, K_RH, h1 - h0, h0))
+        return r_el
+
     top = card_y - ch / 2
-    # card frame
+    # card frame (its rectangles follow the arrangement)
     border_trim = el("TrimPath", start=0, end=0, name="Sew border")
-    border = shape("Card border", rect(cw - 18, ch - 18, r=12), el("Stroke", solid(TER), el("DashPath", el("Dash", length=7, name="on"),
-                                                                                         el("Dash", length=5, name="off"), name="d"),
-                                                                  border_trim, thickness=1.8, cap="round", name="Running stitch"))
+    border = shape("Card border", sized(rect(cw - 18, ch - 18, r=12), cw - 18, ch - 18, wcw - 18, wch - 18),
+                   el("Stroke", solid(TER), el("DashPath", el("Dash", length=7, name="on"), el("Dash", length=5, name="off"), name="d"),
+                      border_trim, thickness=1.8, cap="round", name="Running stitch"))
     an.tween(border_trim.id, "end", 8, 0.0, 70, 1.0, "inout")
-    cloth = shape("Card cloth", rect(cw, ch, r=18), fill(CREAM))
-    shade = shape("Card shade", rect(cw, ch, r=18), fill(a(IND_D, 0.6)), x=4, y=8)
+    cloth = shape("Card cloth", sized(rect(cw, ch, r=18), cw, ch, wcw, wch), fill(CREAM))
+    shade = shape("Card shade", sized(rect(cw, ch, r=18), cw, ch, wcw, wch), fill(a(IND_D, 0.6)), x=4, y=8)
     # header row inside card
     logo = logo_mark("Card logo", 12)
     logo.attrs.update(x=-cw / 2 + 34, y=-ch / 2 + 40)
@@ -1173,38 +1410,30 @@ def build_s10():
     who.el.attrs["verticalAlignValue"] = "top"
     who_n = node("Card name gate", who.el)
     who_n.add(bind(vm, "shareIncludeName", 18, conv=C_BOOL_OPACITY))
-    # persona block
-    proots = []
-    for k, fnc in enumerate(EMBLEMS):
-        r, _ = fnc(f"Card P{k}")
-        proots.append(r)
-    psolo = el("Solo", *proots, activeComponentId=proots[0].id, name="Card emblem solo")
-    pdisc = node("Card emblem", psolo, shape("Accent ring", ellipse(300, 300),
-                                              el("Stroke", el("SolidColor", bind(vm, "personaColor", 37), colorValue=TER, name="Accent"),
-                                                 thickness=6, name="Accent")),
-                 medallion("Card medallion"), shape("Disc", ellipse(290, 290), fill(IND)),
-                 shape("Accent keyline", ellipse(309, 309), stroke(a(IND_D, 0.4), 4.0)),
-                 x=-cw / 2 + 64, y=-ch / 2 + 136, scaleX=0.3, scaleY=0.3)
-    plabel = text("Card persona label", -cw / 2 + 118, -ch / 2 + 104, 196, 12, "atkb", TER_D, prop="personaLabel", align="left")
+    # persona block (its emblem is carried separately, see the emblem carrier)
+    plabel = text("Card persona label", -cw / 2 + 118, -ch / 2 + 104, 196, 13, "atkb", TER_D, prop="personaLabel", align="left")
     pname = text("Card persona", -cw / 2 + 118, -ch / 2 + 122, 196, 21, "bree", IND, prop="personaName", align="left", lh=23,
                  h=48, overflow="fitFontSize")
     pname.el.attrs["verticalAlignValue"] = "top"
+    for t_ in (plabel, pname):
+        t_.el.add(bb(WIDE, K_TALIGN, 2))  # left beside the emblem; centred under it on the postcard
     persona = node("Card persona block", plabel.el, pname.el)
-    persona_gate_in = node("Persona activity gate", persona, pdisc)
+    persona_gate_in = node("Persona activity gate", pose("Card persona pose", -292, 190, WIDE, persona))
     persona_gate_in.add(bind(vm, "_noActivity", 18, conv=G_NOT_OPACITY))
     persona_gate = node("Persona gate", persona_gate_in)
     persona_gate.add(bind(vm, "showScreen9", 18, conv=C_BOOL_OPACITY))
-    # five stat patches
+    # five stat patches: 2 x 2 + 1 wide on the portrait card, 3 + 2 on the postcard
     stats = []
     layout = [(2, -78, 0, 150, 96, TER), (3, 78, 0, 150, 96, TEAL), (4, -78, 104, 150, 96, IND), (5, 78, 104, 150, 96, ROSE_D),
               (6, 0, 208, 306, 84, MUST)]
+    wide_off = {2: (53, -32), 3: (55, -32), 4: (369, -136), 5: (-103, -32), 6: (211, -142)}
     for (n, sx, sy, w, h, col) in layout:
         ink = OAT if col in (TER, TEAL, IND) else IND
         num = hero_num(f"Card {STAT[n]}", STAT[n], 0, -12 if h > 90 else -10, w - 20, 40, ink, stitch=None)
-        un = text(f"Card {n} unit", 0, 24 if h > 90 else 20, w - 20, 12, "atkb", ink, prop=f"screen{n}Unit", oy=0.5, h=30,
-                  overflow="fitFontSize", wrap=True)
+        un = text(f"Card {n} unit", 0, 24 if h > 90 else 20, w - 20, 14, "atkb", ink, prop=f"screen{n}Unit", oy=0.5, h=30,
+                  overflow="fitFontSize", wrap=True, lh=15)
         outer, body = patch(f"Card stat {n}", w, h, col, inner=[num.el, un.el], x=sx, y=sy + 20, shadow=False)
-        stats.append(outer)
+        stats.append(pose(f"Card stat {n} pose", *wide_off[n], WIDE, outer))
         f0 = 30 + len(stats) * 6
         an.seq(outer.id, "y", [(0, sy + 300), (f0, sy + 300, "cloth"), (f0 + 26, sy + 20)])
         an.seq(outer.id, "rotation", [(0, 0.5 * (1 if n % 2 else -1)), (f0, 0.5 * (1 if n % 2 else -1), "back"), (f0 + 30, 0.0)])
@@ -1230,7 +1459,10 @@ def build_s10():
     corner = shape("Card corner patch", rect(64, 64, r=6), fill(ROSE_L), stroke(a(TER, 0.6), 1.2, dash=(4, 3)),
                    x=cw / 2 - 40, y=-ch / 2 + 88)
     sc.flap = flap
-    card = node("S10 share card", flap, thanks.el, corner, logo, wm.el, yr.el, who_n, persona_gate, stat_grid, empty, strip, border,
+    card = node("S10 share card", pose("Card corner pose", *CARD_CORNER_OFF, WIDE, flap, thanks.el, corner),
+                pose("Card header pose", -222, 94, WIDE, logo, wm.el), pose("Card year pose", 150, 94, WIDE, yr.el),
+                pose("Card name pose", -30, 58, WIDE, who_n), persona_gate, stat_grid,
+                pose("Card empty pose", 0, -50, WIDE, empty), pose("Card strip pose", -222, -96, WIDE, strip), border,
                 cloth, shade, x=card_x, y=card_y)
     # the card body stitches up around the carried emblem
     for part in (cloth, shade, strip, logo, wm.el, yr.el, corner, flap, thanks.el):
@@ -1240,34 +1472,59 @@ def build_s10():
     an.seq(card.id, "scaleX", [(0, 0.9), (6, 0.9, "cloth"), (40, 1.0)])
     an.seq(card.id, "scaleY", [(0, 0.9), (6, 0.9, "cloth"), (40, 1.0)])
     an.seq(card.id, "opacity", [(0, 1.0)])
-    # continuity: the persona emblem arrives from scene 9's disc position
-    an.seq(pdisc.id, "x", [(0, 195 - card_x), (12, 195 - card_x, "inout"), (52, -cw / 2 + 64)])
-    an.seq(pdisc.id, "y", [(0, 500 - card_y), (12, 500 - card_y, "inout"), (52, -ch / 2 + 136)])
-    an.seq(pdisc.id, "scaleX", [(0, 1.0), (12, 1.0, "inout"), (52, 0.3)])
-    an.seq(pdisc.id, "scaleY", [(0, 1.0), (12, 1.0, "inout"), (52, 0.3)])
+    # continuity: the persona emblem flies from scene 9's disc into its slot on the
+    # card. Both ends depend on the canvas, so the stage script positions it from
+    # the keyed progress (_s10T, frames 0-52).
+    proots = []
+    for k, fnc in enumerate(EMBLEMS):
+        r, _ = fnc(f"Card P{k}")
+        proots.append(r)
+    psolo = el("Solo", *proots, activeComponentId=proots[0].id, name="Card emblem solo")
+    pdisc = node("Card emblem", psolo, shape("Accent ring", ellipse(300, 300),
+                                              el("Stroke", el("SolidColor", bind(vm, "personaColor", 37), colorValue=TER, name="Accent"),
+                                                 thickness=6, name="Accent")),
+                 medallion("Card medallion"), shape("Disc", ellipse(290, 290), fill(IND)),
+                 shape("Accent keyline", ellipse(309, 309), stroke(a(IND_D, 0.4), 4.0)))
+    emb_gate_in = node("Emblem activity gate", pdisc)
+    emb_gate_in.add(bind(vm, "_noActivity", 18, conv=G_NOT_OPACITY))
+    emb_gate = node("Emblem gate", emb_gate_in)
+    emb_gate.add(bind(vm, "showScreen9", 18, conv=C_BOOL_OPACITY))
+    carrier = node("S10 emblem carrier", emb_gate)
+    carrier.add(bn("_embX", K_X), bn("_embY", K_Y), bn("_embS", K_SX), bn("_embS", K_SY))
+    an.tween(S10T_CP.id, "propertyValue", 0, 0.0, 52, 1.0, "linear")
     an.tween(persona.id, "opacity", 50, 0.0, 70, 1.0, "out")
     an.tween(HERO_CP.id, "propertyValue", 40, 0.0, 96, 1.0, "thread")
-    head = text("S10 headline", 195, 96, 340, 24, "bree", OAT, prop="summaryHeadline", reveal=True, lh=27)
-    head_e = text("S10 empty headline", 195, 96, 340, 24, "bree", OAT, prop="emptyHeadline", reveal=True, lh=27)
-    sup = text("S10 support", 195, 704, 330, 15, "atk", a(OAT, 0.92), prop="summarySupport", reveal=True)
+    head = copy_text("S10 headline", 1, 24, "bree", OAT, "summaryHeadline", 340, 50, lh=27)
+    head_e = copy_text("S10 empty headline", 1, 24, "bree", OAT, "emptyHeadline", 340, 50, lh=27)
+    sup = copy_text("S10 support", 2, 15, "atk", a(OAT, 0.92), "summarySupport", 330, 32)
     reveal_keys(an, head, 70, 100)
     reveal_keys(an, head_e, 70, 100)
     reveal_keys(an, sup, 84, 112)
-    hg = node("Headline gate", head.el)
+    hg = node("Headline gate", head.node)
     hg.add(bind(vm, "_noActivity", 18, conv=G_NOT_OPACITY))
-    hge = node("Empty headline gate", head_e.el)
+    hge = node("Empty headline gate", head_e.node)
     hge.add(bind(vm, "_noActivity", 18, conv=C_BOOL_OPACITY))
+    copy = node("S10 copy", hg, hge, sup.node)
+    copy.add(bn("_copyOn", K_OP))
     sc.psolo = psolo
     sc.proots = proots
-    # scene 9 ends on an indigo disc at (195, 500): it blooms to fill the screen
-    # and becomes the summary's ground, so 9 -> 10 has no colour cut
-    bloom = shape("S10 disc bloom", ellipse(290, 290), fill(IND), x=195, y=500)
-    an.seq(bloom.id, "scaleX", [(0, 1.0, (0.55, 0.0, 0.35, 1.0)), (22, 4.2)])
-    an.seq(bloom.id, "scaleY", [(0, 1.0, (0.55, 0.0, 0.35, 1.0)), (22, 4.2)])
+    # scene 9 ends on an indigo disc: it blooms to cover the whole canvas (the stage
+    # script sizes the bloom to the farthest corner) and becomes the summary ground
+    bloom = node("S10 disc bloom", shape("Bloom", ellipse(290, 290), fill(IND)))
+    bloom.add(bn("_bloomX", K_X), bn("_bloomY", K_Y), bn("_bloomS", K_SX), bn("_bloomS", K_SY))
     qlines = quilt_lines(a(IND_L, 0.45), step=40)
     an.seq(qlines.id, "opacity", [(0, 0.0), (14, 0.0, "linear"), (30, 1.0)])
-    sc.root.add(hg, hge, card, sup.el, qlines, bloom, bg(OAT))
+    # the dark page waits until the bloom has covered the canvas (frame 22)
+    sc.root.add(copy, copy_page(sc, an, color=a(IND_D, 0.94), stitch=a(TER_L, 0.6), fade_at=(20, 34)), carrier,
+                hero_group(sc, card),
+                qlines, bloom, bg(OAT))
+    LAYOUT[10] = dict(items=[item(1, 50, 340, gap=12), item(2, 32, 330)],
+                      blocks=[(1, 96, 50), (0, 146, 546), (2, 704, 32)],
+                      hero=(25, 146, 367, 692), shero=(25, 146, 367, 692), sorder=[1, 2], num=None)
     return sc
+
+
+CARD_CORNER_OFF = (220, 64)
 
 
 def logo_mark(name, s=9):
@@ -1289,62 +1546,81 @@ SCENE_SOLO = el("Solo", *scene_nodes, activeComponentId=scene_nodes[0].id, name=
 # ---------------------------------------------------------------- backdrop (the larger quilt seen on camera pull-back)
 # A diamond-in-square quilt of half-square triangles: the same piecing as the
 # 3D sheet the fold lays down, so the pull-back reads as "this scene is one
-# patch of a bigger quilt". Only drawn during hand-offs (opacity keyed).
-backdrop_kids = []
-BQ = 74
-b_dark = [IND_D, TER_D, TEAL_D, IND, ROSE_D, TEAL]
-b_light = [OAT_DD, OAT_D, "FFCDB8A0"]
-for r in range(-1, 13):
-    for c in range(-1, 7):
-        x0, y0 = c * BQ - 25, r * BQ - 16
-        bi, bj = (c + 2) // 2, (r + 2) // 2
-        dark = b_dark[(bi * 3 + bj * 5) % len(b_dark)]
-        light = b_light[(bi + bj * 2) % len(b_light)]
-        # the dark triangle points at its 2x2 block centre (diamond-in-square)
-        ix, iy = c % 2, r % 2
-        corners = {(0, 0): [(BQ, 0), (BQ, BQ), (0, BQ)], (1, 1): [(0, 0), (BQ, 0), (0, BQ)],
-                   (1, 0): [(0, 0), (BQ, BQ), (0, BQ)], (0, 1): [(0, 0), (BQ, 0), (BQ, BQ)]}[(ix, iy)]
-        backdrop_kids.append(shape(f"Q{r}_{c} dark", poly_path(corners), fill(dark), x=x0, y=y0))
-        backdrop_kids.append(shape(f"Q{r}_{c}", rect(BQ, BQ, ox=0, oy=0), fill(light),
-                                   stroke(a(OAT, 0.45), 1.1, dash=(5, 4)), x=x0, y=y0))
-BACKDROP = node("Backdrop quilt", *backdrop_kids, opacity=0)
+# patch of a bigger quilt". Rendered procedurally on the GPU at the real canvas
+# size (scripts/backdrop.luau + shaders/backdrop.wgsl), so it reaches every edge
+# at any size; only drawn during hand-offs (its `show` input is keyed).
+SCRIPT_BACKDROP = new_id()
+BACKDROP_SHOW = el("ScriptInputNumber", propertyValue=0, name="show")
 
-# The scene patch: clipped to the artboard while the camera pulls back (the
-# clip is only switched on during hand-offs), with a stitched binding and a
-# soft shadow so it sits in the larger quilt like a real patch.
-PATCH_MASK = shape("Patch mask", rect(W, H, ox=0, oy=0))
+
+def viewport_inputs():
+    return [el("ScriptInputNumber", bn("_vw", K_IN), propertyValue=W, name="vw"),
+            el("ScriptInputNumber", bn("_vh", K_IN), propertyValue=H, name="vh"),
+            el("ScriptInputNumber", bn("_dpr", K_IN), propertyValue=1, name="dpr")]
+
+
+BACKDROP = el("ScriptedDrawable", BACKDROP_SHOW, *viewport_inputs(), scriptAssetId=SCRIPT_BACKDROP, name="Backdrop quilt")
+
+# The scene patch: clipped to the canvas while the camera pulls back (the clip is
+# only switched on during hand-offs), with a stitched binding and a soft shadow
+# so it sits in the larger quilt like a real patch. Every size follows the canvas.
+PATCH_MASK = shape("Patch mask", el("Rectangle", bn("_vw", K_RW), bn("_vh", K_RH), width=W, height=H, originX=0, originY=0,
+                                    name="Path"))
 PATCH_CLIP = el("ClippingShape", sourceId=PATCH_MASK.id, isVisible=False, name="Patch clip")
 WORLD_INNER = node("World content", PATCH_CLIP, SCENE_SOLO, PATCH_MASK, x=-W / 2, y=-H / 2)
+WORLD_INNER.add(bn("_vw", K_X, -0.5), bn("_vh", K_Y, -0.5))
+
+
+def frame_rect(pad, r):
+    return el("Rectangle", bn("_vw", K_RW, 1, pad), bn("_vh", K_RH, 1, pad), width=W + pad, height=H + pad, originX=0,
+              originY=0, cornerRadiusTL=r, name="Path")
+
+
 PATCH_FRAME = node("Patch frame",
-                   shape("Patch binding stitch", rect(W + 14, H + 14, r=6, ox=0, oy=0),
-                         stroke(a(CREAM, 0.9), 1.8, dash=(7, 5)), x=-7, y=-7),
-                   shape("Patch binding", rect(W + 22, H + 22, r=8, ox=0, oy=0), fill(IND_D), x=-11, y=-11),
-                   shape("Patch shadow", rect(W + 22, H + 22, r=10, ox=0, oy=0),
+                   shape("Patch binding stitch", frame_rect(14, 6), stroke(a(CREAM, 0.9), 1.8, dash=(7, 5)), x=-7, y=-7),
+                   shape("Patch binding", frame_rect(22, 8), fill(IND_D), x=-11, y=-11),
+                   shape("Patch shadow", frame_rect(22, 10),
                          el("Fill", solid(a(IND_D, 0.55)), el("Feather", strength=18, offsetY=10, name="Soft"),
                             fillRule="clockwise", name="Shadow"), x=-11, y=-11),
                    x=-W / 2, y=-H / 2)
+PATCH_FRAME.add(bn("_vw", K_X, -0.5), bn("_vh", K_Y, -0.5))
 WORLD = node("World camera", WORLD_INNER, PATCH_FRAME, x=W / 2, y=H / 2)
+WORLD.add(bn("_vw", K_X, 0.5), bn("_vh", K_Y, 0.5))
 
 # ---------------------------------------------------------------- handoff (signature transition)
 # The fold itself is a GPU-rendered 3D quilt (scripts/cloth.luau +
 # shaders/cloth.wgsl). The Handoff timelines key its inputs: `fold` (0..1 the
 # sheet lands, 1..2 it folds away), `dir` (+1 forward / -1 back) and `cam` (the
-# camera scale, so the sheet always fits the scene patch).
+# camera scale, so the sheet always fits the scene patch). `vw`/`vh`/`dpr` are
+# bound to the real canvas, so the sheet covers it at any size.
 SCRIPT_CLOTH = new_id()
 SCRIPT_WEAVE = new_id()
+SCRIPT_STAGE = new_id()
+SCRIPT_SPEC = new_id()
 CLOTH_FOLD = el("ScriptInputNumber", propertyValue=0, name="fold")
 CLOTH_DIR = el("ScriptInputNumber", propertyValue=1, name="dir")
 CLOTH_CAM = el("ScriptInputNumber", propertyValue=1, name="cam")
-CLOTH = el("ScriptedDrawable", CLOTH_FOLD, CLOTH_DIR, CLOTH_CAM, scriptAssetId=SCRIPT_CLOTH, x=0, y=0,
+CLOTH = el("ScriptedDrawable", CLOTH_FOLD, CLOTH_DIR, CLOTH_CAM, *viewport_inputs(), scriptAssetId=SCRIPT_CLOTH, x=0, y=0,
            name="Quilt fold")
-_weave_style = new_id()
-WEAVE = el("LayoutComponent",
-           el("LayoutComponentStyle", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed", id=_weave_style,
-              name="Cloth ground style"),
-           el("ScriptedLayout", el("ScriptInputNumber", propertyValue=1, name="strength"), scriptAssetId=SCRIPT_WEAVE,
-              name="Cloth ground"),
-           x=0, y=0, width=W, height=H, styleId=_weave_style, name="Cloth ground")
-RM_VEIL = shape("Reduced-motion veil", rect(W, H, ox=0, oy=0), fill(OAT), opacity=0)
+
+
+def fill_box(name, *kids):
+    """An absolutely positioned layout box that always fills the artboard."""
+    sid_ = new_id()
+    return el("LayoutComponent",
+              el("LayoutComponentStyle", layoutWidthScaleType="fill", layoutHeightScaleType="fill", widthUnitsValue="auto",
+                 heightUnitsValue="auto", positionTypeValue="absolute", positionLeft=0, positionLeftUnitsValue="points",
+                 positionTop=0, positionTopUnitsValue="points", positionRight=0, positionRightUnitsValue="points",
+                 positionBottom=0, positionBottomUnitsValue="points", id=sid_, name=name + " style"),
+              *kids, x=0, y=0, width=W, height=H, styleId=sid_, name=name)
+
+
+WEAVE = fill_box("Cloth ground", el("ScriptedLayout", el("ScriptInputNumber", propertyValue=1, name="strength"),
+                                     scriptAssetId=SCRIPT_WEAVE, name="Cloth ground"))
+# the responsive stage: reads the real artboard size, writes the layout numbers
+STAGE = fill_box("Stage", el("ScriptedLayout", scriptAssetId=SCRIPT_STAGE, name="Stage"))
+RM_VEIL = shape("Reduced-motion veil", el("Rectangle", bn("_vw", K_RW), bn("_vh", K_RH), width=W, height=H, originX=0,
+                                          originY=0, name="Path"), fill(OAT), opacity=0)
 HANDOFF = node("Handoff", CLOTH, RM_VEIL)
 
 # ---------------------------------------------------------------- chrome: header, progress, controls
@@ -1359,10 +1635,13 @@ def themed(key, light, dark):
 
 hdr_logo = logo_mark("Header logo", 9)
 hdr_logo.attrs.update(x=34, y=38)
+hdr_logo.add(bn("_hdrLogo", K_X), bn("_hdrY", K_Y), bn("_ui", K_SX), bn("_ui", K_SY))
 wm_t = text("Header wordmark", 50, 38, 160, 21, "bree", IND, lit="Patchwork", align="left", oy=0.5, wrap=False)
+wm_t.el.add(bn("_hdrWord", K_X), bn("_hdrY", K_Y), bn("_ui", K_SX), bn("_ui", K_SY))
 wm_t.solid.attrs["name"] = "wordmark ink"
 THEME["wordmark"] = (wm_t.solid.id, IND, OAT)
 yr_t = text("Header year", 366, 38, 80, 13, "atkb", IND, prop="year", conv=TO_STR0, align="right", oy=0.5, wrap=False)
+yr_t.el.add(bn("_hdrR", K_X), bn("_hdrY", K_Y), bn("_ui", K_SX), bn("_ui", K_SY))
 THEME["year"] = (yr_t.solid.id, IND, OAT)
 
 segs = []
@@ -1382,9 +1661,12 @@ for k in range(1, 11):
                          bind(vm, "currentScreen", 16, conv=seg_fill(k))),
                    el("Fill", ts, name="Track"), height=4, styleId=sid, name=f"Segment {k}"))
 row_style = new_id()
+# the segments span the real width: the row's width is bound, its segments share it
 PROGRESS = el("LayoutComponent", el("LayoutComponentStyle", layoutWidthScaleType="fixed", layoutHeightScaleType="fixed",
-                                    flexDirectionValue="row", gapHorizontal=5, gapHorizontalUnitsValue="points", id=row_style,
-                                    name="Progress style"),
+                                    flexDirectionValue="row", gapHorizontal=5, gapHorizontalUnitsValue="points",
+                                    positionTypeValue="absolute", positionLeft=0, positionLeftUnitsValue="points",
+                                    positionTop=0, positionTopUnitsValue="points", id=row_style, name="Progress style"),
+              bn("_progX", K_X), bn("_progY", K_Y), bn("_progW", K_LW),
               *segs, x=24, y=64, width=342, height=4, styleId=row_style, name="Progress segments")
 for i, k in enumerate(range(1, 11)):
     THEME[f"segfill{k}"] = (seg_fill_ids[i], IND, OAT)
@@ -1395,16 +1677,26 @@ BTN_Y = 772
 FOCUSABLE = []
 
 
-def button(k, name, x, w, h, r, label_prop, content, fill_key, stroke_key=None, light=IND, dark=OAT, role_label=None):
+def button(k, name, x, w, h, r, label_prop, content, fill_key, stroke_key=None, light=IND, dark=OAT, role_label=None,
+           xprop=None, wprop=None):
+    """xprop: the stage number the button's x follows; wprop: the one its width follows."""
     fs = themed(f"{name} fill", light, dark)
-    ring_s = shape(f"{name} focus ring", rect(w + 12, h + 12, r=r + 6), stroke(TER_L, 3.0))
+    ring_r = rect(w + 12, h + 12, r=r + 6)
+    ring_s = shape(f"{name} focus ring", ring_r, stroke(TER_L, 3.0))
     ring_s.add(bind(vm, "_focusIndex", 18, conv=focus_ring(k)))
-    body = shape(f"{name} body", rect(w, h, r=r), el("Fill", fs, name="Fill") if fill_key == "fill" else None,
+    body_r = rect(w, h, r=r)
+    body = shape(f"{name} body", body_r, el("Fill", fs, name="Fill") if fill_key == "fill" else None,
                  el("Stroke", fs, thickness=1.6, name="Outline") if fill_key == "outline" else None,
                  el("FocusData", canTouch=False, name="Focus"),
                  el("SemanticData", bind(vm, label_prop, 983), role="button", label="", name="Semantics"))
-    hit = shape(f"{name} hit", rect(max(w, 48), max(h, 48)), fill("00000000"))
+    hit_r = rect(max(w, 48), max(h, 48))
+    hit = shape(f"{name} hit", hit_r, fill("00000000"))
+    if wprop:
+        ring_r.add(bn(wprop, K_RW, 1, 12))
+        body_r.add(bn(wprop, K_RW))
+        hit_r.add(bn(wprop, K_RW))  # every bound width is >= 80, so the hit area stays >= 48
     btn = node(name, *content, ring_s, body, hit, x=x, y=BTN_Y)
+    btn.add(bn(xprop, K_X), bn("_ctlY", K_Y), bn("_ui", K_SX), bn("_ui", K_SY))
     btn.body = body
     btn.hit = hit
     FOCUSABLE.append((k, body))
@@ -1425,7 +1717,8 @@ def chevron(name, d, key, light=IND, dark=OAT):
                  el("Stroke", s, thickness=2.4, cap="round", join="round", name="Stroke"))
 
 
-prev_btn = button(1, "Previous button", 44, 52, 52, 26, "previousLabel", [chevron("Prev chevron", 1, "prev icon")], "outline")
+prev_btn = button(1, "Previous button", 44, 52, 52, 26, "previousLabel", [chevron("Prev chevron", 1, "prev icon")], "outline",
+                  xprop="_ctlL")
 cont_lbl = label("Continue label", "continueLabel", 120, 16, "continue text")
 cont_arrow_s = themed("continue arrow", OAT, IND)
 cont_arrow = shape("Continue arrow", el("PointsPath", el("StraightVertex", x=-6, y=0), el("StraightVertex", x=6, y=0),
@@ -1433,9 +1726,13 @@ cont_arrow = shape("Continue arrow", el("PointsPath", el("StraightVertex", x=-6,
                                         isClosed=False, name="Path"), el("Stroke", cont_arrow_s, thickness=2.2, cap="round", join="round", name="S"),
                    x=64)
 cont_lbl.el.attrs["x"] = -8
-cont_btn = button(2, "Continue button", 195, 196, 52, 26, "continueLabel", [cont_lbl.el, cont_arrow], "fill", light=IND, dark=OAT)
+cont_lbl.el.add(bn("_contW", K_TW, 1, -76))
+cont_arrow.add(bn("_contW", K_X, 0.5, -34))
+cont_btn = button(2, "Continue button", 195, 196, 52, 26, "continueLabel", [cont_lbl.el, cont_arrow], "fill", light=IND, dark=OAT,
+                  xprop="_ctlM", wprop="_contW")
 share_lbl = label("Share label", "shareLabel", 90, 15, "share text")
-share_lbl.el.attrs["x"] = 11
+share_lbl.el.attrs["x"] = 13
+share_lbl.el.add(bn("_shareW", K_TW, 1, -40))
 share_icon_s = themed("share icon", OAT, IND)
 # tray with an arrow rising out of it
 SHARE_ICON = shape("Share icon",
@@ -1446,9 +1743,12 @@ SHARE_ICON = shape("Share icon",
                    el("PointsPath", el("StraightVertex", x=-3.8, y=-4), el("StraightVertex", x=0, y=-7.8),
                       el("StraightVertex", x=3.8, y=-4), isClosed=False, name="Head"),
                    el("Stroke", share_icon_s, thickness=2.0, cap="round", join="round", name="S"), x=-31, y=0)
-share_btn = button(3, "Share button", 139, 118, 52, 26, "shareLabel", [share_lbl.el, SHARE_ICON], "fill", light=IND, dark=OAT)
+SHARE_ICON.add(bn("_shareW", K_X, -0.5, 28))
+share_btn = button(3, "Share button", 139, 118, 52, 26, "shareLabel", [share_lbl.el, SHARE_ICON], "fill", light=IND, dark=OAT,
+                   xprop="_shareX", wprop="_shareW")
 replay_lbl = label("Replay label", "replayLabel", 84, 15, "replay text", light=IND, dark=OAT)
-replay_lbl.el.attrs["x"] = 11
+replay_lbl.el.attrs["x"] = 13
+replay_lbl.el.add(bn("_replayW", K_TW, 1, -40))
 
 
 def replay_icon():
@@ -1467,18 +1767,18 @@ def replay_icon():
     return node("Replay icon",
                 shape("Replay arrowhead", head, el("Fill", themed("replay icon head", IND, OAT), name="F")),
                 shape("Replay arc", arc, el("Stroke", themed("replay icon arc", IND, OAT), thickness=2.0, cap="round", join="round", name="S")),
-                x=-30, y=0.5)
+                bn("_replayW", K_X, -0.5, 23), x=-30, y=0.5)
 
 
 replay_btn = button(4, "Replay button", 259, 106, 52, 26, "replayLabel", [replay_lbl.el, replay_icon()], "outline",
-                    light=IND, dark=OAT)
+                    light=IND, dark=OAT, xprop="_replayX", wprop="_replayW")
 pause_icon = themed("pause icon", IND, OAT)
 play_icon = themed("play icon", IND, OAT)
 PAUSE_GLYPH = shape("Pause glyph", el("Rectangle", width=4, height=16, x=-4, cornerRadiusTL=1.5, name="L"),
                     el("Rectangle", width=4, height=16, x=4, cornerRadiusTL=1.5, name="R"), el("Fill", pause_icon, name="F"))
 PLAY_GLYPH = shape("Play glyph", el("Triangle", width=16, height=16, rotation=math.pi / 2, x=1, name="P"), el("Fill", play_icon, name="F"))
 PAUSE_SOLO = el("Solo", PAUSE_GLYPH, PLAY_GLYPH, activeComponentId=PAUSE_GLYPH.id, name="Pause icon solo")
-pause_btn = button(5, "Pause button", 346, 52, 52, 26, "pauseLabel", [PAUSE_SOLO], "outline")
+pause_btn = button(5, "Pause button", 346, 52, 52, 26, "pauseLabel", [PAUSE_SOLO], "outline", xprop="_ctlR")
 pause_btn.body.children[-1].attrs["isToggleable"] = True
 pause_btn.body.children[-1].add(bind(vm, "isPaused", 1000))
 
@@ -1488,14 +1788,27 @@ CTRL_SOLO = el("Solo", NAV_GROUP, SUM_GROUP, activeComponentId=NAV_GROUP.id, nam
 
 # delight hits (above navigation, opaque so the story never advances from them)
 DEL_NONE = node("No delight")
-DEL_S1 = shape("Thanks hit S1", rect(82, 82), fill("00000000"), x=195 + 88, y=386 - 88, isTargetOpaque=True)
-DEL_S10 = shape("Thanks hit S10", rect(70, 70), fill("00000000"), x=195 + 336 / 2 - 40, y=418 - 540 / 2 + 88, isTargetOpaque=True)
+# each hit follows its patch: scene 1's in the scene-1 hero frame, the card's in
+# the scene-10 frame and the card arrangement
+DEL_S1_HIT = shape("Thanks hit S1", rect(82, 82), fill("00000000"), x=195 + 88, y=386 - 88, isTargetOpaque=True)
+DEL_S1 = node("Thanks hit S1 frame", DEL_S1_HIT)
+DEL_S1.add(*xform("_h1"))
+DEL_S10_HIT = shape("Thanks hit S10", rect(70, 70), fill("00000000"), x=336 / 2 - 40, y=-540 / 2 + 88, isTargetOpaque=True)
+DEL_S10 = node("Thanks hit S10 frame", node("Thanks hit card", pose("Thanks hit pose", *CARD_CORNER_OFF, "_cardWide",
+                                                                    DEL_S10_HIT), x=195, y=418))
+DEL_S10.add(*xform("_h10"))
 DEL_SOLO = el("Solo", DEL_NONE, DEL_S1, DEL_S10, activeComponentId=DEL_NONE.id, name="Delight hits")
 
+# tap zones: left third back, right two-thirds next, across the real width
 NAV_TOP, NAV_BOTTOM = 92, 736
-NAV_LEFT = shape("Tap back region", rect(130, NAV_BOTTOM - NAV_TOP, ox=0, oy=0), fill("00000000"), x=0, y=NAV_TOP)
-NAV_RIGHT = shape("Tap forward region", rect(W - 130, NAV_BOTTOM - NAV_TOP, ox=0, oy=0), fill("00000000"), x=130, y=NAV_TOP)
-SURFACE = shape("Release surface", rect(W, H, ox=0, oy=0), fill("00000000"))
+NAV_LEFT = shape("Tap back region", el("Rectangle", bn("_navSplit", K_RW), bn("_navH", K_RH), width=130,
+                                       height=NAV_BOTTOM - NAV_TOP, originX=0, originY=0, name="Path"),
+                 fill("00000000"), bn("_navY", K_Y), x=0, y=NAV_TOP)
+NAV_RIGHT = shape("Tap forward region", el("Rectangle", bn("_navRW", K_RW), bn("_navH", K_RH), width=W - 130,
+                                           height=NAV_BOTTOM - NAV_TOP, originX=0, originY=0, name="Path"),
+                  fill("00000000"), bn("_navSplit", K_X), bn("_navY", K_Y), x=130, y=NAV_TOP)
+SURFACE = shape("Release surface", el("Rectangle", bn("_vw", K_RW), bn("_vh", K_RH), width=W, height=H, originX=0, originY=0,
+                                      name="Path"), fill("00000000"))
 
 CHROME = node("Chrome", hdr_logo, wm_t.el, yr_t.el, PROGRESS, prev_btn, CTRL_SOLO, pause_btn)
 CHROME.add(bind(vm, "shareCaptureMode", 18, conv=G_CHROME))
@@ -1520,8 +1833,8 @@ def finalize_scene_anim(sc, an):
         if n == 10:
             # the chrome turns light-on-dark only once the indigo bloom is behind it
             an.key(sid, "colorValue", 0, light, kind="Color")
-            an.key(sid, "colorValue", 9, light, "linear", kind="Color")
-            an.key(sid, "colorValue", 17, dark, kind="Color")
+            an.key(sid, "colorValue", 12, light, "linear", kind="Color")
+            an.key(sid, "colorValue", 22, dark, kind="Color")
         else:
             an.key(sid, "colorValue", 0, dark if sc.dark else light, kind="Color")
     an.key(sc.root.id, "opacity", 0, 1.0)
@@ -1566,7 +1879,7 @@ def cam_keys(an, pts):
 
 def handoff_on(an):
     an.key(PATCH_CLIP.id, "isVisible", 0, True, kind="Bool")
-    an.key(BACKDROP.id, "opacity", 0, 1.0)
+    an.key(BACKDROP_SHOW.id, "propertyValue", 0, 1.0)
     an.key(RM_VEIL.id, "opacity", 0, 0.0)
 
 
@@ -1587,7 +1900,7 @@ def handoff_reveal(name, dir_):
     cam_keys(an, [(0, CAM, "linear"), (8, CAM, (0.4, 0.0, 0.2, 1.0)), (REVEAL_F, 1.0)])
     handoff_on(an)
     an.key(PATCH_CLIP.id, "isVisible", REVEAL_F, False, kind="Bool")
-    an.key(BACKDROP.id, "opacity", REVEAL_F, 0.0)
+    an.key(BACKDROP_SHOW.id, "propertyValue", REVEAL_F, 0.0)
     return an
 
 
@@ -1608,7 +1921,7 @@ A_HANDOFF_IDLE = Anim("handoff_idle", 1)
 for a_ in (A_RM_COVER, A_RM_REVEAL, A_CARRY, A_HANDOFF_IDLE):
     a_.key(CLOTH_FOLD.id, "propertyValue", 0, 0.0)
     a_.key(PATCH_CLIP.id, "isVisible", 0, False, kind="Bool")
-    a_.key(BACKDROP.id, "opacity", 0, 0.0)
+    a_.key(BACKDROP_SHOW.id, "propertyValue", 0, 0.0)
 for a_ in (A_RM_COVER, A_RM_REVEAL, A_HANDOFF_IDLE):
     a_.key(WORLD.id, "scaleX", 0, 1.0)
     a_.key(WORLD.id, "scaleY", 0, 1.0)
@@ -1926,9 +2239,9 @@ LISTENERS = [
        targetId=NAV_RIGHT.id, listenerTypeValue="down", name="Press forward region"),
     el("StateMachineListenerSingle", set_vm(vm, "_pressing", "Boolean", False), targetId=SURFACE.id, listenerTypeValue="up",
        name="Release anywhere"),
-    el("StateMachineListenerSingle", set_vm(vm, "_thanksOpen", "Boolean", True), targetId=DEL_S1.id, listenerTypeValue="click",
+    el("StateMachineListenerSingle", set_vm(vm, "_thanksOpen", "Boolean", True), targetId=DEL_S1_HIT.id, listenerTypeValue="click",
        name="Lift thanks flap S1"),
-    el("StateMachineListenerSingle", set_vm(vm, "_thanksOpen", "Boolean", True), targetId=DEL_S10.id, listenerTypeValue="click",
+    el("StateMachineListenerSingle", set_vm(vm, "_thanksOpen", "Boolean", True), targetId=DEL_S10_HIT.id, listenerTypeValue="click",
        name="Lift thanks flap S10"),
     # global keyboard on the App focus host
     el("StateMachineListener", el("ListenerInputTypeKeyboard", key_input("right"), listenerTypeValue="keyboard"),
@@ -1993,7 +2306,7 @@ ALL_ANIMS += [REST, AMB_SWAY, AMB_FLOW, REST_SWAY, A_COVER_F, A_REVEAL_F, A_COVE
 inst_id = new_id()
 style_id = new_id()
 ARTBOARD = el("Artboard", el("LayoutComponentStyle", name="Artboard style", id=style_id),
-              APP, *EV_SCREEN, EV_SHARE, EV_FINISH, SM, *[a_.element() for a_ in ALL_ANIMS],
+              APP, STAGE, *EV_SCREEN, EV_SHARE, EV_FINISH, SM, *[a_.element() for a_ in ALL_ANIMS],
               defaultStateMachineId=SM.id, viewModelId=vm.id, viewModelInstanceId=inst_id, styleId=style_id,
               width=W, height=H, clip=True, name="Patchwork Recap")
 
@@ -2001,6 +2314,10 @@ ROOT = el("Rive", ARTBOARD, *CONVS,
           E("FontAsset", {"file": "assets/fonts/BreeSerif-Regular.ttf", "name": "Bree Serif"}, id=FONT_BREE),
           E("FontAsset", {"file": "assets/fonts/AtkinsonHyperlegible-Regular.ttf", "name": "Atkinson Hyperlegible"}, id=FONT_ATK),
           E("FontAsset", {"file": "assets/fonts/AtkinsonHyperlegible-Bold.ttf", "name": "Atkinson Hyperlegible Bold"}, id=FONT_ATKB),
+          E("ScriptAsset", {"file": "scripts/layout_spec.luau", "isModule": True, "folderPath": "scripts", "name": "layout_spec"},
+            id=SCRIPT_SPEC),
+          E("ScriptAsset", {"file": "scripts/stage.luau", "name": "stage"}, id=SCRIPT_STAGE),
+          E("ScriptAsset", {"file": "scripts/backdrop.luau", "name": "backdrop"}, id=SCRIPT_BACKDROP),
           E("ScriptAsset", {"file": "scripts/cloth.luau", "name": "cloth"}, id=SCRIPT_CLOTH),
           E("ScriptAsset", {"file": "scripts/weave.luau", "name": "weave"}, id=SCRIPT_WEAVE),
           E("ScriptAsset", {"file": "scripts/medallion.luau", "name": "medallion"}, id=SCRIPT_MEDALLION),
@@ -2010,4 +2327,81 @@ header = ("<!-- GENERATED by apps/patchwork/tools/gen_scene.py — Patchwork ten
           "     Edit here for small tweaks, or change the generator and re-run it. -->\n")
 with open(OUT, "w") as f:
     f.write("\n".join(ROOT.render()) + "\n")
+
+
+# ---------------------------------------------------------------- resize harness (checks only)
+# A second artboard that nests the recap in a layout box whose size is keyed on a
+# timeline, so a headless run can resize the recap *mid-scene* (the CLI's
+# --viewport is fixed for a run). tools/check.sh splices this fragment into a
+# temporary copy of the project; it never ships in the .riv.
+# Schedule (frames at 60 fps): 0 portrait 600x900, 300 landscape 1200x800,
+# 480 portrait 700x900, 600 landscape 1280x720.
+HARNESS_SIZES = [(0, 600, 900), (300, 1200, 800), (480, 700, 900), (600, 1280, 720)]
+reset_ids(90000)
+h_style, h_nest, h_anim, h_sm, h_state = new_id(), new_id(), new_id(), new_id(), new_id()
+h_kw = [el("KeyFrameDouble", value=w_, frame=f_, interpolationType="hold") for f_, w_, _ in HARNESS_SIZES]
+h_kh = [el("KeyFrameDouble", value=hh_, frame=f_, interpolationType="hold") for f_, _, hh_ in HARNESS_SIZES]
+HARNESS = el("Artboard",
+             el("LayoutComponentStyle", name="Harness style", id=h_style),
+             el("NestedArtboardLayout", el("NestedStateMachine", animationId=SM.id, name="Recap"), artboardId=ARTBOARD.id,
+                instanceWidth=600, instanceHeight=900, name="Recap under test", id=h_nest),
+             el("LinearAnimation", el("KeyedObject", el("KeyedProperty", *h_kw, propertyKey=663),
+                                      el("KeyedProperty", *h_kh, propertyKey=664), objectId=h_nest),
+                loopValue="oneShot", duration=900, name="resize schedule", id=h_anim),
+             el("StateMachine", el("StateMachineLayer", el("AnyState", x=0, y=-100), el("ExitState", x=200, y=-100),
+                                   el("EntryState", trans(h_state), x=-200, y=0),
+                                   E("AnimationState", {"x": 0, "y": 0, "animationId": h_anim}, [], id=h_state),
+                                   name="Resize"), name="Harness", id=h_sm),
+             defaultStateMachineId=h_sm, viewModelId=vm.id, viewModelInstanceId=inst_id, styleId=h_style,
+             width=1280, height=900, x=600, y=0, name="Resize harness")
+with open(os.path.join(HERE, "resize_harness.rml"), "w") as f:
+    f.write("<!-- GENERATED by gen_scene.py: test-only artboard, spliced in by tools/check.sh -->\n")
+    f.write("\n".join(HARNESS.render()) + "\n")
+
+
+# ---------------------------------------------------------------- layout spec for scripts/stage.luau
+def lua_num(v):
+    return fmt(float(v)) if not isinstance(v, bool) else ("true" if v else "false")
+
+
+def lua_list(vs):
+    return "{ " + ", ".join(lua_num(v) for v in vs) + " }"
+
+
+spec = ["--!strict",
+        "-- GENERATED by apps/patchwork/tools/gen_scene.py: the per-scene layout spec the",
+        "-- stage script reads. Design units are the 390 x 844 portrait master.",
+        "-- items:  copy lines (slot, local height h, design width w, box item?, box origin",
+        "--         bx0/by0, stack offset ty, split offset sty, split height delta sh, split gap)",
+        "-- blocks: the portrait stack, top to bottom { item (0 = hero), design top, height }",
+        "-- hero / shero: the hero's essential box { x0, y0, x1, y1 } in the stack / split",
+        "-- sorder: the split column order (0 = the numeral group); num { ax, ay, w, h, gap }",
+        "export type Item = { slot: number, h: number, w: number, box: boolean, bx0: number, by0: number, ty: number,",
+        "    sty: number, sh: number, gap: number }",
+        "export type Scene = { items: { Item }, blocks: { { number } }, hero: { number }, shero: { number },",
+        "    sorder: { number }, num: { number } }",
+        "local M: { scenes: { Scene }, wideCard: { number }, tallSlot: { number }, wideSlot: { number } } = {",
+        "    scenes = {"]
+for n in range(1, 11):
+    L_ = LAYOUT[n]
+    its = []
+    for it in L_["items"]:
+        its.append("{ " + ", ".join(f"{k} = {lua_num(it[k])}" for k in
+                                    ("slot", "h", "w", "box", "bx0", "by0", "ty", "sty", "sh", "gap")) + " }")
+    spec.append(f"        -- {n}. {SCENES[n].title}")
+    spec.append("        {")
+    spec.append("            items = { " + ", ".join(its) + " },")
+    spec.append("            blocks = { " + ", ".join(lua_list(b) for b in L_["blocks"]) + " },")
+    spec.append(f"            hero = {lua_list(L_['hero'])}, shero = {lua_list(L_['shero'])},")
+    spec.append(f"            sorder = {lua_list(L_['sorder'])}, num = {lua_list(L_['num'] or [])},")
+    spec.append("        },")
+wc, wh = WIDE_CARD
+spec += ["    },",
+         f"    wideCard = {lua_list((195 - wc / 2 - 2, 418 - wh / 2 - 2, 195 + wc / 2 + 4, 418 + wh / 2 + 8))},",
+         f"    tallSlot = {lua_list(TALL_SLOT)},",
+         f"    wideSlot = {lua_list(WIDE_SLOT)},",
+         "}",
+         "return M", ""]
+with open(os.path.join(HERE, "..", "rive", "scripts", "layout_spec.luau"), "w") as f:
+    f.write("\n".join(spec))
 print("wrote", os.path.normpath(OUT), "anims:", len(ALL_ANIMS))

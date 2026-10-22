@@ -11,7 +11,11 @@
 -- Every value is a ScriptInput keyed by the state-machine timelines (the camera,
 -- `build`, the tram's position) or by the scene's idle Joystick (`sway`), so
 -- choreography stays in the timelines, pause freezes it and reduced motion holds
--- the settled pose. `live` (keyed per scene) skips all GPU work while hidden; the
+-- the settled pose. `w`, `h` and `res` (device pixels per point, bound to the
+-- layout) may change at runtime: the canvas is re-allocated to match, so it is
+-- always sized to its real box at device resolution. With `refW` > 0 the camera's
+-- horizontal framing is authored for a `refW`-wide canvas and kept anchored to the
+-- left edge (or the right edge with `alignR` = 1) when the canvas is wider. `live` (keyed per scene) skips all GPU work while hidden; the
 -- canvas re-renders only when an input changed. With no GPU shader support the
 -- script draws a flat vector stand-in.
 
@@ -32,7 +36,12 @@ type P3 = {
     sway: Input<number>,
     dim: Input<number>,
     outline: Input<number>,
+    refW: Input<number>,
+    alignR: Input<number>,
     gpu: boolean,
+    samples: number,
+    pw: number,
+    ph: number,
     canvas: GPUCanvas?,
     msaaTex: GPUTexture?,
     depth: GPUTexture?,
@@ -508,6 +517,23 @@ local function buildFallback(self: P3)
     end
 end
 
+-- canvas size in device pixels for the current w x h points at `res` pixels per point
+local function targetSize(self: P3): (number, number, number)
+    local k = math.clamp(self.res, 1, 4)
+    local pw = math.max(16, math.ceil(self.w * k / 8) * 8)
+    local ph = math.max(16, math.ceil(self.h * k / 8) * 8)
+    return k, pw, ph
+end
+
+local function allocTargets(self: P3, pw: number, ph: number)
+    if self.samples > 1 then
+        self.msaaTex = GPUTexture.new({ width = pw, height = ph, format = 'rgba8unorm', renderTarget = true,
+            sampleCount = self.samples, label = 'poster3d msaa' })
+    end
+    self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
+        sampleCount = self.samples, label = 'poster3d depth' })
+end
+
 function init(self: P3, context: Context): boolean
     if self.gpu then
         return true
@@ -569,17 +595,11 @@ function init(self: P3, context: Context): boolean
     self.vbuf = GPUBuffer.new({ size = math.max(1, total) * STRIDE, usage = 'vertex', data = data, immutable = true,
         label = 'poster3d mesh' })
     self.nOpaque, self.nOutline, self.nTotal = nO, nL, total
-    local k = math.max(1, self.res)
-    self.k = k
-    local pw = math.max(16, math.ceil(self.w * k / 8) * 8)
-    local ph = math.max(16, math.ceil(self.h * k / 8) * 8)
+    self.samples = samples
+    local k, pw, ph = targetSize(self)
+    self.k, self.pw, self.ph = k, pw, ph
     self.canvas = context:gpuCanvas({ width = pw, height = ph })
-    if samples > 1 then
-        self.msaaTex = GPUTexture.new({ width = pw, height = ph, format = 'rgba8unorm', renderTarget = true,
-            sampleCount = samples, label = 'poster3d msaa' })
-    end
-    self.depth = GPUTexture.new({ width = pw, height = ph, format = 'depth32float', renderTarget = true,
-        sampleCount = samples, label = 'poster3d depth' })
+    allocTargets(self, pw, ph)
     self.gpu = true
     return true
 end
@@ -595,8 +615,16 @@ local function writeU(self: P3)
     local dist = math.max(0.5, self.dist)
     local view = Mat4.lookAt(Vector.xyz(0, 0, dist), Vector.xyz(0, 0, 0), Vector.xyz(0, 1, 0))
     local proj = Mat4.perspective(fov, aspect, math.max(0.05, dist - 30), dist + 60)
-    -- off-centre framing: shift the image without changing the perspective
-    local shift = Mat4.fromTranslation(self.camX, self.camY, 0)
+    -- off-centre framing: shift the image without changing the perspective. The
+    -- projection keeps the vertical field of view, so on-screen sizes do not depend
+    -- on the canvas width; only the centre has to be re-anchored when it widens.
+    local sx = self.camX
+    if self.refW > 0 and self.w > 0 then
+        local centre = if self.alignR >= 0.5 then self.w - self.refW * (1 - self.camX) * 0.5
+            else self.refW * (1 + self.camX) * 0.5
+        sx = 2 * centre / self.w - 1
+    end
+    local shift = Mat4.fromTranslation(sx, self.camY, 0)
     local vp = shift * proj * view
     local kind = math.floor(self.kind + 0.5)
     local model: Mat4
@@ -677,8 +705,17 @@ function draw(self: P3, renderer: Renderer)
         end
         return
     end
-    local key = string.format('%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.3f', self.build, self.pitch, self.yaw,
-        self.dist, self.fov, self.camX, self.camY, self.tz, self.sway, self.dim, self.outline)
+    -- follow the layout: a new box size or device scale re-allocates the canvas
+    local res, pw, ph = targetSize(self)
+    if pw ~= self.pw or ph ~= self.ph then
+        canvas:resize(pw, ph)
+        allocTargets(self, pw, ph)
+        self.pw, self.ph = pw, ph
+        self.lastKey = ''
+    end
+    self.k = res
+    local key = string.format('%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.4f|%.3f|%.2f|%.2f', self.build, self.pitch,
+        self.yaw, self.dist, self.fov, self.camX, self.camY, self.tz, self.sway, self.dim, self.outline, self.w, self.h)
     if key ~= self.lastKey then
         self.lastKey = key
         render(self, canvas)
@@ -708,7 +745,12 @@ return function(): Node<P3>
         sway = 0,
         dim = 0,
         outline = 0.02,
+        refW = 0,
+        alignR = 0,
         gpu = false,
+        samples = 1,
+        pw = 0,
+        ph = 0,
         canvas = nil,
         msaaTex = nil,
         depth = nil,

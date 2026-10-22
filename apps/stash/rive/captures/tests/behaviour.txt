@@ -27,3 +27,18 @@
 [PASS] screenChanged heard as a Rive event once per scene (10)  -- 10
 [PASS] recapFinished heard as a Rive event exactly once  -- 1
 [PASS] shareTapped heard as a Rive event exactly once  -- 1
+[PASS] 390x844: landscape layout is False  -- False
+[PASS] 767x1024: landscape layout is False  -- False
+[PASS] 740x360: landscape layout is False  -- False
+[PASS] 768x1024: landscape layout is True  -- True
+[PASS] 1280x720: landscape layout is True  -- True
+[PASS] layoutBreakpoint=300 puts 390x844 in the landscape layout
+[PASS] 667x375 (portrait layout) splits into columns and uses the wide card  -- True True
+[PASS] 1280x720: right two-thirds advances, left third goes back  -- ['currentScreen=1', 'currentScreen=2', 'currentScreen=1']
+[PASS] 1280x720: Right arrow advances scenes  -- ['currentScreen=1', 'currentScreen=2', 'currentScreen=3']
+[PASS] 1280x720: the Continue button (under the copy column) advances  -- ['currentScreen=1', 'currentScreen=2']
+[PASS] 1280x720: hold pauses and its release does not navigate  -- ['currentScreen=1']
+[PASS] 1280x720: the motif's tap toy follows the art zone (nudges, never navigates)  -- 1 ['currentScreen=1']
+[PASS] resize across the threshold flips the layout portrait -> landscape -> portrait -> landscape  -- ['_landscape=False', '_landscape=True', '_landscape=False', '_landscape=True']
+[PASS] the current scene survives every resize (scene 4, one screenChanged)  -- ['currentScreen=4'] 1
+[PASS] the layout settles after the last resize (no zone changes in the final 1.5 s)  -- []

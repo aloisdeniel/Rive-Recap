@@ -7,8 +7,13 @@ from art import text, FONT_MONO, FONT_MONO_M, WORDMARK_AB, arrow, alpha
 import conv
 import os
 import model
-from model import path
+from model import path, rig_path
 from stage import STAGE_AB, STAGE_SM
+
+
+def rb(name, key, conv_id=None):
+    """Bind a property to a CruxRig value (the director's responsive layout)."""
+    return bind(rig_path(name), key, conv_id)
 
 MAIN_AB = "0:20"
 MAIN_SM = "0:21"
@@ -60,21 +65,32 @@ CONTROLS = {}
 
 
 def button(key, n, w, h, radius, fill_c, label_prop, icon_kids, extra=()):
-    """A focusable, labelled control. The focus ring shows when focusedControl == n."""
+    """A focusable, labelled control. The focus ring shows when focusedControl == n.
+    Round buttons take their size from the rig (52 pt, 48 or 44 on short canvases)."""
     FOCUS[key] = n
-    ring = box(f"{key} Focus Ring", w + 10, h + 10,
-               dict(absolute(top=-5, left=-5, right=-5, bottom=-5), cornerRadiusTL=radius + 5,
-                    layoutWidthScaleType="fill", layoutHeightScaleType="fill"), stroke_c=COBALT, stroke_w=3)
+    half = "pillHalf" if not w else "btnHalf"
+    ring_st = style(**absolute(top=-5, left=-5, right=-5, bottom=-5), cornerRadiusTL=radius + 5,
+                    layoutWidthScaleType="fill", layoutHeightScaleType="fill")
+    ring_st.add(rb(half, 640, conv.affine(1, 5, "Plus 5")))
+    ring = E("LayoutComponent", width=w + 10, height=h + 10, styleId=ring_st.id, name=f"{key} Focus Ring")
+    ring.add(ring_st, stroke(COBALT, 3))
     ring.add(bind(path("focusedControl"), 18, conv.equals(n, "Focused is")))
     sem = E("SemanticData", role="button", label=key, name="Semantics",
             kids=[bind(path(label_prop), 983)])
-    st = dict(cornerRadiusTL=radius, layoutWidthScaleType="fixed" if w else "fill", layoutHeightScaleType="fixed")
-    b = box(key, w or 40, h, st, fill_c=fill_c, stroke_c=CHALK if fill_c == COAL else COAL, stroke_w=2)
+    st = style(cornerRadiusTL=radius, layoutWidthScaleType="fixed" if w else "fill", layoutHeightScaleType="fixed")
+    st.add(rb(half, 640))
+    b = E("LayoutComponent", width=w or 40, height=h, styleId=st.id, name=key)
+    b.add(st, fill(fill_c), stroke(CHALK if fill_c == COAL else COAL, 2))
+    if w:
+        b.add(rb("btn", 7), rb("btn", 8))
     b.kids.insert(1, E("FocusData", name="Focus"))
     b.kids.insert(2, sem)
     b.add(ring)
     b.add(list(extra))
-    b.add(E("Node", name=f"{key} Icon", x=(w or 0) / 2, y=h / 2, kids=list(icon_kids)))
+    icon = E("Node", name=f"{key} Icon", x=(w or 0) / 2, y=h / 2, kids=list(icon_kids))
+    if w:
+        icon.add(rb("btnHalf", 13), rb("btnHalf", 14))
+    b.add(icon)
     CONTROLS[key] = b
     return b
 
@@ -107,6 +123,9 @@ def build():
                                             layoutAlignmentType="centerLeft", gapHorizontal=14,
                                             gapHorizontalUnitsValue="points"), l=20, r=20),
               [rule, wm_slot, progress, year], fill_c=CHALK)
+    # responsive chrome: bar height and side padding follow the canvas (rig)
+    top.add(rb("topH", 8))
+    top.kids[0].add(rb("barPad", 512), rb("barPad", 513))
 
     # -------------------------------------------------------------- bottom bar
     prev = button("Previous", 1, 52, 52, 26, COAL, "previousLabel", [arrow("Back", CHALK, 3, 0, 0, 1.0, flip=True)])
@@ -118,6 +137,7 @@ def build():
         shape("Loop", [ellipse(20)], [E("Stroke", thickness=3, cap="round", name="Stroke", kids=[solid(CHALK), replay_trim])]),
         shape("Head", [poly([(6, -12), (12, -4), (2, -3)], radius=1)], [fill(CHALK)])])
     mid = box("Middle Slot", 52, 52, dict(layoutWidthScaleType="fixed", layoutHeightScaleType="fixed"), [replay, pause])
+    mid.add(rb("btn", 7), rb("btn", 8))
     cont_label = text("Continue Label", 0, 0, 0, 0, FONT_MONO_M, 15, CHALK, [("Continue", "continueLabel", None)],
                       sizing="autoWidth", lh=18, overflow="ellipsis")
     cont_label.kids.insert(0, E("LayoutParticipant", layoutWidthScaleType="fill", layoutHeightScaleType="hug", name="Label Layout"))
@@ -141,15 +161,25 @@ def build():
                                    shape("Up", [poly([(0, 6), (0, -9)], closed=False), poly([(-6, -3), (0, -9), (6, -3)], closed=False)],
                                          [stroke(COAL, 3, cap="square", join="miter")]),
                                    shape("Tray", [poly([(-9, 2), (-9, 10), (9, 10), (9, 2)], closed=False)], [stroke(COAL, 3, join="miter")])])]))
-    pill = box("Pill Slot", 40, 56, dict(layoutWidthScaleType="fill", layoutHeightScaleType="fixed"), [share, cont])
+    # the pill fills the bar on phones and stops at 380 pt on wide canvases, where the
+    # bar spreads into [Previous, Pause] ... [Continue]
+    pill = box("Pill Slot", 40, 56, dict(layoutWidthScaleType="fill", layoutHeightScaleType="fixed",
+                                         maxWidth=380, maxWidthUnitsValue="points"), [share, cont])
+    pill.add(rb("pill", 8))
+    cluster = box("Left Controls", 114, 52, dict(layoutWidthScaleType="hug", layoutHeightScaleType="hug",
+                                                 flexDirectionValue="row", layoutAlignmentType="centerLeft",
+                                                 gapHorizontal=10, gapHorizontalUnitsValue="points"), [prev, mid])
     bottom = box("Bottom Bar", 390, 104, pad(dict(layoutWidthScaleType="fill",
                                                   layoutHeightScaleType="fixed", flexDirectionValue="row",
-                                                  layoutAlignmentType="centerLeft", gapHorizontal=10,
+                                                  layoutAlignmentType="spaceBetweenCenter", gapHorizontal=10,
                                                   gapHorizontalUnitsValue="points"), l=20, r=20, b=18),
-                 [prev, mid, pill])
+                 [cluster, pill])
+    bottom.add(rb("botH", 8))
+    bottom.kids[0].add(rb("barPad", 512), rb("barPad", 513), rb("botPad", 515))
 
     # -------------------------------------------------------------- stage + director
-    stage_leaf = E("NestedArtboardLeaf", artboardId=STAGE_AB, fit="cover", alignmentX=0, alignmentY=-0.8, name="Stage",
+    # fit=layout: the stage artboard is resized to the canvas; the director lays its blocks out
+    stage_leaf = E("NestedArtboardLeaf", artboardId=STAGE_AB, fit="layout", name="Stage",
                    kids=[E("NestedStateMachine", animationId=STAGE_SM, name="Story")])
     stage_box = box("Stage Box", 390, 844, dict(absolute(top=0, left=0, right=0, bottom=0), layoutWidthScaleType="fill",
                                                 layoutHeightScaleType="fill"), [stage_leaf], fill_c=CHALK)

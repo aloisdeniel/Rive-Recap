@@ -73,6 +73,8 @@ PUBLIC = [
     # contract additions (documented in README)
     ("privateValueLabel", "string", "Private"),
     ("turntableHint", "string", "Drag to turn"),
+    # responsive layout: landscape when the artboard width is >= layoutBreakpoint
+    ("layoutBreakpoint", "number", 768),
 ]
 
 # internal, written by the in-file sequencer script / state machine only.
@@ -87,6 +89,38 @@ INTERNAL = [
     ("_cardX", "number", 45),
     ("_cardY", "number", 196),
     ("_cardScale", "number", 1),
+    # responsive placement, written by the sequencer from the real artboard size
+    # (defaults are the 390 x 844 portrait values)
+    ("_landscape", "number", 0),
+    ("_stack", "number", 1),
+    ("_dpr", "number", 1),
+    ("_copyL", "number", 28),
+    ("_copyT", "number", 86),
+    ("_copyR", "number", 28),
+    ("_copyB", "number", 0),
+    ("_copyS", "number", 1),
+    ("_copyR4", "number", 150),
+    ("_c9T", "number", 92),
+    ("_altL", "number", 28),
+    ("_altR", "number", 28),
+    ("_c10T", "number", 84),
+    ("_c10B", "number", 0),
+    ("_alignL", "number", 0),
+    ("_alignC", "number", 1),
+    ("_align10", "number", 1),
+    ("_textC", "number", 2),
+    ("_bigK", "number", 1),
+    ("_padX", "number", 24),
+    ("_navX", "number", 20),
+    ("_actL", "number", 20),
+    ("_actR", "number", 20),
+    ("_actAlign", "number", 4),
+    ("_headVA", "number", 0),
+    ("_chromeS", "number", 1),
+    ("_chromeR", "number", 0),
+    ("_hdrT", "number", 12),
+    ("_ftrB", "number", 18),
+    ("_hintOn", "number", 1),
 ] + [(f"_seg{i}", "number", 0) for i in range(1, 11)] + [
     ("_isEmpty", "number", 0),
     ("_personaVariant", "number", 1),

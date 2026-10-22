@@ -6,6 +6,15 @@
 -- strings, and turns pointer / keyboard / control requests into navigation.
 -- Every value it writes lives in the single bound UserRecap instance; scenes
 -- and components only ever read that instance.
+--
+-- Responsive layout: it is also the one place that knows the artboard's real
+-- size (a fill-sized ScriptedLayout receives it in `resize`). It picks the
+-- orientation from `layoutBreakpoint` (landscape when the width reaches it),
+-- writes the slot values the scenes' bindings read (scripts/stage.luau), eases
+-- the pot motif's frame from scene to scene, and hit-tests taps against the
+-- real width.
+
+local stage = require('scripts/stage')
 
 type Dir = {
     ctx: Context?,
@@ -34,11 +43,19 @@ type Dir = {
     qPause: number,
     qShare: number,
     qReplay: number,
+    -- layout
+    width: number,
+    height: number,
+    layoutDirty: boolean,
+    lastBreakpoint: number,
+    slots: stage.Slots?,
+    motifScreen: number,
+    mx0: number, my0: number, ms0: number,   -- motif frame: carry start
+    mx1: number, my1: number, ms1: number,   -- carry target
+    mt: number,                              -- carry clock (s); >= MOTIF_CARRY when settled
 }
 
-local W = 390
-local CONTENT_TOP = 92
-local CONTENT_BOTTOM = 752
+local MOTIF_CARRY = 0.72 -- the pose carry in tools/main_board.py (720 ms, ease in-out)
 local HOLD_SECONDS = 0.35
 local SETTLE = 2.1
 local SETTLE_RM = 0.3
@@ -198,6 +215,80 @@ local function deriveStrings(self: Dir)
     setStr(self, 'summaryRecipeLine', if bool(self, 'shareIncludeSensitiveValues', false) then recipe else '')
 end
 
+-- ------------------------------------------------------------ layout
+-- the pose carry's ease (cubic-bezier 0.65, 0, 0.35, 1), solved for x
+local function easeInOut(x: number): number
+    if x <= 0 then return 0 end
+    if x >= 1 then return 1 end
+    local x1, x2, y1, y2 = 0.65, 0.35, 0, 1
+    local t = x
+    for _ = 1, 8 do
+        local cx = 3 * x1 * t * (1 - t) ^ 2 + 3 * x2 * t ^ 2 * (1 - t) + t ^ 3
+        local dx = 3 * x1 * (1 - t) ^ 2 + 6 * (x2 - x1) * t * (1 - t) + 3 * (1 - x2) * t ^ 2
+        if math.abs(dx) < 1e-6 then break end
+        t = math.clamp(t - (cx - x) / dx, 0, 1)
+    end
+    return 3 * y1 * t * (1 - t) ^ 2 + 3 * y2 * t ^ 2 * (1 - t) + t ^ 3
+end
+
+local function writeMotif(self: Dir)
+    local k = easeInOut(math.min(self.mt / MOTIF_CARRY, 1))
+    setNum(self, 'motifFrameX', self.mx0 + (self.mx1 - self.mx0) * k)
+    setNum(self, 'motifFrameY', self.my0 + (self.my1 - self.my0) * k)
+    setNum(self, 'motifFrameScale', self.ms0 + (self.ms1 - self.ms0) * k)
+end
+
+-- the motif frame follows the current scene's art; a scene change carries it, a resize snaps it
+local function aimMotif(self: Dir, carry: boolean)
+    local s = self.slots
+    if s == nil then return end
+    local screen = num(self, 'currentScreen', 1)
+    local tx, ty, sc = stage.sceneFrame(s, screen)
+    if carry and not bool(self, 'reducedMotion', false) then
+        local k = easeInOut(math.min(self.mt / MOTIF_CARRY, 1))
+        self.mx0 = self.mx0 + (self.mx1 - self.mx0) * k
+        self.my0 = self.my0 + (self.my1 - self.my0) * k
+        self.ms0 = self.ms0 + (self.ms1 - self.ms0) * k
+        self.mt = 0
+    else
+        self.mx0, self.my0, self.ms0 = tx, ty, sc
+        self.mt = MOTIF_CARRY
+    end
+    self.mx1, self.my1, self.ms1 = tx, ty, sc
+    self.motifScreen = screen
+    writeMotif(self)
+end
+
+local function applyLayout(self: Dir)
+    local bp = num(self, 'layoutBreakpoint', 768)
+    if not finite(bp) or bp <= 0 then bp = 768 end
+    self.lastBreakpoint = num(self, 'layoutBreakpoint', 768)
+    self.layoutDirty = false
+    local s = stage.compute(self.width, self.height, bp)
+    self.slots = s
+    setNum(self, 'stageWidth', s.W)
+    setNum(self, 'stageHeight', s.H)
+    setBool(self, 'isLandscape', s.landscape)
+    setNum(self, 'layoutMargin', s.m)
+    setNum(self, 'layoutTop', s.top)
+    setNum(self, 'layoutBottom', s.bottom)
+    setNum(self, 'layoutControlsY', s.controlsY)
+    setNum(self, 'layoutContinueWidth', s.continueW)
+    setNum(self, 'layoutCopyScale', s.cs)
+    setNum(self, 'layoutCopyWidth', s.cw)
+    setNum(self, 'layoutCopyAvail', s.avail)
+    setNum(self, 'layoutCopyXa', s.copyXa)
+    setNum(self, 'layoutCopyXb', s.copyXb)
+    setNum(self, 'layoutArtX0a', s.artX0a)
+    setNum(self, 'layoutArtX1a', s.artX1a)
+    setNum(self, 'layoutArtX0b', s.artX0b)
+    setNum(self, 'layoutArtX1b', s.artX1b)
+    setNum(self, 'layoutStack', s.stack)
+    setNum(self, 'layoutSide', s.side)
+    -- a resize (even across the breakpoint mid-scene) keeps the scene and snaps the motif to it
+    aimMotif(self, false)
+end
+
 -- ------------------------------------------------------------ navigation
 local function indexOf(list: { number }, v: number): number
     for i, x in ipairs(list) do
@@ -310,6 +401,13 @@ local function boot(self: Dir)
     self.ready = true
 end
 
+function resize(self: Dir, size: Vector, scale: number)
+    if size.x > 0 and size.y > 0 and (size.x ~= self.width or size.y ~= self.height) then
+        self.width, self.height = size.x, size.y
+        self.layoutDirty = true
+    end
+end
+
 function advance(self: Dir, seconds: number): boolean
     if self.vm == nil then
         local ctx = self.ctx
@@ -323,6 +421,9 @@ function advance(self: Dir, seconds: number): boolean
         if self.vm == nil then return true end
     end
     if not self.ready then boot(self) end
+    if self.layoutDirty or num(self, 'layoutBreakpoint', 768) ~= self.lastBreakpoint then
+        applyLayout(self)
+    end
 
     -- host data may change at any time: keep the derived model consistent
     sanitize(self)
@@ -436,19 +537,31 @@ function advance(self: Dir, seconds: number): boolean
         end
     end
     setBool(self, 'motionFrozen', paused and settled)
+
+    -- the motif frame: carry to the new scene's art when the scene changes
+    if num(self, 'currentScreen', 1) ~= self.motifScreen then
+        aimMotif(self, true)
+    elseif self.mt < MOTIF_CARRY then
+        self.mt += seconds
+        writeMotif(self)
+    end
     return true
 end
 
 function draw(self: Dir, renderer: Renderer) end
 
 -- ------------------------------------------------------------ input
-local function inContent(event: PointerEvent): boolean
+-- taps count between the progress bar and the controls row, across the real width
+local function inContent(self: Dir, event: PointerEvent): boolean
     local y = event.position.y
-    return y >= CONTENT_TOP and y <= CONTENT_BOTTOM
+    local s = self.slots
+    local top = if s ~= nil then s.top else 92
+    local bottom = if s ~= nil then s.controlsY - 40 else 752
+    return y >= top and y <= bottom
 end
 
 function pointerDown(self: Dir, event: PointerEvent)
-    if not inContent(event) then return end
+    if not inContent(self, event) then return end
     self.down = true
     self.downX = event.position.x
     self.downY = event.position.y
@@ -466,7 +579,8 @@ function pointerUp(self: Dir, event: PointerEvent)
         setBool(self, 'isPaused', self.pausedBeforeHold)
         return
     end
-    if self.downX < W / 3 then self.qPrev += 1 else self.qNext += 1 end
+    -- left third goes back, right two-thirds go forward, of the real width
+    if self.downX < self.width / 3 then self.qPrev += 1 else self.qNext += 1 end
     event:hit()
 end
 
@@ -517,7 +631,9 @@ return function(context: Context): Layout<Dir>
         down = false, downX = 0, downY = 0, held = 0, holding = false, pausedBeforeHold = false,
         sharing = false, pausedBeforeShare = false,
         qNext = 0, qPrev = 0, qPause = 0, qShare = 0, qReplay = 0,
-        init = init, advance = advance, draw = draw,
+        width = 390, height = 844, layoutDirty = true, lastBreakpoint = 768, slots = nil, motifScreen = -1,
+        mx0 = 0, my0 = 0, ms0 = 1, mx1 = 0, my1 = 0, ms1 = 1, mt = MOTIF_CARRY,
+        init = init, resize = resize, advance = advance, draw = draw,
         pointerDown = pointerDown, pointerUp = pointerUp, pointerExit = pointerExit,
         keyboardEvent = keyboardEvent,
     }

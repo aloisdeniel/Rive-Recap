@@ -1,71 +1,71 @@
 <Rive version="1" kind="fragment">
   <Artboard isComponent="true" width="160" height="56" x="1000" y="0" clip="false" styleId="0:61" name="Wordmark" id="0:60">
     <LayoutComponentStyle name="Wordmark Style" id="0:61"/>
-    <Shape x="133" y="28" name="X Hold" id="0:29547">
-      <PointsPath isClosed="true" isClockwise="true" name="Path" id="0:29538">
-        <StraightVertex x="-7" y="-8" radius="3" id="0:29539"/>
-        <StraightVertex x="8" y="-5" radius="3" id="0:29540"/>
-        <StraightVertex x="6" y="8" radius="3" id="0:29541"/>
-        <StraightVertex x="-8" y="6" radius="3" id="0:29542"/>
+    <Shape x="133" y="28" name="X Hold" id="0:31163">
+      <PointsPath isClosed="true" isClockwise="true" name="Path" id="0:31154">
+        <StraightVertex x="-7" y="-8" radius="3" id="0:31155"/>
+        <StraightVertex x="8" y="-5" radius="3" id="0:31156"/>
+        <StraightVertex x="6" y="8" radius="3" id="0:31157"/>
+        <StraightVertex x="-8" y="6" radius="3" id="0:31158"/>
       </PointsPath>
-      <Fill name="Fill" id="0:29543">
-        <SolidColor colorValue="FFDCFF3F" name="Color" id="0:29544"/>
+      <Fill name="Fill" id="0:31159">
+        <SolidColor colorValue="FFDCFF3F" name="Color" id="0:31160"/>
       </Fill>
-      <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:29545">
-        <SolidColor colorValue="FF20221F" name="Color" id="0:29546"/>
+      <Stroke thickness="3" cap="butt" join="round" name="Stroke" id="0:31161">
+        <SolidColor colorValue="FF20221F" name="Color" id="0:31162"/>
       </Stroke>
     </Shape>
-    <Shape name="X" id="0:29556">
-      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:29548">
-        <StraightVertex x="116" y="6" id="0:29549"/>
-        <StraightVertex x="150" y="50" id="0:29550"/>
+    <Shape name="X" id="0:31172">
+      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:31164">
+        <StraightVertex x="116" y="6" id="0:31165"/>
+        <StraightVertex x="150" y="50" id="0:31166"/>
       </PointsPath>
-      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:29551">
-        <StraightVertex x="150" y="6" id="0:29552"/>
-        <StraightVertex x="116" y="50" id="0:29553"/>
+      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:31167">
+        <StraightVertex x="150" y="6" id="0:31168"/>
+        <StraightVertex x="116" y="50" id="0:31169"/>
       </PointsPath>
-      <Stroke thickness="10.5" cap="butt" join="round" name="Stroke" id="0:29554">
-        <SolidColor colorValue="FF20221F" name="Color" id="0:29555"/>
+      <Stroke thickness="10.5" cap="butt" join="round" name="Stroke" id="0:31170">
+        <SolidColor colorValue="FF20221F" name="Color" id="0:31171"/>
       </Stroke>
     </Shape>
-    <Shape name="U" id="0:29566">
-      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:29557">
-        <StraightVertex x="82" y="6" id="0:29558"/>
-        <StraightVertex x="82" y="40" id="0:29559"/>
-        <StraightVertex x="88" y="50" id="0:29560"/>
-        <StraightVertex x="102" y="50" id="0:29561"/>
-        <StraightVertex x="108" y="40" id="0:29562"/>
-        <StraightVertex x="108" y="6" id="0:29563"/>
+    <Shape name="U" id="0:31182">
+      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:31173">
+        <StraightVertex x="82" y="6" id="0:31174"/>
+        <StraightVertex x="82" y="40" id="0:31175"/>
+        <StraightVertex x="88" y="50" id="0:31176"/>
+        <StraightVertex x="102" y="50" id="0:31177"/>
+        <StraightVertex x="108" y="40" id="0:31178"/>
+        <StraightVertex x="108" y="6" id="0:31179"/>
       </PointsPath>
-      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:29564">
-        <SolidColor colorValue="FF20221F" name="Color" id="0:29565"/>
+      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:31180">
+        <SolidColor colorValue="FF20221F" name="Color" id="0:31181"/>
       </Stroke>
     </Shape>
-    <Shape name="R" id="0:29580">
-      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:29567">
-        <StraightVertex x="45" y="50" id="0:29568"/>
-        <StraightVertex x="45" y="6" id="0:29569"/>
-        <StraightVertex x="64" y="6" id="0:29570"/>
-        <StraightVertex x="70" y="12" id="0:29571"/>
-        <StraightVertex x="70" y="23" id="0:29572"/>
-        <StraightVertex x="64" y="28" id="0:29573"/>
-        <StraightVertex x="45" y="28" id="0:29574"/>
+    <Shape name="R" id="0:31196">
+      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:31183">
+        <StraightVertex x="45" y="50" id="0:31184"/>
+        <StraightVertex x="45" y="6" id="0:31185"/>
+        <StraightVertex x="64" y="6" id="0:31186"/>
+        <StraightVertex x="70" y="12" id="0:31187"/>
+        <StraightVertex x="70" y="23" id="0:31188"/>
+        <StraightVertex x="64" y="28" id="0:31189"/>
+        <StraightVertex x="45" y="28" id="0:31190"/>
       </PointsPath>
-      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:29575">
-        <StraightVertex x="58" y="28" id="0:29576"/>
-        <StraightVertex x="72" y="50" id="0:29577"/>
+      <PointsPath isClosed="false" isClockwise="true" name="Path" id="0:31191">
+        <StraightVertex x="58" y="28" id="0:31192"/>
+        <StraightVertex x="72" y="50" id="0:31193"/>
       </PointsPath>
-      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:29578">
-        <SolidColor colorValue="FF20221F" name="Color" id="0:29579"/>
+      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:31194">
+        <SolidColor colorValue="FF20221F" name="Color" id="0:31195"/>
       </Stroke>
     </Shape>
-    <Shape x="19" y="28" name="C" rotation="1.5708" id="0:29585">
-      <Ellipse width="30" height="40" name="Path" id="0:29584"/>
-      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:29581">
-        <SolidColor colorValue="FF20221F" name="Color" id="0:29582"/>
-        <TrimPath start="0.1" end="0.9" offset="0" modeValue="sequential" name="Open" id="0:29583"/>
+    <Shape x="19" y="28" name="C" rotation="1.5708" id="0:31201">
+      <Ellipse width="30" height="40" name="Path" id="0:31200"/>
+      <Stroke thickness="10.5" cap="butt" join="miter" name="Stroke" id="0:31197">
+        <SolidColor colorValue="FF20221F" name="Color" id="0:31198"/>
+        <TrimPath start="0.1" end="0.9" offset="0" modeValue="sequential" name="Open" id="0:31199"/>
       </Stroke>
     </Shape>
   </Artboard>
-  <ComponentAsset artboardId="0:60" name="Wordmark" id="0:29586"/>
+  <ComponentAsset artboardId="0:60" name="Wordmark" id="0:31202"/>
 </Rive>

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Regenerate every capture in captures/ (settled scenes, personas, fixtures, reduced motion, transition frames,
-viewports, the concept side-by-side and motion-preview.gif). Stale files are removed first so nothing piles up.
+"""Regenerate every capture in captures/ (settled scenes, personas, fixtures, reduced motion, transition frames at
+390x844, the concept side-by-side and motion-preview.gif). The responsive matrix is tools/responsive.py. Stale files are removed first so nothing piles up.
 
 usage: python3 tools/captures.py            (from apps/parlance/rive; Pillow is taken from /usr/bin/python3)
 """
@@ -91,8 +91,8 @@ if __name__ == "__main__":
     for stale in ("motion-preview.gif", "concept-vs-build.png"):
         if os.path.exists(os.path.join(CAP, stale)):
             os.remove(os.path.join(CAP, stale))
-    for vp in ("320x568", "430x932", "1280x800"):
-        JOBS.append((os.path.join(CAP, "viewports", f"{vp}-contain.png"), [f"--viewport={vp}", "--fit=contain"] + nav(2)))
+    # (the old Fit.contain viewport captures are gone: the file is responsive now; the size matrix lives in
+    # captures/responsive/, rebuilt by tools/responsive.py)
     with ThreadPoolExecutor(int(sys.argv[1]) if len(sys.argv) > 1 else 4) as ex:
         ok = list(ex.map(run, JOBS))
     print(f"{sum(ok)}/{len(ok)} captures")

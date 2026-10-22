@@ -647,6 +647,167 @@
         "path": "recapFinishedSignal",
         "type": "trigger",
         "changed": true
+      },
+      {
+        "name": "layoutBreakpoint",
+        "path": "layoutBreakpoint",
+        "type": "number",
+        "value": 768,
+        "changed": false
+      },
+      {
+        "name": "stageWidth",
+        "path": "stageWidth",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "stageHeight",
+        "path": "stageHeight",
+        "type": "number",
+        "value": 844,
+        "changed": false
+      },
+      {
+        "name": "isLandscape",
+        "path": "isLandscape",
+        "type": "boolean",
+        "value": false,
+        "changed": false
+      },
+      {
+        "name": "layoutMargin",
+        "path": "layoutMargin",
+        "type": "number",
+        "value": 24,
+        "changed": false
+      },
+      {
+        "name": "layoutTop",
+        "path": "layoutTop",
+        "type": "number",
+        "value": 92,
+        "changed": false
+      },
+      {
+        "name": "layoutBottom",
+        "path": "layoutBottom",
+        "type": "number",
+        "value": 770,
+        "changed": false
+      },
+      {
+        "name": "layoutControlsY",
+        "path": "layoutControlsY",
+        "type": "number",
+        "value": 792,
+        "changed": false
+      },
+      {
+        "name": "layoutContinueWidth",
+        "path": "layoutContinueWidth",
+        "type": "number",
+        "value": 214,
+        "changed": false
+      },
+      {
+        "name": "layoutCopyScale",
+        "path": "layoutCopyScale",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "layoutCopyWidth",
+        "path": "layoutCopyWidth",
+        "type": "number",
+        "value": 342,
+        "changed": false
+      },
+      {
+        "name": "layoutCopyAvail",
+        "path": "layoutCopyAvail",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "layoutCopyXa",
+        "path": "layoutCopyXa",
+        "type": "number",
+        "value": 24,
+        "changed": false
+      },
+      {
+        "name": "layoutCopyXb",
+        "path": "layoutCopyXb",
+        "type": "number",
+        "value": 24,
+        "changed": false
+      },
+      {
+        "name": "layoutArtX0a",
+        "path": "layoutArtX0a",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "layoutArtX1a",
+        "path": "layoutArtX1a",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "layoutArtX0b",
+        "path": "layoutArtX0b",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "layoutArtX1b",
+        "path": "layoutArtX1b",
+        "type": "number",
+        "value": 390,
+        "changed": false
+      },
+      {
+        "name": "layoutStack",
+        "path": "layoutStack",
+        "type": "number",
+        "value": 1,
+        "changed": false
+      },
+      {
+        "name": "layoutSide",
+        "path": "layoutSide",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "motifFrameX",
+        "path": "motifFrameX",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "motifFrameY",
+        "path": "motifFrameY",
+        "type": "number",
+        "value": 0,
+        "changed": false
+      },
+      {
+        "name": "motifFrameScale",
+        "path": "motifFrameScale",
+        "type": "number",
+        "value": 1,
+        "changed": false
       }
     ]
   },
@@ -665,6 +826,11 @@
     {
       "path": "S10 Summary/Share card",
       "artboard": "Share card",
+      "inherits": true
+    },
+    {
+      "path": "S10 Summary/Share card wide",
+      "artboard": "Share card wide",
       "inherits": true
     },
     {

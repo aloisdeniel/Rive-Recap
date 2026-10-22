@@ -94,6 +94,29 @@
     <ViewModelPropertyTrigger name="handoffForward" id="0:101"/>
     <ViewModelPropertyTrigger name="handoffBack" id="0:102"/>
     <ViewModelPropertyTrigger name="recapFinishedSignal" id="0:103"/>
+    <ViewModelPropertyNumber name="layoutBreakpoint" id="0:104"/>
+    <ViewModelPropertyNumber name="stageWidth" id="0:105"/>
+    <ViewModelPropertyNumber name="stageHeight" id="0:106"/>
+    <ViewModelPropertyBoolean name="isLandscape" id="0:107"/>
+    <ViewModelPropertyNumber name="layoutMargin" id="0:108"/>
+    <ViewModelPropertyNumber name="layoutTop" id="0:109"/>
+    <ViewModelPropertyNumber name="layoutBottom" id="0:110"/>
+    <ViewModelPropertyNumber name="layoutControlsY" id="0:111"/>
+    <ViewModelPropertyNumber name="layoutContinueWidth" id="0:112"/>
+    <ViewModelPropertyNumber name="layoutCopyScale" id="0:113"/>
+    <ViewModelPropertyNumber name="layoutCopyWidth" id="0:114"/>
+    <ViewModelPropertyNumber name="layoutCopyAvail" id="0:115"/>
+    <ViewModelPropertyNumber name="layoutCopyXa" id="0:116"/>
+    <ViewModelPropertyNumber name="layoutCopyXb" id="0:117"/>
+    <ViewModelPropertyNumber name="layoutArtX0a" id="0:118"/>
+    <ViewModelPropertyNumber name="layoutArtX1a" id="0:119"/>
+    <ViewModelPropertyNumber name="layoutArtX0b" id="0:120"/>
+    <ViewModelPropertyNumber name="layoutArtX1b" id="0:121"/>
+    <ViewModelPropertyNumber name="layoutStack" id="0:122"/>
+    <ViewModelPropertyNumber name="layoutSide" id="0:123"/>
+    <ViewModelPropertyNumber name="motifFrameX" id="0:124"/>
+    <ViewModelPropertyNumber name="motifFrameY" id="0:125"/>
+    <ViewModelPropertyNumber name="motifFrameScale" id="0:126"/>
     <ViewModelInstance exports="true" name="Fixture" id="0:401">
       <ViewModelInstanceString propertyValue="Alex" viewModelPropertyId="0:11" id="0:100001"/>
       <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:12" id="0:100002"/>
@@ -188,201 +211,272 @@
       <ViewModelInstanceTrigger viewModelPropertyId="0:101" id="0:100091"/>
       <ViewModelInstanceTrigger viewModelPropertyId="0:102" id="0:100092"/>
       <ViewModelInstanceTrigger viewModelPropertyId="0:103" id="0:100093"/>
+      <ViewModelInstanceNumber propertyValue="768" viewModelPropertyId="0:104" id="0:100094"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:105" id="0:100095"/>
+      <ViewModelInstanceNumber propertyValue="844" viewModelPropertyId="0:106" id="0:100096"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:107" id="0:100097"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:108" id="0:100098"/>
+      <ViewModelInstanceNumber propertyValue="92" viewModelPropertyId="0:109" id="0:100099"/>
+      <ViewModelInstanceNumber propertyValue="770" viewModelPropertyId="0:110" id="0:100100"/>
+      <ViewModelInstanceNumber propertyValue="792" viewModelPropertyId="0:111" id="0:100101"/>
+      <ViewModelInstanceNumber propertyValue="214" viewModelPropertyId="0:112" id="0:100102"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:113" id="0:100103"/>
+      <ViewModelInstanceNumber propertyValue="342" viewModelPropertyId="0:114" id="0:100104"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:115" id="0:100105"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:116" id="0:100106"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:117" id="0:100107"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:118" id="0:100108"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:119" id="0:100109"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:120" id="0:100110"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:121" id="0:100111"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:122" id="0:100112"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:123" id="0:100113"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:124" id="0:100114"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:125" id="0:100115"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:126" id="0:100116"/>
     </ViewModelInstance>
     <ViewModelInstance exports="true" name="New user" id="0:402">
-      <ViewModelInstanceString propertyValue="Sam" viewModelPropertyId="0:11" id="0:100094"/>
-      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:12" id="0:100095"/>
-      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:13" id="0:100096"/>
-      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:14" id="0:100097"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:15" id="0:100098"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:16" id="0:100099"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:17" id="0:100100"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:18" id="0:100101"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:19" id="0:100102"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:20" id="0:100103"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:21" id="0:100104"/>
-      <ViewModelInstanceNumber propertyValue="-1" viewModelPropertyId="0:22" id="0:100105"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:23" id="0:100106"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:24" id="0:100107"/>
-      <ViewModelInstanceColor propertyValue="FFFFEDB0" viewModelPropertyId="0:25" id="0:100108"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:26" id="0:100109"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:27" id="0:100110"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:28" id="0:100111"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:29" id="0:100112"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:30" id="0:100113"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:31" id="0:100114"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:32" id="0:100115"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:33" id="0:100116"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:34" id="0:100117"/>
-      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:35" id="0:100118"/>
-      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:36" id="0:100119"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:37" id="0:100120"/>
-      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:38" id="0:100121"/>
-      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:39" id="0:100122"/>
-      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:40" id="0:100123"/>
-      <ViewModelInstanceString propertyValue="Your 2026 on Simmer" viewModelPropertyId="0:41" id="0:100124"/>
-      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:42" id="0:100125"/>
-      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:43" id="0:100126"/>
-      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:44" id="0:100127"/>
-      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:45" id="0:100128"/>
-      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:46" id="0:100129"/>
-      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:47" id="0:100130"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:48" id="0:100131"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:49" id="0:100132"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:50" id="0:100133"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:51" id="0:100134"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:52" id="0:100135"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:53" id="0:100136"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:54" id="0:100137"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:55" id="0:100138"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:56" id="0:100139"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:57" id="0:100140"/>
-      <ViewModelInstanceString propertyValue="You made something good." viewModelPropertyId="0:58" id="0:100141"/>
-      <ViewModelInstanceString propertyValue="A year seasoned your way." viewModelPropertyId="0:59" id="0:100142"/>
-      <ViewModelInstanceString propertyValue="meals cooked" viewModelPropertyId="0:60" id="0:100143"/>
-      <ViewModelInstanceString propertyValue="Fresh pages. Full plates." viewModelPropertyId="0:61" id="0:100144"/>
-      <ViewModelInstanceString propertyValue="Curiosity was always on the menu." viewModelPropertyId="0:62" id="0:100145"/>
-      <ViewModelInstanceString propertyValue="recipes tried" viewModelPropertyId="0:63" id="0:100146"/>
-      <ViewModelInstanceString propertyValue="Your kitchen went places." viewModelPropertyId="0:64" id="0:100147"/>
-      <ViewModelInstanceString propertyValue="New flavors, one recipe at a time." viewModelPropertyId="0:65" id="0:100148"/>
-      <ViewModelInstanceString propertyValue="cuisines explored" viewModelPropertyId="0:66" id="0:100149"/>
-      <ViewModelInstanceString propertyValue="A pinch of possibility." viewModelPropertyId="0:67" id="0:100150"/>
-      <ViewModelInstanceString propertyValue="You welcomed new flavors to the shelf." viewModelPropertyId="0:68" id="0:100151"/>
-      <ViewModelInstanceString propertyValue="new ingredients" viewModelPropertyId="0:69" id="0:100152"/>
-      <ViewModelInstanceString propertyValue="Worth making again." viewModelPropertyId="0:70" id="0:100153"/>
-      <ViewModelInstanceString propertyValue="Your most-cooked recipe: lemon orzo." viewModelPropertyId="0:71" id="0:100154"/>
-      <ViewModelInstanceString propertyValue="favorite recipe cooks" viewModelPropertyId="0:72" id="0:100155"/>
-      <ViewModelInstanceString propertyValue="There was room at your table." viewModelPropertyId="0:73" id="0:100156"/>
-      <ViewModelInstanceString propertyValue="Good food found good company." viewModelPropertyId="0:74" id="0:100157"/>
-      <ViewModelInstanceString propertyValue="shared meals" viewModelPropertyId="0:75" id="0:100158"/>
-      <ViewModelInstanceString propertyValue="A delicious kind of rhythm." viewModelPropertyId="0:76" id="0:100159"/>
-      <ViewModelInstanceString propertyValue="From quick lunches to slow Sundays." viewModelPropertyId="0:77" id="0:100160"/>
-      <ViewModelInstanceString propertyValue="cooking days" viewModelPropertyId="0:78" id="0:100161"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:79" id="0:100162"/>
-      <ViewModelInstanceString propertyValue="Hello, {name}!" viewModelPropertyId="0:80" id="0:100163"/>
-      <ViewModelInstanceString propertyValue="Your {year} on Simmer" viewModelPropertyId="0:81" id="0:100164"/>
-      <ViewModelInstanceString propertyValue="Your most-cooked recipe: {recipe}." viewModelPropertyId="0:82" id="0:100165"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:83" id="0:100166"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:84" id="0:100167"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:85" id="0:100168"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:86" id="0:100169"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:87" id="0:100170"/>
-      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:88" id="0:100171"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:89" id="0:100172"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90" id="0:100173"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:91" id="0:100174"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:92" id="0:100175"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:93" id="0:100176"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:94" id="0:100177"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:95" id="0:100178"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:96" id="0:100179"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:97" id="0:100180"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:98" id="0:100181"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:99" id="0:100182"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:100" id="0:100183"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:101" id="0:100184"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:102" id="0:100185"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:103" id="0:100186"/>
+      <ViewModelInstanceString propertyValue="Sam" viewModelPropertyId="0:11" id="0:100117"/>
+      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:12" id="0:100118"/>
+      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:13" id="0:100119"/>
+      <ViewModelInstanceString propertyValue="en-GB" viewModelPropertyId="0:14" id="0:100120"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:15" id="0:100121"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:16" id="0:100122"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:17" id="0:100123"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:18" id="0:100124"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:19" id="0:100125"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:20" id="0:100126"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:21" id="0:100127"/>
+      <ViewModelInstanceNumber propertyValue="-1" viewModelPropertyId="0:22" id="0:100128"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:23" id="0:100129"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:24" id="0:100130"/>
+      <ViewModelInstanceColor propertyValue="FFFFEDB0" viewModelPropertyId="0:25" id="0:100131"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:26" id="0:100132"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:27" id="0:100133"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:28" id="0:100134"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:29" id="0:100135"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:30" id="0:100136"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:31" id="0:100137"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:32" id="0:100138"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:33" id="0:100139"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:34" id="0:100140"/>
+      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:35" id="0:100141"/>
+      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:36" id="0:100142"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:37" id="0:100143"/>
+      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:38" id="0:100144"/>
+      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:39" id="0:100145"/>
+      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:40" id="0:100146"/>
+      <ViewModelInstanceString propertyValue="Your 2026 on Simmer" viewModelPropertyId="0:41" id="0:100147"/>
+      <ViewModelInstanceString propertyValue="A year, uniquely yours." viewModelPropertyId="0:42" id="0:100148"/>
+      <ViewModelInstanceString propertyValue="A little year. A lot of you." viewModelPropertyId="0:43" id="0:100149"/>
+      <ViewModelInstanceString propertyValue="Take a piece of your year with you." viewModelPropertyId="0:44" id="0:100150"/>
+      <ViewModelInstanceString propertyValue="Every story starts somewhere." viewModelPropertyId="0:45" id="0:100151"/>
+      <ViewModelInstanceString propertyValue="Your next chapter is waiting." viewModelPropertyId="0:46" id="0:100152"/>
+      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:47" id="0:100153"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:48" id="0:100154"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:49" id="0:100155"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:50" id="0:100156"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:51" id="0:100157"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:52" id="0:100158"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:53" id="0:100159"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:54" id="0:100160"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:55" id="0:100161"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:56" id="0:100162"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:57" id="0:100163"/>
+      <ViewModelInstanceString propertyValue="You made something good." viewModelPropertyId="0:58" id="0:100164"/>
+      <ViewModelInstanceString propertyValue="A year seasoned your way." viewModelPropertyId="0:59" id="0:100165"/>
+      <ViewModelInstanceString propertyValue="meals cooked" viewModelPropertyId="0:60" id="0:100166"/>
+      <ViewModelInstanceString propertyValue="Fresh pages. Full plates." viewModelPropertyId="0:61" id="0:100167"/>
+      <ViewModelInstanceString propertyValue="Curiosity was always on the menu." viewModelPropertyId="0:62" id="0:100168"/>
+      <ViewModelInstanceString propertyValue="recipes tried" viewModelPropertyId="0:63" id="0:100169"/>
+      <ViewModelInstanceString propertyValue="Your kitchen went places." viewModelPropertyId="0:64" id="0:100170"/>
+      <ViewModelInstanceString propertyValue="New flavors, one recipe at a time." viewModelPropertyId="0:65" id="0:100171"/>
+      <ViewModelInstanceString propertyValue="cuisines explored" viewModelPropertyId="0:66" id="0:100172"/>
+      <ViewModelInstanceString propertyValue="A pinch of possibility." viewModelPropertyId="0:67" id="0:100173"/>
+      <ViewModelInstanceString propertyValue="You welcomed new flavors to the shelf." viewModelPropertyId="0:68" id="0:100174"/>
+      <ViewModelInstanceString propertyValue="new ingredients" viewModelPropertyId="0:69" id="0:100175"/>
+      <ViewModelInstanceString propertyValue="Worth making again." viewModelPropertyId="0:70" id="0:100176"/>
+      <ViewModelInstanceString propertyValue="Your most-cooked recipe: lemon orzo." viewModelPropertyId="0:71" id="0:100177"/>
+      <ViewModelInstanceString propertyValue="favorite recipe cooks" viewModelPropertyId="0:72" id="0:100178"/>
+      <ViewModelInstanceString propertyValue="There was room at your table." viewModelPropertyId="0:73" id="0:100179"/>
+      <ViewModelInstanceString propertyValue="Good food found good company." viewModelPropertyId="0:74" id="0:100180"/>
+      <ViewModelInstanceString propertyValue="shared meals" viewModelPropertyId="0:75" id="0:100181"/>
+      <ViewModelInstanceString propertyValue="A delicious kind of rhythm." viewModelPropertyId="0:76" id="0:100182"/>
+      <ViewModelInstanceString propertyValue="From quick lunches to slow Sundays." viewModelPropertyId="0:77" id="0:100183"/>
+      <ViewModelInstanceString propertyValue="cooking days" viewModelPropertyId="0:78" id="0:100184"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:79" id="0:100185"/>
+      <ViewModelInstanceString propertyValue="Hello, {name}!" viewModelPropertyId="0:80" id="0:100186"/>
+      <ViewModelInstanceString propertyValue="Your {year} on Simmer" viewModelPropertyId="0:81" id="0:100187"/>
+      <ViewModelInstanceString propertyValue="Your most-cooked recipe: {recipe}." viewModelPropertyId="0:82" id="0:100188"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:83" id="0:100189"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:84" id="0:100190"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:85" id="0:100191"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:86" id="0:100192"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:87" id="0:100193"/>
+      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:88" id="0:100194"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:89" id="0:100195"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90" id="0:100196"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:91" id="0:100197"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:92" id="0:100198"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:93" id="0:100199"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:94" id="0:100200"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:95" id="0:100201"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:96" id="0:100202"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:97" id="0:100203"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:98" id="0:100204"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:99" id="0:100205"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:100" id="0:100206"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:101" id="0:100207"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:102" id="0:100208"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:103" id="0:100209"/>
+      <ViewModelInstanceNumber propertyValue="768" viewModelPropertyId="0:104" id="0:100210"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:105" id="0:100211"/>
+      <ViewModelInstanceNumber propertyValue="844" viewModelPropertyId="0:106" id="0:100212"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:107" id="0:100213"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:108" id="0:100214"/>
+      <ViewModelInstanceNumber propertyValue="92" viewModelPropertyId="0:109" id="0:100215"/>
+      <ViewModelInstanceNumber propertyValue="770" viewModelPropertyId="0:110" id="0:100216"/>
+      <ViewModelInstanceNumber propertyValue="792" viewModelPropertyId="0:111" id="0:100217"/>
+      <ViewModelInstanceNumber propertyValue="214" viewModelPropertyId="0:112" id="0:100218"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:113" id="0:100219"/>
+      <ViewModelInstanceNumber propertyValue="342" viewModelPropertyId="0:114" id="0:100220"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:115" id="0:100221"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:116" id="0:100222"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:117" id="0:100223"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:118" id="0:100224"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:119" id="0:100225"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:120" id="0:100226"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:121" id="0:100227"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:122" id="0:100228"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:123" id="0:100229"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:124" id="0:100230"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:125" id="0:100231"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:126" id="0:100232"/>
     </ViewModelInstance>
     <ViewModelInstance exports="true" name="Extreme" id="0:403">
-      <ViewModelInstanceString propertyValue="Maximiliana Alessandra Kowalczyk-Featherstonehaugh" viewModelPropertyId="0:11" id="0:100187"/>
-      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:12" id="0:100188"/>
-      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:13" id="0:100189"/>
-      <ViewModelInstanceString propertyValue="de-DE" viewModelPropertyId="0:14" id="0:100190"/>
-      <ViewModelInstanceNumber propertyValue="1048576" viewModelPropertyId="0:15" id="0:100191"/>
-      <ViewModelInstanceNumber propertyValue="99999" viewModelPropertyId="0:16" id="0:100192"/>
-      <ViewModelInstanceNumber propertyValue="187" viewModelPropertyId="0:17" id="0:100193"/>
-      <ViewModelInstanceNumber propertyValue="12345" viewModelPropertyId="0:18" id="0:100194"/>
-      <ViewModelInstanceNumber propertyValue="2048" viewModelPropertyId="0:19" id="0:100195"/>
-      <ViewModelInstanceNumber propertyValue="-4" viewModelPropertyId="0:20" id="0:100196"/>
-      <ViewModelInstanceNumber propertyValue="366" viewModelPropertyId="0:21" id="0:100197"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:22" id="0:100198"/>
-      <ViewModelInstanceString propertyValue="Flavor Explorer" viewModelPropertyId="0:23" id="0:100199"/>
-      <ViewModelInstanceString propertyValue="Always room for a new flavor." viewModelPropertyId="0:24" id="0:100200"/>
-      <ViewModelInstanceColor propertyValue="FFFFEDB0" viewModelPropertyId="0:25" id="0:100201"/>
-      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:26" id="0:100202"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:27" id="0:100203"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:28" id="0:100204"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:29" id="0:100205"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:30" id="0:100206"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:31" id="0:100207"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:32" id="0:100208"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:33" id="0:100209"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:34" id="0:100210"/>
-      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:35" id="0:100211"/>
-      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:36" id="0:100212"/>
-      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:37" id="0:100213"/>
-      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:38" id="0:100214"/>
-      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:39" id="0:100215"/>
-      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:40" id="0:100216"/>
-      <ViewModelInstanceString propertyValue="Your 2026 on Simmer" viewModelPropertyId="0:41" id="0:100217"/>
-      <ViewModelInstanceString propertyValue="A whole year of cooking, uniquely and entirely yours." viewModelPropertyId="0:42" id="0:100218"/>
-      <ViewModelInstanceString propertyValue="A little year. A lot of you — and then some more." viewModelPropertyId="0:43" id="0:100219"/>
-      <ViewModelInstanceString propertyValue="Take a piece of your year with you — and then some more." viewModelPropertyId="0:44" id="0:100220"/>
-      <ViewModelInstanceString propertyValue="Every story starts somewhere — and then some more." viewModelPropertyId="0:45" id="0:100221"/>
-      <ViewModelInstanceString propertyValue="Your next chapter is waiting — and then some more." viewModelPropertyId="0:46" id="0:100222"/>
-      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:47" id="0:100223"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:48" id="0:100224"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:49" id="0:100225"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:50" id="0:100226"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:51" id="0:100227"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:52" id="0:100228"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:53" id="0:100229"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:54" id="0:100230"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:55" id="0:100231"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:56" id="0:100232"/>
-      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:57" id="0:100233"/>
-      <ViewModelInstanceString propertyValue="You made something genuinely, wonderfully good." viewModelPropertyId="0:58" id="0:100234"/>
-      <ViewModelInstanceString propertyValue="A year seasoned your way — and then some more." viewModelPropertyId="0:59" id="0:100235"/>
-      <ViewModelInstanceString propertyValue="meals cooked (extended)" viewModelPropertyId="0:60" id="0:100236"/>
-      <ViewModelInstanceString propertyValue="Fresh pages. Full plates — and then some more." viewModelPropertyId="0:61" id="0:100237"/>
-      <ViewModelInstanceString propertyValue="Curiosity was always on the menu — and then some more." viewModelPropertyId="0:62" id="0:100238"/>
-      <ViewModelInstanceString propertyValue="recipes tried — and then some more." viewModelPropertyId="0:63" id="0:100239"/>
-      <ViewModelInstanceString propertyValue="Your kitchen went places — and then some more." viewModelPropertyId="0:64" id="0:100240"/>
-      <ViewModelInstanceString propertyValue="New flavors, one recipe at a time — and then some more." viewModelPropertyId="0:65" id="0:100241"/>
-      <ViewModelInstanceString propertyValue="cuisines explored — and then some more." viewModelPropertyId="0:66" id="0:100242"/>
-      <ViewModelInstanceString propertyValue="A pinch of possibility — and then some more." viewModelPropertyId="0:67" id="0:100243"/>
-      <ViewModelInstanceString propertyValue="You welcomed new flavors to the shelf — and then some more." viewModelPropertyId="0:68" id="0:100244"/>
-      <ViewModelInstanceString propertyValue="new ingredients — and then some more." viewModelPropertyId="0:69" id="0:100245"/>
-      <ViewModelInstanceString propertyValue="Worth making again — and then some more." viewModelPropertyId="0:70" id="0:100246"/>
-      <ViewModelInstanceString propertyValue="Your most-cooked recipe: lemon orzo — and then some more." viewModelPropertyId="0:71" id="0:100247"/>
-      <ViewModelInstanceString propertyValue="favorite recipe cooks — and then some more." viewModelPropertyId="0:72" id="0:100248"/>
-      <ViewModelInstanceString propertyValue="There was always plenty of room at your table." viewModelPropertyId="0:73" id="0:100249"/>
-      <ViewModelInstanceString propertyValue="Good food found good company — and then some more." viewModelPropertyId="0:74" id="0:100250"/>
-      <ViewModelInstanceString propertyValue="shared meals (extended)" viewModelPropertyId="0:75" id="0:100251"/>
-      <ViewModelInstanceString propertyValue="A delicious kind of rhythm — and then some more." viewModelPropertyId="0:76" id="0:100252"/>
-      <ViewModelInstanceString propertyValue="From quick lunches to slow Sundays — and then some more." viewModelPropertyId="0:77" id="0:100253"/>
-      <ViewModelInstanceString propertyValue="cooking days (extended)" viewModelPropertyId="0:78" id="0:100254"/>
-      <ViewModelInstanceString propertyValue="Slow-roasted tomato and white bean cassoulet with garlicky breadcrumbs" viewModelPropertyId="0:79" id="0:100255"/>
-      <ViewModelInstanceString propertyValue="Hello, {name}!" viewModelPropertyId="0:80" id="0:100256"/>
-      <ViewModelInstanceString propertyValue="Your {year} on Simmer" viewModelPropertyId="0:81" id="0:100257"/>
-      <ViewModelInstanceString propertyValue="Your most-cooked recipe: {recipe}." viewModelPropertyId="0:82" id="0:100258"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:83" id="0:100259"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:84" id="0:100260"/>
-      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:85" id="0:100261"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:86" id="0:100262"/>
-      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:87" id="0:100263"/>
-      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:88" id="0:100264"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:89" id="0:100265"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90" id="0:100266"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:91" id="0:100267"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:92" id="0:100268"/>
-      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:93" id="0:100269"/>
-      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:94" id="0:100270"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:95" id="0:100271"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:96" id="0:100272"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:97" id="0:100273"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:98" id="0:100274"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:99" id="0:100275"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:100" id="0:100276"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:101" id="0:100277"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:102" id="0:100278"/>
-      <ViewModelInstanceTrigger viewModelPropertyId="0:103" id="0:100279"/>
+      <ViewModelInstanceString propertyValue="Maximiliana Alessandra Kowalczyk-Featherstonehaugh" viewModelPropertyId="0:11" id="0:100233"/>
+      <ViewModelInstanceNumber propertyValue="2026" viewModelPropertyId="0:12" id="0:100234"/>
+      <ViewModelInstanceString propertyValue="January 1–December 31, 2026" viewModelPropertyId="0:13" id="0:100235"/>
+      <ViewModelInstanceString propertyValue="de-DE" viewModelPropertyId="0:14" id="0:100236"/>
+      <ViewModelInstanceNumber propertyValue="1048576" viewModelPropertyId="0:15" id="0:100237"/>
+      <ViewModelInstanceNumber propertyValue="99999" viewModelPropertyId="0:16" id="0:100238"/>
+      <ViewModelInstanceNumber propertyValue="187" viewModelPropertyId="0:17" id="0:100239"/>
+      <ViewModelInstanceNumber propertyValue="12345" viewModelPropertyId="0:18" id="0:100240"/>
+      <ViewModelInstanceNumber propertyValue="2048" viewModelPropertyId="0:19" id="0:100241"/>
+      <ViewModelInstanceNumber propertyValue="-4" viewModelPropertyId="0:20" id="0:100242"/>
+      <ViewModelInstanceNumber propertyValue="366" viewModelPropertyId="0:21" id="0:100243"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:22" id="0:100244"/>
+      <ViewModelInstanceString propertyValue="Flavor Explorer" viewModelPropertyId="0:23" id="0:100245"/>
+      <ViewModelInstanceString propertyValue="Always room for a new flavor." viewModelPropertyId="0:24" id="0:100246"/>
+      <ViewModelInstanceColor propertyValue="FFFFEDB0" viewModelPropertyId="0:25" id="0:100247"/>
+      <ViewModelInstanceNumber propertyValue="7" viewModelPropertyId="0:26" id="0:100248"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:27" id="0:100249"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:28" id="0:100250"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:29" id="0:100251"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:30" id="0:100252"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:31" id="0:100253"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:32" id="0:100254"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:33" id="0:100255"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:34" id="0:100256"/>
+      <ViewModelInstanceString propertyValue="Continue" viewModelPropertyId="0:35" id="0:100257"/>
+      <ViewModelInstanceString propertyValue="Previous" viewModelPropertyId="0:36" id="0:100258"/>
+      <ViewModelInstanceString propertyValue="Pause" viewModelPropertyId="0:37" id="0:100259"/>
+      <ViewModelInstanceString propertyValue="Play" viewModelPropertyId="0:38" id="0:100260"/>
+      <ViewModelInstanceString propertyValue="Share" viewModelPropertyId="0:39" id="0:100261"/>
+      <ViewModelInstanceString propertyValue="Replay" viewModelPropertyId="0:40" id="0:100262"/>
+      <ViewModelInstanceString propertyValue="Your 2026 on Simmer" viewModelPropertyId="0:41" id="0:100263"/>
+      <ViewModelInstanceString propertyValue="A whole year of cooking, uniquely and entirely yours." viewModelPropertyId="0:42" id="0:100264"/>
+      <ViewModelInstanceString propertyValue="A little year. A lot of you — and then some more." viewModelPropertyId="0:43" id="0:100265"/>
+      <ViewModelInstanceString propertyValue="Take a piece of your year with you — and then some more." viewModelPropertyId="0:44" id="0:100266"/>
+      <ViewModelInstanceString propertyValue="Every story starts somewhere — and then some more." viewModelPropertyId="0:45" id="0:100267"/>
+      <ViewModelInstanceString propertyValue="Your next chapter is waiting — and then some more." viewModelPropertyId="0:46" id="0:100268"/>
+      <ViewModelInstanceString propertyValue="Your personal style" viewModelPropertyId="0:47" id="0:100269"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:48" id="0:100270"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:49" id="0:100271"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:50" id="0:100272"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:51" id="0:100273"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:52" id="0:100274"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:53" id="0:100275"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:54" id="0:100276"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:55" id="0:100277"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:56" id="0:100278"/>
+      <ViewModelInstanceBoolean propertyValue="true" viewModelPropertyId="0:57" id="0:100279"/>
+      <ViewModelInstanceString propertyValue="You made something genuinely, wonderfully good." viewModelPropertyId="0:58" id="0:100280"/>
+      <ViewModelInstanceString propertyValue="A year seasoned your way — and then some more." viewModelPropertyId="0:59" id="0:100281"/>
+      <ViewModelInstanceString propertyValue="meals cooked (extended)" viewModelPropertyId="0:60" id="0:100282"/>
+      <ViewModelInstanceString propertyValue="Fresh pages. Full plates — and then some more." viewModelPropertyId="0:61" id="0:100283"/>
+      <ViewModelInstanceString propertyValue="Curiosity was always on the menu — and then some more." viewModelPropertyId="0:62" id="0:100284"/>
+      <ViewModelInstanceString propertyValue="recipes tried — and then some more." viewModelPropertyId="0:63" id="0:100285"/>
+      <ViewModelInstanceString propertyValue="Your kitchen went places — and then some more." viewModelPropertyId="0:64" id="0:100286"/>
+      <ViewModelInstanceString propertyValue="New flavors, one recipe at a time — and then some more." viewModelPropertyId="0:65" id="0:100287"/>
+      <ViewModelInstanceString propertyValue="cuisines explored — and then some more." viewModelPropertyId="0:66" id="0:100288"/>
+      <ViewModelInstanceString propertyValue="A pinch of possibility — and then some more." viewModelPropertyId="0:67" id="0:100289"/>
+      <ViewModelInstanceString propertyValue="You welcomed new flavors to the shelf — and then some more." viewModelPropertyId="0:68" id="0:100290"/>
+      <ViewModelInstanceString propertyValue="new ingredients — and then some more." viewModelPropertyId="0:69" id="0:100291"/>
+      <ViewModelInstanceString propertyValue="Worth making again — and then some more." viewModelPropertyId="0:70" id="0:100292"/>
+      <ViewModelInstanceString propertyValue="Your most-cooked recipe: lemon orzo — and then some more." viewModelPropertyId="0:71" id="0:100293"/>
+      <ViewModelInstanceString propertyValue="favorite recipe cooks — and then some more." viewModelPropertyId="0:72" id="0:100294"/>
+      <ViewModelInstanceString propertyValue="There was always plenty of room at your table." viewModelPropertyId="0:73" id="0:100295"/>
+      <ViewModelInstanceString propertyValue="Good food found good company — and then some more." viewModelPropertyId="0:74" id="0:100296"/>
+      <ViewModelInstanceString propertyValue="shared meals (extended)" viewModelPropertyId="0:75" id="0:100297"/>
+      <ViewModelInstanceString propertyValue="A delicious kind of rhythm — and then some more." viewModelPropertyId="0:76" id="0:100298"/>
+      <ViewModelInstanceString propertyValue="From quick lunches to slow Sundays — and then some more." viewModelPropertyId="0:77" id="0:100299"/>
+      <ViewModelInstanceString propertyValue="cooking days (extended)" viewModelPropertyId="0:78" id="0:100300"/>
+      <ViewModelInstanceString propertyValue="Slow-roasted tomato and white bean cassoulet with garlicky breadcrumbs" viewModelPropertyId="0:79" id="0:100301"/>
+      <ViewModelInstanceString propertyValue="Hello, {name}!" viewModelPropertyId="0:80" id="0:100302"/>
+      <ViewModelInstanceString propertyValue="Your {year} on Simmer" viewModelPropertyId="0:81" id="0:100303"/>
+      <ViewModelInstanceString propertyValue="Your most-cooked recipe: {recipe}." viewModelPropertyId="0:82" id="0:100304"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:83" id="0:100305"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:84" id="0:100306"/>
+      <ViewModelInstanceString propertyValue="" viewModelPropertyId="0:85" id="0:100307"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:86" id="0:100308"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:87" id="0:100309"/>
+      <ViewModelInstanceNumber propertyValue="10" viewModelPropertyId="0:88" id="0:100310"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:89" id="0:100311"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:90" id="0:100312"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:91" id="0:100313"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:92" id="0:100314"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:93" id="0:100315"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:94" id="0:100316"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:95" id="0:100317"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:96" id="0:100318"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:97" id="0:100319"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:98" id="0:100320"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:99" id="0:100321"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:100" id="0:100322"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:101" id="0:100323"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:102" id="0:100324"/>
+      <ViewModelInstanceTrigger viewModelPropertyId="0:103" id="0:100325"/>
+      <ViewModelInstanceNumber propertyValue="768" viewModelPropertyId="0:104" id="0:100326"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:105" id="0:100327"/>
+      <ViewModelInstanceNumber propertyValue="844" viewModelPropertyId="0:106" id="0:100328"/>
+      <ViewModelInstanceBoolean propertyValue="false" viewModelPropertyId="0:107" id="0:100329"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:108" id="0:100330"/>
+      <ViewModelInstanceNumber propertyValue="92" viewModelPropertyId="0:109" id="0:100331"/>
+      <ViewModelInstanceNumber propertyValue="770" viewModelPropertyId="0:110" id="0:100332"/>
+      <ViewModelInstanceNumber propertyValue="792" viewModelPropertyId="0:111" id="0:100333"/>
+      <ViewModelInstanceNumber propertyValue="214" viewModelPropertyId="0:112" id="0:100334"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:113" id="0:100335"/>
+      <ViewModelInstanceNumber propertyValue="342" viewModelPropertyId="0:114" id="0:100336"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:115" id="0:100337"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:116" id="0:100338"/>
+      <ViewModelInstanceNumber propertyValue="24" viewModelPropertyId="0:117" id="0:100339"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:118" id="0:100340"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:119" id="0:100341"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:120" id="0:100342"/>
+      <ViewModelInstanceNumber propertyValue="390" viewModelPropertyId="0:121" id="0:100343"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:122" id="0:100344"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:123" id="0:100345"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:124" id="0:100346"/>
+      <ViewModelInstanceNumber propertyValue="0" viewModelPropertyId="0:125" id="0:100347"/>
+      <ViewModelInstanceNumber propertyValue="1" viewModelPropertyId="0:126" id="0:100348"/>
     </ViewModelInstance>
   </ViewModel>
   <FontAsset file="assets/fonts/BricolageGrotesque.ttf" name="Bricolage Grotesque" id="0:501"/>
   <FontAsset file="assets/fonts/SourceSans3.ttf" name="Source Sans 3" id="0:502"/>
   <FontAsset file="assets/fonts/Caveat.ttf" name="Caveat" id="0:503"/>
+  <ScriptAsset file="scripts/stageBoxes.luau" isModule="true" folderPath="scripts" name="stageBoxes" id="0:518"/>
+  <ScriptAsset file="scripts/stage.luau" isModule="true" folderPath="scripts" name="stage" id="0:519"/>
   <ScriptAsset file="scripts/director.luau" name="director" id="0:511"/>
   <ScriptAsset file="scripts/formatCount.luau" name="formatCount" id="0:512"/>
   <ScriptAsset file="scripts/eventAudit.luau" name="eventAudit" id="0:513"/>

@@ -11,8 +11,11 @@ activity.
 apps/marginalia/rive/
   rive.yaml                 project (main artboard: Recap)
   rml/recap.rml             the whole document (generated, but plain editable RML)
+  scripts/responsive.luau   the responsive layout rules (module): orientation, chrome, page frames
+  scripts/responsive_test.luau  `rive . --test` checks for those rules across ~400 sizes
+  scripts/resize_harness.luau   test fixture: resizes a hosted Recap mid-run (Resize Harness artboard)
   scripts/director.luau     sequencing / formatting / input "director"
-  scripts/pagestage.luau    hosts the pages, draws every page turn as a 3D paper curl
+  scripts/pagestage.luau    hosts the pages, places their frames for the real size, draws every page turn as a 3D paper curl
   scripts/paper.luau        laid-paper grain multiplied over the whole recap
   scripts/moon.luau         the engraved moon (a lit sphere, ScriptedDrawable)
   shaders/pageturn.wgsl     leaf curl, lighting, show-through, marbled endpaper, shadows
@@ -21,6 +24,7 @@ apps/marginalia/rive/
   tools/build_rml.py        generator for rml/recap.rml (+ art.py, rmlkit.py)
   tools/capture.py          headless capture helper (taps, fixtures, viewports)
   tools/capture_all.sh      regenerates captures/
+  tools/capture_responsive.py  the responsive matrix -> captures/responsive/ contact sheets
   tools/motion_preview.py   renders captures/motion-preview.mp4
   tools/probe.sh            prints key UserRecap values after a scripted run
   fixtures/                 sample.json, zero.json, extreme.json
@@ -114,12 +118,163 @@ p95 0.15 ms, max 0.74 ms; no wasm memory growth. GPU cost per turn frame: one
 page render into a canvas + one MSAA pass of ~6.2k vertices; idle frames draw
 one page + the cached paper image.
 
+## Responsive layout
+
+The recap adapts to any canvas. There are two layouts, chosen by width only:
+
+| Artboard width | Layout | Chrome | Pages |
+|---|---|---|---|
+| **< `layoutBreakpoint`** (default 768) | **portrait** | header across the top, controls centred across the bottom | copy on top, illustration below, standing on the floor of the stage |
+| **≥ `layoutBreakpoint`** | **landscape** | header across the top, controls together at the bottom right | an open **spread**: the copy column on one page, the illustration on the facing page, the bookmark ribbon lying in the gutter |
+
+Because the rule is width only, a tall 768×1024 or 820×1180 canvas is
+landscape and a short 667×375 or 740×360 is portrait. Each layout then
+follows the real size continuously; nothing is letterboxed.
+
+**`layoutBreakpoint`** (number, default `768`, host-owned) is a **contract
+addition** on `UserRecap`. The file compares the artboard's real width to it
+every frame, so the host can retune it at any time; a non-finite or
+non-positive value falls back to 768. The current orientation is published as
+the private `_landscape` (bool), recomputed whenever the canvas is resized,
+including across the threshold in the middle of a scene: the scene, its
+progress, its state and the events are untouched (no `screenChanged`), any
+page turn in flight lands where it was going, and the new layout is in place
+on the next frame.
+
+### Mechanism
+
+* **One rule module**, `scripts/responsive.luau` (a Luau module, pure
+  functions): from the real artboard size and the breakpoint it returns the
+  chrome metrics and, for each page, one transform per frame. It is used by
+  both scripts and tested by `scripts/responsive_test.luau`.
+* **Chrome**: the Director (`scripts/director.luau`) reads its own size (the
+  root artboard, resized by the host's layout fit) and writes `_landscape`,
+  `_vw`, `_vh`, `_headerH`, `_headerPadT`, `_controlsH`, `_controlsPadB`,
+  `_marginX`, `_controlsAlign`. The header and controls are absolute
+  `LayoutComponent`s whose height, padding and alignment are **bound** to
+  those numbers, so the engine reflows them (the primary button grows with
+  the row up to 340). Heights compact smoothly on short canvases (header
+  76 → 44, controls 104 → 58); controls stay 48×48 and 54 tall. The progress
+  segments, the tap zones (left third back, right two-thirds next, above the
+  controls band), hold-to-pause and the parallax band all use the real size.
+* **Pages**: every page is now the **whole canvas** (the header and
+  controls draw over it), so the paper bleeds edge to edge and every page turn
+  covers the full viewport. Each page's art is still authored in the
+  390-unit design space of the portrait master, grouped into named frames that
+  are never keyed: `Copy Frame`, `Art Frame`, `Bleed Front`/`Bleed Back`
+  (bands that run edge to edge: the hills of scene 1, the bridge and the water
+  of scene 2), `Foot Frame` (scene 3's caption), `Wide Frame` and `Sky Frame`
+  (scene 10), `Empty Frame` (the zero-user summary), `Paper Frame`. The Page
+  Stage (`scripts/pagestage.luau`) moves and scales them through
+  `Artboard:node(name)` whenever the size or the breakpoint changes. All
+  choreography stays inside the frames, untouched.
+* **Arrangements** (all computed, all continuous):
+  * portrait *column*: copy at the top (scale `width/390`, 0.733–1.3),
+    illustration below, scaled to the space left and anchored to the floor;
+    *unit* for scene 3 while it fits, so the page-edge ribbon still runs into
+    the numeral; a short portrait stage (wider than 1.25× its height) puts the
+    illustration beside the copy (*row*);
+  * landscape *row*: the spread. Scenes 3 and 9 mirror it (illustration on
+    the left page); scene 3's rule and support become a caption under the
+    illustration; in a **tall** landscape frame (768×1024, 820×1180) the
+    spread *staggers*: the copy column opens the page at the top, the
+    illustration takes the lower part on the other side;
+  * scene 10 has its own landscape arrangement: a new **wide summary card**
+    (720×220, bookplate beside the five stats in a row, with its own assembly
+    and persona/name layers) beside or under the headline, or the tall card,
+    whichever keeps the card largest; the skyline stands on the floor;
+  * the persona reveal: plate on the left page, name and description on the
+    right.
+* **Carried objects**: the ribbon's horizontal place is no longer keyed; the
+  Page Stage glides the Carry's `Ribbon Frame` with the pose morph (760 ms):
+  the page margin in portrait, the gutter of the spread in landscape, over the
+  slips (6) and the card's corner (10). Its length is clamped above the
+  controls. The `Moon Frame` takes the illustration transform of scenes 4–5
+  and is eased with the 4 → 5 carry.
+* **Cover**: the closed book fills the canvas; its gilt rules are bound to
+  `_vw/_vh`, the fleurons and the stamped title are placed by script. The
+  header and controls fade in as it opens (`_chromeAlpha`); the bookmark lies
+  under the cover.
+* **GPU surfaces**: the leaf canvases and the GPU canvas are sized to the
+  real page at device resolution (`resize` scale), capped at ~4.2 MP per leaf
+  on very large canvases; the leaf mesh keeps ~6,100 square cells whatever the
+  aspect; the roll radius follows the page's shorter side, so a wide page
+  bends like a phone page. The paper grain renders at device resolution
+  (capped at 8 MP); the engraved moon renders at 6 px per point so it stays
+  sharp at spread scale.
+* **Readable minimum**: 11 pt. Every copy font is at least 15 design units
+  and copy frames never scale below 0.733; the summary card's unit labels are
+  14.5 and the card never scales below 0.759 (the 390×844 look changed a
+  little for this: units and support lines 14 → 15, card labels 10.5 → 14.5).
+
+### Host setup
+
+Use the runtime's **layout fit**, so the `Recap` artboard is resized to the
+canvas (and resized again on every window resize or rotation) instead of being
+scaled: web `new Layout({ fit: Fit.Layout })` and call
+`rive.resizeDrawingSurfaceToCanvas()` on resize (React: the same `Layout` in
+`useRive`), Apple `fit: .layout`, Android `Fit.LAYOUT`, Flutter `Fit.layout`.
+These names are from the runtimes' current APIs; check them against the
+version you ship. Bind the same `UserRecap` instance as before; optionally
+write `layoutBreakpoint`. The CLI's default `--fit=layout` does the same:
+`rive apps/marginalia/rive --viewport=1280x720`.
+
+### Sizes tested
+
+Every scene settled, plus a mid-turn frame (4 → 5 at 330 ms), at the
+validation matrix — portrait 320×568, 360×640, 390×844, 430×932, 600×960,
+767×1024, 667×375, 740×360; landscape 768×1024, 820×1180, 1024×768, 1280×720,
+1440×900, 1920×1080, 2560×1080, 1366×600 — in `captures/responsive/`
+(`tools/capture_responsive.py`: one contact sheet per scene, portrait row
+above, landscape row below). The rule module is also checked on a grid of
+~400 sizes from 320×360 to 2560×1440 (`rive . --test`). Supported range:
+any width; heights from 360; a canvas narrower than 560 needs at least 560 of
+height (a phone held upright). 390×844 is the portrait master: its frames are
+the identity, so it renders as before (bar the larger small type).
+
+### Checks added
+
+| Check | Result |
+|---|---|
+| `rive . --test` (11 cases): breakpoint at 767/768 at any height, retuned and invalid breakpoints, chrome ≥ 44 pt controls, 390×844 identity, copy ≥ 11 pt and card ≥ 11 pt, copy/art inside the safe band, no copy/art overlap, ribbon above the controls and out of the copy, across the matrix + grid | 11/11 pass |
+| Resize harness, portrait → landscape mid-scene: `rive . --artboard="Resize Harness" --viewport=1280x720 --data=currentScreen=4 --advance=3.5s` (Recap laid out 720×1280, rotated to 1280×720 at 1.5 s, during scene 4's entrance) | `currentScreen=4`, `_landscape=true`, `_vw=1280`, `screenChanged`×1 (the jump only); settled spread |
+| Resize harness, landscape → portrait: `--viewport=390x844 --data=currentScreen=6` (844×390 → 390×844) | `currentScreen=6`, `_landscape=false`, settled column |
+| Resize mid-turn: tap next at 1.2 s, rotation at 1.5 s (0.3 s into the 0.84 s turn) | the leaf lands at once, `currentScreen=5`, `screenChanged`×2, settled |
+
+The **Resize Harness** artboard (and `scripts/resize_harness.luau`) is a test
+fixture shipped in the `.riv`, never shown by default: it hosts `Recap` and
+changes its size mid-run, which the CLI's `--viewport` cannot. Hosting it
+showed that the Page Stage's `init` can run again with the instance the host
+finally binds; the Page Stage now rebinds to it (before, a re-init was
+ignored).
+
+### Compromises
+
+* Each page is one composition in a 390-unit design space placed as blocks
+  (copy, art, bands), not a free reflow of every element: text boxes keep
+  their authored widths, so a copy column scales rather than rewraps.
+* Bands are stretched horizontally (and down to the floor in a centred
+  spread); they lost their near-layer parallax.
+* The tall landscape frames (768×1024, 820×1180) are the weakest: a spread in
+  a portrait-shaped frame; the stagger uses the height but leaves more
+  parchment than a phone layout would.
+* On the smallest phone (320×568) the illustrations get what the readable
+  copy leaves: scene 3's page-edge ribbon in particular is small.
+* Short portraits (667×375, 740×360) run at the type floor (11 pt) with
+  compact chrome; scene 3's caption moves under its illustration there.
+* The header and controls are hidden for the first ~0.6 s while the closed
+  cover fills the screen (they fade in as it opens, fully by ~1.1 s; reduced motion skips the
+  cover). They are still focusable and hit-testable.
+* The leaf texture is capped at ~4.2 MP, so a 2560-wide @2x page turns at a
+  little under device resolution for its 0.84 s.
+
 ## Preview
 
 ```bash
 rive apps/marginalia/rive                       # live previewer (window, rebuilds on save)
-rive apps/marginalia/rive --viewport=320x568    # small phone, layout reflows
-rive apps/marginalia/rive --viewport=1280x800 --fit=contain   # desktop, centred portrait
+rive apps/marginalia/rive --viewport=320x568    # small phone: portrait layout
+rive apps/marginalia/rive --viewport=1280x720   # desktop: landscape spread (the default --fit=layout resizes the artboard)
+rive apps/marginalia/rive --viewport=740x360    # short portrait (still portrait: the rule is width only)
 ```
 
 Tap the right two-thirds to advance, the left third to go back, press and hold
@@ -135,6 +290,8 @@ rive inspect apps/marginalia/rive --summary
 python3 apps/marginalia/rive/tools/capture.py one 4 3200 /tmp/s4.png               # scene 4, settled
 python3 apps/marginalia/rive/tools/capture.py one 9 3200 /tmp/p2.png personaIndex=2
 python3 apps/marginalia/rive/tools/capture.py one 2 3200 /tmp/x.png --fixture=extreme
+python3 apps/marginalia/rive/tools/capture.py one 9 3200 /tmp/l.png --viewport=1440x900   # any size
+rive apps/marginalia/rive --test                       # responsive rule checks
 apps/marginalia/rive/tools/probe.sh --advance=95s      # full auto-advance; prints currentScreen, event counts...
 ```
 
@@ -145,10 +302,11 @@ Build: `rive apps/marginalia/rive --once` writes `build/marginalia-recap.riv`
 
 | Artboard | Size | Role |
 |---|---|---|
-| `Recap` (main) | 390×844, layout root | chrome: header (wordmark, year, progress), stage, controls; the `Director` script; the `Page Stage` script (stage); the `Paper Grain` overlay; events; keyboard/focus; bound to `UserRecap` |
-| `Page 1` … `Page 10` (components) | 390×664 each | one scene each, with its own state machine (scene layer, plus Persona for 9 and the summary/card layers for 10). Hosted as script instances by `Page Stage`, contain-fitted into the stage |
-| `Carry` (component) | 390×664 | the objects carried through the cuts: the bookmark ribbon (10 poses) and the moon (swing, carry, spotlight). Drawn above the pages and the turning leaf |
-| `Cover` (component) | 390×664 | the closed book the recap opens on (static artwork) |
+| `Recap` (main) | authored 390×844; resized to the canvas by the host's layout fit | chrome: header (wordmark, year, progress), controls (heights / padding / alignment bound to the layout properties), the full-canvas stage; the `Director` script; the `Page Stage` script (stage); the `Paper Grain` overlay; events; keyboard/focus; bound to `UserRecap` |
+| `Page 1` … `Page 10` (components) | 390×664 design space; drawn as the whole canvas | one scene each, with its own state machine (scene layer, plus Persona for 9 and the summary/card layers for 10). Hosted as script instances by `Page Stage`, which places their frames for the real size (see Responsive layout) |
+| `Carry` (component) | 390×664 design space | the objects carried through the cuts: the bookmark ribbon (10 poses; placed by `Ribbon Frame`) and the moon (swing, carry, spotlight; `Moon Frame`). Drawn above the pages and the turning leaf |
+| `Cover` (component) | fills the canvas | the closed book the recap opens on (static artwork, a one-state machine so its binds apply) |
+| `Resize Harness` | 1280×720 | test fixture only: hosts `Recap` and resizes it mid-run |
 | `ShareCard` (component) | 340×460 | the static, chrome-free share card for the host to snapshot |
 
 Draw hierarchy per page: `Scene N` › `Content` (`Copy` — never parallaxed —
@@ -232,6 +390,7 @@ instance).
 | `showScreen1…10` | bool | eligibility; hide absent metrics, not zeros. 1 and 10 are always shown |
 | **`isSharing`** (added) | bool | file sets `true` on Share; host sets `false` when its share sheet closes — the previous pause state is then restored |
 | **`isBackgrounded`** (added) | bool | host sets while the app is backgrounded; freezes timer + motion |
+| **`layoutBreakpoint`** (added) | number | default 768: the landscape layout applies when the artboard is at least this wide, the portrait layout below; read every frame (non-finite / ≤ 0 → 768). See Responsive layout |
 
 ### File-owned outputs (read)
 
@@ -245,8 +404,11 @@ instance).
 | `primaryA11yLabel`, `secondaryA11yLabel` (added) | string | accessible labels of the two context buttons: Continue/Share and Pause/Play/Replay, taken from the localized label strings |
 
 Underscore-prefixed properties (`_navDir`, `_parallaxX/Y`, `_personaRow`,
-`_motionPaused`, `_hasStats`, `_focus`, `_cmd*`, `_evt*`, `_dbg*Events`)
-are private runtime state, not user data; hosts should not write them.
+`_motionPaused`, `_hasStats`, `_focus`, `_cmd*`, `_evt*`, `_dbg*Events`, and
+the layout state `_landscape`, `_vw`, `_vh`, `_headerH`, `_headerPadT`,
+`_controlsH`, `_controlsPadB`, `_marginX`, `_controlsAlign`, `_chromeAlpha`)
+are private runtime state, not user data; hosts should not write them
+(`_landscape` may be read: it is the current orientation).
 
 ### Events (fired by the `Recap` state machine)
 
@@ -307,7 +469,7 @@ renders no text.
 
 ## Measurements (Apple M5 Pro, macOS 26.6, Rive CLI 1.6.0, headless @1x)
 
-- `.riv`: **2.48 MB**, of which 2.10 MB are the three embedded variable fonts (art, timelines, 3 scripts, 3 shaders ≈ 0.38 MB). Before the improvement pass: 2.32 MB.
+- `.riv`: **2.52 MB** (2,524,261 bytes), of which 2.10 MB are the three embedded variable fonts. Responsive pass: +44 KB (+1.8 %) over 2,480,036 bytes (the layout module, the wide summary card, frames, the resize harness). Before the improvement pass: 2.32 MB.
 - `rive --bench=600` (intro scene, all scripts as published): advance mean ≈0.02 ms (p95 0.04–0.07), render-record mean ≈0.095 ms (p95 0.15, max 0.4–0.7 ms); `--bench=1200 --data=autoAdvanceSeconds=3` (includes two page turns) is the same within noise; no wasm memory growth. These are CPU-side figures from the CLI, not device GPU frame times; no physical phone was available, so device frame-rate is **not measured**.
 - Per page-turn frame on the GPU: one page re-rendered into a canvas, one 4x MSAA pass (shadow quad + 6.2k-vertex leaf). Idle frames: one page + `Carry` + one cached paper image (multiply).
 - Object counts: pages 1.0k–2.4k objects each (Page 9 largest), Carry ≈3.2k (mostly the 10×9 ribbon transitions), Cover ≈100, Recap ≈480.
@@ -316,7 +478,8 @@ renders no text.
 ## Verification performed
 
 `--verify` and `inspect --summary` are clean (0 errors, 0 warnings, `problems: []`).
-All rows below were re-run after the improvement pass with identical results
+All rows below were re-run after the responsive pass (October 2026, at
+390×844) with identical results; they were also re-run after the improvement pass with identical results
 (the Director's logic is unchanged; only the unused `_turnFwd`/`_turnBack`
 triggers were removed).
 Behaviour was checked headlessly with `tools/probe.sh` (reads `UserRecap` after a scripted run; `_dbg*Events` count every event fire):
@@ -338,7 +501,7 @@ Behaviour was checked headlessly with `tools/probe.sh` (reads `UserRecap` after 
 | `autoAdvanceSeconds=0.5` | clamped to 3 s |
 | Zero fixture | 2 segments, intro → "Every story starts somewhere." summary, no persona |
 | Extreme fixture (de-DE, 12.345.678, 40%+ longer copy, 55-char name, −5, persona 7) | separators, fitted headlines, ellipsized units/name, −5→0, persona row 0 |
-| Viewports 320×568 / 390×844 / 430×932 / 1280×800 contain | chrome reflows, stage contain-fits |
+| Viewports: the 16-size responsive matrix (see Responsive layout) | portrait / landscape by width, no overlaps, type ≥ 11 pt |
 
 Captures (`captures/`, regenerated by `tools/capture_all.sh`): `settled/` (all ten),
 `personas/` (four, settled + mid-reveal), `transitions/` (three frames of every
@@ -364,7 +527,7 @@ the summary, five rapid taps, moon hero + carry, summary assembly),
 
 - **`.rev` was not produced**: `rive . --once --rev=build/marginalia-recap.rev` stops with `Not logged in. Run: rive login`. After `rive login`, run that command to write `build/marginalia-recap.rev` (the `.riv` builds without a login).
 - Navigating while paused resumes playback (the scene state machine is frozen while paused, so a change would otherwise be invisible).
-- At 320×568 the stage is height-limited and contain-scales to ~58 %; supporting lines render ≈ 8 pt. Chrome stays full size. A dedicated compact layout was not built.
+- Responsive compromises are listed under Responsive layout (tall landscape frames are the weakest).
 - The Director's persona table holds English defaults; a host that localizes must write `personaName`/`personaDescription` itself (they are preserved, but a stale localized string is not detected if the host changes the index without updating the text).
 - RTL was not verified (no RTL target locale in the brief); layouts are authored LTR.
 - Device frame-rate/thermal measurements were not possible (no device attached); only CLI bench figures are recorded.

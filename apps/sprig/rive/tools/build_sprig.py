@@ -17,6 +17,7 @@ from rml import _f  # noqa
 
 W, H = 390, 844
 FPS = 60
+OFF = 20000  # inactive hit regions are moved this far off-canvas (clear of any viewport, any scale)
 STEPS = 28  # dwell clock resolution (pause granularity = dwell / STEPS)
 
 # ===================================================================== view model
@@ -30,6 +31,9 @@ def prop(name, typ, default):
     PROPS[name] = (ID(), typ, default)
     VM_ORDER.append(name)
 
+
+# each scene's copy column height at 390 x 844 (design units); the columns write their real height back
+CH_DESIGN = {1: 158.6, 2: 151.1, 3: 126.1, 4: 151.1, 5: 126.1, 6: 126.1, 7: 151.1, 8: 193.5, 9: 122.2, 10: 98.3}
 
 SPEC = [
     ("userName", "string", "Alex"), ("year", "number", 2026),
@@ -73,11 +77,16 @@ SPEC = [
     ("screen8Unit", "string", "active months"),
     # ---- adapter additions (documented in README)
     ("groupSeparator", "string", ","),
+    ("layoutBreakpoint", "number", 768),
     # ---- private state-machine plumbing (leading underscore = not user data)
     ("_navNext", "trigger", None), ("_navPrev", "trigger", None), ("_replay", "trigger", None),
     ("_navDir", "number", 1), ("_pressing", "bool", False), ("_pressSide", "number", 0),
     ("_holdPaused", "bool", False), ("_leafHeld", "bool", False), ("_focusIndex", "number", 0),
-]
+    # ---- written by scripts/viewport.luau (responsive layout); defaults are the 390 x 844 design
+    ("_vw", "number", 390), ("_vh", "number", 844), ("_dpr", "number", 1), ("_landscape", "bool", False),
+    ("_tall", "bool", True), ("_rpt", "number", 1), ("_rpw", "number", 0), ("_rlw", "number", 0),
+    ("_rlt", "number", 0),
+] + [(f"_ch{k}", "number", h) for k, h in CH_DESIGN.items()]   # measured copy-column heights (design units)
 for n, t, d in SPEC:
     prop(n, t, d)
 
@@ -107,7 +116,8 @@ FIXTURES = {
 # ===================================================================== GPU scripts (scripts/*.luau + *.wgsl)
 # Scripts and shaders are scanned from scripts/ by the CLI; the ScriptAssets are declared (in this order,
 # modules first) by sprig_main so ScriptedDrawables can name them.
-SCRIPTS = {n: ID() for n in ("dwellclock", "paperleaf", "canopylight")}
+SCRIPTS = {n: ID() for n in ("layoutsolve", "dwellclock", "paperleaf", "canopylight", "viewport")}
+MODULES = {"layoutsolve"}  # plain modules (declared first so `require` finds them)
 
 
 def scripted(name, script, nums=None, cols=None, bools=None, x=0.0, y=0.0, id=None, op=None, sx=None, sy=None):
@@ -397,7 +407,9 @@ def stack(*items):
 
 
 def bg_rect(c, name="Background"):
-    return shape(name, rect(W + 40, H + 40), fill(col(c)), x=W / 2, y=H / 2)
+    """The scene's paper colour, covering the real viewport edge to edge (and the 0.94 recede)."""
+    r = rect(W + 40, H + 40)
+    return LY.cover_rect(shape(name, r, fill(col(c)), x=W / 2, y=H / 2), r)
 
 
 def poly(name, d, c, x=0, y=0, a=1.0, id=None, rot=None, sx=None, sy=None, op=None, feather=None):
@@ -606,18 +618,61 @@ def frac_at(d, target):
     return acc[best] / acc[-1]
 
 
+def frame_vertex_exprs(mirror=False):
+    """Screen expressions of frame_d()'s nine vertices (same order as contour_params): the frame is a
+    rounded rectangle inset FRAME_IN from the real viewport edge, at any size."""
+    a, r = FRAME_IN, FRAME_R
+    VW, VH = LY.VW, LY.VH
+    pts = [(VW / 2, a), (VW - a - r, a), (VW - a, a + r), (VW - a, VH - a - r), (VW - a - r, VH - a),
+           (a + r, VH - a), (a, VH - a - r), (a, a + r), (a + r, a)]
+    if mirror:
+        pts = [(VW - x, y) for x, y in pts]
+    return pts
+
+
+def bound_path(d, exprs, name="Path"):
+    """A PointsPath for d whose vertex positions are bound to screen expressions (tangents keep their
+    authored angles and lengths, so the corners stay round at any size)."""
+    (verts, is_closed, cw), = contour_params(d)
+    assert len(verts) == len(exprs), (len(verts), len(exprs))
+    vs = []
+    for vp, (ex, ey) in zip(verts, exprs):
+        tag = "CubicDetachedVertex" if "inRotation" in vp else "StraightVertex"
+        v = E(tag, **vp)
+        LY.apply(v, "Frame vertex", vx=ex, vy=ey)
+        vs.append(v)
+    return E("PointsPath", *vs, isClosed=is_closed, isClockwise=cw, name=name)
+
+
+def frame_tip_frac():
+    """Perimeter fraction (from the frame's top centre, clockwise) of the right-edge point level with the
+    current scene's vine tip. Bound to the frame trims' offset, so the vine always grows out of the tip."""
+    a, r = FRAME_IN, FRAME_R
+    VW, VH = LY.VW, LY.VH
+    yd = 752.8 - 64.75 * LY.clamp(LY.CS, 1, 10)            # design tip height (linear fit of vine_tip)
+    ys = LY.VINE_TOP + (yd - 104) * LY.SV
+    per = 2 * (VW - 2 * a - 2 * r) + 2 * (VH - 2 * a - 2 * r) + 2 * math.pi * r
+    return (VW / 2 - a - r + math.pi * r / 2 + LY.clamp(ys, a + r, VH - a - r) - a - r) / per
+
+
 def transition_globals():
     if TG:
         return TG
     d, dm = frame_d(), frame_d(True)
     trims, cols, kids = {}, [], []
-    for nm, dd in (("cw", d), ("ccw", dm)):
+    f0 = frame_tip_frac()
+    for nm, dd, mir in (("cw", d, False), ("ccw", dm, True)):
         t1, t2, c1 = ID(), ID(), ID()
-        kids.append(shape(f"Frame vine light {nm}", *path_el(dd), stroke(col(LEAF_PALE, 0.55), 1.1, trim=trim(0, 0, id=t2))))
-        kids.append(shape(f"Frame vine {nm}", *path_el(dd), stroke(col(LEAF), 3.6, trim=trim(0, 0, id=t1), color_id=c1)))
+        off = f0 if not mir else 1 - f0
+        kids.append(shape(f"Frame vine light {nm}", bound_path(dd, frame_vertex_exprs(mir)),
+                          stroke(col(LEAF_PALE, 0.55), 1.1, trim=LY.apply(trim(0, 0, id=t2), "Frame tip", trim_off=off))))
+        kids.append(shape(f"Frame vine {nm}", bound_path(dd, frame_vertex_exprs(mir)),
+                          stroke(col(LEAF), 3.6, trim=LY.apply(trim(0, 0, id=t1), "Frame tip", trim_off=off),
+                                 color_id=c1)))
         trims[nm] = (t1, t2)
         cols.append(c1)
     leaves = []
+    a, r = FRAME_IN, FRAME_R
     for j in range(FRAME_LEAVES):
         fj = (j + 0.5) / FRAME_LEAVES
         (px, py), ang = point_at(d, fj)
@@ -627,15 +682,24 @@ def transition_globals():
         L = 20 + 6 * ((j * 5) % 3)
         n, p = leaf(f"Frame leaf {j}", px, py, L, L * 0.62, rot=rot, light=[LEAF, LEAF_PALE, LEAF_DARK][j % 3],
                     dark=[LEAF_DARK, LEAF, LEAF_DEEP][j % 3], rib=None, s=0.0)
+        # glue each leaf to the same stretch of the real frame: corners keep their offset, edges spread
+        ex = px if px < a + r else (LY.VW - (W - px) if px > W - a - r else a + (px - a) / (W - 2 * a) * (LY.VW - 2 * a))
+        ey = py if py < a + r else (LY.VH - (H - py) if py > H - a - r else a + (py - a) / (H - 2 * a) * (LY.VH - 2 * a))
+        LY.apply(n, f"Frame leaf {j}", x=ex, y=ey)
         kids.append(n)
         leaves.append((p["node"], fj))
     frame_id = ID()
     frame = node("Frame vine", *kids, op=0.0, id=frame_id)
     lnode = ID()
+    # the 3D leaf sweeps across a viewport-centred wrapper scaled with the screen; its canvas follows the
+    # wrapper's real pixel size (device pixels), capped at a 2048 px canvas
+    res = LY.clamp(LY.K_LEAF * LY.xmax(LY.DPR, 1), 1, 2048 / 880)
     lf, lin = leaf3d("Transition leaf 3D", 0, 0, id=lnode, L=560, W=190, cy=280, halfW=440, top=-440, bottom=440,
-                     res=1.0, persp=900, cup=0.25, wave=0.5, fold=0.6, curl=0.4, shadow=0.3, shadowX=46, shadowY=70,
+                     res=(1.0, LY.bindx(243, res, "Transition leaf res")), persp=900, cup=0.25, wave=0.5, fold=0.6,
+                     curl=0.4, shadow=0.3, shadowX=46, shadowY=70,
                      shadowBlur=50, front="#86B455", back="#EFE6C9", glowColor="#E2F2A8", glow=0.9, alpha=0, live=0)
-    TG.update(d=d, frame=frame, frame_id=frame_id, trims=trims, cols=cols, leaves=leaves, leaf=lf, leaf_node=lnode,
+    leaf_wrap = LY.place("Transition leaf place", lf, x=LY.VW / 2, y=LY.VH / 2, s=LY.K_LEAF)
+    TG.update(d=d, frame=frame, frame_id=frame_id, trims=trims, cols=cols, leaves=leaves, leaf=leaf_wrap, leaf_node=lnode,
               lin=lin)
     gset = {frame_id, lnode, *lin.values(), *cols, *[i for t in trims.values() for i in t], *[l for l, _ in leaves]}
     TG["ids"] = gset
@@ -652,25 +716,34 @@ def build_scene_root(sc, content_kids, overlay_kids=None, clip=True):
     k = sc.k
     ox, oy = vine_tip(k)
     sc.origin = (ox, oy)
-    mask = shape(f"S{k} wipe mask", *path_el(wipe_leaf_d()), x=ox, y=oy, sx=26, sy=26, rot=0.2, id=sc.mask)
-    content = node(f"S{k} content", *content_kids, id=sc.content)
+    # the iris grows from the real vine tip and is scaled so it covers the whole viewport at any size
+    tx, ty = LY.vine_map(ox, oy)
+    mask = shape(f"S{k} wipe mask", *path_el(wipe_leaf_d()), x=0.0, y=0.0, sx=26, sy=26, rot=0.2, id=sc.mask)
+    mask_place = LY.place(f"S{k} iris place", mask, x=tx, y=ty, s=LY.K_IRIS)
+    # camera: content scales about the viewport centre (recede / push), its children keep screen coords
+    pcx, pcy = LY.VW / 2, LY.VH * 0.45
+    inner = LY.place(f"S{k} uncentre", *content_kids, x=-pcx, y=-pcy)
+    content = node(f"S{k} content", inner, id=sc.content)
     if clip and k > 1:
         content.kids.insert(0, E("ClippingShape", sourceId=sc.mask, name="Wipe clip"))
+    camera = LY.place(f"S{k} camera", content, x=pcx, y=pcy)
     # wipe overlay: a paper edge with a soft green glow following the mask
     edge_id = ID()
     sc.edge = edge_id
     edge = shape(f"S{k} wipe edge", *path_el(wipe_leaf_d()),
                  stroke(col(CREAM, 0.9), 2.2, fixed=True),
                  stroke(col(LEAF, 0.55), 14, fixed=True, feather=8),
-                 x=ox, y=oy, sx=26, sy=26, rot=0.2, op=0.0, id=edge_id)
+                 x=0.0, y=0.0, sx=26, sy=26, rot=0.2, op=0.0, id=edge_id)
+    edge_place = LY.place(f"S{k} edge place", edge, x=tx, y=ty, s=LY.K_IRIS)
     bud_id = ID()
     bud = node(f"S{k} bud",
                shape("Bud glow", ellipse(30, 30), fill(col(LEAF_PALE, 0.5), feather=8)),
                shape("Bud", *path_el(leaf_full_d(18, 14)), fill(col(LEAF)), y=8),
-               x=ox, y=oy, sx=0.0, sy=0.0, id=bud_id)
+               x=0.0, y=0.0, sx=0.0, sy=0.0, id=bud_id)
+    bud_place = LY.place(f"S{k} bud place", bud, x=tx, y=ty, s=LY.clamp(LY.SV, 0.6, 1.6))
     sc.bud = bud_id
-    ov = node(f"S{k} wipe overlay", edge, bud, *(overlay_kids or []), id=sc.overlay)
-    root = node(f"Scene {k}", ov, content, mask, op=0.0, id=sc.root)
+    ov = node(f"S{k} wipe overlay", edge_place, bud_place, *(overlay_kids or []), id=sc.overlay)
+    root = node(f"Scene {k}", ov, camera, mask_place, op=0.0, id=sc.root)
     return root
 
 
@@ -693,8 +766,8 @@ def scene_wipe_in(sc):
     a.key(sc.content, "scaleY", [(0, 1.0, "hold")])
     a.key(sc.bud, "scaleX", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.6, "in"), (18, 0.0)])
     a.key(sc.bud, "scaleY", [(0, 0.0, "hold"), (1, 0.0, "back"), (10, 1.6, "in"), (18, 0.0)])
-    a.key(sc.mask, "x", [(0, ox, "hold")])
-    a.key(sc.mask, "y", [(0, oy, "hold")])
+    a.key(sc.mask, "x", [(0, 0.0, "hold")])
+    a.key(sc.mask, "y", [(0, 0.0, "hold")])
     a.key(sc.mask, "scaleX", [(0, 0.01, "hold"), (10, 0.01, "fold"), (44, 26.0)])
     a.key(sc.mask, "scaleY", [(0, 0.01, "hold"), (10, 0.01, "fold"), (44, 26.0)])
     a.key(sc.mask, "rotation", [(0, -0.6, "hold"), (10, -0.6, "fold"), (46, 0.2)])
@@ -703,9 +776,9 @@ def scene_wipe_in(sc):
     a.key(sc.edge, "opacity", [(0, 0.0, "hold"), (10, 1.0, "hold"), (42, 1.0, "in"), (48, 0.0)])
     # ---- the vine runs round the edge both ways and becomes the frame, then lets go
     f0 = frac_at(g["d"], (W - FRAME_IN, oy))
-    for nm, off in (("cw", f0), ("ccw", 1 - f0)):
+    for nm in ("cw", "ccw"):
         for tid in g["trims"][nm]:
-            a.key(tid, "offset", [(0, off, "hold")])
+            # offset is bound (frame_tip_frac): the vine leaves the real tip at any viewport size
             a.key(tid, "start", [(0, 0.0, "hold")])
             a.key(tid, "end", [(0, 0.0, "hold"), (2, 0.0, (0.3, 0.3, 0.3, 1.0)), (32, 0.5)])
     a.key(g["frame_id"], "opacity", [(0, 1.0, "hold"), (36, 1.0, "io"), (58, 0.0)])
@@ -723,8 +796,9 @@ def scene_wipe_in(sc):
     K("live", [(0, 1.0, "hold"), (46, 0.0, "hold")])
     K("alpha", [(0, 0.0, "hold"), (4, 1.0, "hold"), (40, 1.0, "lin"), (45, 0.0)])
     # crosses the screen centre as the iris is half open (frame ~25), so the leaf carries the cut
-    a.key(ln, "x", [(0, W / 2 + 470, "hold"), (4, W / 2 + 470, (0.3, 0.1, 0.62, 0.9)), (44, W / 2 - 470)])
-    a.key(ln, "y", [(0, 440 + 400, "hold"), (4, 440 + 400, (0.3, 0.1, 0.62, 0.9)), (44, 440 - 420)])
+    # relative to the viewport-centred leaf wrapper (design centre 195, 422)
+    a.key(ln, "x", [(0, 470, "hold"), (4, 470, (0.3, 0.1, 0.62, 0.9)), (44, -470)])
+    a.key(ln, "y", [(0, 418, "hold"), (4, 418, (0.3, 0.1, 0.62, 0.9)), (44, -402)])
     a.key(ln, "scaleX", [(0, 0.85, "hold"), (4, 0.85, "io"), (25, 1.32, "io"), (44, 1.0)])
     a.key(ln, "scaleY", [(0, 0.85, "hold"), (4, 0.85, "io"), (25, 1.32, "io"), (44, 1.0)])
     K("spin", [(0, -0.3, "hold"), (4, -0.3, "io"), (42, -1.05)])
@@ -769,21 +843,24 @@ def scene_derive(sc):
         an.key(g["lin"]["live"], "propertyValue", [(0, 0.0, "hold")])
         an.key(g["frame_id"], "opacity", [(0, 0.0, "hold")])
     hide_globals(er)
-    # leaving forward: the old scene recedes a little (camera pulls back) while the leaf passes over it
-    cx, cy = W / 2, H * 0.45
+    # leaving forward: the old scene recedes a little (camera pulls back) while the leaf passes over it.
+    # The content node sits on a viewport-centred camera pivot, so scale alone recedes about the centre.
     lf = Anim(f"S{k} leave fwd", 50)
     lf.key(sc.root, "opacity", [(0, 1.0, "hold"), (48, 0.0, "hold")])
-    for p, v0, v1 in (("scaleX", 1.0, 0.94), ("scaleY", 1.0, 0.94), ("x", 0.0, cx * 0.06), ("y", 0.0, cy * 0.06)):
+    for p, v0, v1 in (("scaleX", 1.0, 0.94), ("scaleY", 1.0, 0.94)):
         lf.key(sc.content, p, [(0, v0, "antic"), (6, v0 + (v0 - v1) * 0.2, "io"), (46, v1)])
+    for p in ("x", "y"):
+        lf.key(sc.content, p, [(0, 0.0, "hold")])
     for i in sc.fade_leave:
         lf.key(i, "opacity", [(0, 1.0, "lin"), (10, 0.0)])
     for hid, hx in sc.hits:
-        lf.key(hid, "x", [(0, hx + 2000, "hold")])
+        lf.key(hid, "x", [(0, hx + OFF, "hold")])
     lb = Anim(f"S{k} leave back", 44)
     lb.key(sc.root, "opacity", [(0, 1.0, "hold"), (42, 0.0, "hold")])
-    lx, ly = 18.0, oy + 60
-    lb.key(sc.mask, "x", [(0, ox, "fold"), (38, lx)])
-    lb.key(sc.mask, "y", [(0, oy, "fold"), (38, ly)])
+    # the iris folds back into the left margin (mask local to its tip wrapper, which scales with the screen)
+    lx, ly = 18.0 - ox, 60.0
+    lb.key(sc.mask, "x", [(0, 0.0, "fold"), (38, lx)])
+    lb.key(sc.mask, "y", [(0, 0.0, "fold"), (38, ly)])
     lb.key(sc.mask, "scaleX", [(0, 26.0, "fold"), (38, 0.01)])
     lb.key(sc.mask, "scaleY", [(0, 26.0, "fold"), (38, 0.01)])
     lb.key(sc.mask, "rotation", [(0, 0.2, "fold"), (38, 1.1)])
@@ -791,14 +868,15 @@ def scene_derive(sc):
         lb.tracks[(sc.edge, p)] = list(lb.tracks[(sc.mask, p)])
     lb.key(sc.edge, "opacity", [(0, 0.0, "lin"), (6, 1.0, "hold"), (34, 1.0, "lin"), (40, 0.0)])
     # the folding-away scene is pushed toward the camera as it closes
-    for p, v1 in (("scaleX", 1.05), ("scaleY", 1.05), ("x", -cx * 0.05), ("y", -cy * 0.05)):
-        lb.key(sc.content, p, [(0, 1.0 if p.startswith("scale") else 0.0, "fold"), (40, v1)])
+    for p, v1 in (("scaleX", 1.05), ("scaleY", 1.05)):
+        lb.key(sc.content, p, [(0, 1.0, "fold"), (40, v1)])
+    for p in ("x", "y"):
+        lb.key(sc.content, p, [(0, 0.0, "hold")])
     if k > 1:
         # reverse: the frame unweaves back into the tip and the 3D leaf sweeps the other way, inner face first
         f0 = frac_at(g["d"], (W - FRAME_IN, oy))
-        for nm, off in (("cw", f0), ("ccw", 1 - f0)):
+        for nm in ("cw", "ccw"):
             for tid in g["trims"][nm]:
-                lb.key(tid, "offset", [(0, off, "hold")])
                 lb.key(tid, "start", [(0, 0.0, "hold")])
                 lb.key(tid, "end", [(0, 0.5, "fold"), (34, 0.0)])
         lb.key(g["frame_id"], "opacity", [(0, 1.0, "hold"), (30, 1.0, "lin"), (40, 0.0)])
@@ -814,8 +892,8 @@ def scene_derive(sc):
         K = lambda n, keys: lb.key(li[n], "propertyValue", keys)
         K("live", [(0, 1.0, "hold"), (42, 0.0, "hold")])
         K("alpha", [(0, 0.0, "hold"), (2, 1.0, "hold"), (34, 1.0, "lin"), (40, 0.0)])
-        lb.key(ln, "x", [(0, W / 2 - 470, "hold"), (2, W / 2 - 470, (0.3, 0.1, 0.62, 0.9)), (38, W / 2 + 470)])
-        lb.key(ln, "y", [(0, 440 - 420, "hold"), (2, 440 - 420, (0.3, 0.1, 0.62, 0.9)), (38, 440 + 400)])
+        lb.key(ln, "x", [(0, -470, "hold"), (2, -470, (0.3, 0.1, 0.62, 0.9)), (38, 470)])
+        lb.key(ln, "y", [(0, -402, "hold"), (2, -402, (0.3, 0.1, 0.62, 0.9)), (38, 418)])
         lb.key(ln, "scaleX", [(0, 0.96, "hold"), (2, 0.96, "io"), (20, 1.3, "io"), (38, 0.85)])
         lb.key(ln, "scaleY", [(0, 0.96, "hold"), (2, 0.96, "io"), (20, 1.3, "io"), (38, 0.85)])
         K("spin", [(0, 2.25, "hold"), (2, 2.25, "io"), (38, 1.85)])
@@ -827,16 +905,16 @@ def scene_derive(sc):
     for i in sc.fade_leave:
         lb.key(i, "opacity", [(0, 1.0, "lin"), (8, 0.0)])
     for hid, hx in sc.hits:
-        lb.key(hid, "x", [(0, hx + 2000, "hold")])
+        lb.key(hid, "x", [(0, hx + OFF, "hold")])
     lr = Anim(f"S{k} leave reduced", 13)
     lr.key(sc.root, "opacity", [(0, 1.0, "lin"), (12, 0.0)])
     hide_globals(lr)
     for hid, hx in sc.hits:
-        lr.key(hid, "x", [(0, hx + 2000, "hold")])
+        lr.key(hid, "x", [(0, hx + OFF, "hold")])
     hd = Anim(f"S{k} hidden", 1)
     hd.key(sc.root, "opacity", [(0, 0.0, "hold")])
     for hid, hx in sc.hits:
-        hd.key(hid, "x", [(0, hx + 2000, "hold")])
+        hd.key(hid, "x", [(0, hx + OFF, "hold")])
         for a in (sc.ef, eb, er):
             a.key(hid, "x", [(0, hx, "hold")])
     for obj, p, v in sc.extra_hidden:
@@ -876,3 +954,7 @@ def metric_text(sc, num_kw, head_xy, head_w, head_align, unit_kw=None, dark_text
     sc.key(sup_id, "opacity", [(0, 0.0, "hold"), (82, 0.0, "outs"), (106, 0.82)])
     sc.settle.append((col_id, "y", 10.0))
     return hero, unit, colm
+
+
+# ===================================================================== responsive layout (tools/layout.py)
+import layout as LY  # noqa: E402  (needs P, CV and the converters above)

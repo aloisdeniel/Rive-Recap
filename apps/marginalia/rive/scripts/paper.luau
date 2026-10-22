@@ -42,7 +42,13 @@ end
 
 function resize(self: Paper, size: Vector, scale: number)
     self.size = size
-    self.scale = if scale > 0 then scale else 1
+    -- device resolution, within an 8 MP budget on very large canvases (the
+    -- grain is soft; it is generated once per resize)
+    local sc = if scale > 0 then scale else 1
+    if size.x > 0 and size.y > 0 then
+        sc = math.min(sc, math.sqrt(8e6 / (size.x * size.y)))
+    end
+    self.scale = sc
     local ctx = self.ctx
     if ctx == nil or self.pipe == nil or size.x <= 0 or size.y <= 0 then
         return

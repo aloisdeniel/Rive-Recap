@@ -13,6 +13,11 @@
 --         -1 back (rose quilt, mirrored: lands from the left, leaves rightward)
 --   cam   the camera scale the World is keyed to, so the sheet always fits the
 --         scene patch exactly while the camera pulls back to show the quilt
+--   vw/vh the real canvas size in points and `dpr` its pixel density, bound to
+--         the stage script's numbers: the sheet covers the whole canvas at any
+--         size. Its surfaces render at the device density (at least 2 px per
+--         point, so 1x captures stay supersampled), capped to a pixel budget on
+--         very large canvases. The mesh follows the canvas aspect.
 --
 -- Reduced motion keys fold = 0 (the Handoff layer uses its oat veil instead).
 -- Runtimes without shader support draw a flat, hinged 2D panel.
@@ -21,9 +26,14 @@ type Cloth = {
     fold: Input<number>,
     dir: Input<number>,
     cam: Input<number>,
+    vw: Input<number>,
+    vh: Input<number>,
+    dpr: Input<number>,
     ctx: Context?,
     size: Vector,
     scale: number,
+    gx: number,
+    gy: number,
     seed: number,
     -- GPU
     gpu: boolean,
@@ -55,11 +65,10 @@ type Cloth = {
     shade: Paint,
 }
 
-local AW, AH = 390, 844 -- artboard (scene patch at camera scale 1)
--- canvas pixels per point: a ScriptedDrawable gets no resize/pixel density, so
--- the sheet renders at 2x (supersampled on @1x captures, soft-ish only on @3x)
-local RES = 2
-local GX, GY = 44, 96 -- sheet mesh resolution (~9 pt cells)
+local AW, AH = 390, 844 -- the portrait master (defaults before the bound size arrives)
+local MIN_RES = 2 -- px per point at least: 1x captures stay supersampled
+local BUDGET = 3.6e6 -- max surface pixels (colour + 2x MSAA + depth ~ 72 MB at the cap)
+local CELLS = 44 * 96 -- sheet mesh cells (~9 pt cells on the master)
 local PI = math.pi
 
 local function clamp01(x: number): number
@@ -87,23 +96,32 @@ local function pose(p: number, W: number, H: number): (number, number, number, n
     local phi = lerp(0.40, 0.04, easeSine(p))
     local nx, ny = math.cos(phi), math.sin(phi)
     local q = clamp01((p - 0.04) / 0.96)
-    local R = W * (0.065 + 0.15 * math.sin(PI * q) ^ 1.1 + 0.05 * q)
+    -- the roll is sized from the sheet's short side (the master's width), so a
+    -- wide landscape sheet curls like the same cloth rather than a huge drum
+    local L = math.min(W, H * 0.9)
+    local R = L * (0.065 + 0.15 * math.sin(PI * q) ^ 1.1 + 0.05 * q)
     local span = W * nx + H * ny
-    local cEnd = span + R * 1.2 / nx + W * 0.04
+    local cEnd = span + R * 1.2 / nx + L * 0.04
     local c
     if p < 0.07 then
-        c = W * 0.09 * easeOut(p / 0.07)
+        c = L * 0.09 * easeOut(p / 0.07)
     elseif p < 0.11 then
-        c = W * (0.09 - 0.016 * math.sin(PI * 0.5 * (p - 0.07) / 0.04))
+        c = L * (0.09 - 0.016 * math.sin(PI * 0.5 * (p - 0.07) / 0.04))
     else
         local q2 = clamp01((p - 0.11) / 0.89)
-        c = lerp(W * 0.074, cEnd, 0.55 * easeSine(q2) + 0.45 * q2)
+        c = lerp(L * 0.074, cEnd, 0.55 * easeSine(q2) + 0.45 * q2)
     end
     return W - nx * c, H - ny * c, nx, ny, R
 end
 
 -- ------------------------------------------------------------ GPU
 local function buildMesh(self: Cloth)
+    -- cells follow the sheet's aspect so they stay roughly square
+    local aspect = math.clamp(self.size.x / math.max(self.size.y, 1), 0.2, 5)
+    local GX = math.max(8, math.floor(math.sqrt(CELLS * aspect) + 0.5))
+    local GY = math.max(8, math.floor(CELLS / GX + 0.5))
+    self.gx = GX
+    self.gy = GY
     local nv = (GX + 1) * (GY + 1)
     local vb = buffer.create(nv * 8)
     local o = 0
@@ -168,14 +186,39 @@ local function initGpu(self: Cloth, context: Context)
     local ubo = GPUBuffer.new({ size = 96, usage = 'uniform', label = 'cloth uniforms' })
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = layout, ubos = { { slot = 0, buffer = ubo } } })
-    buildMesh(self)
     self.gpu = true
+end
+
+-- Follow the bound canvas size and density; drop the surfaces (and the mesh,
+-- when the aspect changes) so the next fold reallocates them at the new size.
+local function track(self: Cloth)
+    local w = if self.vw > 1 then self.vw else AW
+    local h = if self.vh > 1 then self.vh else AH
+    local res = math.max(self.dpr, MIN_RES)
+    res = math.min(res, math.sqrt(BUDGET / (w * h)))
+    res = math.max(res, 0.5)
+    if w ~= self.size.x or h ~= self.size.y or math.abs(res - self.scale) > 0.01 then
+        local aspectChanged = math.abs(w / h - self.size.x / self.size.y) > 0.02
+        self.size = Vector.xy(w, h)
+        self.scale = res
+        self.gc = nil
+        self.colorView = nil
+        self.msaaView = nil
+        self.depthView = nil
+        if aspectChanged then
+            self.vbuf = nil
+            self.ibuf = nil
+        end
+    end
 end
 
 local function allocate(self: Cloth)
     local ctx = self.ctx
     if ctx == nil or not self.gpu or self.size.x <= 0 or self.size.y <= 0 then
         return
+    end
+    if self.vbuf == nil then
+        buildMesh(self)
     end
     local w = math.max(1, math.ceil(self.size.x * self.scale))
     local h = math.max(1, math.ceil(self.size.y * self.scale))
@@ -229,15 +272,15 @@ local function writeUniforms(self: Cloth, ubo: GPUBuffer, p: number, mirrored: b
     local ox, oy, sw, sh = sheetRect(self)
     local W, H = sw * k, sh * k
     local ax, ay, nx, ny, R = pose(p, W, H)
-    local ptK = sw / AW * k -- px per sheet point
+    local ptK = sw / self.size.x * k -- px per sheet point
     local b = self.staging
     local vals = {
         W, H, ox * k, oy * k,
-        self.size.x * k, self.size.y * k, self.size.y * k * 2.0, if mirrored then 1 else 0,
+        self.size.x * k, self.size.y * k, math.max(self.size.x, self.size.y) * k * 2.0, if mirrored then 1 else 0,
         ax, ay, nx, ny,
         R, 1, ptK, 3.2 * ptK * math.sin(PI * clamp01(p * 1.4)),
         -0.42, -0.58, 0.70, 0.55,
-        if self.dir >= 0 then 0 else 1, self.seed, AW, AH,
+        if self.dir >= 0 then 0 else 1, self.seed, self.size.x, self.size.y,
     }
     for i, v in vals do
         buffer.writef32(b, (i - 1) * 4, v)
@@ -288,7 +331,7 @@ local function projectPt(self: Cloth, lx: number, ly: number, z: number, mirrore
     local x = if mirrored then W - lx else lx
     local px, py = x + ox * k, ly + oy * k
     local cx, cy = self.size.x * k * 0.5, self.size.y * k * 0.5
-    local D = self.size.y * k * 2.0
+    local D = math.max(self.size.x, self.size.y) * k * 2.0
     local f = D / math.max(D - z, 1)
     return Vector.xy((cx + (px - cx) * f) / k, (cy + (py - cy) * f) / k)
 end
@@ -387,6 +430,7 @@ function draw(self: Cloth, renderer: Renderer)
     end
     -- one piecing per direction: stable through every fold, rapid taps and skips
     self.seed = if self.dir < 0 then 0.71 else 0.23
+    track(self)
     local p, mirrored, u, landing = phase(self)
     if self.gpu and self.gc == nil then
         allocate(self)
@@ -408,9 +452,14 @@ return function(): Node<Cloth>
         fold = 0,
         dir = 1,
         cam = 1,
+        vw = AW,
+        vh = AH,
+        dpr = 1,
         ctx = nil,
         size = Vector.xy(AW, AH),
-        scale = RES,
+        scale = MIN_RES,
+        gx = 44,
+        gy = 96,
         seed = 0.2,
         gpu = false,
         gc = nil,

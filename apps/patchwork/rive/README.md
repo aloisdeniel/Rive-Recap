@@ -149,18 +149,151 @@ settings, because the woven texture is fine detail that VP9 has to keep.
 
 | Path | What |
 |---|---|
-| `scene.rml` | **The editable source.** One artboard (`Patchwork Recap`, 390 × 844), one state machine (`Recap`), the `UserRecap` view model, converters, fonts. |
+| `scene.rml` | **The editable source.** One artboard (`Patchwork Recap`, authored at 390 × 844 and laid out at any size, see "Responsive layout"), one state machine (`Recap`), the `UserRecap` view model, converters, fonts. |
 | `../tools/gen_scene.py`, `../tools/art.py`, `../tools/rml.py` | Generator that writes `scene.rml` (keeps ~600 repetitive state-machine nodes consistent). Small tweaks can be made directly in `scene.rml`; larger ones in the generator, then `python3 apps/patchwork/tools/gen_scene.py`. |
 | `assets/fonts/` | Bree Serif, Atkinson Hyperlegible Regular/Bold + their OFL licence texts. |
 | `scripts/cloth.luau` + `shaders/cloth.wgsl` | The signature fold: a GPU-rendered 3D quilt sheet (see "Improvement pass"). |
 | `scripts/weave.luau` + `shaders/weave.wgsl` | Woven-cotton ground texture multiplied over the whole recap. |
 | `scripts/medallion.luau` + `shaders/medallion.wgsl` | The quilted, lit persona medallion (scene 9 and the card). |
+| `scripts/stage.luau` + `scripts/layout_spec.luau` | The responsive stage: reads the real artboard size and writes every scene's layout into private `UserRecap` numbers (the spec module is generated). |
+| `scripts/backdrop.luau` + `shaders/backdrop.wgsl` | The larger quilt revealed by the hand-off's camera pull-back, rendered at the real canvas size. |
 | `build/patchwork-recap.riv` | Runtime export (unsigned local build; **contains scripts**, so web hosts need a signed `--publish` build). |
 | `build/patchwork-recap.rev` | Editor export — see "Exports" for its status. |
-| `captures/` | Headless review captures (scenes, personas, transitions, fixtures, reduced motion, states, viewports) and `captures/motion-preview.mp4` (an H.264 transcode of `../video.webm`, the full walkthrough rendered by `scripts/render-video.py`). |
+| `captures/` | Headless review captures (scenes, personas, transitions, fixtures, reduced motion, states, `responsive/` contact sheets of the viewport matrix) and `captures/motion-preview.mp4` (an H.264 transcode of `../video.webm`, the full walkthrough rendered by `scripts/render-video.py`). |
 | `../fixtures/` | `zero-user.json` / `extreme.json` host fixtures plus `.args` files that replay them through `rive --data`. The supplied `../sample-data.json` is the authored default instance. |
-| `../tools/check.sh` | The behaviour checks below, as 15 headless assertions (exit code = failures). |
+| `../tools/check.sh` | The behaviour checks below, as 31 headless assertions (15 original + 16 responsive; exit code = failures). |
 | `../tools/capture_all.sh`, `shoot.sh`, `probe.sh` | Regenerate captures; drive taps headlessly; dump the live view-model values. |
+| `../tools/capture_responsive.sh`, `contact_sheet.py` | The viewport-matrix contact sheets in `captures/responsive/`. |
+| `../tools/resize_harness.rml` | Generated test-only artboard that resizes the recap mid-run; `check.sh` splices it into a temporary copy (never shipped). |
+
+## Responsive layout
+
+The recap adapts to any canvas. There are two layouts, chosen by a **pure width
+breakpoint**, and each one adapts continuously to every size on its side of it.
+
+### The rule and `layoutBreakpoint`
+
+* **Landscape** when the artboard width is **≥ `layoutBreakpoint`** (a new
+  `UserRecap` number, default **768**), **portrait** otherwise. Height plays no
+  part in the choice: 768 × 1024 and 820 × 1180 are landscape, 667 × 375 and
+  740 × 360 are portrait.
+* The width is the artboard's real, laid-out width, read every frame, so a
+  resize (or a change of `layoutBreakpoint`) that crosses the threshold
+  switches layout mid-scene. The current scene, its progress and the event
+  counters are untouched; the scene simply re-settles in the other layout.
+  `_landscape` reports the result.
+
+### What each layout does
+
+| | Portrait (width < breakpoint) | Landscape (width ≥ breakpoint) |
+|---|---|---|
+| Chrome | Phone chrome: header and progress on top, a full-width control bar at the bottom | Header and progress across the top; the controls sit at the foot of a stitched fabric page; the chrome grows up to 1.5× on large canvases |
+| Composition | **Stack**: copy above and below the hero, as on the 390 × 844 master. The hero scales with the space, the gaps compress before it shrinks. On a short canvas (content wider than tall) the copy moves into a column beside the hero (**split**) | **Spread**: the hero art in a left panel, the copy on a fabric page on the right. Very wide canvases centre the composition and let the grounds bleed. A tall canvas (content taller than wide) puts the hero on top and the page as a band along the bottom |
+| Numerals (3, 5, 8) | Part of the hero | Move onto the page, above the headline, beside the art (stay with the hero in the tall band) |
+| Persona (9) | Title over the medallion | Medallion left, label, title and line on the page |
+| Share card (10) | Portrait card (336 × 540) | A landscape **postcard** (780 × 340: persona column + 3 + 2 stat patches) whenever it is legible, else the portrait card beside the page. A very short portrait canvas gives the postcard the full width and drops the summary copy |
+| Copy | Centred, type 0.8–1.2× | Ranged left, type 0.85–1.7× with the page width |
+
+Everything follows the real size: grounds, quilting and bleeds are authored far
+past the master (to 3000 × 1800 points) so they reach every edge; the progress
+row spans the real width; the tap zones are the real left third (back) and right
+two-thirds (next) between the progress row and the control row, and hold-to-pause
+uses the same zones; the thanks patches' hit areas follow their art. Controls stay
+≥ 48 × 48 (52 × 52 bodies).
+
+### Mechanism
+
+* **`scripts/stage.luau`** is a `ScriptedLayout` in an absolutely positioned,
+  fill-sized `LayoutComponent` at the artboard root, so its `resize` receives
+  the artboard's laid-out size and pixel density. It reads `layoutBreakpoint`
+  and `currentScreen`, computes the layout and writes about 80 private
+  `UserRecap` numbers (`_h1x`…`_h10s` per-scene hero transforms, `_c1x`…`_c4w`
+  copy slots, chrome anchors, button widths, tap zones, page rectangle,
+  carries). It writes only values that changed.
+* The markup is **bound** to those numbers: each scene's hero group binds
+  `x`/`y`/`scale`, copy lines bind their slot's position, scale, measure,
+  `alignValue` and `originX`, buttons bind position and width. Discrete
+  arrangements (the share card) are poses: wrapper nodes whose offset is a bound
+  boolean times a constant. Nothing is scaled with letterboxing.
+* **`scripts/layout_spec.luau`** (generated by `tools/gen_scene.py`) holds each
+  scene's design boxes measured on the master: its stack blocks, the hero's
+  essential box, the copy order. At 390 × 844 the script reproduces the master
+  exactly, which is why the original checks pass unchanged.
+* **Continuity carries** (8 → 9 patches, 9 → 10 bloom and emblem flight) join
+  scenes whose frames now differ: the timelines key their progress into
+  `_carryP`/`_s10T`, and the script places the carried objects between the two
+  frames. The bloom grows to the farthest corner of whatever canvas it is in.
+* **GPU canvases are sized to their real box.** The quilt fold
+  (`cloth.luau`) takes the canvas size and density through bound inputs, covers
+  the whole canvas at any size, and its mesh follows the aspect; the roll is
+  sized from the short side. The pull-back backdrop is now a procedural GPU
+  quilt (`backdrop.luau`/`backdrop.wgsl`) covering any size. The weave ground
+  fills the artboard at the device density. The medallion renders at the
+  device density times its on-screen scale. Fold and backdrop render at
+  ≥ 2 px per point (device density when higher), capped at 3.6 M pixels on very
+  large canvases.
+
+### Host setup
+
+Use the runtime's **layout fit**, so the artboard is resized to the canvas and
+the stage script sees the real size; resize it whenever the canvas changes. The
+option is `Fit.Layout` on the web runtime (`new Layout({ fit: Fit.Layout })`,
+then call `resizeDrawingSurfaceToCanvas()` on resize), `.layout` on Apple,
+`Fit.LAYOUT` on Android and `Fit.layout` in Flutter; check the Rive runtime docs
+for your version's exact names and for `layoutScaleFactor`, which should stay at
+its default (1 point per CSS/OS point). Do not use `contain`: the artboard would
+stay 390 × 844 and the recap would never switch layout. Set `layoutBreakpoint`
+before or during playback to tune the switch; safe-area insets are the host's
+(pad the canvas, or keep it inside the safe area). In the CLI the default
+`--fit=layout` already does this, so `--viewport=WxH` renders the recap laid out
+at W × H.
+
+### Sizes tested
+
+Captured and checked at every scene, settled, plus mid-transition frames
+(`captures/responsive/`):
+
+* Portrait: 320 × 568, 360 × 640, 390 × 844, 430 × 932, 600 × 960,
+  767 × 1024, 667 × 375, 740 × 360.
+* Landscape: 768 × 1024, 820 × 1180, 1024 × 768, 1280 × 720, 1440 × 900,
+  1920 × 1080, 2560 × 1080, 1366 × 600.
+
+`tools/check.sh` adds 16 responsive checks to the original 15: orientation at
+the threshold (767 vs 768) and on tall/short canvases, a host-tuned breakpoint,
+full runs, arrows, taps, hold and the pause button at landscape positions, a
+short portrait, reduced motion in landscape, and **mid-run resizes across the
+threshold** (settled, during a fold, and back again, with auto-advance running)
+through a generated harness artboard that nests the recap in a box whose size
+is keyed on a timeline. The harness is spliced into a temporary copy, never into
+the shipped `.riv`.
+
+### Compromises
+
+* Grounds and quilting cover canvases up to about 3000 × 1800 points (larger
+  canvases keep the ground colour at the edges but lose the quilting lines).
+* Readable minimums: copy never drops below about 11 pt. Labels *inside* the art
+  scale with it: units on the hero numerals were enlarged (16–17 pt) and stay at
+  ≥ 10 pt at 320 × 568; the portrait share card at 320 × 568 renders its stat
+  units at about 8 pt (the card fills the screen; captured shares are full size).
+* The copy slots are written for the current scene, so the incoming scene's copy
+  can sit one or two frames at the previous scene's slots; copy fades in late in
+  every entrance, so this is not visible.
+* A very short portrait canvas (≈ 740 × 360) drops the summary headline and
+  support line to keep the postcard legible.
+* Layout switches are immediate (no animated reflow) when a resize crosses the
+  threshold.
+* The stage script is one more Luau script in the file, so the web still needs
+  a signed `--publish` build.
+
+### Also fixed, and cost
+
+* The progress row was a layout box placed by the artboard's flex column after
+  the 390 × 844 weave box, so it laid out below the canvas and never showed in
+  earlier captures. It is now absolutely positioned and bound to the real width.
+* `patchwork-recap.riv`: 639,722 → **770,920 bytes** (199,608 → 237,881
+  gzipped), +20 %: the wider bleeds (S2 quilt field 6 → 24 columns, extended
+  hills, soil, quilting), the share-card poses, the bindings, two scripts and one
+  shader. The vector backdrop quilt (224 shapes) was replaced by the GPU one.
 
 ## Preview
 
@@ -168,7 +301,7 @@ settings, because the woven texture is fine detail that VP9 has to keep.
 rive apps/patchwork/rive                 # live previewer (window, rebuilds on save)
 rive apps/patchwork/rive --verify        # compile check
 rive inspect apps/patchwork/rive --summary
-apps/patchwork/tools/check.sh            # behaviour checks (15 assertions, headless)
+apps/patchwork/tools/check.sh            # behaviour checks (31 assertions, headless)
 apps/patchwork/tools/capture_all.sh      # every PNG in captures/ (headless)
 apps/patchwork/tools/probe.sh --advance=120s   # full auto-advance run, prints key view-model values
 ```
@@ -177,8 +310,8 @@ Fixtures in the live previewer or a capture: append `--data=<property>=<value>`
 (e.g. `--data=personaIndex=2 --data=reducedMotion=true`), or use the `.args`
 files (`tools/shootfx.sh ../fixtures/extreme.args out.png 1`).
 
-**Hosts must use `Fit.contain` (or `layout` with the 390 × 844 artboard
-centred) and paint the letterbox with oat `#F5EBDD`** — see Limitations.
+**Hosts use the runtime's layout fit, so the artboard is resized to the canvas
+and reflows** — see "Responsive layout". `--viewport=WxH` previews any size.
 
 ## Exports
 
@@ -252,6 +385,10 @@ host reads. **H/F** = both (host may set, file updates).
 | `shareCaptureMode` | Boolean | H | Hides header, progress and controls so the host can snapshot a clean, settled card. |
 | `screenChangedCount`, `shareTappedCount`, `recapFinishedCount` | Number | F | Diagnostic mirrors incremented in the exact state/listener that fires each event — lets tests (and `--data-dump`) prove "exactly once". |
 | `_commitNext`, `_commitPrev`, `_commitReplay`, `_settled`, `_pressing`, `_pressSide`, `_holdPaused`, `_heroT`, `_finishedLatch`, `_thanksOpen`, `_focusIndex`, `_noActivity` | — | F | Private plumbing (leading underscore). `_heroT` is the shared 0→1 count-up playhead, not user data. Hosts must not write these. |
+| **`layoutBreakpoint`** | Number | H | **Responsive-layout addition.** Width in artboard points at which the layout switches from portrait to landscape (default **768**: landscape when the artboard width is ≥ 768). Read live, so a host may tune it at any time; values ≤ 0 fall back to 768. |
+| `_landscape`, `_split`, `_cardWide` | Boolean | F | Written by `scripts/stage.luau`: the current orientation, whether the copy sits in a column beside the hero, and which share-card arrangement is showing. Hosts may read them (diagnostics); never write. |
+| `_cardX`, `_cardY`, `_cardW`, `_cardH` | Number | F | The share card's rectangle in artboard points, for a host that crops its `shareTapped` snapshot. |
+| `_vw` … `_medRes` (about 80 numbers: `_h1x`…`_h10s`, `_c1x`…`_c4w`, chrome, carries) | Number | F | The stage script's layout output, bound by the markup. Private: hosts must not write them. `_carryP` and `_s10T` are the keyed progress of the 8 → 9 and 9 → 10 carries, written back by the timelines for the stage script. |
 
 ### Events
 
@@ -303,9 +440,9 @@ row 0's emblem. With no evidence (new user) the host sets
 3. Map `personaIndex` → name/description/colour atomically; hex → ARGB colour.
 4. Localise and pluralise all strings; set `numberGroupSeparator` for the locale.
 5. Set `reducedMotion` from the OS; set `isPaused=true` while backgrounded or sharing (restore afterwards).
-6. On `shareTapped`: set `shareCaptureMode=true`, wait one frame, snapshot the artboard (the card occupies x 27–363, y 148–688), set it back, present the share sheet.
+6. On `shareTapped`: set `shareCaptureMode=true`, wait one frame, snapshot the artboard, set it back, present the share sheet. The card's rectangle depends on the canvas: read `_cardX`, `_cardY`, `_cardW`, `_cardH` (artboard points) to crop to it (x 27–363, y 148–688 at 390 × 844).
 7. Listen for `screenChanged` / `recapFinished`; announce `currentScreen`'s headline + hero value via the platform screen reader (the file exposes button semantics; long-form announcements are the host's job).
-8. Paint the letterbox oat and use `Fit.contain`.
+8. Use the layout fit and resize the artboard with the canvas (see "Responsive layout"); optionally set `layoutBreakpoint`.
 
 ---
 
@@ -413,7 +550,7 @@ same family names through its asset loader.
 | Keyed deformation of cloth / real page-curl folds | Supported through scripted GPU rendering | The fold is a GPU-curled 3D quilt (`scripts/cloth.luau`). The thanks corner lift is still a vector triangle flap. |
 | Camera pull-back revealing a larger quilt | No camera object | A `World camera` node scaled about the centre over a backdrop quilt. |
 | Raster grain | Restrained, procedural | A woven-cotton texture is generated once on the GPU and multiplied over everything at low strength. It never carries text or a scene. |
-| Responsive reflow to 320 × 568 / 430 × 932 | Hand-composed 390 × 844 art; layout reflow of illustrated scenes is not practical | Fixed artboard, host `Fit.contain` with oat letterbox; validated at 320 × 568, 430 × 932 and a 1280 × 800 desktop (captures/viewports). |
+| Responsive layout at any size | Layout components alone cannot scale hand-placed illustration | A stage script computes the layout from the real artboard size and drives bound transforms; portrait and landscape layouts split at `layoutBreakpoint` (see "Responsive layout"). |
 | Sound | Not used | Silent; `soundEnabled` reserved. |
 | Visible focus | Supported (focus/blur listeners) | Focus ring bound to `_focusIndex`; pointer clicks do not focus (`canTouch=false`). |
 | Screen announcements | Rive exposes semantics, not live announcements | Buttons carry `SemanticData` (labels bound); host announces scene changes. |
@@ -429,6 +566,7 @@ Run from `apps/patchwork/rive` with `tools/probe.sh` (dumps the live
 | Check | Result |
 |---|---|
 | `--verify` / `inspect --summary` | 0 errors / `problems: []` |
+| Responsive (16 checks in `tools/check.sh`) | threshold 767/768, tall and short canvases, tuned breakpoint, landscape runs/taps/hold/pause button, mid-run resizes across the threshold (settled, during a fold, back again, during auto-advance): all pass |
 | Full auto-advance (120 s, no input) | ends on 10, `screenChangedCount` 10, `recapFinishedCount` 1 |
 | Hidden 3, 4, 9 + auto-advance | ends on 10, 7 scenes entered, progress row shows 7 segments |
 | Zero user (2–9 hidden) + one tap | intro → welcoming summary (`_noActivity`), 2 segments, no persona |
@@ -472,16 +610,15 @@ hand-offs).
 * Background/foreground is host-driven (`isPaused`); the file cannot detect it.
 * Hidden/empty persona: the scene is hidden via `showScreen9`; there is no
   separate "neutral persona" emblem.
-* The fixed 390 × 844 composition scales (contain) rather than reflows; at
-  320 × 568 text renders at ~0.67× — readable but small.
+* Responsive limits (portrait and landscape): see "Responsive layout →
+  Compromises". The weakest spot is the portrait share card on a 320 × 568
+  phone, whose smallest labels render at about 8 pt.
 * Right-to-left layouts were not built or verified (no RTL target locale in the brief's fixture).
 * Frame-rate numbers come from the CLI's headless `--bench` on the authoring
   Mac, not from a phone.
 * The motion preview (`captures/motion-preview.mp4`, `../video.webm`) is 30 fps
   headless renders; review exact timing in the live previewer.
-* Pluralisation is still the host's job (units are bound strings), and the
-  layout still scales rather than reflows. The improvement pass did not change
-  either.
+* Pluralisation is still the host's job (units are bound strings).
 * The scripted 3D and shaders were only verified in the native CLI runtime
   (headless). A signed web build, and GPU frame times on a phone, are
   unverified.

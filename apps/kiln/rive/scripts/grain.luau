@@ -15,6 +15,7 @@ type Grain = {
     staging: buffer,
     sampler: ImageSampler,
     dirty: boolean,
+    k: number,
 }
 
 function init(self: Grain, context: Context): boolean
@@ -40,12 +41,22 @@ function init(self: Grain, context: Context): boolean
     return true
 end
 
+-- the grain canvas covers the whole artboard at device resolution (up to 2x, and at
+-- most ~8 million pixels on very large canvases); the pattern is defined in points, so
+-- it looks the same at any resolution, only crisper
+local MAX_PIXELS = 8000000
+
 function resize(self: Grain, size: Vector, scale: number)
     self.size = size
     local c = self.canvas
     if c ~= nil and size.x > 0 and size.y > 0 then
-        -- grain is a 1x texture by design: on dense screens it is meant to be soft
-        c:resize(math.ceil(size.x), math.ceil(size.y))
+        local k = math.clamp(if scale ~= nil then scale else 1, 1, 2)
+        local area = size.x * size.y
+        if area * k * k > MAX_PIXELS then
+            k = math.max(1, math.sqrt(MAX_PIXELS / area))
+        end
+        self.k = k
+        c:resize(math.ceil(size.x * k), math.ceil(size.y * k))
         self.dirty = true
     end
 end
@@ -65,8 +76,8 @@ function draw(self: Grain, renderer: Renderer)
     if self.dirty then
         self.dirty = false
         local b = self.staging
-        buffer.writef32(b, 0, c.width)
-        buffer.writef32(b, 4, c.height)
+        buffer.writef32(b, 0, c.width / self.k)
+        buffer.writef32(b, 4, c.height / self.k)
         buffer.writef32(b, 8, 17.0)
         buffer.writef32(b, 12, 0)
         ubo:write(b)
@@ -79,7 +90,10 @@ function draw(self: Grain, renderer: Renderer)
         pass:draw(3)
         pass:finish()
     end
+    renderer:save()
+    renderer:transform(Mat2D.withScale(1 / self.k, 1 / self.k))
     renderer:drawImage(c.image, self.sampler, 'softLight', self.strength)
+    renderer:restore()
 end
 
 return function(context: Context): Layout<Grain>
@@ -94,6 +108,7 @@ return function(context: Context): Layout<Grain>
         staging = buffer.create(16),
         sampler = ImageSampler('clamp', 'clamp', 'nearest'),
         dirty = true,
+        k = 1,
         init = init,
         resize = resize,
         advance = advance,

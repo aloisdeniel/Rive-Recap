@@ -12,6 +12,8 @@ files; no intermediate video or animated-image encoder is needed.
 
 Outputs:
     apps/<app>/video.webm              VP9 video (looping is controlled by the player)
+    --output path                      write elsewhere, e.g. a landscape render:
+        scripts/render-video.py <app> --viewport 1280x720 --output apps/<app>/video-landscape.webm
 """
 import argparse
 import os
@@ -36,7 +38,8 @@ def parse_args():
     p.add_argument("--quality", type=int, default=75, help="VP9 quality 0-100, higher is better; maps to CRF 63-0 (default 75)")
     p.add_argument("--jobs", type=int, default=max(1, (os.cpu_count() or 4) - 2), help="parallel renders")
     p.add_argument("--data", action="append", default=[], help="extra view model values, path=value (repeatable)")
-    p.add_argument("--keep-frames", action="store_true", help="keep the PNG frames in rive/build/video-frames")
+    p.add_argument("--keep-frames", action="store_true", help="keep the PNG frames in rive/build/video-frames-<name>")
+    p.add_argument("--output", help="output .webm (default apps/<app>/video.webm), e.g. apps/<app>/video-landscape.webm")
     a = p.parse_args()
     if a.fps <= 0 or TICKS % a.fps:
         p.error(f"--fps must divide {TICKS}")
@@ -83,7 +86,11 @@ def main():
     # Hold the auto-advance timer off so only our key presses move the story.
     data = ["autoAdvanceEnabled=false"] + a.data
 
-    frames = os.path.join(project, "build", "video-frames")
+    webm = os.path.abspath(a.output) if a.output else os.path.join(ROOT, "apps", a.app, "video.webm")
+    if not webm.endswith(".webm"):
+        sys.exit("--output must end in .webm")
+    # Per-output frame directory, so a portrait and a landscape render can run at once.
+    frames = os.path.join(project, "build", "video-frames-" + os.path.splitext(os.path.basename(webm))[0])
     shutil.rmtree(frames, ignore_errors=True)
     os.makedirs(frames)
     print(f"{a.app}: rendering {len(ticks)} frames ({total / TICKS:.1f}s at {a.fps} fps, {a.jobs} jobs)")
@@ -101,7 +108,6 @@ def main():
             if done % 100 == 0 or done == len(ticks):
                 print(f"  {done}/{len(ticks)}", flush=True)
 
-    webm = os.path.join(ROOT, "apps", a.app, "video.webm")
     crf = round(63 * (1 - a.quality / 100))
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-framerate", str(a.fps),
                     "-i", os.path.join(frames, "f%05d.png"),

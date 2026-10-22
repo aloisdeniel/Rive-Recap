@@ -141,7 +141,7 @@ def fade_up(sc, obj, t0, t1, dy=14, ease="out"):
 def scene1(sc, ctx):
     serif, sans, italic = ctx["serif"], ctx["sans"], ctx["italic"]
     sc.enter_ms = 2300
-    period = copy_text(ctx, "Period", 20, 18, sans(12, GOLDD, 500, ls=1.8), "periodLabel", w=350)
+    period = copy_text(ctx, "Period", 20, 16, sans(15, GOLDD, 500, ls=1.5), "periodLabel", w=350)
     head = copy_text(ctx, "Intro Headline", 30, 40, serif(42, INK, 500, lh=44, lining=True), "introHeadline", w=330,
                      h=92, overflow="fitFontSize", wrap="wrap")
     sup = copy_text(ctx, "Intro Support", 30, 140, sans(15, INK2, 400, lh=19), "introSupport", w=330, h=40,
@@ -158,8 +158,11 @@ def scene1(sc, ctx):
 
     # --- hero: a book unfolds into a paper city
     far = node("Far Hills").ensure()
-    far.add(shape("Hill", smooth([(-40, 664), (60, 520), (150, 560), (260, 500), (430, 560), (430, 664)]),
-                  fill(PSHADE)))
+    # the hills are a band that runs edge to edge (Bleed Back frame: stretched
+    # across the page by the Page Stage script, on the illustration's floor)
+    hills = shape("Hill", smooth([(-40, 664), (60, 520), (150, 560), (260, 500), (430, 560), (430, 664)]),
+                  fill(PSHADE)).ensure()
+    sc.bleed_back.add(hills)
     far.add(cloud("Cloud A", 70, 300, 0.8), cloud("Cloud B", 320, 330, 0.65))
     stars = [sparkle(f"Spark {i}", x, y, s) for i, (x, y, s) in
              enumerate([(48, 262, 13), (346, 250, 16), (300, 300, 9), (90, 330, 8)])]
@@ -206,6 +209,7 @@ def scene1(sc, ctx):
         sc.tw(s, "scaleX", 900 + i * 90, 1300 + i * 90, 0.0, 1.0, "back")
         sc.tw(s, "scaleY", 900 + i * 90, 1300 + i * 90, 0.0, 1.0, "back")
     sc.tw(far, "opacity", 0, 600, 0.0, 1.0, "soft")
+    sc.tw(hills, "opacity", 0, 600, 0.0, 1.0, "soft")
     fade_up(sc, period, 1000, 1400)
     fade_up(sc, head, 1150, 1600, 18)
     fade_up(sc, sup, 1350, 1800)
@@ -247,7 +251,9 @@ def scene2(sc, ctx):
     birds = node("Birds", x=300, y=330).ensure()
     for bx, by in ((0, 0), (16, -8), (30, 4)):
         birds.add(shape("Bird", poly([(-5, 0), (0, 3), (5, 0)], closed=False), stroke(INK3, 1.2, cap="round"), x=bx, y=by))
-    sc.content.add(copy, plx("near", "near", ground), plx("spines", "mid", spines_n, birds), plx("far", "far", far))
+    # the bridge and the water run edge to edge (Bleed Front: above the spines)
+    sc.bleed_front.add(ground)
+    sc.content.add(copy, plx("spines", "mid", spines_n, birds), plx("far", "far", far))
     # choreography: spines rise as doorways, lit one after another
     order = sorted(range(8), key=lambda i: abs(xs[i] - 195))
     for k, i in enumerate(order):
@@ -283,9 +289,12 @@ def scene3(sc, ctx):
     unit = copy_text(ctx, "Unit", 20, 292, sans(15, INK, 500, ls=1.6, lh=18), "screen3Unit", w=350, h=36,
                      overflow="ellipsis", wrap="wrap")
     rule = gold_rule(SW / 2, 334, 150)
-    sup = copy_text(ctx, "Support", 60, 348, sans(14, INK2, 400, lh=19), "screen3Support", w=270, h=40,
+    sup = copy_text(ctx, "Support", 60, 348, sans(15, INK2, 400, lh=20), "screen3Support", w=270, h=40,
                     overflow="ellipsis", wrap="wrap")
-    copy = node("Copy", head, num, unit, rule, sup)
+    copy = node("Copy", head, num, unit)
+    # the rule + support are a foot of their own: with the copy everywhere,
+    # except on a short spread, where they caption the illustration
+    sc.foot_frame.add(node("Copy Foot", rule, sup))
 
     # the band: twelve page edges (paper / shade / ink hairlines) with a gilt edge
     rib = node("Page-edge Ribbon").ensure()
@@ -724,7 +733,7 @@ def emblem_collector():
 def scene9(sc, ctx):
     serif, sans, italic = ctx["serif"], ctx["sans"], ctx["italic"]
     sc.enter_ms = 2300
-    label = copy_text(ctx, "Persona Label", 20, 6, sans(12, GOLDD, 500, ls=1.8), "personaLabel", w=350)
+    label = copy_text(ctx, "Persona Label", 20, 4, sans(15, GOLDD, 500, ls=1.5), "personaLabel", w=350)
     name = text("Persona Name", 15, 28, [(serif(46, OX, 600, lh=48), ctx["DATA"].get("personaName"), bind("personaName", 268))],
                 w=360, h=56, align="center", overflow="fitFontSize", wrap="noWrap", valign="middle")
     rule = gold_rule(SW / 2, 96, 180)
@@ -893,7 +902,7 @@ def card_content(ctx, prefix="Card"):
               for i, (cx, cy) in enumerate([(-W / 2 + 11, -H / 2 + 11), (W / 2 - 11, -H / 2 + 11),
                                              (-W / 2 + 11, H / 2 - 11), (W / 2 - 11, H / 2 - 11)])]
     wm = text("Card Wordmark", -W / 2, -H / 2 + 26, [(italic(30, INK, 600), "Marginalia", None)], w=W, align="center")
-    yr = text("Card Year", -W / 2, -H / 2 + 64, [(sans(12, GOLDD, 500, ls=3), str(D.get("year")), bind("yearText", 268))],
+    yr = text("Card Year", -W / 2, -H / 2 + 62, [(sans(14.5, GOLDD, 500, ls=2), str(D.get("year")), bind("yearText", 268))],
               w=W, align="center")
     # persona medallion (colour bound; four mini emblems switch with the row)
     med = node("Persona Medallion", x=0, y=-H / 2 + 126).ensure()
@@ -925,8 +934,69 @@ def card_content(ctx, prefix="Card"):
         s = node(f"Stat {stat}", x=sx, y=-H / 2 + sy).ensure()
         s.add(text("Value", -75, -30, [(serif(34, OX, 600, lining=True), f"{int(D.get(stat, 0)):,}", bind(f"{stat}Text", 268))],
                    w=150, h=38, align="center", overflow="fitFontSize", wrap="noWrap", valign="middle"))
-        s.add(text("Unit", -75, 10, [(sans(10.5, INK2, 500, ls=1.2), D.get(unit), bind(unit, 268))],
-                   w=150, h=15, align="center", overflow="ellipsis", wrap="wrap", valign="top"))
+        # unit labels are the card's smallest type: 14.5, so the card can shrink
+        # to 0.76 on a small phone and they still read at 11 pt
+        s.add(text("Unit", -78, 9, [(sans(14.5, INK2, 500, ls=0.3), D.get(unit), bind(unit, 268))],
+                   w=156, h=19, align="center", overflow="ellipsis", wrap="wrap", valign="top"))
+        stats.append(s)
+    g.add(wm, yr, med, pname, rname, rule, stats, corner, inner, face)
+    parts.update(face=face, wm=wm, yr=yr, med=med, minis=minis, pname=pname, rname=rname, rule=rule, stats=stats)
+    return g, parts
+
+
+def card_content_wide(ctx, prefix="Wide Card"):
+    """The summary card's wide arrangement (780 x 220) for spreads and short
+    canvases: the bookplate (wordmark, year, medallion, persona, reader) and
+    the five stats in one row. Same parts as card_content, so card_layers and
+    the assembly score apply."""
+    serif, sans, italic = ctx["serif"], ctx["sans"], ctx["italic"]
+    D = ctx["DATA"]
+    W, H = 720, 220
+    g = node(f"{prefix}", x=0, y=0).ensure()
+    parts = {}
+    face = shape("Card Face", rect(W, H, x=0, y=0, r=6), fill(PAPER), stroke(PDEEP, 1))
+    inner = shape("Jacket Rule", rect(W - 22, H - 22, x=0, y=0, r=3), stroke(GOLD, 1))
+    corner = [shape(f"Corner {i}", star(10, 10, 4, 0.3, x=cx, y=cy), fill(GOLD))
+              for i, (cx, cy) in enumerate([(-W / 2 + 11, -H / 2 + 11), (W / 2 - 11, -H / 2 + 11),
+                                             (-W / 2 + 11, H / 2 - 11), (W / 2 - 11, H / 2 - 11)])]
+    lx = -252  # centre of the bookplate side
+    wm = text("Card Wordmark", lx - 90, -94, [(italic(28, INK, 600), "Marginalia", None)], w=180, align="center")
+    yr = text("Card Year", lx - 90, -60, [(sans(14.5, GOLDD, 500, ls=2), str(D.get("year")), bind("yearText", 268))],
+              w=180, align="center")
+    med = node("Persona Medallion", x=lx, y=-10).ensure()
+    mfill = solid(INK)
+    mfill.add(bind("personaColor", 37))
+    minis = []
+    m0 = shape("Mini Door", arch(15, 22, x=0, y=10), fill(GOLDL)).ensure()
+    m1 = shape("Mini Well", ellipse(26, 10, y=-5), ellipse(17, 7, y=2), ellipse(9, 4, y=7), stroke(GOLDL, 1.3)).ensure()
+    m2 = shape("Mini Crescent", smooth([(0, -12), (9, -5), (10, 2), (5, 10), (0, 12), (5, 3), (5, -3)], sharp={0, 4}),
+               fill(INK), x=-3).ensure()
+    m3 = node("Mini Fan", x=0, y=9).ensure()
+    for i in range(5):
+        m3.add(shape("Leaf", rect(4.5, 19, y=-9.5), fill([OX, INK, GREEN, OXD, INK2][i]), rotation=(i - 2) * 0.35))
+    for m in (m0, m1, m2, m3):
+        m.attrs["opacity"] = 0
+        minis.append(m)
+    med.add(minis)
+    med.add(shape("Medallion", ellipse(44, 44), N("Fill", mfill, name="Fill"), stroke(GOLD, 2)))
+    pname = text("Card Persona", lx - 88, 18, [(serif(25, OX, 600), D.get("personaName"), bind("personaName", 268))],
+                 w=176, h=30, align="center", overflow="fitFontSize", wrap="noWrap")
+    rname = text("Card Reader", lx - 88, 52, [(italic(16, INK2, 500), D.get("userName"), bind("userName", 268))],
+                 w=176, h=20, align="center", overflow="ellipsis", wrap="wrap", valign="top", opacity=0).ensure()
+    # a vertical gilt rule between the bookplate and the stats
+    rule = node("Gold Rule", x=-152, y=0).ensure()
+    rule.add(shape("Star", star(11, 11, 4, 0.28), fill(GOLD)))
+    rule.add(shape("Line T", rect(1, 70, y=-45), fill(GOLD)))
+    rule.add(shape("Line B", rect(1, 70, y=45), fill(GOLD)))
+    stats = []
+    spec = [("booksFinished", "screen2Unit"), ("pagesRead", "screen3Unit"), ("readingHours", "screen4Unit"),
+            ("genresExplored", "screen5Unit"), ("passagesSaved", "screen6Unit")]
+    for k, (stat, unit) in enumerate(spec):
+        s = node(f"Stat {stat}", x=-100 + k * 100, y=-14).ensure()
+        s.add(text("Value", -49, -32, [(serif(34, OX, 600, lining=True), f"{int(D.get(stat, 0)):,}", bind(f"{stat}Text", 268))],
+                   w=98, h=38, align="center", overflow="fitFontSize", wrap="noWrap", valign="middle"))
+        s.add(text("Unit", -49, 9, [(sans(14.5, INK2, 500, ls=0.3, lh=18), D.get(unit), bind(unit, 268))],
+                   w=98, h=38, align="center", overflow="ellipsis", wrap="wrap", valign="top"))
         stats.append(s)
     g.add(wm, yr, med, pname, rname, rule, stats, corner, inner, face)
     parts.update(face=face, wm=wm, yr=yr, med=med, minis=minis, pname=pname, rname=rname, rule=rule, stats=stats)
@@ -968,7 +1038,7 @@ def scene10(sc, ctx):
     sc.enter_ms = 2000
     head = copy_text(ctx, "Summary Headline", 22, 8, serif(28, INK, 500, lh=31), "summaryHeadline", w=346,
                      h=64, overflow="fitFontSize", wrap="wrap")
-    sup = copy_text(ctx, "Summary Support", 30, 74, sans(14, INK2, 400, lh=18), "summarySupport", w=330, h=36,
+    sup = copy_text(ctx, "Summary Support", 30, 74, sans(15, INK2, 400, lh=19), "summarySupport", w=330, h=38,
                     overflow="ellipsis", wrap="wrap")
     full = node("Full Summary").ensure()
     card, cp = card_content(ctx, "Summary Card")
@@ -979,7 +1049,19 @@ def scene10(sc, ctx):
     skyline = node("Skyline").ensure()
     for i, (bx, h, w, roof) in enumerate([(30, 160, 30, "pointed"), (64, 120, 26, "dome"), (330, 150, 30, "crenel"), (362, 190, 24, "pointed")]):
         skyline.add(building(f"Spire {i}", bx, 640, w, h, PSHADE, roof, win=PDEEP))
-    full.add(head, sup, card_holder, plx("skyline", "far", skyline))
+    # the headline + support are the copy frame; the tall card the art; the
+    # skyline its own frame (it stands on the stage floor); a wide card is the
+    # spread's arrangement (Wide Frame) - responsive.luau shows one card
+    full_copy = node("Copy", head, sup).ensure()
+    full.add(card_holder)
+    full_sky = node("Full Sky", plx("skyline", "far", skyline)).ensure()
+    sc.sky_frame.add(full_sky)
+    wcard, wcp = card_content_wide(ctx, "Wide Card")
+    wide_holder = node("Wide Card Holder", wcard, x=0, y=0).ensure()
+    wide_holder.children.append(shape("Card Shadow", rect(720, 220, x=6, y=10, r=8), N("Fill", solid("000000", 0.18),
+                                N("Feather", strength=14, name="Feather"), fillRule="clockwise", name="Fill")))
+    full_wide = node("Full Wide", wide_holder).ensure()
+    sc.wide_frame.add(full_wide)
     # zero / new user: a small complete motif + invitation
     empty = node("Empty Summary", opacity=0).ensure()
     eh = copy_text(ctx, "Empty Headline", 40, 150, serif(36, INK, 500, lh=40), "emptyHeadline", w=310, h=84,
@@ -988,7 +1070,8 @@ def scene10(sc, ctx):
                    overflow="ellipsis", wrap="wrap")
     eb, ebp = open_book("Small Book", SW / 2, 470, 200, cover=OX)
     empty.add(eh, es, eb, sparkle("Spark", SW / 2, 360, 16))
-    sc.content.add(full, empty)
+    sc.content.add(full_copy, full)
+    sc.empty_frame.add(empty)   # a centred unit of its own (see responsive.luau)
     # assembly: card lands, rules draw, medallion turns, stats file in
     sc.tw(card_holder, "y", 0, 700, 420, 346, "back")
     sc.tw(card_holder, "rotation", 0, 800, -0.08, 0.0, "back")
@@ -1002,22 +1085,39 @@ def scene10(sc, ctx):
         t0 = 800 + i * 110
         sc.tw(s, "opacity", t0, t0 + 260, 0.0, 1.0, "soft")
         sc.tw(s, "y", t0, t0 + 420, s.attrs["y"] + 16, s.attrs["y"], "back")
+    # the wide card assembles with the same score
+    sc.tw(wide_holder, "y", 0, 700, 50, 0, "back")
+    sc.tw(wide_holder, "rotation", 0, 800, -0.06, 0.0, "back")
+    sc.tw(wide_holder, "opacity", 0, 200, 0.0, 1.0, "linear")
+    sc.tw(wcp["wm"], "opacity", 350, 700, 0.0, 1.0, "soft")
+    sc.tw(wcp["med"], "scaleX", 450, 950, 0.0, 1.0, "back")
+    sc.tw(wcp["med"], "scaleY", 450, 950, 0.0, 1.0, "back")
+    sc.tw(wcp["med"], "rotation", 450, 950, -1.2, 0.0, "out")
+    sc.tw(wcp["rule"], "scaleY", 650, 1050, 0.0, 1.0, "inout")
+    for i, s in enumerate(wcp["stats"]):
+        t0 = 800 + i * 110
+        sc.tw(s, "opacity", t0, t0 + 260, 0.0, 1.0, "soft")
+        sc.tw(s, "y", t0, t0 + 420, s.attrs["y"] + 16, s.attrs["y"], "back")
     fade_up(sc, head, 0, 400, 10)
     fade_up(sc, sup, 150, 550, 10)
     sc.tw(skyline, "y", 300, 1200, 120, 0, "out")
     sc.tw(eb, "scaleY", 200, 800, 0.0, 1.0, "back")
     sc.idle_ms = 8000
     sc.idle_keys(cp["med"], "rotation", [(0, 0, "sine"), (4000, 0.06, "sine"), (8000, 0, "linear")])
+    sc.idle_keys(wcp["med"], "rotation", [(0, 0, "sine"), (4000, 0.06, "sine"), (8000, 0, "linear")])
     # layers: full vs empty, and the card's persona/name layers
     L = Layer("Summary Mode")
-    a_full = Anim("Summary Full", 17).set(full, "opacity", 1.0).set(empty, "opacity", 0.0)
-    a_empty = Anim("Summary Empty", 17).set(full, "opacity", 0.0).set(empty, "opacity", 1.0)
+    a_full = Anim("Summary Full", 17).set(empty, "opacity", 0.0)
+    a_empty = Anim("Summary Empty", 17).set(empty, "opacity", 1.0)
+    for g_ in (full, full_copy, full_sky, full_wide):
+        a_full.set(g_, "opacity", 1.0)
+        a_empty.set(g_, "opacity", 0.0)
     s_f = L.state(a_full, 100, 0)
     s_e = L.state(a_empty, 360, 0)
     L.start(s_f)
     trans(s_f, s_e, cbool("_hasStats", False))
     trans(s_e, s_f, cbool("_hasStats", True))
-    return [(L, [a_full, a_empty])] + card_layers("Summary Card", cp)
+    return [(L, [a_full, a_empty])] + card_layers("Summary Card", cp) + card_layers("Summary Wide", wcp)
 
 
 # ======================================================================= persistent objects
@@ -1062,14 +1162,17 @@ def persistent(ctx):
     ribbon_shape = shape("Ribbon", path, fill(paint=lin(-12, 0, 12, 0, [(0, OXD, 1), (0.45, OXL, 1), (1, OXD, 1)])))
     sheen = shape("Ribbon Stitch", rect(1, 40, y=-60), fill(GOLD, 0.6))
     rib_sway = node("Ribbon Sway", ribbon_shape, x=0, y=0).ensure()
-    ribbon = node("Bookmark Ribbon", rib_sway, x=RIBBON_POSES[1][0], y=0).ensure()
-    root.add(ribbon)
+    # x is not keyed: the Page Stage script places the Ribbon Frame for the
+    # real layout (page margin, the spread's gutter, the bookmark over the
+    # slips) and glides it between scenes with the pose morph (760 ms)
+    ribbon = node("Bookmark Ribbon", rib_sway, x=0, y=0).ensure()
+    ribbon_frame = node("Ribbon Frame", ribbon, x=RIBBON_POSES[1][0], y=76).ensure()
+    root.add(ribbon_frame)
     L = Layer("Ribbon")
     anims = []
     states = {}
     for n, (x, end, sway, w, tilt) in RIBBON_POSES.items():
         a = Anim(f"Ribbon Pose {n}", 17)
-        a.set(ribbon, "x", x)
         for v, (vx, vy) in zip(vnodes, ribbon_vertices(end, sway, w, tilt)):
             a.set(v, "x", vx).set(v, "y", vy)
         anims.append(a)
@@ -1157,7 +1260,10 @@ def persistent(ctx):
     trans(s_h, s_sp, at(5), ms=400, ease="soft")
     layers.append((L3, anims3))
 
-    root.children = [ribbon, moon]
+    # the moon lives in the illustration's space of scenes 4-5 (Moon Frame =
+    # their Art Frame transform, set by the Page Stage script)
+    moon_frame = node("Moon Frame", moon).ensure()
+    root.children = [ribbon_frame, moon_frame]
     return root, layers
 
 
@@ -1170,15 +1276,24 @@ def cover_artboard(ctx):
     V, italic, sans = ctx["V"], ctx["italic"], ctx["sans"]
     st = N("LayoutComponentStyle", name="Cover Style").ensure()
     ab = N("Artboard", isComponent=True, width=SW, height=SH, styleId=st.id,
-           viewModelId=V.el.id, viewModelInstanceId=V.inst.id, clip=True, name="Cover").ensure()
+           viewModelId=V.el.id, viewModelInstanceId=V.inst.id, clip=False, name="Cover").ensure()
     g = node("Book Cover").ensure()
     cx = SW / 2
-    # gilt frame (double rule) with corner fleurons
-    frame = node("Gilt Frame").ensure()
-    frame.add(shape("Outer Rule", rect(SW - 44, SH - 44, x=cx, y=SH / 2, r=2), stroke(GOLD, 1.4)))
-    frame.add(shape("Inner Rule", rect(SW - 58, SH - 58, x=cx, y=SH / 2, r=1), stroke(GOLD, 0.7, 0.8)))
-    for i, (fx, fy) in enumerate([(22, 22), (SW - 22, 22), (22, SH - 22), (SW - 22, SH - 22)]):
-        frame.add(shape(f"Fleuron {i}", star(16, 16, 4, 0.25, x=fx, y=fy), fill(GOLDL)))
+    conv = ctx["conv"]
+    # The cover fills the whole canvas. The Page Stage script places the named
+    # frames below for the real size; the gilt rules' rectangles are bound to
+    # the canvas size (_vw/_vh, written by the Director) minus their inset.
+    inset = {d: conv(N("DataConverterRangeMapper", minInput=0, maxInput=1000, minOutput=-d, maxOutput=1000 - d,
+                       name=f"Cover inset {d}")) for d in (44, 58)}
+
+    def gilt_rect(name, d, wgt, a=1.0, r=0):
+        rr = rect(SW - d, SH - d, x=0, y=0, r=r)
+        rr.add(K.bind("_vw", K.KEY["width"], inset[d]), K.bind("_vh", K.KEY["height"], inset[d]))
+        return shape(name, rr, stroke(GOLD, wgt, a))
+    frame = node("Gilt Frame", x=cx, y=SH / 2).ensure()
+    frame.add(gilt_rect("Outer Rule", 44, 1.4, r=2), gilt_rect("Inner Rule", 58, 0.7, 0.8, r=1))
+    fleurons = [shape(f"Fleuron {i}", star(16, 16, 4, 0.25), fill(GOLDL), x=fx, y=fy).ensure()
+                for i, (fx, fy) in enumerate([(22, 22), (SW - 22, 22), (22, SH - 22), (SW - 22, SH - 22)])]
     # emblem: an open-book doorway, stamped in gold
     emb = node("Emblem", x=cx, y=258).ensure()
     emb.add(shape("Door", arch(46, 70, x=0, y=6), stroke(GOLDL, 1.6)))
@@ -1195,12 +1310,23 @@ def cover_artboard(ctx):
              shape("Lozenge", star(9, 9, 4, 0.4), fill(GOLDL)))
     year = text("Year", 0, 432, [(sans(14, GOLDL, 500, ls=6), str(ctx["DATA"].get("year")), bind("yearText", 268))],
                 w=SW, align="center")
+    title_block = node("Cover Title", year, rule, title, title_sh, emb).ensure()
     # cloth: oxblood with a deeper hinge along the spine and a soft sheen
     hinge = shape("Hinge", rect(16, SH, x=8, y=SH / 2), fill(paint=lin(0, 0, 16, 0, [(0, "000000", 0.35), (1, "000000", 0)])))
     groove = shape("Groove", rect(2, SH, x=24, y=SH / 2), fill("000000", 0.18))
-    cloth = shape("Cloth", rect(SW, SH, x=cx, y=SH / 2),
-                  fill(paint=lin(0, 0, SW, SH, [(0, OXD, 1), (0.45, OX, 1), (1, OXD, 1)])))
-    g.add(year, rule, title, title_sh, emb, frame, groove, hinge, cloth)
+    spine = node("Cover Spine", groove, hinge).ensure()
+    cloth = node("Cloth", shape("Cloth Fill", rect(SW, SH, x=cx, y=SH / 2),
+                                fill(paint=lin(0, 0, SW, SH, [(0, OXD, 1), (0.45, OX, 1), (1, OXD, 1)])))).ensure()
+    g.add(title_block, fleurons, frame, spine, cloth)
+    # a one-state machine: without one the hosted cover's binds (canvas size,
+    # year) are never applied
+    sm = N("StateMachine", name="Cover").ensure()
+    L = Layer("Cover")
+    still = Anim("Cover Still", 17).set(g, "opacity", 1.0)
+    L.start(L.state(still, 100, 0))
+    sm.add(L.build())
+    ab.attrs["defaultStateMachineId"] = sm.id
+    ab.add(sm, still.build())
     ab.add(st, g)
     return ab
 

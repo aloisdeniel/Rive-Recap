@@ -5,6 +5,7 @@
 -- the scene's timeline; `still` (reducedMotion or frozen) stops the heat haze.
 -- The canvas re-renders only while something changes: a cooled kiln is one image draw.
 -- Without GPU scripting it draws nothing and the vector bands beneath show instead.
+-- `zoom` (the art stage scale) and `dpr` keep the canvas at the chamber's real size.
 
 type Kiln = {
     fire: Input<number>,
@@ -13,6 +14,8 @@ type Kiln = {
     w: Input<number>,
     h: Input<number>,
     res: Input<number>,
+    zoom: Input<number>,
+    dpr: Input<number>,
     gpu: boolean,
     canvas: GPUCanvas?,
     pipe: GPUPipeline?,
@@ -24,6 +27,14 @@ type Kiln = {
     k: number,
     lastKey: string,
 }
+
+-- px per point of the chamber: stage scale x device pixel ratio, never under `res`,
+-- in quarter steps, capped at 4
+local function pixelsPerPoint(self: Kiln): number
+    local z = math.max(0.25, self.zoom)
+    local k = math.clamp(z * math.max(math.max(1, self.dpr), self.res), 0.5, 4)
+    return math.floor(k * 4 + 0.5) / 4
+end
 
 function init(self: Kiln, context: Context): boolean
     if self.gpu then
@@ -43,7 +54,7 @@ function init(self: Kiln, context: Context): boolean
     local ubo = GPUBuffer.new({ size = 32, usage = 'uniform', label = 'kiln chamber' })
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    local k = math.max(0.5, self.res)
+    local k = pixelsPerPoint(self)
     self.k = k
     self.canvas = context:gpuCanvas({ width = math.ceil(self.w * k), height = math.ceil(self.h * k) })
     self.gpu = true
@@ -51,6 +62,16 @@ function init(self: Kiln, context: Context): boolean
 end
 
 function advance(self: Kiln, seconds: number): boolean
+    -- the chamber canvas follows the stage scale (zoom) and the device pixel ratio
+    local canvas = self.canvas
+    if self.gpu and canvas ~= nil and self.live >= 0.5 then
+        local k = pixelsPerPoint(self)
+        if k ~= self.k then
+            self.k = k
+            canvas:resize(math.ceil(self.w * k), math.ceil(self.h * k))
+            self.lastKey = ''
+        end
+    end
     -- haze only moves while the kiln is hot and motion is allowed
     if not self.still and self.live >= 0.5 and self.fire > 0.02 and self.fire < 1.98 then
         self.t += math.min(seconds, 0.1)
@@ -102,6 +123,8 @@ return function(): Node<Kiln>
         w = 300,
         h = 380,
         res = 1.5,
+        zoom = 1,
+        dpr = 1,
         gpu = false,
         canvas = nil,
         pipe = nil,

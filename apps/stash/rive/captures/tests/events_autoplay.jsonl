@@ -1,6 +1,6 @@
 {"schema": 1, "kind": "header", "artboard": "EventProbe", "stateMachine": "Probe", "intervalFrames": 1}
-{"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 1, "time": 0.0166666675, "values": [{"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 0, "time": 0, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 1}, {"path": "screenProgress", "value": 0}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 1}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": false}, {"path": "_focus", "value": 0}, {"path": "_landscape", "value": false}, {"path": "_split", "value": false}, {"path": "_wideCard", "value": false}, {"path": "_viewW", "value": 390}, {"path": "_mfx", "value": 0}, {"path": "_mfy", "value": 0}, {"path": "_mfs", "value": 1}, {"path": "_evtScreenChanged", "fired": true}, {"path": "_c4s", "value": 1}, {"path": "_a4s", "value": 1}]}
+{"frame": 1, "time": 0.0166666675, "values": [{"path": "_heardScreenChanged", "fired": true}, {"path": "_c4s", "value": 0.982558131}, {"path": "_a4s", "value": 0.982558131}]}
 {"frame": 150, "time": 2.49999833, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 151, "time": 2.51666498, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 152, "time": 2.53333163, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -181,7 +181,52 @@
 {"frame": 327, "time": 5.45001602, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 328, "time": 5.46668291, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 329, "time": 5.4833498, "values": [{"path": "currentScreen", "value": 2}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 330, "time": 5.50001669, "values": [{"path": "_visibleIndex", "value": 2}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 330, "time": 5.50001669, "values": [{"path": "_visibleIndex", "value": 2}, {"path": "_mfx", "value": 0.00307103526}, {"path": "_mfy", "value": 0.00100792956}, {"path": "_mfs", "value": 0.999984264}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 331, "time": 5.51668358, "values": [{"path": "_mfx", "value": 0.0126879122}, {"path": "_mfy", "value": 0.00416423799}, {"path": "_mfs", "value": 0.999934912}]}
+{"frame": 332, "time": 5.53335047, "values": [{"path": "_mfx", "value": 0.0295271743}, {"path": "_mfy", "value": 0.00969097018}, {"path": "_mfs", "value": 0.999848604}]}
+{"frame": 333, "time": 5.55001736, "values": [{"path": "_mfx", "value": 0.0543760695}, {"path": "_mfy", "value": 0.0178465042}, {"path": "_mfs", "value": 0.999721169}]}
+{"frame": 334, "time": 5.56668425, "values": [{"path": "_mfx", "value": 0.088157326}, {"path": "_mfy", "value": 0.0289336871}, {"path": "_mfs", "value": 0.999547899}]}
+{"frame": 335, "time": 5.58335114, "values": [{"path": "_mfx", "value": 0.131960884}, {"path": "_mfy", "value": 0.0433102399}, {"path": "_mfs", "value": 0.999323249}]}
+{"frame": 336, "time": 5.60001802, "values": [{"path": "_mfx", "value": 0.187084794}, {"path": "_mfy", "value": 0.0614021905}, {"path": "_mfs", "value": 0.999040604}]}
+{"frame": 337, "time": 5.61668491, "values": [{"path": "_mfx", "value": 0.2550883}, {"path": "_mfy", "value": 0.0837212875}, {"path": "_mfs", "value": 0.998691857}]}
+{"frame": 338, "time": 5.6333518, "values": [{"path": "_mfx", "value": 0.337860882}, {"path": "_mfy", "value": 0.110887676}, {"path": "_mfs", "value": 0.998267353}]}
+{"frame": 339, "time": 5.65001869, "values": [{"path": "_mfx", "value": 0.437711835}, {"path": "_mfy", "value": 0.143659264}, {"path": "_mfs", "value": 0.997755349}]}
+{"frame": 340, "time": 5.66668558, "values": [{"path": "_mfx", "value": 0.557484925}, {"path": "_mfy", "value": 0.182969406}, {"path": "_mfs", "value": 0.997141123}]}
+{"frame": 341, "time": 5.68335247, "values": [{"path": "_mfx", "value": 0.700699925}, {"path": "_mfy", "value": 0.229973316}, {"path": "_mfs", "value": 0.996406674}]}
+{"frame": 342, "time": 5.70001936, "values": [{"path": "_mfx", "value": 0.871712327}, {"path": "_mfy", "value": 0.286100477}, {"path": "_mfs", "value": 0.995529652}]}
+{"frame": 343, "time": 5.71668625, "values": [{"path": "_mfx", "value": 1.07584941}, {"path": "_mfy", "value": 0.353099287}, {"path": "_mfs", "value": 0.994482815}]}
+{"frame": 344, "time": 5.73335314, "values": [{"path": "_mfx", "value": 1.31939781}, {"path": "_mfy", "value": 0.433033139}, {"path": "_mfs", "value": 0.99323386}]}
+{"frame": 345, "time": 5.75002003, "values": [{"path": "_mfx", "value": 1.60911977}, {"path": "_mfy", "value": 0.528121352}, {"path": "_mfs", "value": 0.991748095}]}
+{"frame": 346, "time": 5.76668692, "values": [{"path": "_mfx", "value": 1.9506104}, {"path": "_mfy", "value": 0.640200317}, {"path": "_mfs", "value": 0.98999685}]}
+{"frame": 347, "time": 5.78335381, "values": [{"path": "_mfx", "value": 2.34453416}, {"path": "_mfy", "value": 0.769488156}, {"path": "_mfs", "value": 0.98797673}]}
+{"frame": 348, "time": 5.80002069, "values": [{"path": "_mfx", "value": 2.78095508}, {"path": "_mfy", "value": 0.91272378}, {"path": "_mfs", "value": 0.985738695}]}
+{"frame": 349, "time": 5.81668758, "values": [{"path": "_mfx", "value": 3.23638725}, {"path": "_mfy", "value": 1.06219888}, {"path": "_mfs", "value": 0.983403146}]}
+{"frame": 350, "time": 5.83335447, "values": [{"path": "_mfx", "value": 3.68057466}, {"path": "_mfy", "value": 1.20798349}, {"path": "_mfs", "value": 0.981125236}]}
+{"frame": 351, "time": 5.85002136, "values": [{"path": "_mfx", "value": 4.0895915}, {"path": "_mfy", "value": 1.34222496}, {"path": "_mfs", "value": 0.979027748}]}
+{"frame": 352, "time": 5.86668825, "values": [{"path": "_mfx", "value": 4.45243073}, {"path": "_mfy", "value": 1.46131051}, {"path": "_mfs", "value": 0.97716701}]}
+{"frame": 353, "time": 5.88335514, "values": [{"path": "_mfx", "value": 4.7682929}, {"path": "_mfy", "value": 1.56497812}, {"path": "_mfs", "value": 0.975547194}]}
+{"frame": 354, "time": 5.90002203, "values": [{"path": "_mfx", "value": 5.04135656}, {"path": "_mfy", "value": 1.65459907}, {"path": "_mfs", "value": 0.974146903}]}
+{"frame": 355, "time": 5.91668892, "values": [{"path": "_mfx", "value": 5.27724743}, {"path": "_mfy", "value": 1.73201978}, {"path": "_mfs", "value": 0.972937167}]}
+{"frame": 356, "time": 5.93335581, "values": [{"path": "_mfx", "value": 5.48142529}, {"path": "_mfy", "value": 1.79903185}, {"path": "_mfs", "value": 0.971890152}]}
+{"frame": 357, "time": 5.9500227, "values": [{"path": "_mfx", "value": 5.65864086}, {"path": "_mfy", "value": 1.85719502}, {"path": "_mfs", "value": 0.9709813}]}
+{"frame": 358, "time": 5.96668959, "values": [{"path": "_mfx", "value": 5.81285763}, {"path": "_mfy", "value": 1.90780962}, {"path": "_mfs", "value": 0.970190465}]}
+{"frame": 359, "time": 5.98335648, "values": [{"path": "_mfx", "value": 5.94732904}, {"path": "_mfy", "value": 1.95194387}, {"path": "_mfs", "value": 0.969500899}]}
+{"frame": 360, "time": 6.00002337, "values": [{"path": "_mfx", "value": 6.0647192}, {"path": "_mfy", "value": 1.99047196}, {"path": "_mfs", "value": 0.968898892}]}
+{"frame": 361, "time": 6.01669025, "values": [{"path": "_mfx", "value": 6.16721678}, {"path": "_mfy", "value": 2.02411222}, {"path": "_mfs", "value": 0.968373239}]}
+{"frame": 362, "time": 6.03335714, "values": [{"path": "_mfx", "value": 6.25663042}, {"path": "_mfy", "value": 2.05345821}, {"path": "_mfs", "value": 0.967914701}]}
+{"frame": 363, "time": 6.05002403, "values": [{"path": "_mfx", "value": 6.3344655}, {"path": "_mfy", "value": 2.07900405}, {"path": "_mfs", "value": 0.967515588}]}
+{"frame": 364, "time": 6.06669092, "values": [{"path": "_mfx", "value": 6.40198612}, {"path": "_mfy", "value": 2.10116458}, {"path": "_mfs", "value": 0.967169285}]}
+{"frame": 365, "time": 6.08335781, "values": [{"path": "_mfx", "value": 6.46026039}, {"path": "_mfy", "value": 2.12029052}, {"path": "_mfs", "value": 0.966870487}]}
+{"frame": 366, "time": 6.1000247, "values": [{"path": "_mfx", "value": 6.51019907}, {"path": "_mfy", "value": 2.1366806}, {"path": "_mfs", "value": 0.966614366}]}
+{"frame": 367, "time": 6.11669159, "values": [{"path": "_mfx", "value": 6.55258369}, {"path": "_mfy", "value": 2.15059161}, {"path": "_mfs", "value": 0.966396987}]}
+{"frame": 368, "time": 6.13335848, "values": [{"path": "_mfx", "value": 6.58808994}, {"path": "_mfy", "value": 2.1622448}, {"path": "_mfs", "value": 0.966214895}]}
+{"frame": 369, "time": 6.15002537, "values": [{"path": "_mfx", "value": 6.6173048}, {"path": "_mfy", "value": 2.17183328}, {"path": "_mfs", "value": 0.966065109}]}
+{"frame": 370, "time": 6.16669226, "values": [{"path": "_mfx", "value": 6.6407423}, {"path": "_mfy", "value": 2.17952561}, {"path": "_mfs", "value": 0.965944886}]}
+{"frame": 371, "time": 6.18335915, "values": [{"path": "_mfx", "value": 6.65885448}, {"path": "_mfy", "value": 2.1854701}, {"path": "_mfs", "value": 0.965852022}]}
+{"frame": 372, "time": 6.20002604, "values": [{"path": "_mfx", "value": 6.67204094}, {"path": "_mfy", "value": 2.18979812}, {"path": "_mfs", "value": 0.965784431}]}
+{"frame": 373, "time": 6.21669292, "values": [{"path": "_mfx", "value": 6.68065691}, {"path": "_mfy", "value": 2.19262576}, {"path": "_mfs", "value": 0.965740204}]}
+{"frame": 374, "time": 6.23335981, "values": [{"path": "_mfx", "value": 6.68501902}, {"path": "_mfy", "value": 2.19405746}, {"path": "_mfs", "value": 0.965717852}]}
+{"frame": 375, "time": 6.2500267, "values": [{"path": "_mfx", "value": 6.68571424}, {"path": "_mfy", "value": 2.19428563}, {"path": "_mfs", "value": 0.965714276}]}
 {"frame": 479, "time": 7.98338318, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 480, "time": 8.00004959, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 481, "time": 8.016716, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -362,7 +407,52 @@
 {"frame": 656, "time": 10.9333382, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 657, "time": 10.9500046, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 658, "time": 10.966671, "values": [{"path": "currentScreen", "value": 3}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 659, "time": 10.9833374, "values": [{"path": "_visibleIndex", "value": 3}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 659, "time": 10.9833374, "values": [{"path": "_visibleIndex", "value": 3}, {"path": "_mfx", "value": 6.68420553}, {"path": "_mfy", "value": 2.19379044}, {"path": "_mfs", "value": 0.965722024}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 660, "time": 11.0000038, "values": [{"path": "_mfx", "value": 6.67948103}, {"path": "_mfy", "value": 2.19224}, {"path": "_mfs", "value": 0.965746224}]}
+{"frame": 661, "time": 11.0166702, "values": [{"path": "_mfx", "value": 6.67120838}, {"path": "_mfy", "value": 2.18952465}, {"path": "_mfs", "value": 0.965788662}]}
+{"frame": 662, "time": 11.0333366, "values": [{"path": "_mfx", "value": 6.6590004}, {"path": "_mfy", "value": 2.18551803}, {"path": "_mfs", "value": 0.965851307}]}
+{"frame": 663, "time": 11.0500031, "values": [{"path": "_mfx", "value": 6.64240456}, {"path": "_mfy", "value": 2.18007112}, {"path": "_mfs", "value": 0.965936363}]}
+{"frame": 664, "time": 11.0666695, "values": [{"path": "_mfx", "value": 6.6208849}, {"path": "_mfy", "value": 2.1730082}, {"path": "_mfs", "value": 0.966046751}]}
+{"frame": 665, "time": 11.0833359, "values": [{"path": "_mfx", "value": 6.59380341}, {"path": "_mfy", "value": 2.1641202}, {"path": "_mfs", "value": 0.966185629}]}
+{"frame": 666, "time": 11.1000023, "values": [{"path": "_mfx", "value": 6.56039476}, {"path": "_mfy", "value": 2.15315509}, {"path": "_mfs", "value": 0.966356933}]}
+{"frame": 667, "time": 11.1166687, "values": [{"path": "_mfx", "value": 6.51973009}, {"path": "_mfy", "value": 2.13980889}, {"path": "_mfs", "value": 0.96656549}]}
+{"frame": 668, "time": 11.1333351, "values": [{"path": "_mfx", "value": 6.47067547}, {"path": "_mfy", "value": 2.12370896}, {"path": "_mfs", "value": 0.966817021}]}
+{"frame": 669, "time": 11.1500015, "values": [{"path": "_mfx", "value": 6.41183376}, {"path": "_mfy", "value": 2.10439658}, {"path": "_mfs", "value": 0.9671188}]}
+{"frame": 670, "time": 11.1666679, "values": [{"path": "_mfx", "value": 6.34147501}, {"path": "_mfy", "value": 2.08130455}, {"path": "_mfs", "value": 0.967479587}]}
+{"frame": 671, "time": 11.1833344, "values": [{"path": "_mfx", "value": 6.25746012}, {"path": "_mfy", "value": 2.05373049}, {"path": "_mfs", "value": 0.967910469}]}
+{"frame": 672, "time": 11.2000008, "values": [{"path": "_mfx", "value": 6.1571722}, {"path": "_mfy", "value": 2.02081537}, {"path": "_mfs", "value": 0.968424737}]}
+{"frame": 673, "time": 11.2166672, "values": [{"path": "_mfx", "value": 6.03752184}, {"path": "_mfy", "value": 1.98154557}, {"path": "_mfs", "value": 0.969038367}]}
+{"frame": 674, "time": 11.2333336, "values": [{"path": "_mfx", "value": 5.89518738}, {"path": "_mfy", "value": 1.93483078}, {"path": "_mfs", "value": 0.969768286}]}
+{"frame": 675, "time": 11.25, "values": [{"path": "_mfx", "value": 5.72742033}, {"path": "_mfy", "value": 1.87976873}, {"path": "_mfs", "value": 0.970628619}]}
+{"frame": 676, "time": 11.2666664, "values": [{"path": "_mfx", "value": 5.53389359}, {"path": "_mfy", "value": 1.81625223}, {"path": "_mfs", "value": 0.971621037}]}
+{"frame": 677, "time": 11.2833328, "values": [{"path": "_mfx", "value": 5.319489}, {"path": "_mfy", "value": 1.74588358}, {"path": "_mfs", "value": 0.972720563}]}
+{"frame": 678, "time": 11.2999992, "values": [{"path": "_mfx", "value": 5.09574509}, {"path": "_mfy", "value": 1.67244959}, {"path": "_mfs", "value": 0.973867953}]}
+{"frame": 679, "time": 11.3166656, "values": [{"path": "_mfx", "value": 4.87752485}, {"path": "_mfy", "value": 1.60082877}, {"path": "_mfs", "value": 0.97498703}]}
+{"frame": 680, "time": 11.3333321, "values": [{"path": "_mfx", "value": 4.67658329}, {"path": "_mfy", "value": 1.53487873}, {"path": "_mfs", "value": 0.976017535}]}
+{"frame": 681, "time": 11.3499985, "values": [{"path": "_mfx", "value": 4.49832821}, {"path": "_mfy", "value": 1.47637439}, {"path": "_mfs", "value": 0.976931632}]}
+{"frame": 682, "time": 11.3666649, "values": [{"path": "_mfx", "value": 4.34315157}, {"path": "_mfy", "value": 1.42544472}, {"path": "_mfs", "value": 0.977727413}]}
+{"frame": 683, "time": 11.3833313, "values": [{"path": "_mfx", "value": 4.20900106}, {"path": "_mfy", "value": 1.38141584}, {"path": "_mfs", "value": 0.97841537}]}
+{"frame": 684, "time": 11.3999977, "values": [{"path": "_mfx", "value": 4.09311295}, {"path": "_mfy", "value": 1.34338069}, {"path": "_mfs", "value": 0.979009688}]}
+{"frame": 685, "time": 11.4166641, "values": [{"path": "_mfx", "value": 3.99280477}, {"path": "_mfy", "value": 1.31045902}, {"path": "_mfs", "value": 0.979524076}]}
+{"frame": 686, "time": 11.4333305, "values": [{"path": "_mfx", "value": 3.90574241}, {"path": "_mfy", "value": 1.28188467}, {"path": "_mfs", "value": 0.979970574}]}
+{"frame": 687, "time": 11.4499969, "values": [{"path": "_mfx", "value": 3.82997894}, {"path": "_mfy", "value": 1.2570188}, {"path": "_mfs", "value": 0.980359077}]}
+{"frame": 688, "time": 11.4666634, "values": [{"path": "_mfx", "value": 3.76391602}, {"path": "_mfy", "value": 1.23533654}, {"path": "_mfs", "value": 0.98069787}]}
+{"frame": 689, "time": 11.4833298, "values": [{"path": "_mfx", "value": 3.70624471}, {"path": "_mfy", "value": 1.21640849}, {"path": "_mfs", "value": 0.980993629}]}
+{"frame": 690, "time": 11.4999962, "values": [{"path": "_mfx", "value": 3.65588975}, {"path": "_mfy", "value": 1.19988179}, {"path": "_mfs", "value": 0.981251836}]}
+{"frame": 691, "time": 11.5166626, "values": [{"path": "_mfx", "value": 3.6119628}, {"path": "_mfy", "value": 1.18546474}, {"path": "_mfs", "value": 0.981477141}]}
+{"frame": 692, "time": 11.533329, "values": [{"path": "_mfx", "value": 3.57372403}, {"path": "_mfy", "value": 1.17291451}, {"path": "_mfs", "value": 0.981673181}]}
+{"frame": 693, "time": 11.5499954, "values": [{"path": "_mfx", "value": 3.54055262}, {"path": "_mfy", "value": 1.16202748}, {"path": "_mfs", "value": 0.981843293}]}
+{"frame": 694, "time": 11.5666618, "values": [{"path": "_mfx", "value": 3.51192355}, {"path": "_mfy", "value": 1.1526314}, {"path": "_mfs", "value": 0.981990159}]}
+{"frame": 695, "time": 11.5833282, "values": [{"path": "_mfx", "value": 3.4873898}, {"path": "_mfy", "value": 1.14457917}, {"path": "_mfs", "value": 0.982115924}]}
+{"frame": 696, "time": 11.5999947, "values": [{"path": "_mfx", "value": 3.46656704}, {"path": "_mfy", "value": 1.13774502}, {"path": "_mfs", "value": 0.982222736}]}
+{"frame": 697, "time": 11.6166611, "values": [{"path": "_mfx", "value": 3.44912362}, {"path": "_mfy", "value": 1.13202}, {"path": "_mfs", "value": 0.982312202}]}
+{"frame": 698, "time": 11.6333275, "values": [{"path": "_mfx", "value": 3.43477082}, {"path": "_mfy", "value": 1.12730944}, {"path": "_mfs", "value": 0.982385814}]}
+{"frame": 699, "time": 11.6499939, "values": [{"path": "_mfx", "value": 3.42325664}, {"path": "_mfy", "value": 1.12353039}, {"path": "_mfs", "value": 0.982444823}]}
+{"frame": 700, "time": 11.6666603, "values": [{"path": "_mfx", "value": 3.41435838}, {"path": "_mfy", "value": 1.12061}, {"path": "_mfs", "value": 0.98249048}]}
+{"frame": 701, "time": 11.6833267, "values": [{"path": "_mfx", "value": 3.40788031}, {"path": "_mfy", "value": 1.11848378}, {"path": "_mfs", "value": 0.98252368}]}
+{"frame": 702, "time": 11.6999931, "values": [{"path": "_mfx", "value": 3.40364742}, {"path": "_mfy", "value": 1.11709452}, {"path": "_mfs", "value": 0.982545376}]}
+{"frame": 703, "time": 11.7166595, "values": [{"path": "_mfx", "value": 3.40150428}, {"path": "_mfy", "value": 1.11639118}, {"path": "_mfs", "value": 0.982556403}]}
+{"frame": 704, "time": 11.733326, "values": [{"path": "_mfx", "value": 3.40116286}, {"path": "_mfy", "value": 1.11627913}, {"path": "_mfs", "value": 0.982558131}]}
 {"frame": 808, "time": 13.4666328, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 809, "time": 13.4832993, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 810, "time": 13.4999657, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -1086,7 +1176,52 @@
 {"frame": 1972, "time": 32.8663368, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 1973, "time": 32.8830032, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 1974, "time": 32.8996696, "values": [{"path": "currentScreen", "value": 7}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 1975, "time": 32.9163361, "values": [{"path": "_visibleIndex", "value": 7}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 1975, "time": 32.9163361, "values": [{"path": "_visibleIndex", "value": 7}, {"path": "_mfx", "value": 3.40267158}, {"path": "_mfy", "value": 1.1167742}, {"path": "_mfs", "value": 0.982550383}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 1976, "time": 32.9330025, "values": [{"path": "_mfx", "value": 3.40739608}, {"path": "_mfy", "value": 1.11832488}, {"path": "_mfs", "value": 0.982526183}]}
+{"frame": 1977, "time": 32.9496689, "values": [{"path": "_mfx", "value": 3.41566896}, {"path": "_mfy", "value": 1.12103999}, {"path": "_mfs", "value": 0.982483745}]}
+{"frame": 1978, "time": 32.9663353, "values": [{"path": "_mfx", "value": 3.42787671}, {"path": "_mfy", "value": 1.12504673}, {"path": "_mfs", "value": 0.98242116}]}
+{"frame": 1979, "time": 32.9830017, "values": [{"path": "_mfx", "value": 3.44447255}, {"path": "_mfy", "value": 1.13049364}, {"path": "_mfs", "value": 0.982336044}]}
+{"frame": 1980, "time": 32.9996681, "values": [{"path": "_mfx", "value": 3.46599245}, {"path": "_mfy", "value": 1.13755643}, {"path": "_mfs", "value": 0.982225657}]}
+{"frame": 1981, "time": 33.0163345, "values": [{"path": "_mfx", "value": 3.4930737}, {"path": "_mfy", "value": 1.14644468}, {"path": "_mfs", "value": 0.982086778}]}
+{"frame": 1982, "time": 33.0330009, "values": [{"path": "_mfx", "value": 3.52648234}, {"path": "_mfy", "value": 1.15740955}, {"path": "_mfs", "value": 0.981915474}]}
+{"frame": 1983, "time": 33.0496674, "values": [{"path": "_mfx", "value": 3.56714678}, {"path": "_mfy", "value": 1.17075586}, {"path": "_mfs", "value": 0.981706917}]}
+{"frame": 1984, "time": 33.0663338, "values": [{"path": "_mfx", "value": 3.6162014}, {"path": "_mfy", "value": 1.18685591}, {"path": "_mfs", "value": 0.981455386}]}
+{"frame": 1985, "time": 33.0830002, "values": [{"path": "_mfx", "value": 3.67504334}, {"path": "_mfy", "value": 1.20616806}, {"path": "_mfs", "value": 0.981153607}]}
+{"frame": 1986, "time": 33.0996666, "values": [{"path": "_mfx", "value": 3.7454021}, {"path": "_mfy", "value": 1.22926009}, {"path": "_mfs", "value": 0.98079282}]}
+{"frame": 1987, "time": 33.116333, "values": [{"path": "_mfx", "value": 3.82941675}, {"path": "_mfy", "value": 1.25683427}, {"path": "_mfs", "value": 0.980361938}]}
+{"frame": 1988, "time": 33.1329994, "values": [{"path": "_mfx", "value": 3.92970514}, {"path": "_mfy", "value": 1.28974938}, {"path": "_mfs", "value": 0.97984767}]}
+{"frame": 1989, "time": 33.1496658, "values": [{"path": "_mfx", "value": 4.04935551}, {"path": "_mfy", "value": 1.32901919}, {"path": "_mfs", "value": 0.979234099}]}
+{"frame": 1990, "time": 33.1663322, "values": [{"path": "_mfx", "value": 4.19168949}, {"path": "_mfy", "value": 1.37573409}, {"path": "_mfs", "value": 0.978504181}]}
+{"frame": 1991, "time": 33.1829987, "values": [{"path": "_mfx", "value": 4.35945702}, {"path": "_mfy", "value": 1.43079615}, {"path": "_mfs", "value": 0.977643788}]}
+{"frame": 1992, "time": 33.1996651, "values": [{"path": "_mfx", "value": 4.55298328}, {"path": "_mfy", "value": 1.49431252}, {"path": "_mfs", "value": 0.976651371}]}
+{"frame": 1993, "time": 33.2163315, "values": [{"path": "_mfx", "value": 4.76738787}, {"path": "_mfy", "value": 1.56468117}, {"path": "_mfs", "value": 0.975551844}]}
+{"frame": 1994, "time": 33.2329979, "values": [{"path": "_mfx", "value": 4.99113226}, {"path": "_mfy", "value": 1.63811517}, {"path": "_mfs", "value": 0.974404454}]}
+{"frame": 1995, "time": 33.2496643, "values": [{"path": "_mfx", "value": 5.20935202}, {"path": "_mfy", "value": 1.70973611}, {"path": "_mfs", "value": 0.973285377}]}
+{"frame": 1996, "time": 33.2663307, "values": [{"path": "_mfx", "value": 5.41029358}, {"path": "_mfy", "value": 1.77568614}, {"path": "_mfs", "value": 0.972254932}]}
+{"frame": 1997, "time": 33.2829971, "values": [{"path": "_mfx", "value": 5.58854866}, {"path": "_mfy", "value": 1.83419037}, {"path": "_mfs", "value": 0.971340775}]}
+{"frame": 1998, "time": 33.2996635, "values": [{"path": "_mfx", "value": 5.7437253}, {"path": "_mfy", "value": 1.88512003}, {"path": "_mfs", "value": 0.970544994}]}
+{"frame": 1999, "time": 33.31633, "values": [{"path": "_mfx", "value": 5.8778758}, {"path": "_mfy", "value": 1.92914903}, {"path": "_mfs", "value": 0.969857037}]}
+{"frame": 2000, "time": 33.3329964, "values": [{"path": "_mfx", "value": 5.99376392}, {"path": "_mfy", "value": 1.96718407}, {"path": "_mfs", "value": 0.969262719}]}
+{"frame": 2001, "time": 33.3496628, "values": [{"path": "_mfx", "value": 6.09407234}, {"path": "_mfy", "value": 2.00010586}, {"path": "_mfs", "value": 0.968748331}]}
+{"frame": 2002, "time": 33.3663292, "values": [{"path": "_mfx", "value": 6.1811347}, {"path": "_mfy", "value": 2.02868009}, {"path": "_mfs", "value": 0.968301892}]}
+{"frame": 2003, "time": 33.3829956, "values": [{"path": "_mfx", "value": 6.25689793}, {"path": "_mfy", "value": 2.05354595}, {"path": "_mfs", "value": 0.96791333}]}
+{"frame": 2004, "time": 33.399662, "values": [{"path": "_mfx", "value": 6.32296085}, {"path": "_mfy", "value": 2.07522821}, {"path": "_mfs", "value": 0.967574537}]}
+{"frame": 2005, "time": 33.4163284, "values": [{"path": "_mfx", "value": 6.3806324}, {"path": "_mfy", "value": 2.09415627}, {"path": "_mfs", "value": 0.967278838}]}
+{"frame": 2006, "time": 33.4329948, "values": [{"path": "_mfx", "value": 6.43098736}, {"path": "_mfy", "value": 2.11068296}, {"path": "_mfs", "value": 0.967020571}]}
+{"frame": 2007, "time": 33.4496613, "values": [{"path": "_mfx", "value": 6.47491407}, {"path": "_mfy", "value": 2.12510014}, {"path": "_mfs", "value": 0.966795325}]}
+{"frame": 2008, "time": 33.4663277, "values": [{"path": "_mfx", "value": 6.51315308}, {"path": "_mfy", "value": 2.13765025}, {"path": "_mfs", "value": 0.966599226}]}
+{"frame": 2009, "time": 33.4829941, "values": [{"path": "_mfx", "value": 6.54632473}, {"path": "_mfy", "value": 2.14853716}, {"path": "_mfs", "value": 0.966429114}]}
+{"frame": 2010, "time": 33.4996605, "values": [{"path": "_mfx", "value": 6.57495356}, {"path": "_mfy", "value": 2.15793347}, {"path": "_mfs", "value": 0.966282308}]}
+{"frame": 2011, "time": 33.5163269, "values": [{"path": "_mfx", "value": 6.5994873}, {"path": "_mfy", "value": 2.16598558}, {"path": "_mfs", "value": 0.966156483}]}
+{"frame": 2012, "time": 33.5329933, "values": [{"path": "_mfx", "value": 6.62030983}, {"path": "_mfy", "value": 2.17281961}, {"path": "_mfs", "value": 0.966049671}]}
+{"frame": 2013, "time": 33.5496597, "values": [{"path": "_mfx", "value": 6.63775349}, {"path": "_mfy", "value": 2.17854476}, {"path": "_mfs", "value": 0.965960264}]}
+{"frame": 2014, "time": 33.5663261, "values": [{"path": "_mfx", "value": 6.65210629}, {"path": "_mfy", "value": 2.18325543}, {"path": "_mfs", "value": 0.965886652}]}
+{"frame": 2015, "time": 33.5829926, "values": [{"path": "_mfx", "value": 6.66362047}, {"path": "_mfy", "value": 2.18703437}, {"path": "_mfs", "value": 0.965827584}]}
+{"frame": 2016, "time": 33.599659, "values": [{"path": "_mfx", "value": 6.67251873}, {"path": "_mfy", "value": 2.18995476}, {"path": "_mfs", "value": 0.965781927}]}
+{"frame": 2017, "time": 33.6163254, "values": [{"path": "_mfx", "value": 6.67899704}, {"path": "_mfy", "value": 2.19208097}, {"path": "_mfs", "value": 0.965748727}]}
+{"frame": 2018, "time": 33.6329918, "values": [{"path": "_mfx", "value": 6.68322945}, {"path": "_mfy", "value": 2.19347024}, {"path": "_mfs", "value": 0.965727031}]}
+{"frame": 2019, "time": 33.6496582, "values": [{"path": "_mfx", "value": 6.68537283}, {"path": "_mfy", "value": 2.19417357}, {"path": "_mfs", "value": 0.965716064}]}
+{"frame": 2020, "time": 33.6663246, "values": [{"path": "_mfx", "value": 6.68571424}, {"path": "_mfy", "value": 2.19428563}, {"path": "_mfs", "value": 0.965714276}]}
 {"frame": 2124, "time": 35.3996315, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 2125, "time": 35.4162979, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 2126, "time": 35.4329643, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -1267,7 +1402,52 @@
 {"frame": 2301, "time": 38.3495865, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 2302, "time": 38.3662529, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 2303, "time": 38.3829193, "values": [{"path": "currentScreen", "value": 8}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 2304, "time": 38.3995857, "values": [{"path": "_visibleIndex", "value": 8}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 2304, "time": 38.3995857, "values": [{"path": "_visibleIndex", "value": 8}, {"path": "_mfx", "value": 6.68420553}, {"path": "_mfy", "value": 2.19379044}, {"path": "_mfs", "value": 0.965722024}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 2305, "time": 38.4162521, "values": [{"path": "_mfx", "value": 6.67948103}, {"path": "_mfy", "value": 2.19224}, {"path": "_mfs", "value": 0.965746224}]}
+{"frame": 2306, "time": 38.4329185, "values": [{"path": "_mfx", "value": 6.67120838}, {"path": "_mfy", "value": 2.18952465}, {"path": "_mfs", "value": 0.965788662}]}
+{"frame": 2307, "time": 38.449585, "values": [{"path": "_mfx", "value": 6.6590004}, {"path": "_mfy", "value": 2.18551803}, {"path": "_mfs", "value": 0.965851307}]}
+{"frame": 2308, "time": 38.4662514, "values": [{"path": "_mfx", "value": 6.64240456}, {"path": "_mfy", "value": 2.18007112}, {"path": "_mfs", "value": 0.965936363}]}
+{"frame": 2309, "time": 38.4829178, "values": [{"path": "_mfx", "value": 6.6208849}, {"path": "_mfy", "value": 2.1730082}, {"path": "_mfs", "value": 0.966046751}]}
+{"frame": 2310, "time": 38.4995842, "values": [{"path": "_mfx", "value": 6.59380341}, {"path": "_mfy", "value": 2.1641202}, {"path": "_mfs", "value": 0.966185629}]}
+{"frame": 2311, "time": 38.5162506, "values": [{"path": "_mfx", "value": 6.56039476}, {"path": "_mfy", "value": 2.15315509}, {"path": "_mfs", "value": 0.966356933}]}
+{"frame": 2312, "time": 38.532917, "values": [{"path": "_mfx", "value": 6.51973009}, {"path": "_mfy", "value": 2.13980889}, {"path": "_mfs", "value": 0.96656549}]}
+{"frame": 2313, "time": 38.5495834, "values": [{"path": "_mfx", "value": 6.47067547}, {"path": "_mfy", "value": 2.12370896}, {"path": "_mfs", "value": 0.966817021}]}
+{"frame": 2314, "time": 38.5662498, "values": [{"path": "_mfx", "value": 6.41183376}, {"path": "_mfy", "value": 2.10439658}, {"path": "_mfs", "value": 0.9671188}]}
+{"frame": 2315, "time": 38.5829163, "values": [{"path": "_mfx", "value": 6.34147501}, {"path": "_mfy", "value": 2.08130455}, {"path": "_mfs", "value": 0.967479587}]}
+{"frame": 2316, "time": 38.5995827, "values": [{"path": "_mfx", "value": 6.25746012}, {"path": "_mfy", "value": 2.05373049}, {"path": "_mfs", "value": 0.967910469}]}
+{"frame": 2317, "time": 38.6162491, "values": [{"path": "_mfx", "value": 6.1571722}, {"path": "_mfy", "value": 2.02081537}, {"path": "_mfs", "value": 0.968424737}]}
+{"frame": 2318, "time": 38.6329155, "values": [{"path": "_mfx", "value": 6.03752184}, {"path": "_mfy", "value": 1.98154557}, {"path": "_mfs", "value": 0.969038367}]}
+{"frame": 2319, "time": 38.6495819, "values": [{"path": "_mfx", "value": 5.89518738}, {"path": "_mfy", "value": 1.93483078}, {"path": "_mfs", "value": 0.969768286}]}
+{"frame": 2320, "time": 38.6662483, "values": [{"path": "_mfx", "value": 5.72742033}, {"path": "_mfy", "value": 1.87976873}, {"path": "_mfs", "value": 0.970628619}]}
+{"frame": 2321, "time": 38.6829147, "values": [{"path": "_mfx", "value": 5.53389359}, {"path": "_mfy", "value": 1.81625223}, {"path": "_mfs", "value": 0.971621037}]}
+{"frame": 2322, "time": 38.6995811, "values": [{"path": "_mfx", "value": 5.319489}, {"path": "_mfy", "value": 1.74588358}, {"path": "_mfs", "value": 0.972720563}]}
+{"frame": 2323, "time": 38.7162476, "values": [{"path": "_mfx", "value": 5.09574509}, {"path": "_mfy", "value": 1.67244959}, {"path": "_mfs", "value": 0.973867953}]}
+{"frame": 2324, "time": 38.732914, "values": [{"path": "_mfx", "value": 4.87752485}, {"path": "_mfy", "value": 1.60082877}, {"path": "_mfs", "value": 0.97498703}]}
+{"frame": 2325, "time": 38.7495804, "values": [{"path": "_mfx", "value": 4.67658329}, {"path": "_mfy", "value": 1.53487873}, {"path": "_mfs", "value": 0.976017535}]}
+{"frame": 2326, "time": 38.7662468, "values": [{"path": "_mfx", "value": 4.49832821}, {"path": "_mfy", "value": 1.47637439}, {"path": "_mfs", "value": 0.976931632}]}
+{"frame": 2327, "time": 38.7829132, "values": [{"path": "_mfx", "value": 4.34315157}, {"path": "_mfy", "value": 1.42544472}, {"path": "_mfs", "value": 0.977727413}]}
+{"frame": 2328, "time": 38.7995796, "values": [{"path": "_mfx", "value": 4.20900106}, {"path": "_mfy", "value": 1.38141584}, {"path": "_mfs", "value": 0.97841537}]}
+{"frame": 2329, "time": 38.816246, "values": [{"path": "_mfx", "value": 4.09311295}, {"path": "_mfy", "value": 1.34338069}, {"path": "_mfs", "value": 0.979009688}]}
+{"frame": 2330, "time": 38.8329124, "values": [{"path": "_mfx", "value": 3.99280477}, {"path": "_mfy", "value": 1.31045902}, {"path": "_mfs", "value": 0.979524076}]}
+{"frame": 2331, "time": 38.8495789, "values": [{"path": "_mfx", "value": 3.90574241}, {"path": "_mfy", "value": 1.28188467}, {"path": "_mfs", "value": 0.979970574}]}
+{"frame": 2332, "time": 38.8662453, "values": [{"path": "_mfx", "value": 3.82997894}, {"path": "_mfy", "value": 1.2570188}, {"path": "_mfs", "value": 0.980359077}]}
+{"frame": 2333, "time": 38.8829117, "values": [{"path": "_mfx", "value": 3.76391602}, {"path": "_mfy", "value": 1.23533654}, {"path": "_mfs", "value": 0.98069787}]}
+{"frame": 2334, "time": 38.8995781, "values": [{"path": "_mfx", "value": 3.70624471}, {"path": "_mfy", "value": 1.21640849}, {"path": "_mfs", "value": 0.980993629}]}
+{"frame": 2335, "time": 38.9162445, "values": [{"path": "_mfx", "value": 3.65588975}, {"path": "_mfy", "value": 1.19988179}, {"path": "_mfs", "value": 0.981251836}]}
+{"frame": 2336, "time": 38.9329109, "values": [{"path": "_mfx", "value": 3.6119628}, {"path": "_mfy", "value": 1.18546474}, {"path": "_mfs", "value": 0.981477141}]}
+{"frame": 2337, "time": 38.9495773, "values": [{"path": "_mfx", "value": 3.57372403}, {"path": "_mfy", "value": 1.17291451}, {"path": "_mfs", "value": 0.981673181}]}
+{"frame": 2338, "time": 38.9662437, "values": [{"path": "_mfx", "value": 3.54055262}, {"path": "_mfy", "value": 1.16202748}, {"path": "_mfs", "value": 0.981843293}]}
+{"frame": 2339, "time": 38.9829102, "values": [{"path": "_mfx", "value": 3.51192355}, {"path": "_mfy", "value": 1.1526314}, {"path": "_mfs", "value": 0.981990159}]}
+{"frame": 2340, "time": 38.9995766, "values": [{"path": "_mfx", "value": 3.4873898}, {"path": "_mfy", "value": 1.14457917}, {"path": "_mfs", "value": 0.982115924}]}
+{"frame": 2341, "time": 39.016243, "values": [{"path": "_mfx", "value": 3.46656704}, {"path": "_mfy", "value": 1.13774502}, {"path": "_mfs", "value": 0.982222736}]}
+{"frame": 2342, "time": 39.0329094, "values": [{"path": "_mfx", "value": 3.44912362}, {"path": "_mfy", "value": 1.13202}, {"path": "_mfs", "value": 0.982312202}]}
+{"frame": 2343, "time": 39.0495758, "values": [{"path": "_mfx", "value": 3.43477082}, {"path": "_mfy", "value": 1.12730944}, {"path": "_mfs", "value": 0.982385814}]}
+{"frame": 2344, "time": 39.0662422, "values": [{"path": "_mfx", "value": 3.42325664}, {"path": "_mfy", "value": 1.12353039}, {"path": "_mfs", "value": 0.982444823}]}
+{"frame": 2345, "time": 39.0829086, "values": [{"path": "_mfx", "value": 3.41435838}, {"path": "_mfy", "value": 1.12061}, {"path": "_mfs", "value": 0.98249048}]}
+{"frame": 2346, "time": 39.099575, "values": [{"path": "_mfx", "value": 3.40788031}, {"path": "_mfy", "value": 1.11848378}, {"path": "_mfs", "value": 0.98252368}]}
+{"frame": 2347, "time": 39.1162415, "values": [{"path": "_mfx", "value": 3.40364742}, {"path": "_mfy", "value": 1.11709452}, {"path": "_mfs", "value": 0.982545376}]}
+{"frame": 2348, "time": 39.1329079, "values": [{"path": "_mfx", "value": 3.40150428}, {"path": "_mfy", "value": 1.11639118}, {"path": "_mfs", "value": 0.982556403}]}
+{"frame": 2349, "time": 39.1495743, "values": [{"path": "_mfx", "value": 3.40116286}, {"path": "_mfy", "value": 1.11627913}, {"path": "_mfs", "value": 0.982558131}]}
 {"frame": 2453, "time": 40.8828812, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 2454, "time": 40.8995476, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 2455, "time": 40.916214, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -1448,7 +1628,52 @@
 {"frame": 2630, "time": 43.8328362, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 2631, "time": 43.8495026, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 2632, "time": 43.866169, "values": [{"path": "currentScreen", "value": 9}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 2633, "time": 43.8828354, "values": [{"path": "_visibleIndex", "value": 9}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 2633, "time": 43.8828354, "values": [{"path": "_visibleIndex", "value": 9}, {"path": "_mfx", "value": 3.40242362}, {"path": "_mfy", "value": 1.1166929}, {"path": "_mfs", "value": 0.982551694}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 2634, "time": 43.8995018, "values": [{"path": "_mfx", "value": 3.40637207}, {"path": "_mfy", "value": 1.11798882}, {"path": "_mfs", "value": 0.982531428}]}
+{"frame": 2635, "time": 43.9161682, "values": [{"path": "_mfx", "value": 3.41328573}, {"path": "_mfy", "value": 1.12025785}, {"path": "_mfs", "value": 0.982495964}]}
+{"frame": 2636, "time": 43.9328346, "values": [{"path": "_mfx", "value": 3.42348814}, {"path": "_mfy", "value": 1.12360632}, {"path": "_mfs", "value": 0.982443631}]}
+{"frame": 2637, "time": 43.949501, "values": [{"path": "_mfx", "value": 3.43735766}, {"path": "_mfy", "value": 1.12815845}, {"path": "_mfs", "value": 0.982372522}]}
+{"frame": 2638, "time": 43.9661674, "values": [{"path": "_mfx", "value": 3.45534229}, {"path": "_mfy", "value": 1.1340611}, {"path": "_mfs", "value": 0.982280314}]}
+{"frame": 2639, "time": 43.9828339, "values": [{"path": "_mfx", "value": 3.47797465}, {"path": "_mfy", "value": 1.14148915}, {"path": "_mfs", "value": 0.982164204}]}
+{"frame": 2640, "time": 43.9995003, "values": [{"path": "_mfx", "value": 3.5058949}, {"path": "_mfy", "value": 1.15065277}, {"path": "_mfs", "value": 0.982021034}]}
+{"frame": 2641, "time": 44.0161667, "values": [{"path": "_mfx", "value": 3.53987908}, {"path": "_mfy", "value": 1.16180646}, {"path": "_mfs", "value": 0.98184675}]}
+{"frame": 2642, "time": 44.0328331, "values": [{"path": "_mfx", "value": 3.58087516}, {"path": "_mfy", "value": 1.17526162}, {"path": "_mfs", "value": 0.981636524}]}
+{"frame": 2643, "time": 44.0494995, "values": [{"path": "_mfx", "value": 3.63005066}, {"path": "_mfy", "value": 1.19140124}, {"path": "_mfs", "value": 0.981384337}]}
+{"frame": 2644, "time": 44.0661659, "values": [{"path": "_mfx", "value": 3.68885088}, {"path": "_mfy", "value": 1.2106998}, {"path": "_mfs", "value": 0.981082797}]}
+{"frame": 2645, "time": 44.0828323, "values": [{"path": "_mfx", "value": 3.75906372}, {"path": "_mfy", "value": 1.23374403}, {"path": "_mfs", "value": 0.980722725}]}
+{"frame": 2646, "time": 44.0994987, "values": [{"path": "_mfx", "value": 3.84287667}, {"path": "_mfy", "value": 1.26125181}, {"path": "_mfs", "value": 0.980292916}]}
+{"frame": 2647, "time": 44.1161652, "values": [{"path": "_mfx", "value": 3.94287109}, {"path": "_mfy", "value": 1.29407048}, {"path": "_mfs", "value": 0.979780138}]}
+{"frame": 2648, "time": 44.1328316, "values": [{"path": "_mfx", "value": 4.06182289}, {"path": "_mfy", "value": 1.33311105}, {"path": "_mfs", "value": 0.979170144}]}
+{"frame": 2649, "time": 44.149498, "values": [{"path": "_mfx", "value": 4.20202923}, {"path": "_mfy", "value": 1.37912762}, {"path": "_mfs", "value": 0.978451133}]}
+{"frame": 2650, "time": 44.1661644, "values": [{"path": "_mfx", "value": 4.36376381}, {"path": "_mfy", "value": 1.43220961}, {"path": "_mfs", "value": 0.977621734}]}
+{"frame": 2651, "time": 44.1828308, "values": [{"path": "_mfx", "value": 4.54294586}, {"path": "_mfy", "value": 1.49101818}, {"path": "_mfs", "value": 0.976702869}]}
+{"frame": 2652, "time": 44.1994972, "values": [{"path": "_mfx", "value": 4.72993374}, {"path": "_mfy", "value": 1.55238855}, {"path": "_mfs", "value": 0.975743949}]}
+{"frame": 2653, "time": 44.2161636, "values": [{"path": "_mfx", "value": 4.91230488}, {"path": "_mfy", "value": 1.61224365}, {"path": "_mfs", "value": 0.974808693}]}
+{"frame": 2654, "time": 44.23283, "values": [{"path": "_mfx", "value": 5.08023596}, {"path": "_mfy", "value": 1.66735947}, {"path": "_mfs", "value": 0.973947525}]}
+{"frame": 2655, "time": 44.2494965, "values": [{"path": "_mfx", "value": 5.22920752}, {"path": "_mfy", "value": 1.71625268}, {"path": "_mfs", "value": 0.973183572}]}
+{"frame": 2656, "time": 44.2661629, "values": [{"path": "_mfx", "value": 5.35889149}, {"path": "_mfy", "value": 1.75881577}, {"path": "_mfs", "value": 0.972518504}]}
+{"frame": 2657, "time": 44.2828293, "values": [{"path": "_mfx", "value": 5.47100401}, {"path": "_mfy", "value": 1.79561162}, {"path": "_mfs", "value": 0.971943557}]}
+{"frame": 2658, "time": 44.2994957, "values": [{"path": "_mfx", "value": 5.5678544}, {"path": "_mfy", "value": 1.82739842}, {"path": "_mfs", "value": 0.971446872}]}
+{"frame": 2659, "time": 44.3161621, "values": [{"path": "_mfx", "value": 5.65168428}, {"path": "_mfy", "value": 1.85491168}, {"path": "_mfs", "value": 0.971017003}]}
+{"frame": 2660, "time": 44.3328285, "values": [{"path": "_mfx", "value": 5.72444391}, {"path": "_mfy", "value": 1.87879193}, {"path": "_mfs", "value": 0.970643878}]}
+{"frame": 2661, "time": 44.3494949, "values": [{"path": "_mfx", "value": 5.78776121}, {"path": "_mfy", "value": 1.89957285}, {"path": "_mfs", "value": 0.970319152}]}
+{"frame": 2662, "time": 44.3661613, "values": [{"path": "_mfx", "value": 5.84297132}, {"path": "_mfy", "value": 1.91769314}, {"path": "_mfs", "value": 0.97003603}]}
+{"frame": 2663, "time": 44.3828278, "values": [{"path": "_mfx", "value": 5.89116859}, {"path": "_mfy", "value": 1.93351173}, {"path": "_mfs", "value": 0.969788909}]}
+{"frame": 2664, "time": 44.3994942, "values": [{"path": "_mfx", "value": 5.9332509}, {"path": "_mfy", "value": 1.94732344}, {"path": "_mfs", "value": 0.969573081}]}
+{"frame": 2665, "time": 44.4161606, "values": [{"path": "_mfx", "value": 5.96996164}, {"path": "_mfy", "value": 1.95937204}, {"path": "_mfs", "value": 0.969384789}]}
+{"frame": 2666, "time": 44.432827, "values": [{"path": "_mfx", "value": 6.00191879}, {"path": "_mfy", "value": 1.96986055}, {"path": "_mfs", "value": 0.969220936}]}
+{"frame": 2667, "time": 44.4494934, "values": [{"path": "_mfx", "value": 6.02964067}, {"path": "_mfy", "value": 1.97895908}, {"path": "_mfs", "value": 0.969078779}]}
+{"frame": 2668, "time": 44.4661598, "values": [{"path": "_mfx", "value": 6.05356646}, {"path": "_mfy", "value": 1.98681164}, {"path": "_mfs", "value": 0.968956053}]}
+{"frame": 2669, "time": 44.4828262, "values": [{"path": "_mfx", "value": 6.07406998}, {"path": "_mfy", "value": 1.993541}, {"path": "_mfs", "value": 0.968850911}]}
+{"frame": 2670, "time": 44.4994926, "values": [{"path": "_mfx", "value": 6.09147215}, {"path": "_mfy", "value": 1.99925244}, {"path": "_mfs", "value": 0.968761683}]}
+{"frame": 2671, "time": 44.5161591, "values": [{"path": "_mfx", "value": 6.10605001}, {"path": "_mfy", "value": 2.0040369}, {"path": "_mfs", "value": 0.968686938}]}
+{"frame": 2672, "time": 44.5328255, "values": [{"path": "_mfx", "value": 6.11804485}, {"path": "_mfy", "value": 2.00797367}, {"path": "_mfs", "value": 0.968625426}]}
+{"frame": 2673, "time": 44.5494919, "values": [{"path": "_mfx", "value": 6.12766743}, {"path": "_mfy", "value": 2.011132}, {"path": "_mfs", "value": 0.968576074}]}
+{"frame": 2674, "time": 44.5661583, "values": [{"path": "_mfx", "value": 6.1351037}, {"path": "_mfy", "value": 2.01357245}, {"path": "_mfs", "value": 0.968537927}]}
+{"frame": 2675, "time": 44.5828247, "values": [{"path": "_mfx", "value": 6.14051771}, {"path": "_mfy", "value": 2.01534939}, {"path": "_mfs", "value": 0.968510151}]}
+{"frame": 2676, "time": 44.5994911, "values": [{"path": "_mfx", "value": 6.14405537}, {"path": "_mfy", "value": 2.01651049}, {"path": "_mfs", "value": 0.968492031}]}
+{"frame": 2677, "time": 44.6161575, "values": [{"path": "_mfx", "value": 6.14584637}, {"path": "_mfy", "value": 2.01709819}, {"path": "_mfs", "value": 0.968482852}]}
+{"frame": 2678, "time": 44.6328239, "values": [{"path": "_mfx", "value": 6.14613199}, {"path": "_mfy", "value": 2.01719189}, {"path": "_mfs", "value": 0.968481362}]}
 {"frame": 2782, "time": 46.3661308, "values": [{"path": "screenProgress", "value": 0.00555555569}]}
 {"frame": 2783, "time": 46.3827972, "values": [{"path": "screenProgress", "value": 0.0111111114}]}
 {"frame": 2784, "time": 46.3994637, "values": [{"path": "screenProgress", "value": 0.0166666675}]}
@@ -1629,52 +1854,52 @@
 {"frame": 2959, "time": 49.3160858, "values": [{"path": "screenProgress", "value": 0.988888919}]}
 {"frame": 2960, "time": 49.3327522, "values": [{"path": "screenProgress", "value": 0.994444489}]}
 {"frame": 2961, "time": 49.3494186, "values": [{"path": "currentScreen", "value": 10}, {"path": "screenProgress", "value": 0}, {"path": "_evtScreenChanged", "fired": true}]}
-{"frame": 2962, "time": 49.3660851, "values": [{"path": "screenProgress", "value": 0.00666666683}, {"path": "_visibleIndex", "value": 10}, {"path": "_heardScreenChanged", "fired": true}]}
-{"frame": 2963, "time": 49.3827515, "values": [{"path": "screenProgress", "value": 0.0133333337}]}
-{"frame": 2964, "time": 49.3994179, "values": [{"path": "screenProgress", "value": 0.0200000014}]}
-{"frame": 2965, "time": 49.4160843, "values": [{"path": "screenProgress", "value": 0.0266666673}]}
-{"frame": 2966, "time": 49.4327507, "values": [{"path": "screenProgress", "value": 0.0333333351}]}
-{"frame": 2967, "time": 49.4494171, "values": [{"path": "screenProgress", "value": 0.0400000028}]}
-{"frame": 2968, "time": 49.4660835, "values": [{"path": "screenProgress", "value": 0.0466666706}]}
-{"frame": 2969, "time": 49.4827499, "values": [{"path": "screenProgress", "value": 0.0533333346}]}
-{"frame": 2970, "time": 49.4994164, "values": [{"path": "screenProgress", "value": 0.0600000024}]}
-{"frame": 2971, "time": 49.5160828, "values": [{"path": "screenProgress", "value": 0.0666666701}]}
-{"frame": 2972, "time": 49.5327492, "values": [{"path": "screenProgress", "value": 0.0733333379}]}
-{"frame": 2973, "time": 49.5494156, "values": [{"path": "screenProgress", "value": 0.0800000057}]}
-{"frame": 2974, "time": 49.566082, "values": [{"path": "screenProgress", "value": 0.0866666734}]}
-{"frame": 2975, "time": 49.5827484, "values": [{"path": "screenProgress", "value": 0.0933333412}]}
-{"frame": 2976, "time": 49.5994148, "values": [{"path": "screenProgress", "value": 0.100000009}]}
-{"frame": 2977, "time": 49.6160812, "values": [{"path": "screenProgress", "value": 0.106666669}]}
-{"frame": 2978, "time": 49.6327477, "values": [{"path": "screenProgress", "value": 0.113333337}]}
-{"frame": 2979, "time": 49.6494141, "values": [{"path": "screenProgress", "value": 0.120000005}]}
-{"frame": 2980, "time": 49.6660805, "values": [{"path": "screenProgress", "value": 0.12666668}]}
-{"frame": 2981, "time": 49.6827469, "values": [{"path": "screenProgress", "value": 0.13333334}]}
-{"frame": 2982, "time": 49.6994133, "values": [{"path": "screenProgress", "value": 0.140000001}]}
-{"frame": 2983, "time": 49.7160797, "values": [{"path": "screenProgress", "value": 0.146666676}]}
-{"frame": 2984, "time": 49.7327461, "values": [{"path": "screenProgress", "value": 0.153333336}]}
-{"frame": 2985, "time": 49.7494125, "values": [{"path": "screenProgress", "value": 0.160000011}]}
-{"frame": 2986, "time": 49.7660789, "values": [{"path": "screenProgress", "value": 0.166666672}]}
-{"frame": 2987, "time": 49.7827454, "values": [{"path": "screenProgress", "value": 0.173333347}]}
-{"frame": 2988, "time": 49.7994118, "values": [{"path": "screenProgress", "value": 0.180000007}]}
-{"frame": 2989, "time": 49.8160782, "values": [{"path": "screenProgress", "value": 0.186666682}]}
-{"frame": 2990, "time": 49.8327446, "values": [{"path": "screenProgress", "value": 0.193333343}]}
-{"frame": 2991, "time": 49.849411, "values": [{"path": "screenProgress", "value": 0.200000018}]}
-{"frame": 2992, "time": 49.8660774, "values": [{"path": "screenProgress", "value": 0.206666678}]}
-{"frame": 2993, "time": 49.8827438, "values": [{"path": "screenProgress", "value": 0.213333338}]}
-{"frame": 2994, "time": 49.8994102, "values": [{"path": "screenProgress", "value": 0.220000014}]}
-{"frame": 2995, "time": 49.9160767, "values": [{"path": "screenProgress", "value": 0.226666674}]}
-{"frame": 2996, "time": 49.9327431, "values": [{"path": "screenProgress", "value": 0.233333349}]}
-{"frame": 2997, "time": 49.9494095, "values": [{"path": "screenProgress", "value": 0.24000001}]}
-{"frame": 2998, "time": 49.9660759, "values": [{"path": "screenProgress", "value": 0.246666685}]}
-{"frame": 2999, "time": 49.9827423, "values": [{"path": "screenProgress", "value": 0.25333336}]}
-{"frame": 3000, "time": 49.9994087, "values": [{"path": "screenProgress", "value": 0.26000002}]}
-{"frame": 3001, "time": 50.0160751, "values": [{"path": "screenProgress", "value": 0.266666681}]}
-{"frame": 3002, "time": 50.0327415, "values": [{"path": "screenProgress", "value": 0.273333341}]}
-{"frame": 3003, "time": 50.049408, "values": [{"path": "screenProgress", "value": 0.280000001}]}
-{"frame": 3004, "time": 50.0660744, "values": [{"path": "screenProgress", "value": 0.286666691}]}
-{"frame": 3005, "time": 50.0827408, "values": [{"path": "screenProgress", "value": 0.293333352}]}
-{"frame": 3006, "time": 50.0994072, "values": [{"path": "screenProgress", "value": 0.300000012}]}
-{"frame": 3007, "time": 50.1160736, "values": [{"path": "screenProgress", "value": 0.306666672}]}
+{"frame": 2962, "time": 49.3660851, "values": [{"path": "screenProgress", "value": 0.00666666683}, {"path": "_visibleIndex", "value": 10}, {"path": "_mfx", "value": 6.14330864}, {"path": "_mfy", "value": 2.03895688}, {"path": "_mfs", "value": 0.968495846}, {"path": "_heardScreenChanged", "fired": true}]}
+{"frame": 2963, "time": 49.3827515, "values": [{"path": "screenProgress", "value": 0.0133333337}, {"path": "_mfx", "value": 6.13446808}, {"path": "_mfy", "value": 2.10711336}, {"path": "_mfs", "value": 0.968541205}]}
+{"frame": 2964, "time": 49.3994179, "values": [{"path": "screenProgress", "value": 0.0200000014}, {"path": "_mfx", "value": 6.11898756}, {"path": "_mfy", "value": 2.22645617}, {"path": "_mfs", "value": 0.968620598}]}
+{"frame": 2965, "time": 49.4160843, "values": [{"path": "screenProgress", "value": 0.0266666673}, {"path": "_mfx", "value": 6.0961442}, {"path": "_mfy", "value": 2.40256453}, {"path": "_mfs", "value": 0.968737721}]}
+{"frame": 2966, "time": 49.4327507, "values": [{"path": "screenProgress", "value": 0.0333333351}, {"path": "_mfx", "value": 6.06508923}, {"path": "_mfy", "value": 2.64197803}, {"path": "_mfs", "value": 0.968896985}]}
+{"frame": 2967, "time": 49.4494171, "values": [{"path": "screenProgress", "value": 0.0400000028}, {"path": "_mfx", "value": 6.02482128}, {"path": "_mfy", "value": 2.95242143}, {"path": "_mfs", "value": 0.969103456}]}
+{"frame": 2968, "time": 49.4660835, "values": [{"path": "screenProgress", "value": 0.0466666706}, {"path": "_mfx", "value": 5.97414589}, {"path": "_mfy", "value": 3.34309411}, {"path": "_mfs", "value": 0.969363332}]}
+{"frame": 2969, "time": 49.4827499, "values": [{"path": "screenProgress", "value": 0.0533333346}, {"path": "_mfx", "value": 5.91163063}, {"path": "_mfy", "value": 3.82504678}, {"path": "_mfs", "value": 0.969683945}]}
+{"frame": 2970, "time": 49.4994164, "values": [{"path": "screenProgress", "value": 0.0600000024}, {"path": "_mfx", "value": 5.83553839}, {"path": "_mfy", "value": 4.41167021}, {"path": "_mfs", "value": 0.970074177}]}
+{"frame": 2971, "time": 49.5160828, "values": [{"path": "screenProgress", "value": 0.0666666701}, {"path": "_mfx", "value": 5.74374628}, {"path": "_mfy", "value": 5.11933088}, {"path": "_mfs", "value": 0.970544875}]}
+{"frame": 2972, "time": 49.5327492, "values": [{"path": "screenProgress", "value": 0.0733333379}, {"path": "_mfx", "value": 5.63363981}, {"path": "_mfy", "value": 5.96818352}, {"path": "_mfs", "value": 0.971109569}]}
+{"frame": 2973, "time": 49.5494156, "values": [{"path": "screenProgress", "value": 0.0800000057}, {"path": "_mfx", "value": 5.50198317}, {"path": "_mfy", "value": 6.98317289}, {"path": "_mfs", "value": 0.971784711}]}
+{"frame": 2974, "time": 49.566082, "values": [{"path": "screenProgress", "value": 0.0866666734}, {"path": "_mfx", "value": 5.34477234}, {"path": "_mfy", "value": 8.19516754}, {"path": "_mfs", "value": 0.972590923}]}
+{"frame": 2975, "time": 49.5827484, "values": [{"path": "screenProgress", "value": 0.0933333412}, {"path": "_mfx", "value": 5.15711069}, {"path": "_mfy", "value": 9.641922}, {"path": "_mfs", "value": 0.9735533}]}
+{"frame": 2976, "time": 49.5994148, "values": [{"path": "screenProgress", "value": 0.100000009}, {"path": "_mfx", "value": 4.93321848}, {"path": "_mfy", "value": 11.3679914}, {"path": "_mfs", "value": 0.974701464}]}
+{"frame": 2977, "time": 49.6160812, "values": [{"path": "screenProgress", "value": 0.106666669}, {"path": "_mfx", "value": 4.6668787}, {"path": "_mfy", "value": 13.4213009}, {"path": "_mfs", "value": 0.976067305}]}
+{"frame": 2978, "time": 49.6327477, "values": [{"path": "screenProgress", "value": 0.113333337}, {"path": "_mfx", "value": 4.35294867}, {"path": "_mfy", "value": 15.8415041}, {"path": "_mfs", "value": 0.977677166}]}
+{"frame": 2979, "time": 49.6494141, "values": [{"path": "screenProgress", "value": 0.120000005}, {"path": "_mfx", "value": 3.99081731}, {"path": "_mfy", "value": 18.6333103}, {"path": "_mfs", "value": 0.979534268}]}
+{"frame": 2980, "time": 49.6660805, "values": [{"path": "screenProgress", "value": 0.12666668}, {"path": "_mfx", "value": 3.58961844}, {"path": "_mfy", "value": 21.7262993}, {"path": "_mfs", "value": 0.981591702}]}
+{"frame": 2981, "time": 49.6827469, "values": [{"path": "screenProgress", "value": 0.13333334}, {"path": "_mfx", "value": 3.17094302}, {"path": "_mfy", "value": 24.9540253}, {"path": "_mfs", "value": 0.98373878}]}
+{"frame": 2982, "time": 49.6994133, "values": [{"path": "screenProgress", "value": 0.140000001}, {"path": "_mfx", "value": 2.76260448}, {"path": "_mfy", "value": 28.1020584}, {"path": "_mfs", "value": 0.98583281}]}
+{"frame": 2983, "time": 49.7160797, "values": [{"path": "screenProgress", "value": 0.146666676}, {"path": "_mfx", "value": 2.38659787}, {"path": "_mfy", "value": 31.0008316}, {"path": "_mfs", "value": 0.987761021}]}
+{"frame": 2984, "time": 49.7327461, "values": [{"path": "screenProgress", "value": 0.153333336}, {"path": "_mfx", "value": 2.05304265}, {"path": "_mfy", "value": 33.5723343}, {"path": "_mfs", "value": 0.989471555}]}
+{"frame": 2985, "time": 49.7494125, "values": [{"path": "screenProgress", "value": 0.160000011}, {"path": "_mfx", "value": 1.76267254}, {"path": "_mfy", "value": 35.8109055}, {"path": "_mfs", "value": 0.990960658}]}
+{"frame": 2986, "time": 49.7660789, "values": [{"path": "screenProgress", "value": 0.166666672}, {"path": "_mfx", "value": 1.51164687}, {"path": "_mfy", "value": 37.7461548}, {"path": "_mfs", "value": 0.992247939}]}
+{"frame": 2987, "time": 49.7827454, "values": [{"path": "screenProgress", "value": 0.173333347}, {"path": "_mfx", "value": 1.29479384}, {"path": "_mfy", "value": 39.4179535}, {"path": "_mfs", "value": 0.993360043}]}
+{"frame": 2988, "time": 49.7994118, "values": [{"path": "screenProgress", "value": 0.180000007}, {"path": "_mfx", "value": 1.10709476}, {"path": "_mfy", "value": 40.8649979}, {"path": "_mfs", "value": 0.994322598}]}
+{"frame": 2989, "time": 49.8160782, "values": [{"path": "screenProgress", "value": 0.186666682}, {"path": "_mfx", "value": 0.944181502}, {"path": "_mfy", "value": 42.1209564}, {"path": "_mfs", "value": 0.995158017}]}
+{"frame": 2990, "time": 49.8327446, "values": [{"path": "screenProgress", "value": 0.193333343}, {"path": "_mfx", "value": 0.802411258}, {"path": "_mfy", "value": 43.213913}, {"path": "_mfs", "value": 0.995885074}]}
+{"frame": 2991, "time": 49.849411, "values": [{"path": "screenProgress", "value": 0.200000018}, {"path": "_mfx", "value": 0.678792715}, {"path": "_mfy", "value": 44.166935}, {"path": "_mfs", "value": 0.996519029}]}
+{"frame": 2992, "time": 49.8660774, "values": [{"path": "screenProgress", "value": 0.206666678}, {"path": "_mfx", "value": 0.570876658}, {"path": "_mfy", "value": 44.9989014}, {"path": "_mfs", "value": 0.997072399}]}
+{"frame": 2993, "time": 49.8827438, "values": [{"path": "screenProgress", "value": 0.213333338}, {"path": "_mfx", "value": 0.476651311}, {"path": "_mfy", "value": 45.7253189}, {"path": "_mfs", "value": 0.997555614}]}
+{"frame": 2994, "time": 49.8994102, "values": [{"path": "screenProgress", "value": 0.220000014}, {"path": "_mfx", "value": 0.394454062}, {"path": "_mfy", "value": 46.3590088}, {"path": "_mfs", "value": 0.997977138}]}
+{"frame": 2995, "time": 49.9160767, "values": [{"path": "screenProgress", "value": 0.226666674}, {"path": "_mfx", "value": 0.322900653}, {"path": "_mfy", "value": 46.9106407}, {"path": "_mfs", "value": 0.998344123}]}
+{"frame": 2996, "time": 49.9327431, "values": [{"path": "screenProgress", "value": 0.233333349}, {"path": "_mfx", "value": 0.260829538}, {"path": "_mfy", "value": 47.3891678}, {"path": "_mfs", "value": 0.998662412}]}
+{"frame": 2997, "time": 49.9494095, "values": [{"path": "screenProgress", "value": 0.24000001}, {"path": "_mfx", "value": 0.207258344}, {"path": "_mfy", "value": 47.8021698}, {"path": "_mfs", "value": 0.99893713}]}
+{"frame": 2998, "time": 49.9660759, "values": [{"path": "screenProgress", "value": 0.246666685}, {"path": "_mfx", "value": 0.161349982}, {"path": "_mfy", "value": 48.1560936}, {"path": "_mfs", "value": 0.999172568}]}
+{"frame": 2999, "time": 49.9827423, "values": [{"path": "screenProgress", "value": 0.25333336}, {"path": "_mfx", "value": 0.122385964}, {"path": "_mfy", "value": 48.4564819}, {"path": "_mfs", "value": 0.999372363}]}
+{"frame": 3000, "time": 49.9994087, "values": [{"path": "screenProgress", "value": 0.26000002}, {"path": "_mfx", "value": 0.0897454023}, {"path": "_mfy", "value": 48.7081184}, {"path": "_mfs", "value": 0.999539793}]}
+{"frame": 3001, "time": 50.0160751, "values": [{"path": "screenProgress", "value": 0.266666681}, {"path": "_mfx", "value": 0.0628883541}, {"path": "_mfy", "value": 48.9151688}, {"path": "_mfs", "value": 0.999677479}]}
+{"frame": 3002, "time": 50.0327415, "values": [{"path": "screenProgress", "value": 0.273333341}, {"path": "_mfx", "value": 0.041342441}, {"path": "_mfy", "value": 49.0812759}, {"path": "_mfs", "value": 0.999787986}]}
+{"frame": 3003, "time": 50.049408, "values": [{"path": "screenProgress", "value": 0.280000001}, {"path": "_mfx", "value": 0.0246921089}, {"path": "_mfy", "value": 49.2096405}, {"path": "_mfs", "value": 0.9998734}]}
+{"frame": 3004, "time": 50.0660744, "values": [{"path": "screenProgress", "value": 0.286666691}, {"path": "_mfx", "value": 0.0125699136}, {"path": "_mfy", "value": 49.303093}, {"path": "_mfs", "value": 0.999935567}]}
+{"frame": 3005, "time": 50.0827408, "values": [{"path": "screenProgress", "value": 0.293333352}, {"path": "_mfx", "value": 0.0046493616}, {"path": "_mfy", "value": 49.3641548}, {"path": "_mfs", "value": 0.999976158}]}
+{"frame": 3006, "time": 50.0994072, "values": [{"path": "screenProgress", "value": 0.300000012}, {"path": "_mfx", "value": 0.000639051432}, {"path": "_mfy", "value": 49.3950729}, {"path": "_mfs", "value": 0.999996722}]}
+{"frame": 3007, "time": 50.1160736, "values": [{"path": "screenProgress", "value": 0.306666672}, {"path": "_mfx", "value": 0}, {"path": "_mfy", "value": 49.4000015}, {"path": "_mfs", "value": 1}]}
 {"frame": 3008, "time": 50.13274, "values": [{"path": "screenProgress", "value": 0.313333362}]}
 {"frame": 3009, "time": 50.1494064, "values": [{"path": "screenProgress", "value": 0.320000023}]}
 {"frame": 3010, "time": 50.1660728, "values": [{"path": "screenProgress", "value": 0.326666683}]}
@@ -1781,4 +2006,4 @@
 {"frame": 3111, "time": 51.8493805, "values": [{"path": "screenProgress", "value": 1}]}
 {"frame": 3112, "time": 51.8660469, "values": [{"path": "_finished", "value": true}, {"path": "_evtRecapFinished", "fired": true}]}
 {"frame": 3113, "time": 51.8827133, "values": [{"path": "_heardRecapFinished", "fired": true}]}
-{"frame": 4200, "time": 70.000473, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 10}, {"path": "screenProgress", "value": 1}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 10}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": true}, {"path": "_focus", "value": 0}]}
+{"frame": 4200, "time": 70.000473, "full": true, "values": [{"path": "totalSaved", "value": 1248}, {"path": "deposits", "value": 96}, {"path": "personaName", "value": "Steady Builder"}, {"path": "isPaused", "value": false}, {"path": "currentScreen", "value": 10}, {"path": "screenProgress", "value": 1}, {"path": "_navDir", "value": 1}, {"path": "_visibleCount", "value": 10}, {"path": "_visibleIndex", "value": 10}, {"path": "_personaSlot", "value": 0}, {"path": "_frozen", "value": false}, {"path": "_holding", "value": false}, {"path": "_finished", "value": true}, {"path": "_focus", "value": 0}, {"path": "_landscape", "value": false}, {"path": "_split", "value": false}, {"path": "_wideCard", "value": false}, {"path": "_viewW", "value": 390}, {"path": "_mfx", "value": 0}, {"path": "_mfy", "value": 49.4000015}, {"path": "_mfs", "value": 1}, {"path": "_c4s", "value": 0.982558131}, {"path": "_a4s", "value": 0.982558131}]}

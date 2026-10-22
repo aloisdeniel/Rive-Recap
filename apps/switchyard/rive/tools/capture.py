@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Regenerates the review captures under captures/.
 
-  python3 tools/capture.py            # stills (settled, personas, RM, fixtures, transitions, viewports)
+  python3 tools/capture.py            # stills at 390 x 844 (settled, personas, RM, fixtures, transitions, GPU)
+  python3 tools/responsive.py         # the responsive viewport matrix (captures/responsive/)
   python3 tools/capture.py --motion   # also an auto-advance GIF (slow; ../video.webm is the walkthrough)
 
 Needs Pillow only for the contact sheets / GIF (falls back to stills if missing).
@@ -112,9 +113,7 @@ def stills():
     shot(out("gpu", "pause_freeze_b.png"), *adv(300), "--key=space", *adv(150), data=["currentScreen=6",
                                                                                    "autoAdvanceEnabled=false"])
 
-    for vp in ("320x568", "430x932", "1280x800"):
-        rive([f"--screenshot={out('viewports', f'contain_{vp}.png')}", "--data=currentScreen=4", "--advance=240",
-              f"--viewport={vp}", "--fit=contain"])
+    # responsive layout across the viewport matrix: tools/responsive.py -> captures/responsive/
 
 
 def motion(step=5, seconds=62):

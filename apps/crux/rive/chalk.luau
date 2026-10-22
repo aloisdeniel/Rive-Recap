@@ -3,6 +3,12 @@
 -- timelines key through ScriptInputs - amount, clear, origin, drift, seed, direction.
 -- At amount 0 it issues no GPU work and draws nothing. Without GPU shaders it falls
 -- back to a cluster of vector puffs with the same keyed amount.
+--
+-- Responsive: the cloud lives in the carrier's space (its origin and drift are keyed
+-- there, at the carrier pose), but its canvas always covers the whole real canvas.
+-- `rigX` / `rigY` / `rigS` place this space in the stage viewport (scale `k`), so the
+-- canvas rectangle is mapped back into local units; the canvas itself is sized in
+-- device pixels (`vw` x `vh` x `dpr`, capped for memory).
 
 type Chalk = {
     amount: Input<number>,
@@ -12,8 +18,15 @@ type Chalk = {
     drift: Input<number>,
     seed: Input<number>,
     direction: Input<number>,
-    width: Input<number>,
-    height: Input<number>,
+    rigX: Input<number>,
+    rigY: Input<number>,
+    rigS: Input<number>,
+    k: Input<number>,
+    vw: Input<number>,
+    vh: Input<number>,
+    dpr: Input<number>,
+    ctx: Context?,
+    allocKey: string,
     gpu: boolean,
     started: boolean,
     canvas: GPUCanvas?,
@@ -26,7 +39,7 @@ type Chalk = {
     puffPaint: Paint,
 }
 
-local RES = 1 -- the cloud is soft and grainy; 1 px per point is plenty
+local MAX_PIXELS = 4200000 -- a 2048 x 2048 canvas: the cloud is soft, grain survives
 
 function init(self: Chalk, context: Context): boolean
     if self.started then
@@ -50,9 +63,37 @@ function init(self: Chalk, context: Context): boolean
     self.pipe = pipe
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    self.canvas = context:gpuCanvas({ width = math.floor(self.width * RES), height = math.floor(self.height * RES) })
+    self.ctx = context
     self.gpu = true
     return true
+end
+
+-- The canvas covers the real canvas in device pixels; reallocated only when that changes.
+local function ensureCanvas(self: Chalk): GPUCanvas?
+    local ctx = self.ctx
+    if ctx == nil then
+        return nil
+    end
+    local d = math.max(1, self.dpr)
+    local f = 1
+    if self.vw * self.vh * d * d > MAX_PIXELS then
+        f = math.sqrt(MAX_PIXELS / (self.vw * self.vh * d * d))
+    end
+    local pw: number = math.max(16, math.floor(self.vw * d * f))
+    local ph: number = math.max(16, math.floor(self.vh * d * f))
+    local key = tostring(pw) .. 'x' .. tostring(ph)
+    if self.canvas == nil or key ~= self.allocKey then
+        self.allocKey = key
+        self.canvas = ctx:gpuCanvas({ width = pw, height = ph })
+    end
+    return self.canvas
+end
+
+-- The canvas rectangle in this node's local (carrier) units: origin and size.
+local function view(self: Chalk): (number, number, number, number)
+    local s = math.max(1e-4, self.rigS)
+    local k = math.max(1e-4, self.k)
+    return -self.rigX / s, -self.rigY / s, self.vw / k / s, self.vh / k / s
 end
 
 local function fallback(self: Chalk, renderer: Renderer)
@@ -83,18 +124,23 @@ function draw(self: Chalk, renderer: Renderer)
     if self.amount <= 0.001 then
         return -- nothing to draw: no pass, no composite
     end
+    if self.gpu then
+        ensureCanvas(self)
+    end
     local canvas = self.canvas
     if not self.gpu or canvas == nil or self.pipe == nil or self.ubo == nil or self.group == nil then
         fallback(self, renderer)
         return
     end
+    local vx, vy, vwLocal, _ = view(self)
+    local res = canvas.width / vwLocal -- canvas pixels per local unit
     local b = self.staging
     local vals = {
-        canvas.width, canvas.height, self.originX, self.originY,
+        canvas.width, canvas.height, self.originX - vx, self.originY - vy,
         math.min(self.amount, 1.2), self.seed, self.drift, self.direction,
         0.945, 0.933, 0.906, 1,
         0.70, 0.68, 0.64, 1,
-        math.clamp(self.clear, 0, 1.5), RES, 0, 0,
+        math.clamp(self.clear, 0, 1.5), res, 0, 0,
     }
     for j = 1, 20 do
         buffer.writef32(b, (j - 1) * 4, vals[j])
@@ -109,7 +155,7 @@ function draw(self: Chalk, renderer: Renderer)
     pass:draw(3)
     pass:finish()
     renderer:save()
-    renderer:transform(Mat2D.withScale(1 / RES, 1 / RES))
+    renderer:transform(Mat2D.withTranslation(vx, vy) * Mat2D.withScale(1 / res, 1 / res))
     renderer:drawImage(canvas.image, self.sampler, 'srcOver', 1)
     renderer:restore()
 end
@@ -123,8 +169,15 @@ return function(): Node<Chalk>
         drift = 0,
         seed = 1,
         direction = 1,
-        width = 390,
-        height = 844,
+        rigX = 0,
+        rigY = 0,
+        rigS = 1,
+        k = 1,
+        vw = 390,
+        vh = 844,
+        dpr = 1,
+        ctx = nil,
+        allocKey = '',
         gpu = false,
         started = false,
         canvas = nil,

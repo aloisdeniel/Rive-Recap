@@ -6,7 +6,8 @@ python3 tools/capture_all.py
 The full motion walkthrough is ../../video.webm (scripts/render-video.py nocturne);
 this script only writes stills: settled scenes, personas, key transition frames
 (the GPU iris, the lit moon, the meteor fan, the loupe), reduced motion,
-fixtures, interaction states and the three presentation sizes.
+fixtures and interaction states, all at the 390 x 844 design size. The responsive viewport matrix is
+tools/capture_responsive.py (captures/responsive/).
 """
 import json
 import os
@@ -108,8 +109,7 @@ def stills():
          "--advance=10", *taps(NEXT, 2), "--advance=240")
     shot("interaction/runtime-update-nights-512.png", "--data=observationNights=512", *keys(1), "--advance=240")
     shot("interaction/grouping-de-DE.png", "--data=locale=de-DE", "--data=objectsLogged=1284567", *keys(2), "--advance=240")
-    for vp in ("320x568", "430x932", "1440x900"):
-        shot(f"viewports/{vp}-contain-scene-02.png", f"--viewport={vp}", "--fit=contain", *keys(1), "--advance=240")
+    # other canvas sizes (the responsive layout, no letterboxing): tools/capture_responsive.py -> captures/responsive/
 
 
 if __name__ == "__main__":

@@ -7,6 +7,7 @@ from data import P, count_converter, CONV_FORMAT, CONV_INT, SCRIPT_LETTERS
 from text import style, text, reveal_modifier, key_reveal
 from scene_base import Scene, hero_number, copy_styles, W, H, IDLE_MS
 import art
+import stage
 
 NAMES = {1: 'S1 Invitation', 2: 'S2 Meals cooked', 3: 'S3 Recipes tried', 4: 'S4 Cuisines explored', 5: 'S5 New ingredients',
          6: 'S6 Favorite recipe', 7: 'S7 Shared meals', 8: 'S8 Cooking days', 9: 'S9 Persona', 10: 'S10 Summary'}
@@ -24,11 +25,16 @@ def metric_copy(sc, k, align='left', y_num=98, y_copy=224):
     tb = sc.text_block(24, y_copy, 342, [(u, 'unit', f'screen{k}Unit'), (h, 'Headline', f'screen{k}Headline'),
                                          (s, 'Support', f'screen{k}Support')], align=align)
     sc.reveal_text(tb, *COPY_IN)
+    stage.bind_copy_width(tb)
     ox = 24 if align == 'left' else 366
     # the number swings up from its baseline with a little overshoot (pivot at its edge)
     holder = node('Hero holder', [hn], x=ox, y=y_num + 110)
     hn.attrs['x'] = float(24 - ox)
     hn.attrs['y'] = float(-110)
+    if align != 'left':
+        # right-aligned: the pivot rides the copy column's right edge
+        stage.bind_expr(holder, 13, 'Layout copy right edge', stage.CW + 24.0)
+        stage.bind_expr(hn, 13, 'Layout copy width negated', stage.CW * -1.0)
     sc.key(holder, 'opacity', [(0, 0.0, 'hold'), (HERO_IN, 0.0, 'soft'), (HERO_IN + 260, 1.0)])
     sc.key(holder, 'scaleY', [(0, 0.4, 'hold'), (HERO_IN, 0.4, 'back'), (HERO_IN + 520, 1.0)])
     sc.key(holder, 'scaleX', [(0, 0.85, 'hold'), (HERO_IN, 0.85, 'back'), (HERO_IN + 520, 1.0)])
@@ -132,7 +138,9 @@ def scene1(x_stage):
         sc.idle.ms(v, 'rotation', seq_r)
     dancers = node('Dancing vegetables', veg)
 
-    sc.inner.add(greet, tb, ticket, letters, wm, wm2, underline, dancers)
+    stage.bind_copy_width(tb)
+    stage.bind_copy_width(greet, 12)
+    sc.inner.add(sc.copy_group([greet, tb]), sc.art_group([ticket, letters, wm, wm2, underline, dancers]))
     return sc
 
 
@@ -193,7 +201,7 @@ def scene2(x_stage):
     gar = art.garlic('Table garlic', 0.75, x=300, y=724, rot=-0.2)
     for i, o in enumerate((napkin, gar, tom)):
         sc.key(o, 'y', [(0, float(o.attrs['y']) + 80, 'hold'), (60 + i * 70, float(o.attrs['y']) + 80, 'back'), (480 + i * 70, float(o.attrs['y']))])
-    sc.inner.add(hero, tb, node('Hover', hover), node('Burst', burst), node('Waves', pieces), splash, gar, tom, napkin)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([node('Hover', hover), node('Burst', burst), node('Waves', pieces), splash, gar, tom, napkin]))
     return sc
 
 
@@ -264,7 +272,7 @@ def scene3(x_stage):
     sc.key(book, 'opacity', [(0, 0.0, 'hold'), (60, 0.0, 'soft'), (300, 1.0)])
     sc.key(book, 'rotation', [(0, 0.06, 'hold'), (60, 0.06, 'back'), (520, 0.0)])
     sc.wiggle(ribbon, 'rotation', 0.0, 0.08, IDLE_MS / 2)
-    sc.inner.add(hero, tb, note, arrow_g, *stars, ribbon, book)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, arrow_g, *stars, ribbon, book]))
     return sc
 
 
@@ -338,7 +346,7 @@ def scene4(x_stage):
         sc.key(n, 'opacity', [(0, 0.0, 'hold'), (1500 + i * 90, 0.0, 'soft'), (1750 + i * 90, 1.0)])
         sc.key(n, 'y', [(0, y + 10.0, 'hold'), (1500 + i * 90, y + 10.0, 'back'), (1800 + i * 90, float(y))])
         notes.append(n)
-    sc.inner.add(hero, tb, *notes, *arms, *herbs, sauce, plate, *swooshes)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([*notes, *arms, *herbs, sauce, plate, *swooshes]))
     return sc
 
 
@@ -386,7 +394,7 @@ def scene5(x_stage):
     sc.idle.ms(pinch, 'opacity', [(0, 0.0, 'lin'), (IDLE_MS * 0.2, 1.0, 'lin'), (IDLE_MS * 0.8, 1.0, 'lin'), (IDLE_MS, 0.0)])
     tag = text('Tag', [(hand('t', 25, 'tomato', 700), 'new on the shelf', None, None)], x=40, y=394, rot=-0.06)
     sc.key(tag, 'opacity', [(0, 0.0, 'hold'), (1600, 0.0, 'soft'), (1850, 1.0)])
-    sc.inner.add(hero, tb, tag, pinch, *jars[:4], shelves[0], *jars[4:], shelves[1])
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([tag, pinch, *jars[:4], shelves[0], *jars[4:], shelves[1]]))
     return sc
 
 
@@ -450,7 +458,7 @@ def scene6(x_stage):
         stream.append(g)
     note = text('Note', [(hand('n', 24, 'tomato', 700), 'again & again', None, None)], x=262, y=404, rot=0.08)
     sc.key(note, 'opacity', [(0, 0.0, 'hold'), (1600, 0.0, 'soft'), (1850, 1.0)])
-    sc.inner.add(hero, tb, note, *stream, banner, bowl, *tails, medal)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, *stream, banner, bowl, *tails, medal]))
     return sc
 
 
@@ -514,7 +522,7 @@ def scene7(x_stage):
         glasses.append(g)
     note = text('Note', [(hand('n', 24, 'basil', 700), 'pull up a chair', None, None)], x=26, y=396, rot=-0.07)
     sc.key(note, 'opacity', [(0, 0.0, 'hold'), (1600, 0.0, 'soft'), (1850, 1.0)])
-    sc.inner.add(hero, tb, note, *glasses, *settings, table_wrap)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, *glasses, *settings, table_wrap]))
     return sc
 
 
@@ -576,7 +584,7 @@ def scene8(x_stage):
         marks.append(m)
     note = text('Note', [(hand('n', 24, 'tomato', 700), 'slow Sundays', None, None)], x=250, y=650, rot=-0.06)
     sc.key(note, 'opacity', [(0, 0.0, 'hold'), (1700, 0.0, 'soft'), (1950, 1.0)])
-    sc.inner.add(hero, tb, note, *marks, stitch, grid)
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, *marks, stitch, grid]))
     return sc
 
 
@@ -813,7 +821,8 @@ def scene9(x_stage):
     sc.key(dust, 'opacity', [(0, 0.0, 'hold'), (1150, 0.0, 'lin'), (1200, 0.8, 'soft'), (1600, 0.0)])
     sc.key(dust, 'scaleX', [(0, 0.4, 'hold'), (1150, 0.4, 'out'), (1600, 1.4)])
     sc.settle(dust, 'opacity', 0.0)
-    sc.inner.add(tb, orbit, *groups, dust, halo)
+    stage.bind_copy_width(tb)
+    sc.inner.add(sc.copy_group([tb]), sc.art_group([orbit, *groups, dust, halo]))
     return sc
 
 
@@ -836,41 +845,66 @@ def mini_pot(scale=1.0):
     ], sx=scale, sy=scale)
 
 
-def build_share_card(x_stage):
-    CW, CH = 342, 500
-    ab = E('Artboard', isComponent=True, width=float(CW), height=float(CH), name='Share card', x=float(x_stage), y=1400.0)
+# share card geometry: the tall card (the master; the host captures this one) and a wide
+# arrangement of the same pieces for landscape and short stages. Card-local coordinates.
+CARD = {
+    False: dict(W=342, H=500, ticket=(318, 466), wm=(26, 24), yr=(26, 62), pot=(270, 62), chip=(38, 116), pname=(58, 102),
+                big=(26, 142, 290), unit=(26, 214), tiles=[(26, 252), (176, 252), (26, 340), (176, 340)],
+                name=(26, 428, 222), recipe=(26, 458, 222), stamp=(290, 464)),
+    # the wide card is only shown scaled down (landscape, short stages), so its type is larger
+    True: dict(W=700, H=360, ticket=(676, 326), wm=(26, 22), yr=(26, 62), pot=(262, 62), chip=(38, 118), pname=(58, 103),
+               big=(26, 142, 290), unit=(26, 216), tiles=[(340, 30), (500, 30), (340, 132), (500, 132)],
+               name=(26, 262, 280), recipe=(26, 296, 280), stamp=(622, 296), big_type=True),
+}
+# where each card sits in scene 10 (centre), see scene10 and scripts/stage.luau (motif fly-in)
+CARD_CENTRE = {False: (195, 466), True: (195, 485)}
+TILE = {False: dict(w=140, h=80, unit=15, lh=16, uy=42, uh=37, uw=122, val=30, vh=34),
+        True: dict(w=150, h=92, unit=18, lh=19, uy=42, uh=50, uw=132, val=34, vh=38)}
+
+
+def build_share_card(x_stage, wide=False):
+    g = CARD[wide]
+    CW, CH = g['W'], g['H']
+    ab = E('Artboard', isComponent=True, width=float(CW), height=float(CH), name='Share card wide' if wide else 'Share card',
+           x=float(x_stage), y=1400.0 + (600.0 if wide else 0.0))
     st = E('LayoutComponentStyle', name='Artboard Style')
     ab.attrs['styleId'] = st.id
-    bg = art.scallop_ticket('Ticket', 318, 466, c='butter', edge='tomato', x=CW / 2 - 3, y=CH / 2 - 3)
-    wm = text('Wordmark', [(style('display', 30, 800, 'tomato', ls=-0.8, opsz=48, name='Card wordmark'), 'Simmer', None, None)], x=26, y=24)
-    yr = text('Year', [(style('body', 16, 700, 'aub', name='Card year'), '2026', 'year', CONV_INT)], x=26, y=62)
-    pot = node('Card pot', [mini_pot(0.82)], x=270, y=62)
+    bg = art.scallop_ticket('Ticket', g['ticket'][0], g['ticket'][1], c='butter', edge='tomato', x=CW / 2 - 3, y=CH / 2 - 3)
+    wm = text('Wordmark', [(style('display', 30, 800, 'tomato', ls=-0.8, opsz=48, name='Card wordmark'), 'Simmer', None, None)], x=g['wm'][0], y=g['wm'][1])
+    big_type = g.get('big_type', False)
+    T = TILE[wide]
+    yr = text('Year', [(style('body', 18 if big_type else 16, 700, 'aub', name='Card year'), '2026', 'year', CONV_INT)], x=g['yr'][0], y=g['yr'][1])
+    pot = node('Card pot', [mini_pot(0.82)], x=g['pot'][0], y=g['pot'][1])
     chip_col = E('SolidColor', [bind(P('personaColor'), 37)], colorValue=col('butter'), name='Color')
-    chip = node('Persona chip', [shape('Persona dot', ellipse(14, 14), [E('Fill', [chip_col], name='Persona color')]), shape('chip ring', ellipse(26, 26), [fill('aub')])], x=38, y=116)
-    pname = text('Persona', [(style('display', 22, 700, 'aub', opsz=24, name='Card persona'), 'Flavor Explorer', 'personaName', None)], x=58, y=102,
-                 width=250, height=28, sizing='fixed', overflow='ellipsis', wrap='noWrap')
+    chip = node('Persona chip', [shape('Persona dot', ellipse(14, 14), [E('Fill', [chip_col], name='Persona color')]), shape('chip ring', ellipse(26, 26), [fill('aub')])], x=g['chip'][0], y=g['chip'][1])
+    pname = text('Persona', [(style('display', 24 if big_type else 22, 700, 'aub', opsz=24, name='Card persona'), 'Flavor Explorer', 'personaName', None)], x=g['pname'][0], y=g['pname'][1],
+                 width=250, height=30 if big_type else 28, sizing='fixed', overflow='ellipsis', wrap='noWrap')
     persona = node('Persona row', [chip, pname])
-    big_v = text('Meals value', [(style('display', 66, 800, 'tomato', ls=-2, opsz=96, name='Card big'), '0', 'mealsCooked', CONV_FORMAT)], x=26, y=142,
-                 width=290, height=70, sizing='fixed', overflow='fitFontSize', wrap='noWrap')
-    big_u = text('Meals unit', [(style('body', 17, 600, 'aub', name='Card unit'), 'meals cooked', 'screen2Unit', None)], x=26, y=214,
-                 width=290, height=24, sizing='fixed', overflow='ellipsis', wrap='noWrap')
+    bx, by, bw = g['big']
+    big_v = text('Meals value', [(style('display', 66, 800, 'tomato', ls=-2, opsz=96, name='Card big'), '0', 'mealsCooked', CONV_FORMAT)], x=bx, y=by,
+                 width=bw, height=70, sizing='fixed', overflow='fitFontSize', wrap='noWrap')
+    big_u = text('Meals unit', [(style('body', 19 if big_type else 17, 600, 'aub', name='Card unit'), 'meals cooked', 'screen2Unit', None)], x=g['unit'][0], y=g['unit'][1],
+                 width=bw, height=26 if big_type else 24, sizing='fixed', overflow='ellipsis', wrap='noWrap')
     tiles = []
-    for i, (prop, unit, x, y) in enumerate([('recipesTried', 'screen3Unit', 26, 252), ('cuisinesExplored', 'screen4Unit', 176, 252),
-                                            ('newIngredients', 'screen5Unit', 26, 340), ('repeatRecipeCount', 'screen6Unit', 176, 340)]):
-        v = text('value', [(style('display', 30, 800, 'tomato', ls=-0.8, opsz=36, name='Tile value'), '0', prop, CONV_FORMAT)], x=12, y=8,
-                 width=116, height=34, sizing='fixed', overflow='fitFontSize', wrap='noWrap')
-        u = text('unit', [(style('body', 13, 600, 'aub', lh=15, name='Tile unit'), 'unit', unit, None)], x=12, y=44, width=116, height=32,
+    props = [('recipesTried', 'screen3Unit'), ('cuisinesExplored', 'screen4Unit'), ('newIngredients', 'screen5Unit'), ('repeatRecipeCount', 'screen6Unit')]
+    for i, ((prop, unit), (x, y)) in enumerate(zip(props, g['tiles'])):
+        v = text('value', [(style('display', T['val'], 800, 'tomato', ls=-0.8, opsz=36, name='Tile value'), '0', prop, CONV_FORMAT)], x=12, y=8,
+                 width=T['w'] - 24, height=T['vh'], sizing='fixed', overflow='fitFontSize', wrap='noWrap')
+        # 15 pt (was 13) / 18 pt on the wide card: the card is the smallest text once the layout scales it down
+        u = text('unit', [(style('body', T['unit'], 600, 'aub', lh=T['lh'], name='Tile unit'), 'unit', unit, None)], x=12, y=T['uy'], width=T['uw'], height=T['uh'],
                  sizing='fixed', overflow='ellipsis')
-        tile = node(f'Tile {i}', [v, u, shape('tile', rect(140, 80, 12, 0, 0), [fill('cream'), stroke('aub', 2)]),
-                                  shape('tile ink', rect(140, 80, 12, 0, 0), fill('ink25'), x=3, y=4)], x=x, y=y)
+        tile = node(f'Tile {i}', [v, u, shape('tile', rect(T['w'], T['h'], 12, 0, 0), [fill('cream'), stroke('aub', 2)]),
+                                  shape('tile ink', rect(T['w'], T['h'], 12, 0, 0), fill('ink25'), x=3, y=4)], x=x, y=y)
         tiles.append(tile)
-    name_line = text('Name line', [(style('hand', 26, 700, 'tomato', name='Card name'), '', 'summaryNameLine', None)], x=26, y=428,
-                     width=222, height=32, sizing='fixed', overflow='ellipsis', wrap='noWrap', rot=-0.03)
-    recipe_line = text('Recipe line', [(style('hand', 19, 600, 'aub', name='Card recipe'), '', 'summaryRecipeLine', None)], x=26, y=458,
-                       width=222, height=24, sizing='fixed', overflow='ellipsis', wrap='noWrap')
+    nx, ny, nw = g['name']
+    name_line = text('Name line', [(style('hand', 26, 700, 'tomato', name='Card name'), '', 'summaryNameLine', None)], x=nx, y=ny,
+                     width=nw, height=32, sizing='fixed', overflow='ellipsis', wrap='noWrap', rot=-0.03)
+    rx, ry, rw = g['recipe']
+    recipe_line = text('Recipe line', [(style('hand', 19, 600, 'aub', name='Card recipe'), '', 'summaryRecipeLine', None)], x=rx, y=ry,
+                       width=rw, height=24, sizing='fixed', overflow='ellipsis', wrap='noWrap')
     stamp = node('Stamp', [text('stamp text', [(style('display', 14, 800, 'basil', opsz=14, name='Stamp'), 'COOKED\nWITH\nLOVE', None, None)],
                                  x=-34, y=-26, width=68, sizing='autoHeight', align='center'),
-                            shape('stamp ring', ellipse(84, 84), stroke('basil', 3))], x=290, y=464, rot=-0.25, sx=0.8, sy=0.8)
+                            shape('stamp ring', ellipse(84, 84), stroke('basil', 3))], x=g['stamp'][0], y=g['stamp'][1], rot=-0.25, sx=0.8, sy=0.8)
     card = node('Card', [wm, yr, pot, persona, big_v, big_u, *tiles, name_line, recipe_line, stamp, bg])
     ab.add(st, card)
 
@@ -914,27 +948,43 @@ def scene10(x_stage):
     sc = Scene(10, NAMES[10], x_stage)
     card_ab, card_sm = build_share_card(500 + 10 * 440)
     EXTRA.append((card_ab, card_sm))
+    wide_ab, wide_sm = build_share_card(500 + 10 * 440, wide=True)
+    EXTRA.append((wide_ab, wide_sm))
     hd = style('display', 32, 800, 'aub', lh=34, ls=-0.8, opsz=48, name='Summary headline')
     sp = style('body', 18, 400, 'aub', lh=24, name='Summary support')
     tb = sc.text_block(24, 98, 342, [(hd, 'A little year. A lot of you.', 'summaryHeadline'), (sp, 'Take a piece of your year with you.', 'summarySupport')])
     sc.reveal_text(tb, 250, 1000, y=24)
-    nest = E('NestedArtboard', [E('NestedStateMachine', animationId=card_sm.id, name='machine')], artboardId=card_ab.id, x=-171.0, y=-250.0, name='Share card')
-    card = node('Card holder', [nest], x=195, y=216 + 250)
-    sc.key(card, 'y', [(0, 900.0, 'hold'), (120, 900.0, 'back'), (720, 466.0)])
-    sc.key(card, 'rotation', [(0, 0.22, 'hold'), (120, 0.22, 'back'), (820, -0.02)])
-    normal = node('Normal summary', [tb, card])
+    stage.bind_copy_width(tb)
+    cards = []
+    for wide, (ab_, sm_) in ((False, (card_ab, card_sm)), (True, (wide_ab, wide_sm))):
+        g = CARD[wide]
+        cx_, cy_ = CARD_CENTRE[wide]
+        nest = E('NestedArtboard', [E('NestedStateMachine', animationId=sm_.id, name='machine')], artboardId=ab_.id,
+                 x=-g['W'] / 2, y=-g['H'] / 2, name='Share card wide' if wide else 'Share card')
+        card = node('Wide card holder' if wide else 'Card holder', [nest], x=cx_, y=cy_)
+        sc.key(card, 'y', [(0, cy_ + 434.0 + (80.0 if wide else 0.0), 'hold'), (120, cy_ + 434.0 + (80.0 if wide else 0.0), 'back'), (720, float(cy_))])
+        sc.key(card, 'rotation', [(0, 0.22, 'hold'), (120, 0.22, 'back'), (820, -0.02 if not wide else -0.012)])
+        cards.append(card)
+    # the tall card is the master; the wide arrangement takes over where it would print >= 12% larger
+    tall_art = sc.art_group([cards[0]], key=10, name='Tall card art')
+    wide_art = sc.art_group([cards[1]], key='10wide', name='Wide card art')
+    wide_on = stage.wide_card_wins()
+    stage.bind_expr(tall_art, 18, 'Layout tall card shown', 1.0 - wide_on)
+    stage.bind_expr(wide_art, 18, 'Layout wide card shown', wide_on)
+    normal = node('Normal summary', [sc.copy_group([tb], key=10), tall_art, wide_art])
 
     # empty / new-user summary: welcoming, no stats, no persona
     eh = style('display', 40, 800, 'aub', lh=42, ls=-1.0, opsz=72, name='Empty headline')
     es = style('body', 20, 400, 'aub', lh=26, name='Empty support')
     etb = sc.text_block(24, 120, 342, [(eh, 'Every story starts somewhere.', 'emptyHeadline'), (es, 'Your next chapter is waiting.', 'emptySupport')])
     sc.reveal_text(etb, 300, 1100, y=24)
+    stage.bind_copy_width(etb)
     epot = node('Empty motif', [mini_pot(1.6)], x=195, y=470)
     sc.key(epot, 'y', [(0, 560.0, 'hold'), (200, 560.0, 'back'), (800, 470.0)])
     sc.wiggle(epot, 'rotation', 0.0, 0.05, IDLE_MS / 2)
     seeds = [art.leaf('sprout', 0.9, x=195, y=380, rot=0.3)]
     pop_in(sc, seeds[0], 900, dur=420)
-    empty = node('Empty summary', [etb, epot] + seeds, op=0.0)
+    empty = node('Empty summary', [sc.copy_group([etb], key='10empty'), sc.art_group([epot] + seeds, key='10empty')], op=0.0)
 
     a_norm = Anim('Summary normal', 1)
     a_empty = Anim('Summary empty', 1)

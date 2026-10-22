@@ -332,6 +332,15 @@ KEY_Y = 14
 KEY_SCALEX = 16
 KEY_COLOR = 37
 KEY_DISPLAY = 596
+KEY_SCALEY = 17
+KEY_WIDTH_PATH = 20      # ParametricPath (Rectangle, Ellipse) width
+KEY_HEIGHT_PATH = 21
+KEY_WIDTH_LC = 7         # LayoutComponent width / height
+KEY_HEIGHT_LC = 8
+KEY_TEXT_W = 285         # Text width / height
+KEY_TEXT_H = 286
+KEY_TEXT_ALIGN = 281     # Text alignValue: left 0, right 1, center 2
+KEY_GRAD_ENDY = 35       # LinearGradient endY
 
 
 # ---------------------------------------------------------------- state machine pieces

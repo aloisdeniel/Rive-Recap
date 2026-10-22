@@ -16,6 +16,16 @@
 -- Reduced motion: the handoff states never play, so `progress` stays 0 and
 -- nothing is drawn. Pause: the steam freezes while `motionFrozen` is set.
 -- No GPU scripting: a vector fallback draws the spine as a fat cream stroke.
+--
+-- Responsive: a fill-sized ScriptedLayout, so `resize` hands it the real stage
+-- and the canvas is allocated at that size. The curl is authored on the
+-- 390 x 844 master and stretched onto the stage (x by W/390, y by H/844);
+-- the billows, their radii and the noise scale by the geometric mean k, so the
+-- veil keeps its proportions and covers every edge at any aspect. The halftone
+-- dots stay in real points. The origin is the pot's position in the scene the
+-- user left, through that scene's frame (scripts/stage.luau).
+
+local stage = require('scripts/stage')
 
 type Steam = {
     progress: Input<number>,
@@ -23,6 +33,12 @@ type Steam = {
     started: boolean,
     gpu: boolean,
     vm: ViewModel?,
+    ctx: Context?,
+    W: number,
+    H: number,
+    kx: number,
+    ky: number,
+    k: number,
     canvas: GPUCanvas?,
     pipe: GPUPipeline?,
     ubo: GPUBuffer?,
@@ -46,12 +62,13 @@ type Steam = {
     paint: Paint,
 }
 
-local W, H = 390, 844
+local BW, BH = 390, 844 -- the master the curl is authored on
 local N = 24
+local UBO = 64 + N * 16
 local RES = 1 -- px per point; the steam is soft and its screen is coarse
 
--- where the pot's steam leaves it, per canonical screen (mirrors POSES in
--- tools/main_board.py: pot centre + lid height x scale)
+-- where the pot's steam leaves it, per canonical screen, in that scene's master
+-- coordinates (mirrors POSES in tools/main_board.py: pot centre + lid height x scale)
 local ORIGIN: { [number]: Vector } = {
     [1] = Vector.xy(195, 560),
     [2] = Vector.xy(195, 562),
@@ -85,7 +102,9 @@ end
 -- spaced along the arc.
 local function buildSpine(self: Steam)
     local d = self.sdir
-    local ox, oy = self.ox, self.oy
+    -- the origin back on the master, so the curl keeps its authored shape
+    local ox, oy = self.ox / self.kx, self.oy / self.ky
+    local W = BW
     local cy = math.clamp(oy - 230, 230, 390)
     local cx = 195
     local R = 118
@@ -130,12 +149,38 @@ local function buildSpine(self: Steam)
         local seg = math.max(lens[j + 1] - lens[j], 1e-3)
         local t = clamp01((target - lens[j]) / seg)
         local a, b = dense[j], dense[j + 1]
-        table.insert(spine, a + (b - a) * t)
+        local v = a + (b - a) * t
+        table.insert(spine, Vector.xy(v.x * self.kx, v.y * self.ky))
     end
     self.spine = spine
 end
 
+local function allocate(self: Steam)
+    local ctx = self.ctx
+    if ctx == nil or not self.gpu or self.W <= 0 or self.H <= 0 then
+        return
+    end
+    self.canvas = ctx:gpuCanvas({ width = math.ceil(self.W * RES), height = math.ceil(self.H * RES) })
+end
+
+function resize(self: Steam, size: Vector, scale: number)
+    if size.x <= 0 or size.y <= 0 or (size.x == self.W and size.y == self.H) then
+        return
+    end
+    local okx, oky = self.kx, self.ky
+    self.W, self.H = size.x, size.y
+    self.kx, self.ky = size.x / BW, size.y / BH
+    self.k = math.sqrt(self.kx * self.ky)
+    allocate(self)
+    if #self.spine == N then
+        -- resized mid-handoff: keep the veil on the new stage (same curl, re-stretched)
+        self.ox, self.oy = self.ox * self.kx / okx, self.oy * self.ky / oky
+        buildSpine(self)
+    end
+end
+
 function init(self: Steam, context: Context): boolean
+    self.ctx = context
     if self.vm == nil then
         self.vm = context:viewModel()
     end
@@ -156,12 +201,12 @@ function init(self: Steam, context: Context): boolean
         vertexLayout = {},
         colorTargets = { { format = 'rgba8unorm', blend = blend } },
     })
-    local ubo = GPUBuffer.new({ size = 48 + N * 16, usage = 'uniform', label = 'steam' })
+    local ubo = GPUBuffer.new({ size = UBO, usage = 'uniform', label = 'steam' })
     self.pipe = pipe
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    self.canvas = context:gpuCanvas({ width = math.floor(W * RES), height = math.floor(H * RES) })
     self.gpu = true
+    allocate(self)
     return true
 end
 
@@ -204,7 +249,14 @@ function advance(self: Steam, seconds: number): boolean
         else
             self.carry = 0
             local o = ORIGIN[from] or ORIGIN[1]
-            self.ox, self.oy = o.x, o.y
+            -- through the frame of the scene being left (the pot is part of its art)
+            local slots = stage.fromModel(self.vm)
+            if slots ~= nil then
+                local tx, ty, sc = stage.sceneFrame(slots, from)
+                self.ox, self.oy = tx + sc * o.x, ty + sc * o.y
+            else
+                self.ox, self.oy = o.x, o.y
+            end
             self.sdir = if self.dir >= 0 then 1 else -1
             buildSpine(self)
         end
@@ -221,12 +273,12 @@ function advance(self: Steam, seconds: number): boolean
     return true
 end
 
-local function radiusAt(age: number): number
+local function radiusAt(age: number, k: number): number
     if age <= 0 then
         return 0
     end
     local g = clamp01(age / 0.34)
-    return 10 + 300 * (g ^ 1.35)
+    return (10 + 300 * (g ^ 1.35)) * k
 end
 
 function draw(self: Steam, renderer: Renderer)
@@ -256,17 +308,19 @@ function draw(self: Steam, renderer: Renderer)
         end
         local a = math.floor(255 * clamp01(1 - clear / 1.4))
         self.paint.color = Color.rgba(255, 250, 238, a)
-        self.paint.thickness = radiusAt(pe) * 0.6 + 10
+        self.paint.thickness = radiusAt(pe, self.k) * 0.6 + 10
         renderer:drawPath(path, self.paint)
         return
     end
     local b = self.staging
-    local cy = math.clamp(self.oy - 230, 230, 390)
-    local cx = if self.sdir >= 0 then 195 else W - 195
+    local k = self.k
+    local cy = math.clamp(self.oy / self.ky - 230, 230, 390) * self.ky
+    local cx = self.W * 0.5
     local vals = {
         canvas.width, canvas.height, RES, self.time,
-        pe, 22 + 70 * pe, self.seed, clear,
+        pe, (22 + 70 * pe) * k, self.seed, clear,
         1 - smooth(0.12, 0.42, pe), cx, cy, self.sdir * (0.5 * pe + 1.1 * smooth(0.35, 1.0, pe)),
+        k, 0, 0, 0,
     }
     for i, v in vals do
         buffer.writef32(b, (i - 1) * 4, v)
@@ -275,10 +329,10 @@ function draw(self: Steam, renderer: Renderer)
         local born = (i - 1) / (N - 1) * headT
         local age = pe - born
         local v = self.spine[i]
-        local o = 48 + (i - 1) * 16
+        local o = 64 + (i - 1) * 16
         buffer.writef32(b, o, v.x)
         buffer.writef32(b, o + 4, v.y)
-        buffer.writef32(b, o + 8, radiusAt(age))
+        buffer.writef32(b, o + 8, radiusAt(age, k))
         buffer.writef32(b, o + 12, if age > 0 then 1 else 0)
     end
     ubo:write(b)
@@ -296,18 +350,24 @@ function draw(self: Steam, renderer: Renderer)
     renderer:restore()
 end
 
-return function(): Node<Steam>
+return function(context: Context): Layout<Steam>
     return {
         progress = 0,
         dir = 1,
         started = false,
         gpu = false,
         vm = nil,
+        ctx = nil,
+        W = 0,
+        H = 0,
+        kx = 1,
+        ky = 1,
+        k = 1,
         canvas = nil,
         pipe = nil,
         ubo = nil,
         group = nil,
-        staging = buffer.create(48 + N * 16),
+        staging = buffer.create(UBO),
         sampler = ImageSampler('clamp', 'clamp', 'bilinear'),
         lastP = 0,
         carry = 0,
@@ -323,6 +383,7 @@ return function(): Node<Steam>
         path = Path.new(),
         paint = Paint.with({ style = 'stroke', thickness = 20, cap = 'round', join = 'round', color = Color.rgba(255, 250, 238, 255) }),
         init = init,
+        resize = resize,
         advance = advance,
         draw = draw,
     }

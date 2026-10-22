@@ -13,7 +13,10 @@
 --   * currentScreen, screenProgress, _navDir written back for every consumer
 --   * the recapFinished latch (_finished), cleared by replay
 --   * the optional turntable drag (_turnPhase) in its own hit region
---   * responsive placement of the art and card stages (_art*, _card*)
+--   * responsive placement (_art*, _card*, _copy*, ...): two layouts split by a
+--     pure width breakpoint (layoutBreakpoint, default 768). Landscape when the
+--     artboard is at least that wide, portrait otherwise; each one is computed
+--     continuously from the real size, and recomputed on every resize
 --
 -- Scene choreography itself lives in the state machine, which reads these.
 
@@ -46,6 +49,16 @@ type Seq = {
     vel: number,
     started: boolean,
     cache: { [string]: number },
+    -- responsive placement
+    dpr: number,
+    bp: number,
+    land: boolean,
+    artXR: number, -- art stage x for every scene
+    artXL: number, -- landscape persona (scene 9): the art crosses to the other side
+    artXCur: number,
+    artXVel: number,
+    snap: boolean,
+    chrome: number,
 }
 
 local SETTLE = 1.8
@@ -67,7 +80,10 @@ local NUMS = {
     'currentScreen', 'screenProgress', 'autoAdvanceSeconds', 'personaIndex', '_navDir', '_command', '_artX', '_artY',
     '_artScale', '_cardX', '_cardY', '_cardScale', '_isEmpty', '_personaVariant', '_namePublic', '_hoursPublic',
     '_countSeconds', '_turnPhase', '_finished', '_settled', '_seg1', '_seg2', '_seg3', '_seg4', '_seg5', '_seg6',
-    '_seg7', '_seg8', '_seg9', '_seg10',
+    '_seg7', '_seg8', '_seg9', '_seg10', 'layoutBreakpoint', '_landscape', '_stack', '_dpr', '_copyL', '_copyT',
+    '_copyR', '_copyB', '_copyS', '_copyR4', '_c9T', '_altL', '_altR', '_c10T', '_c10B', '_alignL', '_alignC',
+    '_align10', '_textC', '_bigK', '_padX', '_navX', '_actL', '_actR', '_actAlign', '_headVA', '_chromeS',
+    '_chromeR', '_hdrT', '_ftrB', '_hintOn',
 }
 local BOOLS = {
     'autoAdvanceEnabled', 'isPaused', 'reducedMotion', 'shareIncludeName', 'shareIncludeSensitiveValues', '_frozen',
@@ -207,20 +223,219 @@ local function derive(self: Seq)
     end
 end
 
+-- Layout alignment values (LayoutComponentStyle.layoutAlignmentType) and text alignment
+local TOP_LEFT, TOP_CENTER, CENTER_LEFT, CENTER, BOTTOM_LEFT = 0, 1, 3, 4, 6
+local TEXT_LEFT, TEXT_CENTER = 0, 2
+-- The art stage is a 390 x 560 frame (bottom-anchored). Its art spans x 15..375 and
+-- y -45..560 of it (the scene-2 twig rises above the frame), so a box of 360 x 605 is
+-- what has to fit between the header and the bottom edge.
+local ART_CONTENT_W = 360
+local ART_CONTENT_H = 605
+local HEADER_BOTTOM = 64
+-- copy heights in layout units (worst case: scene 8, three-line headline + number)
+local COPY_FIXED = 87 -- unit, support, gaps
+local COPY_BIG = 257 -- headline + hero number, the part _bigK shrinks
+
+local function breakpoint(self: Seq): number
+    local bp = finite(num(self, 'layoutBreakpoint'), 768)
+    if bp <= 0 then
+        bp = 768
+    end
+    return bp
+end
+
+-- the copy box: visual column [x, x + cw] x [y, y + ch] at scale sc
+-- header and footer: scaled by k about their top-left, kept edge to edge and at their margins
+local function chrome(self: Seq, w: number, k: number)
+    self.chrome = k
+    setNum(self, '_chromeS', k)
+    setNum(self, '_chromeR', w - w / k)
+    setNum(self, '_hdrT', 12 * k)
+    setNum(self, '_ftrB', 74 * k - 56)
+end
+
+local function copyBox(self: Seq, w: number, h: number, x: number, y: number, cw: number, ch: number, sc: number)
+    setNum(self, '_copyS', sc)
+    setNum(self, '_copyL', x)
+    setNum(self, '_copyT', y)
+    setNum(self, '_copyR', w - x - cw / sc)
+    setNum(self, '_copyB', h - y - ch / sc)
+end
+
 local function place(self: Seq)
     local w = if self.size.x > 0 then self.size.x else 390
     local h = if self.size.y > 0 then self.size.y else 844
-    local s = math.clamp(math.min((h - 250) / 594, w / 370), 0.5, 1.15)
+    local bp = breakpoint(self)
+    self.bp = bp
+    local land = w >= bp
+    self.land = land
+    -- portrait stacks copy over art while the canvas is tall enough; on short portrait
+    -- canvases (a phone on its side, below the breakpoint) the art steps beside the copy
+    local stack = not land and h >= w * 1.25
+    setNum(self, '_landscape', if land then 1 else 0)
+    -- the scene-1 hint is engraved on the plinth face (art y 452): hide it when it falls
+    -- behind the footer controls
+    local function hint(s: number, artY: number)
+        setNum(self, '_hintOn', if artY + 458 * s < h - 78 then 1 else 0)
+    end
+    setNum(self, '_stack', if stack then 1 else 0)
+    self.snap = true
+
+    if stack then
+        -- PORTRAIT, stacked: the 390 x 844 master, reflowed. Copy under the header, the
+        -- art bottom-anchored and centred; type grows a little on wide/tall portraits.
+        local s = math.clamp(math.min((h - 250) / 594, w / 370), 0.5, 1.15)
+        setNum(self, '_artScale', s)
+        self.artXR = w / 2 - 195 * s
+        self.artXL = self.artXR
+        -- bottom-anchored; on short stacks lifted so the lowest pieces (art y ~456: tile
+        -- grid, persona bowl) stay above the footer controls
+        local artY = math.min(h - 560 * s, h - 84 - 456 * s)
+        setNum(self, '_artY', artY)
+        hint(s, artY)
+        local sc = math.clamp(math.min(w / 390, h / 844), 1, 1.3)
+        local x = 28 * sc
+        local cw = w - 2 * x
+        copyBox(self, w, h, x, 86, cw, h - 86, sc)
+        setNum(self, '_copyR4', w - x - cw / sc + 122) -- keeps scene-4 copy clear of the jug
+        setNum(self, '_c9T', 92)
+        setNum(self, '_altL', x)
+        setNum(self, '_altR', w - x - cw / sc)
+        setNum(self, '_c10T', 84)
+        setNum(self, '_c10B', 0)
+        setNum(self, '_alignL', TOP_LEFT)
+        setNum(self, '_alignC', TOP_CENTER)
+        setNum(self, '_align10', TOP_CENTER)
+        setNum(self, '_textC', TEXT_CENTER)
+        -- the art rises into the copy column on short stacks: shrink the display type (headline
+        -- and number) so the copy ends where the art begins (1 at 390 x 844 and taller)
+        local copyBottom = artY + 116 * s
+        local k = math.clamp((copyBottom - 86 - COPY_FIXED) / 227, 0.45, 1)
+        setNum(self, '_bigK', k)
+        setNum(self, '_padX', 24)
+        setNum(self, '_navX', 20)
+        setNum(self, '_actL', 20)
+        setNum(self, '_actR', 20)
+        setNum(self, '_actAlign', CENTER)
+        setNum(self, '_headVA', if k < 0.999 then 1 else 0)
+        chrome(self, w, 1)
+        -- the card starts below the summary copy (two headline lines + support at most) and
+        -- ends above the footer; on short screens it shrinks rather than covering the copy
+        local cy = math.clamp(h * 0.28, 196, 252)
+        local cs = math.clamp(math.min((h - 330) / 514, (h - cy - 104) / 440, (w - 48) / 300), 0.5, 1.12)
+        setNum(self, '_cardScale', cs)
+        setNum(self, '_cardX', w / 2 - 150 * cs)
+        setNum(self, '_cardY', cy)
+        return
+    end
+
+    -- Two columns: copy on one side, the art (or the share card) on the other.
+    local x, top, colW, gap, sc, padX
+    -- landscape chrome grows with large canvases (1 at 1280 x 720, up to 1.5)
+    local ck = if land then math.clamp(math.min(w / 1280, h / 720), 1, 1.5) else 1
+    chrome(self, w, ck)
+    local bandB = h - 90 * ck -- above the footer controls
+    if land then
+        -- LANDSCAPE: an editorial spread. Display type scales with the column, the copy is
+        -- centred against the art, the composition is centred on very wide canvases.
+        padX = math.clamp(w * 0.045, 32, 120)
+        top = 76 * ck
+        colW = math.clamp(w * 0.38, 300, 620)
+        gap = math.clamp(w * 0.03, 24, 72)
+        x = padX
+    else
+        -- PORTRAIT, short: portrait type at its authored size, copy top-aligned.
+        padX = 24
+        top = 72
+        colW = math.clamp(w * 0.48, 240, 380)
+        gap = 16
+        x = 28
+    end
+    local regionR = w - (if land then padX else 20)
+    -- landscape: the frame bottom-anchored (plinths rise from the bottom edge). Short portrait:
+    -- the art (down to y 470, the lowest pieces) is fitted above the footer controls, which
+    -- share the bottom row with it there
+    local artBottom = if land then 0 else 80
+    local artSpan = if land then ART_CONTENT_H else 515
+    local s = math.min((h - artBottom - HEADER_BOTTOM * ck) / artSpan, (regionR - x - colW - gap) / ART_CONTENT_W)
+    s = math.clamp(s, 0.35, 2.4)
+    local artW = ART_CONTENT_W * s
+    if land then
+        -- centre the copy + art composition when the canvas is wider than it needs
+        local extra = math.max(0, (regionR - x) - (colW + gap + artW))
+        x += extra * 0.5
+        regionR = x + colW + gap + artW
+    end
+    local artL = x + colW + gap -- art content box [artL, regionR]
+    local artCx = (artL + regionR) / 2
+    local artY = if land then h - 560 * s else h - artBottom - 470 * s
     setNum(self, '_artScale', s)
-    setNum(self, '_artX', w / 2 - 195 * s)
-    setNum(self, '_artY', h - 560 * s)
-    -- the card starts below the summary copy (two headline lines + support at most) and
-    -- ends above the footer; on short screens it shrinks rather than covering the copy
-    local cy = math.clamp(h * 0.28, 196, 252)
-    local cs = math.clamp(math.min((h - 330) / 514, (h - cy - 104) / 440, (w - 48) / 300), 0.5, 1.12)
+    setNum(self, '_artY', artY)
+    hint(s, artY)
+    self.artXR = artCx - 195 * s
+    -- landscape persona: the art takes the left of the spread and the copy the right
+    self.artXL = if land then x + artW / 2 - 195 * s else self.artXR
+
+    local bh = bandB - top
+    local regionH = if land then math.min(bh, math.max(w * 0.62, 300)) else bh
+    if land then
+        sc = math.clamp(math.min(colW / 330, regionH / 390), 1, 1.8)
+    else
+        sc = 1
+    end
+    copyBox(self, w, h, x, top, colW, regionH, sc)
+    setNum(self, '_copyR4', w - x - colW / sc)
+    setNum(self, '_c9T', top)
+    local altX = if land then x + artW + gap else x
+    setNum(self, '_altL', altX)
+    setNum(self, '_altR', w - altX - colW / sc)
+    -- summary: landscape centres its copy in the column, Share / Replay below it at the
+    -- bottom; short portrait sets it right above Share / Replay, like a caption to the card
+    setNum(self, '_c10T', top)
+    setNum(self, '_c10B', if land then h - top - regionH / sc else h - top - (h - 96 - top) / sc)
+    setNum(self, '_alignL', if land then CENTER_LEFT else TOP_LEFT)
+    setNum(self, '_alignC', if land then CENTER_LEFT else TOP_LEFT)
+    setNum(self, '_align10', if land then CENTER_LEFT else BOTTOM_LEFT)
+    setNum(self, '_textC', TEXT_LEFT)
+    setNum(self, '_bigK', math.clamp((regionH / sc - COPY_FIXED) / COPY_BIG, 0.45, 1))
+    -- header / footer insets are in their own (scaled) units
+    setNum(self, '_padX', padX / ck)
+    setNum(self, '_navX', (padX - 4) / ck)
+    setNum(self, '_actL', x / ck)
+    setNum(self, '_actR', (w - x - colW) / ck)
+    setNum(self, '_actAlign', CENTER_LEFT)
+    setNum(self, '_headVA', if land then 1 else 0)
+    -- the share card fills the art side, between the header and the bottom edge
+    local cTop = top - 4
+    local cH = h - 24 * ck - cTop
+    local cW = regionR - artL
+    local cs = math.clamp(math.min(cH / 440, cW / 300), 0.3, 2.2)
     setNum(self, '_cardScale', cs)
-    setNum(self, '_cardX', w / 2 - 150 * cs)
-    setNum(self, '_cardY', cy)
+    setNum(self, '_cardX', artCx - 150 * cs)
+    setNum(self, '_cardY', cTop + (cH - 440 * cs) / 2)
+end
+
+-- the art stage glides to its side of the spread (landscape persona) on a critically
+-- damped spring; resizes and reduced motion snap
+local function glide(self: Seq, dt: number, reduced: boolean)
+    local cs = num(self, 'currentScreen')
+    local target = if self.land and cs == 9 then self.artXL else self.artXR
+    if self.snap or reduced then
+        self.snap = false
+        self.artXCur = target
+        self.artXVel = 0
+    else
+        local k = 7.0
+        local d = self.artXCur - target
+        local a = -k * k * d - 2 * k * self.artXVel
+        self.artXVel += a * dt
+        self.artXCur += self.artXVel * dt
+        if math.abs(self.artXCur - target) < 0.05 and math.abs(self.artXVel) < 0.5 then
+            self.artXCur = target
+            self.artXVel = 0
+        end
+    end
+    setNum(self, '_artX', self.artXCur)
 end
 
 -- ---------------------------------------------------------------- lifecycle
@@ -254,8 +469,10 @@ function init(self: Seq, context: Context): boolean
     return true
 end
 
-function resize(self: Seq, size: Vector)
+function resize(self: Seq, size: Vector, scale: number)
     self.size = size
+    self.dpr = if scale ~= nil and scale > 0 then scale else 1
+    setNum(self, '_dpr', self.dpr)
     place(self)
 end
 
@@ -267,6 +484,7 @@ function advance(self: Seq, seconds: number): boolean
     derive(self)
     if not self.started then
         self.started = true
+        setNum(self, '_dpr', self.dpr)
         place(self)
         local cs0 = num(self, 'currentScreen')
         if not isVisible(self, cs0) then
@@ -317,6 +535,11 @@ function advance(self: Seq, seconds: number): boolean
     setBool(self, '_holding', self.holding)
 
     local reduced = bool(self, 'reducedMotion')
+    -- the host may tune the breakpoint at runtime: re-derive the orientation
+    if breakpoint(self) ~= self.bp then
+        place(self)
+    end
+    glide(self, dt, reduced)
     local paused = bool(self, 'isPaused')
     local frozen = paused or self.holding or reduced
     setBool(self, '_frozen', frozen)
@@ -384,7 +607,8 @@ end
 function pointerDown(self: Seq, event: PointerEvent)
     local x, y = event.position.x, event.position.y
     local h = if self.size.y > 0 then self.size.y else 844
-    if y < 66 or y > h - 92 then
+    local k = if self.chrome > 0 then self.chrome else 1
+    if y < 66 * k or y > h - 92 * k then
         self.mode = 'none' -- header and controls belong to their own listeners
         return
     end
@@ -458,6 +682,15 @@ return function(context: Context): Layout<Seq>
         vel = 0,
         started = false,
         cache = {},
+        dpr = 1,
+        bp = 768,
+        land = false,
+        artXR = 0,
+        artXL = 0,
+        artXCur = 0,
+        artXVel = 0,
+        snap = true,
+        chrome = 1,
         init = init,
         resize = resize,
         advance = advance,

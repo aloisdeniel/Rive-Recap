@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Convert the WebM recap videos to H.264 MP4, for places that do not take WebM
 # (e.g. X/Twitter uploads). Writes each MP4 next to its WebM:
-#   apps/<app>/video.mp4 and apps/showcase.mp4
+#   apps/<app>/video.mp4, apps/<app>/video-landscape.mp4, apps/showcase.mp4 and
+#   apps/showcase-landscape.mp4
 # The MP4s are git-ignored; re-run this after rendering.
 #
-#   scripts/export-mp4.sh [file.webm ...]    # default: every app video + the showcase
+#   scripts/export-mp4.sh [file.webm ...]    # default: every app video + both showcases
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -13,7 +14,8 @@ if [ "$#" -gt 0 ]; then
   inputs=("$@")
 else
   inputs=()
-  for webm in "$root"/apps/*/video.webm "$root"/apps/showcase.webm; do
+  for webm in "$root"/apps/*/video.webm "$root"/apps/*/video-landscape.webm \
+    "$root"/apps/showcase.webm "$root"/apps/showcase-landscape.webm; do
     [ -f "$webm" ] && inputs+=("$webm")
   done
 fi

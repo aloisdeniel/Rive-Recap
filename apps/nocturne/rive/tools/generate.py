@@ -47,6 +47,7 @@ FIXTURE = {
     "summaryHeadline": "A little year. A lot of you.", "summarySupport": "Take a piece of your year with you.",
     "emptyHeadline": "Every story starts somewhere.", "emptySupport": "Your next chapter is waiting.",
     "personaLabel": "Your personal style",
+    "layoutBreakpoint": 768,
     **{f"showScreen{i}": True for i in range(1, 11)},
     "screen2Headline": "You looked up.", "screen2Support": "And found a little more wonder.", "screen2Unit": "nights outside",
     "screen3Headline": "A sky full of discoveries.", "screen3Support": "Your observation journal kept expanding.", "screen3Unit": "objects logged",
@@ -66,6 +67,21 @@ ADDITIONS = {
     "primaryA11yLabel": "Continue", "secondaryA11yLabel": "Pause",
     **{f"fxCount{i}": 1 for i in range(2, 9)},
 }
+# Responsive layout outputs, written by layout.luau from the real artboard size (README "Responsive layout").
+# The defaults are the 390 x 844 portrait values, so the first frame is right before the script runs.
+LAYOUT_OUT = {
+    "isLandscape": False, "isSideBySide": False, "layoutWidth": 390, "layoutHeight": 844, "layScale": 1,
+    "laySideT": 0, "layCardT": 0, "layChrome": 1,
+    "layHdrLX": 28, "layHdrRX": 362, "layHdrY": 42, "layHdrAlpha": 1,
+    "layProgX": 28, "layProgY": 66, "layProgW": 334, "layProgH": 3,
+    "layPrevX": 70, "layPrevY": 780, "layPrimX": 195, "layPrimY": 780, "laySecX": 320, "laySecY": 780,
+    "layTapTop": 104, "layTapH": 650, "layTapPrevW": 130, "layTapNextX": 130, "layTapNextW": 260,
+    "layArtX": 0, "layArtXB": 0, "layArtY": 0, "layArtS": 1,
+    "layCopyX": 0, "layCopyXB": 0, "layCopyY": 0, "layCopyS": 1, "layNumBox": 116,
+    "layCardX": 0, "layCardY": 0, "layCardS": 1, "layHeroX": 0, "layHeroY": 0, "layHeroS": 1,
+    "layArtRes": 1, "layStageRes": 1.9, "layAnnot": 1, "laySkyX": 0, "laySkyY": 0, "laySkyS": 1,
+}
+ADDITIONS.update(LAYOUT_OUT)
 COLOR_PROPS_VM = {"personaColor"}
 
 NEW_USER = dict(FIXTURE)
@@ -243,6 +259,80 @@ def cv_offscreen_if(k, base):
 CV_SEG = {k: formula(f"Segment {k} fill", ["min(", 1, ",", "max(", 0, ",", "in", "-", k, "+",
                                             ("vm", "screenProgress"), ")", ")"]) for k in range(1, 11)}
 
+# ---------------------------------------------------------------- responsive layout helpers
+_LIN = {}
+
+
+def cv_lin(a, b):
+    """number -> a + input * b (orientation blends: a portrait value, b the landscape difference)."""
+    key = (round(float(a), 4), round(float(b), 4))
+    if key not in _LIN:
+        _LIN[key] = formula(f"{key[0]:g} + in * {key[1]:g}", [key[0], "+", "in", "*", key[1]])
+    return _LIN[key]
+
+
+_RES = {}
+
+
+def cv_res(orig):
+    """GPU canvas density from layArtRes (art scale x device scale): keep the authored supersampling at @1x and
+    follow the device beyond it."""
+    if orig not in _RES:
+        _RES[orig] = formula(f"Density x{orig:g}", [orig / 2.0, "*", "max(", 2, ",", "in", ")"])
+    return _RES[orig]
+
+
+CV_HALF_NUM = formula("Number slot offset", ["(", "in", "-", 116, ")", "*", 0.5])
+CV_NUM_SHIFT = formula("Copy below number offset", ["in", "-", 116])
+
+FRAME_PROPS = {"artA": ("layArtX", "layArtY", "layArtS"), "artB": ("layArtXB", "layArtY", "layArtS"),
+               "copyA": ("layCopyX", "layCopyY", "layCopyS"), "copyB": ("layCopyXB", "layCopyY", "layCopyS"),
+               "card": ("layCardX", "layCardY", "layCardS"), "hero": ("layHeroX", "layHeroY", "layHeroS")}
+
+
+def frame(name, kind, *children):
+    """A translate + uniform-scale frame bound to the layout script's output (design space -> canvas)."""
+    px, py, ps = FRAME_PROPS[kind]
+    n = node(name, *children, x=0, y=0)
+    n.add(bind(px, KEY_X), bind(py, KEY_Y), bind(ps, KEY_SCALEX), bind(ps, KEY_SCALEY))
+    return n
+
+
+def side_bind(el, key, pv, lv, prop="laySideT"):
+    """Bind one property to its portrait value pv, or lv when art and copy sit side by side (prop 0 -> 1)."""
+    if pv != lv:
+        el.add(bind(prop, key, cv_lin(pv, lv - pv)))
+    return el
+
+
+def place(name, child, p, l, prop="laySideT"):
+    """Wrap child in a node at its stacked position p, moving to l side by side; child's own (keyed) transform
+    becomes relative to it."""
+    child.attrs["x"] = 0.0
+    child.attrs["y"] = 0.0
+    REST[(child.id, "x")] = 0.0
+    REST[(child.id, "y")] = 0.0
+    w = node(name, child, x=p[0], y=p[1])
+    side_bind(w, KEY_X, float(p[0]), float(l[0]), prop)
+    side_bind(w, KEY_Y, float(p[1]), float(l[1]), prop)
+    return w
+
+
+def annot(name, *children):
+    """Decorative instrument annotations: they fade out before the art scale would draw them below 8 pt."""
+    n = node(name, *children, x=0, y=0)
+    n.add(bind("layAnnot", KEY_OPACITY))
+    return n
+
+
+CV_ALIGN_CL = cv_lin(2, -2)   # Text alignValue: center (2) stacked, left (0) side by side
+
+
+def align_left_when_side(*texts):
+    for t in texts:
+        t.add(bind("laySideT", KEY_TEXT_ALIGN, CV_ALIGN_CL))
+
+
 # ---------------------------------------------------------------- scripts (GPU drawables)
 SCRIPT_IDS = {n: nid() for n in ("sky", "iris", "orb")}
 SCRIPT_IDS["format"] = FORMAT_SCRIPT
@@ -399,9 +489,17 @@ SCENE_ARTBOARDS = []
 COMPONENT_ASSETS = []
 
 
-def scene_component(k, name, art_children, copy_children, anims, root_extra=()):
-    """anims: dict enterF, enterB, exitF, exitB, idle -> (dur, tracks)."""
-    root = node(f"Scene {k} Root", *art_children, *copy_children, *root_extra, x=0, y=0)
+def scene_component(k, name, art_children, copy_children, anims, root_extra=(), kind="A"):
+    """anims: dict enterF, enterB, exitF, exitB, idle -> (dur, tracks).
+
+    kind picks the responsive frames: "A" art left / copy right side by side, "B" mirrored (art right),
+    "card" the summary (art and copy share the card frame). Stacked, A and B are the same."""
+    if kind == "card":
+        frames = [frame(f"S{k} Card Frame", "card", *art_children, *copy_children)]
+    else:
+        frames = [frame(f"S{k} Art Frame", "art" + kind, *art_children),
+                  frame(f"S{k} Copy Frame", "copy" + kind, *copy_children)]
+    root = node(f"Scene {k} Root", *frames, *root_extra, x=0, y=0)
     REST[(root.id, "opacity")] = 1.0
 
     universe = set()
@@ -514,8 +612,20 @@ def metric_copy(k, stat, align):
     col = column(f"S{k} Copy Column", 28, COPY_Y["head"], 334, 110, head, sup, gap=9, align=align)
     counter = node(f"S{k} Count Playhead", x=1.0, y=0.0)
     counter.add(bind(f"fxCount{k}", KEY_X, direction=True))
-    els = [num, unit, div, col]
-    copy = node(f"S{k} Copy", *els, x=0, y=0)
+    if align == "center":
+        # side by side the copy column reads left, toward the art: the text aligns left and the divider takes its
+        # left-hand form (spark at the margin, one rule)
+        align_left_when_side(num, unit, head, sup)
+        side_bind(div, KEY_X, dx, 34.0)
+        lines[0].add(bind("laySideT", KEY_OPACITY, cv_lin(1, -1)))
+    # the hero number's box shrinks on short canvases (layNumBox, 84..116): the font fits the box and the copy
+    # below moves up with it
+    num.add(bind("layNumBox", KEY_TEXT_H))
+    num_slot = node(f"S{k} Number Slot", num, x=0, y=0)
+    num_slot.add(bind("layNumBox", KEY_Y, CV_HALF_NUM))
+    lower = node(f"S{k} Below Number", unit, div, col, x=0, y=0)
+    lower.add(bind("layNumBox", KEY_Y, CV_NUM_SHIFT))
+    copy = node(f"S{k} Copy", num_slot, lower, x=0, y=0)
     return copy, counter, dict(num=num.id, unit=unit.id, div=div.id, head=head.id, sup=sup.id, copy=copy.id,
                                counter=counter.id, col=col.id)
 
@@ -596,7 +706,8 @@ def build_aperture():
     # linear in time (the main timelines ease the remap), from a pupil to fully retracted
     blades_sd, AI = scripted("Blades (GPU)", "iris",
                              nums=dict(mode=1, cx=AP_C, cy=AP_C, hole=AP_R + 6, spin=0.0, blades=9, curl=0.85, curve=0.6, hand=1,
-                                       bloom=0.0, rim=0.9, lightness=1.0, thick=2.0, outer=AP_R, opacity=1, res=2.4))
+                                       bloom=0.0, rim=0.9, lightness=1.0, thick=2.0, outer=AP_R, opacity=1, res=2.4),
+                             binds={"res": bind("layArtRes", KEY_SI_NUM, cv_res(2.4))})
     iris_tracks.append((AI["hole"], "propertyValue", [(0, 6.0, "lin"), (60, AP_R + 6, "hold")]))
     iris_tracks.append((AI["bloom"], "propertyValue", [(0, 0.9, "lin"), (20, 0.25, "lin"), (60, 0.0, "hold")]))
     blade_grp = node("Blades", blades_sd, x=0, y=0)
@@ -653,8 +764,9 @@ def sky_disk(name, k, cx, cy, r, **look):
     nums = dict(mode=1, cx=cx, cy=cy, radius=r, edge=1.6, viewX=0, viewY=0, viewScale=1, viewRot=0, density=1.0, band=1.3,
                 twinkle=1, bandAngle=-0.6, bandWidth=60, warm=0.85, vignette=0.45, exposure=1.0, seed=7, res=2.2, live=0)
     nums.update(look)
-    return scripted(name, "sky", nums=nums, bools=dict(still=False, paused=False, holding=False),
-                    binds=motion_binds(live=bind("currentScreen", KEY_SI_NUM, cv_eq(k))))
+    b = motion_binds(live=bind("currentScreen", KEY_SI_NUM, cv_eq(k)))
+    b["res"] = bind("layArtRes", KEY_SI_NUM, cv_res(float(nums["res"])))
+    return scripted(name, "sky", nums=nums, bools=dict(still=False, paused=False, holding=False), binds=b)
 
 
 def scene1():
@@ -682,12 +794,13 @@ def scene1():
                     overflow="visible", extra=[wm_mod])
     coord_a = text("Coord RA", cx, cy + 34, 270, 16, tstyle("mono", 10, ICE, 0.55, ls=2.4), "RA 05h 35m · DEC −05° 23′",
                    None, align="center", wrap="noWrap")
-    disk = node("Celestial Disk", halo, rim, rim_glow, wordmark, coord_a, lat_grp, lat_clip, inner, disk_tint, disk_base, x=0, y=0)
+    disk = node("Celestial Disk", halo, rim, rim_glow, wordmark, annot("S1 Coordinates", coord_a), lat_grp, lat_clip, inner, disk_tint,
+                disk_base, x=0, y=0)
     stars = starfield("Intro Stars", 26, 195, 300, 0, colors=((ICE, 1.0), (WHITE, 1.0), (AMBER, 0.9)), dmin=1.0, dmax=2.4,
                       rect_wh=(370, 420), groups=3, glow_every=7)
     art = node("S1 Art", disk, *stars, x=0, y=0)
 
-    name = text("S1 Name", 195, 506, 300, 28, tstyle("sg", 21, ICE, 0.9, weight=400, ls=0.2, lh=28), "", tb("userName"),
+    name = text("S1 Name", 195, 506, 334, 28, tstyle("sg", 21, ICE, 0.9, weight=400, ls=0.2, lh=28), "", tb("userName"),
                 align="center")
     head = text("S1 Headline", 195, 544, 334, 88, tstyle("sg", 36, WHITE, weight=400, lh=42, ls=-0.6), "",
                 tb("introHeadline"), align="center")
@@ -695,9 +808,17 @@ def scene1():
                align="center")
     per = text("S1 Period", 195, 690, 334, 18, tstyle("mono", 10.5, AMBER, 0.85, ls=2.2), "", tb("periodLabel"),
                align="center", wrap="noWrap")
-    div = node("S1 Divider", star4("Spark", 0, 0, 11, AMBER, glow=4), shape("Rule L", rect(48, 1, ox=1.0), fill(AMBER, 0.5), x=-10),
+    rule_l = shape("Rule L", rect(48, 1, ox=1.0), fill(AMBER, 0.5), x=-10)
+    div = node("S1 Divider", star4("Spark", 0, 0, 11, AMBER, glow=4), rule_l,
                shape("Rule R", rect(48, 1, ox=0.0), fill(AMBER, 0.5), x=10), x=195, y=722)
+    # side by side the greeting reads left, toward the disk
+    align_left_when_side(name, head, sup, per)
+    side_bind(div, KEY_X, 195.0, 34.0)
+    rule_l.add(bind("laySideT", KEY_OPACITY, cv_lin(1, -1)))
     copy = node("S1 Copy", name, head, sup, per, div, x=0, y=0)
+    # on short canvases the copy box shrinks with the hero-number box (layNumBox); the greeting moves up with it
+    copy_slot = node("S1 Copy Slot", copy, x=0, y=0)
+    copy_slot.add(bind("layNumBox", KEY_Y, CV_NUM_SHIFT))
 
     eF = []
     eF += [(disk.id, "opacity", [(0, 0.0, "hold"), (10, 0.0, "out"), (40, 1.0, "hold")])]
@@ -731,7 +852,7 @@ def scene1():
              (rim_glow_tr.id, "offset", [(0, 0.78, "lin"), (720, 1.78, "hold")])]
     for i, g in enumerate(stars):
         idle += osc(g.id, "opacity", 240, 0.55, 1.0, phase=i / 3)
-    return scene_component(k, "Invitation", [art], [copy],
+    return scene_component(k, "Invitation", [art], [copy_slot],
                            dict(enterF=(144, eF), enterB=(56, eB), exitF=(36, xF), exitB=(36, xB), idle=(720, idle)))
 
 
@@ -792,7 +913,7 @@ def scene3():
         d = 7.0 if i % 6 == 0 else 4.6
         markers.append(dot(f"Marker {i + 1}", cx + R * math.cos(a), cy + R * math.sin(a), d, col, 1.0, glow=d * 1.6, glow_a=0.6))
     mk = node("Markers", *markers, x=0, y=0)
-    art = node("S3 Art", sweep, mk, *labels, *rings, *spokes, x=0, y=0)
+    art = node("S3 Art", sweep, mk, annot("S3 Bearings", *labels), *rings, *spokes, x=0, y=0)
     copy, counter, c = metric_copy(k, "objectsLogged", "left")
     eF = copy_enter(c, 26)
     for g in rings + spokes:
@@ -898,7 +1019,7 @@ def scene5():
         col = AMBER if i in (3, 6, 8) else ICE
         pts.append(node(f"Point {i}", dot("Core", 0, 0, 6.5 if col == AMBER else 5.2, col, 1.0, glow=7, glow_a=0.7),
                         shape("Halo Ring", ellipse(17), stroke(col, 0.35, 1)), x=x, y=y))
-    art = node("S5 Art", *pts, *lines, *glabels, *grid, x=0, y=0)
+    art = node("S5 Art", *pts, *lines, annot("S5 Grid Labels", *glabels), *grid, x=0, y=0)
     copy, counter, c = metric_copy(k, "constellationsLogged", "left")
     eF = copy_enter(c, 26)
     for g in grid:
@@ -971,7 +1092,7 @@ def scene6():
     radiant_glow = shape("Radiant", ellipse(120), fill(AMBER, 0.16, feather=40), x=rx, y=ry)
     hero_flash = shape("Hero Afterglow", rect(360, 8, ox=0.0), fill(ICE, 0.18, feather=12), x=rx, y=ry,
                        rotation=math.radians(lanes[1][0]), opacity=0.0)
-    art = node("S6 Art", met_grp, hero_flash, *trails, *glabels, radiant_glow, *grid, x=0, y=0)
+    art = node("S6 Art", met_grp, hero_flash, *trails, annot("S6 Grid Labels", *glabels), radiant_glow, *grid, x=0, y=0)
     for lane, m, xs, xe, f0 in pool:
         m.attrs["x"] = float(xs)
         REST[(m.id, "x")] = float(xs)
@@ -1012,7 +1133,7 @@ def scene6():
         keys_o = [(0, 0.0, "hold"), (st, 0.0, "lin"), (st + 4, 1.0, "hold"), (st + dur - 10, 1.0, "lin"), (st + dur, 0.0, "hold"), (loop, 0.0, "hold")]
         idle += [(m.id, "x", keys_x), (m.id, "opacity", keys_o)]
     return scene_component(k, "Meteors spotted", [art], [copy, counter],
-                           dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(loop, idle)))
+                           dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(loop, idle)), kind="B")
 
 
 def orb(name, k, cx, cy, r, live=None, **kw):
@@ -1021,6 +1142,7 @@ def orb(name, k, cx, cy, r, live=None, **kw):
     colors = {"tint": kw.pop("tint", ICE)}
     nums.update(kw)
     binds = motion_binds(live=live if live is not None else bind("currentScreen", KEY_SI_NUM, cv_eq(k)))
+    binds["res"] = bind("layArtRes", KEY_SI_NUM, cv_res(float(nums["res"])))
     return scripted(name, "orb", nums=nums, bools=dict(still=False, paused=False, holding=False), colors=colors, binds=binds)
 
 
@@ -1064,7 +1186,7 @@ def scene7():
     idle = osc(halo.id, "opacity", 480, 0.7, 1.0) + [(orbit.id, "rotation", [(0, 0.0, "lin"), (1200, 2 * math.pi / 16, "hold")])]
     idle += osc(warm.id, "opacity", 600, 0.7, 1.0)
     return scene_component(k, "Lunar sessions", [art], [copy, counter],
-                           dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(1200, idle)))
+                           dict(enterF=(132, eF), enterB=(52, eB), exitF=(36, xF), exitB=(36, xB), idle=(1200, idle)), kind="B")
 
 
 def scene8():
@@ -1121,7 +1243,8 @@ def scene8():
                             x=sx, y=sy))
     glow = shape("Nebula Wash", ellipse(200, 140), fill(BLUE, 0.16, feather=36), y=-8)
     glow2 = shape("Nebula Warm", ellipse(90, 60), fill(AMBER, 0.12, feather=24), x=30, y=10)
-    sheet = node("Sketch Sheet", *crosses, *stip, *sketch, ann, ann2, *regs, glow2, glow, margin, paper, x=cx, y=cy, rotation=-0.045)
+    sheet = node("Sketch Sheet", *crosses, *stip, *sketch, annot("S8 Annotations", ann, ann2), *regs, glow2, glow, margin, paper,
+                 x=cx, y=cy, rotation=-0.045)
     # the loupe (the travelling motif sits on it) shows the sky the sketch was drawn from
     lx, ly = POSES[8]["m"][0], POSES[8]["m"][1]
     loupe, LP = sky_disk("Loupe Sky (GPU)", k, lx, ly, 38, seed=31, band=1.7, bandAngle=0.5, bandWidth=15, warm=1.0, density=1.5,
@@ -1317,14 +1440,19 @@ def scene9():
     title = flow_text("S9 Title", tstyle("sg", 40, WHITE, weight=400, lh=46, ls=-0.8), tb("personaName"), "center", max_h=96)
     spark_fill = solid(AMBER, 1.0)
     spark_fill.add(bind("personaColor", KEY_COLOR))
+    rule9_l = shape("Rule L", rect(64, 1, ox=1.0), fill(AMBER, 0.55), x=-16)
     divp = node("S9 Divider",
                 shape("Spark Ring", ellipse(18), stroke(ICE, 0.6, 1)),
                 shape("Spark", El("Star", width=14.0, height=14.0, points=4, innerRadius=0.2, name="Path"), El("Fill", spark_fill, name="Persona Fill")),
-                shape("Rule L", rect(64, 1, ox=1.0), fill(AMBER, 0.55), x=-16),
-                shape("Rule R", rect(64, 1, ox=0.0), fill(AMBER, 0.55), x=16), x=175, y=11)
-    div_box = flow_box("S9 Divider Slot", 350, 22, divp)
+                rule9_l,
+                shape("Rule R", rect(64, 1, ox=0.0), fill(AMBER, 0.55), x=16), x=167, y=11)
+    div_box = flow_box("S9 Divider Slot", 334, 22, divp)
     desc = flow_text("S9 Description", tstyle("mono", 13.5, ICE, 0.85, lh=20, ls=0.6), tb("personaDescription"), "center", max_h=62)
-    col = column("S9 Copy Column", 20, 486, 350, 230, lab, title, div_box, desc, gap=10, align="center")
+    # side by side the persona reads as a title page beside the emblem: left aligned, the divider at the margin
+    align_left_when_side(lab, title, desc)
+    side_bind(divp, KEY_X, 167.0, 9.0)
+    rule9_l.add(bind("laySideT", KEY_OPACITY, cv_lin(1, -1)))
+    col = column("S9 Copy Column", 28, 486, 334, 230, lab, title, div_box, desc, gap=10, align="center")
     copy = node("S9 Copy", col, x=0, y=0)
     art = node("S9 Art", emblems, x=0, y=0)
     fo = lambda oid, f0, f1: [(oid, "opacity", [(0, 0.0, "hold"), (f0, 0.0, "out"), (f1, 1.0, "hold")])]
@@ -1346,45 +1474,74 @@ STATS10 = [("observationNights", 2), ("objectsLogged", 3), ("observationHours", 
 def scene10():
     k = 10
     cx = 195.0
-    top, bottom = 96.0, 640.0
-    ch = bottom - top
-    cy = (top + bottom) / 2
+    # Two arrangements of one card, blended by layCardT (0 tall, 1 wide). The seal (where the travelling
+    # motif lands) stays at design (195, 178) in both, so the motif pose is the same and only the card frame moves.
+    TALL = dict(cx=195.0, cy=358.0, w=334.0, h=524.0)    # portrait: a tall card, support line below
+    WIDE = dict(cx=375.0, cy=253.0, w=600.0, h=330.0)    # landscape: seal panel | stats panel, support below
+    tp, wp = (TALL["cx"], TALL["cy"]), (WIDE["cx"], WIDE["cy"])
+    # the card's own switch (layCardT): wide side by side, but the tall card on tall landscape canvases
+    side_bind = lambda el, key, pv, lv: globals()["side_bind"](el, key, pv, lv, "layCardT")
+    place = lambda name, child, p, l: globals()["place"](name, child, p, l, "layCardT")
+
+    def sized_rect(w_off, h_off, r):
+        rc = rect(TALL["w"] + w_off, TALL["h"] + h_off, r=r)
+        side_bind(rc, KEY_WIDTH_PATH, TALL["w"] + w_off, WIDE["w"] + w_off)
+        side_bind(rc, KEY_HEIGHT_PATH, TALL["h"] + h_off, WIDE["h"] + h_off)
+        return rc
+
+    card_grad = linear([(0, "0F2644", 1), (0.6, "0B1C33", 1), (1, "091629", 1)], 0, -TALL["h"] / 2, 0, TALL["h"] / 2)
+    side_bind(card_grad, 33, -TALL["h"] / 2, -WIDE["h"] / 2)
+    side_bind(card_grad, KEY_GRAD_ENDY, TALL["h"] / 2, WIDE["h"] / 2)
     card_tr = trim(0.0, 1.0, 0.0)
-    card_bg = shape("Card", rect(334, ch, r=22),
-                    fill(paint=linear([(0, "0F2644", 1), (0.6, "0B1C33", 1), (1, "091629", 1)], 0, -ch / 2, 0, ch / 2)), x=cx, y=cy)
-    card_edge = shape("Card Edge", rect(334, ch, r=22), stroke(ICE, 0.3, 1, effects=[card_tr]), x=cx, y=cy)
-    card_inner = shape("Card Inner", rect(314, ch - 20, r=14), stroke(BLUE, 0.18, 1, effects=[dash(2, 5)]), x=cx, y=cy)
-    card_glow = shape("Card Glow", rect(334, ch, r=22), fill(BLUE, 0.16, feather=30), x=cx, y=cy + 10)
-    # data ring around the seal (seal itself = traveling motif from the main artboard)
+    card_bg = shape("Card", sized_rect(0, 0, 22), fill(paint=card_grad))
+    card_edge = shape("Card Edge", sized_rect(0, 0, 22), stroke(ICE, 0.3, 1, effects=[card_tr]))
+    card_inner = shape("Card Inner", sized_rect(-20, -20, 14), stroke(BLUE, 0.18, 1, effects=[dash(2, 5)]))
+    card_glow = shape("Card Glow", sized_rect(0, 0, 22), fill(BLUE, 0.16, feather=30))
+    card_shapes = [place("Card Place", card_bg, tp, wp), place("Card Edge Place", card_edge, tp, wp),
+                   place("Card Inner Place", card_inner, tp, wp),
+                   place("Card Glow Place", card_glow, (tp[0], tp[1] + 10), (wp[0], wp[1] + 10))]
+    # data ring around the seal (the seal itself is the travelling motif from the main artboard)
     seal_y = 178.0
     ring_arcs = []
     cols = [BLUE, ICE, AMBER, BLUE, ICE]
     for j in range(5):
         t = trim(0.0, 0.16, j * 0.2 + 0.02)
-        ring_arcs.append((shape(f"Data Arc {j}", ellipse(104), stroke(cols[j], 0.9, 3, effects=[t], cap="round"), x=cx, y=seal_y), t))
-    ring_grp = node("Data Ring", *[a for a, _ in ring_arcs], x=0, y=0)
+        ring_arcs.append((shape(f"Data Arc {j}", ellipse(104), stroke(cols[j], 0.9, 3, effects=[t], cap="round"), x=0, y=0), t))
+    ring_grp = node("Data Ring", *[a for a, _ in ring_arcs], x=cx, y=seal_y)
     seal_sky, SS = sky_disk("Seal Sky (GPU)", 10, cx, seal_y, 41, seed=13, band=1.4, bandAngle=-0.7, bandWidth=18, warm=0.9,
                             density=1.3, vignette=0.6, res=3.0)
     corners = []
     for sx in (-1, 1):
         for sy in (-1, 1):
-            x0, y0 = cx + sx * 151, cy + sy * (ch / 2 - 16)
-            corners.append(shape("Plate Corner", poly([(x0, y0 - sy * 12), (x0, y0), (x0 - sx * 12, y0)], closed=False),
-                                 stroke(AMBER, 0.6, 1.1)))
-    grid_lines = [shape("Grid V", rect(1, 96), fill(ICE, 0.08), x=cx, y=434),
-                  shape("Grid H1", rect(250, 1), fill(ICE, 0.08), x=cx, y=430),
-                  shape("Grid H2", rect(250, 1), fill(ICE, 0.08), x=cx, y=496)]
+            c_ = shape("Plate Corner", poly([(0, -sy * 12), (0, 0), (-sx * 12, 0)], closed=False), stroke(AMBER, 0.6, 1.1))
+            corners.append((c_, place("Corner Place", c_, (TALL["cx"] + sx * (TALL["w"] / 2 - 16), TALL["cy"] + sy * (TALL["h"] / 2 - 16)),
+                                      (WIDE["cx"] + sx * (WIDE["w"] / 2 - 16), WIDE["cy"] + sy * (WIDE["h"] / 2 - 16)))))
+    # stat grid rules: one set per arrangement
+    grid_tall = [shape("Grid V", rect(1, 96), fill(ICE, 0.08), x=cx, y=424),
+                 shape("Grid H1", rect(250, 1), fill(ICE, 0.08), x=cx, y=418),
+                 shape("Grid H2", rect(250, 1), fill(ICE, 0.08), x=cx, y=478)]
+    grid_wide = [shape("Panel Rule", rect(1, 250), fill(ICE, 0.10), x=315, y=WIDE["cy"]),
+                 shape("Grid H", rect(320, 1), fill(ICE, 0.08), x=495, y=200),
+                 shape("Grid V1", rect(1, 56), fill(ICE, 0.08), x=438, y=160),
+                 shape("Grid V2", rect(1, 56), fill(ICE, 0.08), x=552, y=160)]
+    g_tall = node("Grid (tall)", *grid_tall, x=0, y=0)
+    g_tall.add(bind("layCardT", KEY_OPACITY, cv_lin(1, -1)))
+    g_wide = node("Grid (wide)", *grid_wide, x=0, y=0)
+    g_wide.add(bind("layCardT", KEY_OPACITY))
     wm = text("Card Wordmark", cx, 238, 300, 26, tstyle("sg", 20, ICE, weight=500, ls=3.0), "NOCTURNE", None, align="center", wrap="noWrap")
     yr = text("Card Year", cx, 264, 200, 16, tstyle("mono", 11, AMBER, 0.95, ls=4.0), "", tb("year", CV_YEAR_TEXT), align="center", wrap="noWrap")
-    nm = text("Card Name", cx, 286, 290, 16, tstyle("mono", 11, ICE, 0.75, ls=1.5), "", tb("userName"), align="center", wrap="noWrap")
+    # single-line ellipsis texts keep one width in both arrangements (the left panel's 228): a bound width does not
+    # re-centre an ellipsised line. The name wraps inside a one-line box, so a long name is cut at a word boundary and
+    # stays centred (a noWrap ellipsis is centred on its untruncated width)
+    nm = text("Card Name", cx, 286, 228, 16, tstyle("mono", 11, ICE, 0.75, ls=1.5), "", tb("userName"), align="center", wrap="wrap")
     nm.add(bind("shareIncludeName", KEY_OPACITY, CV_BOOL_NUM))
     p_fill = solid(ICE, 1.0)
     p_fill.add(bind("personaColor", KEY_COLOR))
-    persona_blk = node("Card Persona",
-                       text("Card Persona Label", 0, 0, 290, 14, tstyle("mono", 9.5, ICE, 0.6, ls=2.4), "", tb("personaLabel"),
-                            align="center", wrap="noWrap"),
-                       text("Card Persona Name", 0, 18, 290, 30, tstyle("sg", 24, WHITE, weight=400, ls=-0.3), "", tb("personaName"),
-                            align="center", wrap="noWrap"),
+    p_label = text("Card Persona Label", 0, 0, 228, 15, tstyle("mono", 10.5, ICE, 0.6, ls=2.2), "", tb("personaLabel"),
+                   align="center", wrap="noWrap")
+    p_name = text("Card Persona Name", 0, 18, 228, 30, tstyle("sg", 24, WHITE, weight=400, ls=-0.3), "", tb("personaName"),
+                  align="center", wrap="noWrap")
+    persona_blk = node("Card Persona", p_label, p_name,
                        shape("Persona Rule L", rect(40, 1, ox=1.0), fill(AMBER, 0.45), x=-12, y=58),
                        shape("Persona Rule R", rect(40, 1, ox=0.0), fill(AMBER, 0.45), x=12, y=58),
                        shape("Persona Spark Ring", ellipse(13), stroke(ICE, 0.6, 1), x=0, y=58),
@@ -1392,34 +1549,47 @@ def scene10():
                              El("Fill", p_fill, name="Persona Fill"), x=0, y=58),
                        x=cx, y=312)
     persona_blk.add(bind("showScreen9", KEY_OPACITY, CV_BOOL_NUM))
-    stat_nodes = []
-    pos = [(110, 394), (280, 394), (110, 460), (280, 460), (195, 526)]
-    for (prop, sk), (sx, sy) in zip(STATS10, pos):
-        n_ = node(f"Stat {prop}",
-                  text("Value", 0, 0, 160, 40, tstyle("sg", 34, ICE, weight=300, ls=-1, lh=40), "", tb(prop, CV_INT_TEXT),
-                       align="center", oy=0.5, overflow="fitFontSize", wrap="noWrap"),
-                  text("Unit", 0, 22, 160, 14, tstyle("mono", 9.5, ICE, 0.7, ls=1.6), "", tb(f"screen{sk}Unit"), align="center",
-                       wrap="noWrap"),
-                  x=sx, y=sy)
+    stat_nodes, stat_places = [], []
+    pos_t = [(110, 388), (280, 388), (110, 448), (280, 448), (195, 508)]
+    # wide cells sit inside the stats panel (335..655, like Grid H), so a long label never reaches the card edge
+    pos_w = [(381, 156), (495, 156), (609, 156), (438, 234), (552, 234)]
+    for (prop, sk), pt_, pw_ in zip(STATS10, pos_t, pos_w):
+        val = text("Value", 0, 0, 160, 40, tstyle("sg", 34, ICE, weight=300, ls=-1, lh=40), "", tb(prop, CV_INT_TEXT),
+                   align="center", oy=0.5, overflow="fitFontSize", wrap="noWrap")
+        unit_t = text("Unit", 0, 22, 160, 32, tstyle("mono", 10.5, ICE, 0.72, ls=0.8, lh=14), "", tb(f"screen{sk}Unit"),
+                      align="center", wrap="noWrap")
+        for t_ in (val, unit_t):
+            side_bind(t_, KEY_TEXT_W, 160.0, 104.0)
+        side_bind(unit_t, 683, 1.0, 0.0)   # wrapValue: one line in the tall card, two in the wide card's narrow columns
+        n_ = node(f"Stat {prop}", val, unit_t, x=0, y=0)
         n_.add(bind(f"showScreen{sk}", KEY_OPACITY, CV_BOOL_NUM))
         stat_nodes.append(n_)
-    sh = text("Card Headline", cx, 578, 300, 48, tstyle("sg", 18, WHITE, weight=400, lh=23), "", tb("summaryHeadline"), align="center")
-    full = node("Card Full", *stat_nodes, *grid_lines, sh, persona_blk, x=0, y=0)
+        stat_places.append(place(f"Stat {prop} Place", n_, pt_, pw_))
+    sh = text("Card Headline", 0, 0, 300, 48, tstyle("sg", 18, WHITE, weight=400, lh=23), "", tb("summaryHeadline"), align="center")
+    side_bind(sh, KEY_TEXT_W, 300.0, 320.0)
+    sh_p = place("Card Headline Place", sh, (cx, 552), (495, 318))
+    full = node("Card Full", *stat_places, g_tall, g_wide, sh_p, persona_blk, x=0, y=0)
     full.add(bind("hasStats", KEY_OPACITY, CV_BOOL_NUM))
     # empty / new-user variant: a small, complete motif (the seal) and a welcoming invitation
-    eh = text("Empty Headline", cx, 330, 290, 84, tstyle("sg", 30, WHITE, weight=400, lh=38), "", tb("emptyHeadline"), align="center")
-    es = text("Empty Support", cx, 430, 290, 40, tstyle("mono", 13, ICE, 0.8, lh=19), "", tb("emptySupport"), align="center")
+    eh = text("Empty Headline", 0, 0, 290, 84, tstyle("sg", 30, WHITE, weight=400, lh=38), "", tb("emptyHeadline"), align="center")
+    es = text("Empty Support", 0, 0, 290, 40, tstyle("mono", 13, ICE, 0.8, lh=19), "", tb("emptySupport"), align="center")
+    for t_ in (eh, es):
+        side_bind(t_, KEY_TEXT_W, 290.0, 320.0)
     trio = node("First Stars", dot("a", -40, 0, 5, ICE, 1, glow=6), dot("b", 0, -14, 7, AMBER, 1, glow=7), dot("c", 42, 4, 4, ICE, 1, glow=5),
                 shape("l1", poly([(-40, 0), (0, -14)], closed=False), stroke(ICE, 0.4, 1)),
-                shape("l2", poly([(0, -14), (42, 4)], closed=False), stroke(ICE, 0.4, 1, effects=[dash(2, 4)])), x=cx, y=520)
-    empty = node("Card Empty", eh, es, trio, x=0, y=0)
+                shape("l2", poly([(0, -14), (42, 4)], closed=False), stroke(ICE, 0.4, 1, effects=[dash(2, 4)])), x=0, y=0)
+    empty = node("Card Empty", place("Empty Headline Place", eh, (cx, 330), (495, 130)),
+                 place("Empty Support Place", es, (cx, 430), (495, 236)), place("First Stars Place", trio, (cx, 520), (495, 320)),
+                 x=0, y=0)
     empty.add(bind("hasStats", KEY_OPACITY, CV_NOTBOOL_NUM))
     # bound-opacity content (name, persona, stats) sits in a keyed wrapper so nothing pops in before the card lands
     reveal = node("Card Reveal", nm, full, empty, x=0, y=0)
-    card = node("Share Card", wm, yr, reveal, ring_grp, seal_sky, *corners, card_inner, card_edge, card_bg, card_glow, x=0, y=0)
-    sup = text("S10 Support", cx, 664, 334, 36, tstyle("mono", 12.5, ICE, 0.78, lh=18, ls=0.4), "", tb("summarySupport"), align="center")
+    card = node("Share Card", wm, yr, reveal, ring_grp, seal_sky, *[cp for _, cp in corners], *card_shapes, x=0, y=0)
+    sup = text("S10 Support", 0, 0, 334, 36, tstyle("mono", 12.5, ICE, 0.78, lh=18, ls=0.4), "", tb("summarySupport"), align="center")
+    side_bind(sup, KEY_TEXT_W, 334.0, 560.0)
+    sup_p = place("S10 Support Place", sup, (cx, 640), (375, 436))
     art = node("S10 Art", card, x=0, y=0)
-    copy = node("S10 Copy", sup, x=0, y=0)
+    copy = node("S10 Copy", sup_p, x=0, y=0)
     # assembly
     eF = [(card_bg.id, "opacity", [(0, 0.0, "hold"), (6, 0.0, "out"), (34, 1.0, "hold")]),
           (card_bg.id, "scaleX", [(0, 0.92, "hold"), (6, 0.92, "back"), (44, 1.0, "hold")]),
@@ -1432,10 +1602,11 @@ def scene10():
     eF += [(reveal.id, "opacity", [(0, 0.0, "hold"), (40, 0.0, "out"), (66, 1.0, "hold")])]
     eF += [(seal_sky.id, "opacity", [(0, 0.0, "hold"), (30, 0.0, "out"), (60, 1.0, "hold")]),
            (SS["viewRot"], "propertyValue", [(0, -1.2, "hold"), (30, -1.2, (0.2, 0.8, 0.3, 1.0)), (120, 0.0, "hold")])]
-    for j, g in enumerate(corners):
+    for j, (g, _) in enumerate(corners):
         eF += pop(g.id, 50 + j * 5, 70 + j * 5, 0.3, "back")
-    for j, g in enumerate(grid_lines):
-        eF += [(g.id, "scaleX" if j else "scaleY", [(0, 0.0, "hold"), (70 + j * 6, 0.0, "out"), (100 + j * 6, 1.0, "hold")])]
+    for j, g in enumerate(grid_tall + grid_wide):
+        vertical = g.attrs["name"] in ("Grid V", "Panel Rule", "Grid V1", "Grid V2")
+        eF += [(g.id, "scaleY" if vertical else "scaleX", [(0, 0.0, "hold"), (70 + (j % 4) * 6, 0.0, "out"), (100 + (j % 4) * 6, 1.0, "hold")])]
     eF += fade_up(wm.id, 40, 64, 10) + fade_up(yr.id, 46, 70, 8) + fade_up(nm.id, 50, 74, 8)
     eF += fade_up(persona_blk.id, 54, 84, 14)
     for j, sn in enumerate(stat_nodes):
@@ -1452,17 +1623,9 @@ def scene10():
     xF = art_exit(art.id, 0.9, -10) + fade_out(copy.id, 0, 14, -16)
     xB = art_exit(art.id, 0.94, 30, f1=20) + fade_out(copy.id, 0, 14, 16)
     idle = [(ring_grp.id, "rotation", [(0, 0.0, "lin"), (2400, 2 * math.pi, "hold")])]
-    # ring rotates about the seal: wrap pivot
-    ring_grp.attrs["x"] = cx
-    ring_grp.attrs["y"] = seal_y
-    REST[(ring_grp.id, "x")] = cx
-    REST[(ring_grp.id, "y")] = seal_y
-    for a_, t in ring_arcs:
-        a_.attrs["x"] = 0.0
-        a_.attrs["y"] = 0.0
     idle += osc(card_glow.id, "opacity", 480, 0.65, 1.0)
     return scene_component(k, "Summary", [art], [copy],
-                           dict(enterF=(140, eF), enterB=(50, eB), exitF=(36, xF), exitB=(36, xB), idle=(2400, idle)))
+                           dict(enterF=(140, eF), enterB=(50, eB), exitF=(36, xF), exitB=(36, xB), idle=(2400, idle)), kind="card")
 
 
 # =====================================================================================
@@ -1492,17 +1655,27 @@ POSES = {  # motif centre, scale, iris openness (0 pupil .. 1 open), rotation; l
 def build_main():
     children = []
     # ---------- background + parallax sky (back-most, declared last)
-    bg = shape("Background", rect(W, H, ox=0, oy=0), fill(paint=linear([(0, "0A1A30", 1), (0.5, MID, 1), (1, MID_DEEP, 1)], 0, 0, 0, H)))
+    # the background bleeds edge to edge: sized to the laid-out artboard (layoutWidth x layoutHeight)
+    bg_rect = rect(W, H, ox=0, oy=0)
+    bg_rect.add(bind("layoutWidth", KEY_WIDTH_PATH), bind("layoutHeight", KEY_HEIGHT_PATH))
+    bg_grad = linear([(0, "0A1A30", 1), (0.5, MID, 1), (1, MID_DEEP, 1)], 0, 0, 0, H)
+    bg_grad.add(bind("layoutHeight", KEY_GRAD_ENDY))
+    bg = shape("Background", bg_rect, fill(paint=bg_grad))
     nebula_bg = shape("Ambient Glow", ellipse(520, 380), fill(BLUE, 0.07, feather=90), x=195, y=300)
     sky_groups = starfield("Sky", 64, 195, 422, 0, rect_wh=(470, 900), dmin=0.7, dmax=2.1, amin=0.2, amax=0.75,
                            colors=((ICE, 1), (WHITE, 1), (ICE, 1), (AMBER, 0.8)), groups=4, glow_every=13)
     sky = node("Parallax Sky", *[node("Sky Layer", g, x=-195, y=-422) for g in sky_groups], x=195, y=422)
-    # GPU sky (shaders/sky.wgsl): opaque, so the vector sky above is only the no-shader fallback
+    sky_cover = node("Sky Cover", sky, x=0, y=0)   # the vector fallback sky scales to cover the canvas
+    sky_cover.add(bind("laySkyX", KEY_X), bind("laySkyY", KEY_Y), bind("laySkyS", KEY_SCALEX), bind("laySkyS", KEY_SCALEY))
+    # GPU sky (shaders/sky.wgsl): opaque, so the vector sky above is only the no-shader fallback. It is sized to the
+    # real canvas at the stage density.
+    sky_binds = motion_binds()
+    sky_binds.update(width=bind("layoutWidth", KEY_SI_NUM), height=bind("layoutHeight", KEY_SI_NUM), res=bind("layStageRes", KEY_SI_NUM))
     sky_gpu, SKY = scripted("Sky (GPU)", "sky",
                             nums=dict(mode=0, width=W, height=H, viewX=0, viewY=0, viewScale=1, viewRot=0, density=0.30,
                                       band=0.75, twinkle=1, bandAngle=-0.62, bandWidth=150, warm=0.55, vignette=0, exposure=1.0,
                                       seed=3, res=2, live=1),
-                            bools=dict(still=False, paused=False, holding=False), binds=motion_binds())
+                            bools=dict(still=False, paused=False, holding=False), binds=sky_binds)
     # ---------- scenes (nested components)
     scene_nodes = []
     for ab in SCENE_ARTBOARDS:
@@ -1514,10 +1687,14 @@ def build_main():
     motif, remap = aperture_instance("Motif", m0[0], m0[1], m0[2], m0[3])
     lode = star4("Lodestar", POSES[1]["l"][0], POSES[1]["l"][1], 22, AMBER, 1.0, glow=9, glow_a=0.75, inner=0.12)
     # ---------- stage iris (signature transition, shaders/iris.wgsl)
+    # it covers the real canvas; its centre and hole are keyed in hero design space and mapped by the hero frame
     iris_stage, IR = scripted("Stage Iris (GPU)", "iris",
                               nums=dict(mode=0, width=W, height=H, cx=195, cy=300, hole=0.0, spin=0.62,
                                         blades=9, curl=0.85, curve=0.55, hand=1, bloom=0.6, rim=1, lightness=1, thick=2.4,
-                                        outer=150, opacity=1, res=2))
+                                        outer=150, opacity=1, res=2, fx=0, fy=0, fs=1),
+                              binds=dict(width=bind("layoutWidth", KEY_SI_NUM), height=bind("layoutHeight", KEY_SI_NUM),
+                                         res=bind("layStageRes", KEY_SI_NUM), fx=bind("layHeroX", KEY_SI_NUM),
+                                         fy=bind("layHeroY", KEY_SI_NUM), fs=bind("layHeroS", KEY_SI_NUM)))
     # ---------- finder (signature interaction, scene 1 only)
     fc = node("Finder Centre", x=0, y=0)
     lens_clip = shape("Lens", ellipse(84), x=0, y=0)
@@ -1541,12 +1718,13 @@ def build_main():
     finder.add(bind("currentScreen", KEY_X, cv_offscreen_unless(1, 195)))
     REST[(finder.id, "x")] = 195.0
     # ---------- header chrome
-    year_t = text("Year", 362, 34, 100, 16, tstyle("mono", 11, ICE, 0.85, ls=3.0), "", tb("year", CV_YEAR_TEXT), align="right", wrap="noWrap")
+    # header: the wordmark pinned to the left margin, the year to the right one (layHdr*), scaled by layChrome
+    year_t = text("Year", 0, -8, 100, 16, tstyle("mono", 11, ICE, 0.85, ls=3.0), "", tb("year", CV_YEAR_TEXT), align="right", wrap="noWrap")
     mark = node("Wordmark Mark", shape("Ring", ellipse(13), stroke(ICE, 0.9, 1.1)),
                 *[shape(f"t{i}", rect(1.1, 4), fill(ICE, 0.9), x=9 * math.cos(i * math.pi / 2), y=9 * math.sin(i * math.pi / 2),
                         rotation=i * math.pi / 2 + math.pi / 2) for i in range(4)],
-                dot("Pupil", 0, 0, 3, AMBER, 1.0), x=36, y=42)
-    wordmark = text("Wordmark", 54, 34, 200, 18, tstyle("sg", 15, ICE, weight=500, ls=3.2), "Nocturne", None, align="left", wrap="noWrap")
+                dot("Pupil", 0, 0, 3, AMBER, 1.0), x=8, y=0)
+    wordmark = text("Wordmark", 26, -8, 200, 18, tstyle("sg", 15, ICE, weight=500, ls=3.2), "Nocturne", None, align="left", wrap="noWrap")
     # progress segments: flex row, hidden scenes collapse out of the row
     segs = []
     for kk in range(1, 11):
@@ -1566,7 +1744,14 @@ def build_main():
                    name="Progress Style")
     progress = El("LayoutComponent", seg_style, *segs, x=28.0, y=66.0, width=334.0, height=3.0, styleId=seg_style.id,
                   name="Progress Segments")
-    header = node("Header", year_t, wordmark, mark, x=0, y=0)
+    # the segments span the real width (margin to margin)
+    progress.add(bind("layProgX", KEY_X), bind("layProgY", KEY_Y), bind("layProgW", KEY_WIDTH_LC), bind("layProgH", KEY_HEIGHT_LC))
+    head_l = node("Header Left", wordmark, mark, x=28, y=42)
+    head_r = node("Header Right", year_t, x=362, y=42)
+    for hn, hx in ((head_l, "layHdrLX"), (head_r, "layHdrRX")):
+        hn.add(bind(hx, KEY_X), bind("layHdrY", KEY_Y), bind("layChrome", KEY_SCALEX), bind("layChrome", KEY_SCALEY))
+    header = node("Header", head_l, head_r, progress, x=0, y=0)
+    header.add(bind("layHdrAlpha", KEY_OPACITY))   # steps aside on the summary only when the share card needs the room
 
     # ---------- controls: three always-present slots (nothing hidden stays in the Tab order).
     # The centre slot is Continue, or Share on the summary; the right slot is Pause/Play, or Replay on the summary.
@@ -1628,16 +1813,50 @@ def build_main():
     transport.add(bind("onSummary", KEY_OPACITY, CV_NOTBOOL_NUM))
     replay_face, _ = face("Replay Face", 44.0, ICE, 0.55, [replay_icon], "replayLabel", CV_BOOL_NUM)
     pause_b = node("Pause / Replay", transport, replay_face, sec_focus, pause_hit, x=320, y=by)
+    # the transport follows the layout: a centred bottom row, or a right-hand rail side by side on wide canvases
+    for b_, px_, py_ in ((prev_b, "layPrevX", "layPrevY"), (next_b, "layPrimX", "layPrimY"), (pause_b, "laySecX", "laySecY")):
+        b_.add(bind(px_, KEY_X), bind(py_, KEY_Y), bind("layChrome", KEY_SCALEX), bind("layChrome", KEY_SCALEY))
     controls = node("Controls", prev_b, next_b, pause_b, x=0, y=0)
-    chrome = node("Chrome", header, progress, controls, x=0, y=0)
+    chrome = node("Chrome", header, controls, x=0, y=0)
     chrome.add(bind("captureMode", KEY_OPACITY, CV_NOTBOOL_NUM))
     # ---------- gesture regions
-    tap_prev = shape("Tap Previous (left third)", rect(130, 650, ox=0, oy=0), fill(ICE, 0.0), x=0, y=104)
-    tap_next = shape("Tap Next (right two-thirds)", rect(260, 650, ox=0, oy=0), fill(ICE, 0.0), x=130, y=104)
+    # tap zones over the real canvas (minus header and transport): left third back, right two-thirds next
+    tp_rect = rect(130, 650, ox=0, oy=0)
+    tp_rect.add(bind("layTapPrevW", KEY_WIDTH_PATH), bind("layTapH", KEY_HEIGHT_PATH))
+    tn_rect = rect(260, 650, ox=0, oy=0)
+    tn_rect.add(bind("layTapNextW", KEY_WIDTH_PATH), bind("layTapH", KEY_HEIGHT_PATH))
+    tap_prev = shape("Tap Previous (left third)", tp_rect, fill(ICE, 0.0), x=0, y=104)
+    tap_prev.add(bind("layTapTop", KEY_Y))
+    tap_next = shape("Tap Next (right two-thirds)", tn_rect, fill(ICE, 0.0), x=130, y=104)
+    tap_next.add(bind("layTapNextX", KEY_X), bind("layTapTop", KEY_Y))
     # ---------- clock script (auto-advance dwell timer)
     clock_style = El("LayoutComponentStyle", name="Clock Style")
     clock = El("LayoutComponent", clock_style, El("ScriptedLayout", scriptAssetId=CLOCK_SCRIPT, name="Dwell Clock"),
                x=0.0, y=0.0, width=1.0, height=1.0, styleId=clock_style.id, name="Dwell Clock Host")
+    # ---------- responsive layout (layout.luau): an absolutely positioned box that fills the artboard, so the script
+    # receives the real laid-out size and the device scale and writes the layout into UserRecap
+    probe_style = El("LayoutComponentStyle", positionTypeValue="absolute", layoutWidthScaleType="fill", layoutHeightScaleType="fill",
+                     widthUnitsValue="auto", heightUnitsValue="auto",
+                     positionLeft=0.0, positionLeftUnitsValue="points", positionRight=0.0, positionRightUnitsValue="points",
+                     positionTop=0.0, positionTopUnitsValue="points", positionBottom=0.0, positionBottomUnitsValue="points",
+                     name="Layout Probe Style")
+    # test-only: NOCTURNE_RESIZE_PROBE="<seconds>:<W>x<H>[:<W0>x<H0>]" lays out as if the canvas were resized to W x H
+    # at that time (and were W0 x H0 before it)
+    sim = os.environ.get("NOCTURNE_RESIZE_PROBE", "")
+    sim_at, sim_w, sim_h, sim_w0, sim_h0 = -1.0, 0.0, 0.0, 0.0, 0.0
+    if sim:
+        parts = sim.split(":")
+        sim_at, (sim_w, sim_h) = float(parts[0]), [float(v) for v in parts[1].split("x")]
+        if len(parts) > 2:
+            sim_w0, sim_h0 = [float(v) for v in parts[2].split("x")]
+    layout_probe = El("LayoutComponent", probe_style,
+                      El("ScriptedLayout", El("ScriptInputNumber", propertyValue=sim_at, name="simAt"),
+                         El("ScriptInputNumber", propertyValue=sim_w, name="simWidth"),
+                         El("ScriptInputNumber", propertyValue=sim_h, name="simHeight"),
+                         El("ScriptInputNumber", propertyValue=sim_w0, name="simFromWidth"),
+                         El("ScriptInputNumber", propertyValue=sim_h0, name="simFromHeight"),
+                         scriptAssetId=LAYOUT_SCRIPT, name="Responsive Layout"),
+                      x=0.0, y=0.0, width=float(W), height=float(H), styleId=probe_style.id, name="Responsive Layout Host")
     # ---------- events
     if os.environ.get("NOCTURNE_EVENT_PROBE"):  # test-only: OpenUrlEvents are logged by the CLI, plain Events are not
         ev_screen = El("OpenUrlEvent", url="probe://screenChanged", targetValue=0, name="screenChanged")
@@ -1649,8 +1868,11 @@ def build_main():
         ev_share = El("Event", name="shareTapped")
         ev_fin = El("Event", name="recapFinished")
     seq_dummy = node("Sequencer Marker", x=0, y=0)
+    # the motif, the lodestar and the scene-1 finder travel in the current scene's hero frame
+    hero = frame("Hero Frame", "hero", finder, lode, motif)
+    hero_glow = frame("Hero Glow Frame", "hero", nebula_bg)
     stage = node("Stage", El("FocusData", canFocus=False, name="Keyboard Host"),
-                 chrome, iris_stage, finder, lode, motif, scenes, sky_gpu, sky, nebula_bg, tap_prev, tap_next, x=0, y=0)
+                 chrome, iris_stage, hero, scenes, sky_gpu, sky_cover, hero_glow, tap_prev, tap_next, x=0, y=0)
     stage_bg = bg
 
     # =================================================================== timelines (main)
@@ -1962,13 +2184,14 @@ def build_main():
     smid = nid()
     sm = El("StateMachine", *L, *layers, name="Recap", id=smid)
     style = El("LayoutComponentStyle", name="Artboard Style")
-    ab = El("Artboard", style, stage, clock, seq_dummy, stage_bg, ev_screen, ev_share, ev_fin, sm, *A,
+    ab = El("Artboard", style, stage, clock, layout_probe, seq_dummy, stage_bg, ev_screen, ev_share, ev_fin, sm, *A,
             viewModelId=VMID, viewModelInstanceId=INST_IDS["Fixture"], defaultStateMachineId=smid, styleId=style.id,
             width=float(W), height=float(H), x=0.0, y=0.0, name="Nocturne Recap")
     return ab
 
 
 CLOCK_SCRIPT = nid()
+LAYOUT_SCRIPT = nid()
 
 
 def main():
@@ -1977,6 +2200,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     files = {
         "00_data.rml": [VM_EL, *CONVERTERS, *FONTS, El("ScriptAsset", file="clock.luau", name="clock", id=CLOCK_SCRIPT),
+                        El("ScriptAsset", file="layout.luau", name="layout", id=LAYOUT_SCRIPT),
                         *[El("ScriptAsset", file=SCRIPT_FILES[n], name=n, id=i) for n, i in SCRIPT_IDS.items()
                           if os.path.exists(os.path.join(HERE, "..", SCRIPT_FILES[n]))]],
         "10_main.rml": [main_ab],

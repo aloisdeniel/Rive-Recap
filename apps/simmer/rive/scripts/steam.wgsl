@@ -9,7 +9,8 @@
 // risograph print: paper-white highlights, a cream body, shadow printed as a
 // 45-degree tomato halftone, an aubergine misregistered ink layer offset
 // under it (the same offset every cutout in the recap has) and the tomato
-// ink thread drawn along the ribbon while it is still young. As it clears,
+// ink thread drawn along the ribbon while it is still young. Geometry and noise
+// scale with the stage (u.r.x); the halftone screens stay in real points. As it clears,
 // the fringe breaks into halftone dots that shrink away.
 
 const N: i32 = 24;
@@ -18,6 +19,7 @@ struct U {
     frame: vec4<f32>,   // canvas w, h (px), px per point, time (s)
     p: vec4<f32>,       // progress 0..1, warp, seed, clear 0..1
     q: vec4<f32>,       // thread opacity, curl centre x, y, swirl
+    r: vec4<f32>,       // k: the stage's scale against the 390 x 844 master (geometric mean), -, -, -
     path: array<vec4<f32>, 24>,  // x, y (pt), radius (pt), opacity
 };
 
@@ -84,11 +86,11 @@ fn warped(pt: vec2<f32>) -> vec2<f32> {
     let c = u.q.yz;
     let rel = pt - c;
     let r = length(rel);
-    let ang = u.q.w * exp(-r / 230.0);
+    let ang = u.q.w * exp(-r / (230.0 * u.r.x));
     let cs = cos(ang);
     let sn = sin(ang);
     let sw = c + vec2<f32>(rel.x * cs - rel.y * sn, rel.x * sn + rel.y * cs);
-    let q = sw / 150.0 + vec2<f32>(s * 3.1, s * 1.7 + t * 0.45);
+    let q = sw / (150.0 * u.r.x) + vec2<f32>(s * 3.1, s * 1.7 + t * 0.45);
     let w = vec2<f32>(fbm(q), fbm(q + vec2<f32>(7.3, 2.9))) - 0.5;
     return sw + w * u.p.y;
 }
@@ -130,15 +132,15 @@ fn field(pt: vec2<f32>) -> f32 {
     let h = ribbon(pw);
     // billows on the edge, and the dissolve: thin parts go first
     let t = u.frame.w;
-    let n = fbm3(pt / 95.0 + vec2<f32>(u.p.z * 9.0, -t * 0.7));
-    let holes = fbm3(pt / 120.0 + vec2<f32>(u.p.z * 4.0 + 3.0, -t * 0.35));
+    let n = fbm3(pt / (95.0 * u.r.x) + vec2<f32>(u.p.z * 9.0, -t * 0.7));
+    let holes = fbm3(pt / (120.0 * u.r.x) + vec2<f32>(u.p.z * 4.0 + 3.0, -t * 0.35));
     return h.f + (n - 0.5) * 0.7 - u.p.w * (0.35 + 1.25 * (1.0 - holes));
 }
 
 // ridged (billowy) noise for the cumulus lobes
 fn puffs(pt: vec2<f32>) -> f32 {
     let t = u.frame.w;
-    let q = pt / 120.0 + vec2<f32>(u.p.z * 2.0, t * 0.5 + u.p.z);
+    let q = pt / (120.0 * u.r.x) + vec2<f32>(u.p.z * 2.0, t * 0.5 + u.p.z);
     let n1 = smoothstep(0.25, 0.85, noise(q));
     let n2 = smoothstep(0.3, 0.9, noise(q * 2.3 + vec2<f32>(4.1, 1.3)));
     return n1 * 0.72 + n2 * 0.28;

@@ -44,8 +44,7 @@ tools/goto.sh 10 "$C/extreme-summary.png" 200 "${X[@]}"
 tools/goto.sh 3 "$C/hidden-3-4-7-nav.png" 170 --data=showScreen3=false --data=showScreen4=false --data=showScreen7=false
 # paused state
 "$RIVE" . --screenshot="$C/paused-scene1.png" --advance=300 --pointer=click@342,790 --advance=200 >/dev/null 2>&1
-# responsive checks (fixed 390x844 artboard, host fit = contain)
-"$RIVE" . --screenshot="$C/viewport-320x568-contain.png" --viewport=320x568 --fit=contain --advance=170 >/dev/null 2>&1
-"$RIVE" . --screenshot="$C/viewport-430x932-contain.png" --viewport=430x932 --fit=contain --advance=170 >/dev/null 2>&1
-"$RIVE" . --screenshot="$C/viewport-desktop-1280x800-contain.png" --viewport=1280x800 --fit=contain --advance=170 >/dev/null 2>&1
+# responsive layout: every scene across the 16-size viewport matrix (layout fit), as contact sheets
+rm -rf "$C/responsive"
+python3 tools/responsive.py --out "$C/responsive" --mid --jobs 2
 echo done

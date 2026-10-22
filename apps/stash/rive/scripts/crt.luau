@@ -87,6 +87,13 @@ function draw(self: Crt, renderer: Renderer)
     if not self.gpu or canvas == nil or ubo == nil or pipe == nil or group == nil then
         return
     end
+    -- `res` follows the director's _gpuRes (the real on-screen scale)
+    local k = math.clamp(self.res, 1, 4)
+    if math.abs(k - self.k) >= 0.01 then
+        self.k = k
+        canvas:resize(math.ceil((self.halfW + PAD) * 2 * k / 8) * 8, math.ceil((self.halfH + PAD) * 2 * k / 8) * 8)
+        self.lastKey = ''
+    end
     local l = lit(self)
     local key = string.format('%.2f|%.3f', self.band, self.strength)
     for i = 1, 12 do
@@ -119,9 +126,9 @@ function draw(self: Crt, renderer: Renderer)
         pass:draw(3)
         pass:finish()
     end
-    local k = self.k
+    local kk = self.k
     renderer:save()
-    renderer:transform(Mat2D.withTranslation(-(self.halfW + PAD), -(self.halfH + PAD)) * Mat2D.withScale(1 / k, 1 / k))
+    renderer:transform(Mat2D.withTranslation(-(self.halfW + PAD), -(self.halfH + PAD)) * Mat2D.withScale(1 / kk, 1 / kk))
     renderer:drawImage(canvas.image, self.sampler, 'srcOver', 1)
     renderer:restore()
 end

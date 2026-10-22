@@ -137,6 +137,18 @@ local function setup(self: Jar3D, context: Context)
     self.gpu = true
 end
 
+-- `res` follows the director's _gpuRes (the real on-screen scale), so the glass
+-- is re-rendered at the size it is shown rather than upscaled
+local function applyRes(self: Jar3D, canvas: GPUCanvas)
+    local k = math.clamp(self.res, 1, 4)
+    if math.abs(k - self.k) < 0.01 then
+        return
+    end
+    self.k = k
+    canvas:resize(math.ceil(self.halfW * 2 * k / 8) * 8, math.ceil((self.bottom - self.top) * k / 8) * 8)
+    self.lastKey = ''
+end
+
 function init(self: Jar3D, context: Context): boolean
     if self.gpu then
         return true
@@ -185,6 +197,7 @@ function draw(self: Jar3D, renderer: Renderer)
         renderer:drawPath(self.path, self.paint)
         return
     end
+    applyRes(self, canvas)
     local key = string.format('%.3f|%.3f|%d|%d', self.sway, self.strength, self.glass, self.edge)
     if key ~= self.lastKey then
         self.lastKey = key

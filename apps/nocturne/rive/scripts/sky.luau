@@ -1,7 +1,9 @@
 --!strict
 -- Nocturne sky (shaders/sky.wgsl) as a ScriptedDrawable.
 --
--- mode 0: the full-stage background, drawn from (0, 0) to (width, height).
+-- mode 0: the full-stage background, drawn from (0, 0) to (width, height);
+--         width and height are bound to the laid-out artboard size, so the sky
+--         bleeds edge to edge at any canvas size.
 -- mode 1: a luminous sky disk centred on (cx, cy) with `radius`.
 --
 -- Every look and camera value is a script input, so scene and pose timelines
@@ -57,12 +59,22 @@ type Sky = {
     discPaint: Paint,
 }
 
+local MAX_PX = 4096
+
 local function rect(self: Sky): (number, number, number, number)
     if self.mode < 0.5 then
-        return 0, 0, self.width, self.height
+        return 0, 0, math.max(1, self.width), math.max(1, self.height)
     end
     local r = self.radius + 2
     return self.cx - r, self.cy - r, r * 2, r * 2
+end
+
+-- canvas pixels for the current box and density (`res` = device px per point)
+local function canvasSize(self: Sky): (number, number)
+    local _, _, w, h = rect(self)
+    local res = math.clamp(self.res, 0.5, 4)
+    local k = math.min(1, MAX_PX / math.max(w * res, h * res))
+    return math.max(1, math.ceil(w * res * k)), math.max(1, math.ceil(h * res * k))
 end
 
 function init(self: Sky, context: Context): boolean
@@ -84,11 +96,9 @@ function init(self: Sky, context: Context): boolean
     self.pipe = pipe
     self.ubo = ubo
     self.group = GPUBindGroup.new({ layout = pipe:getBindGroupLayout(0), ubos = { { slot = 0, buffer = ubo } } })
-    local ox, oy, w, h = rect(self)
+    local ox, oy = rect(self)
     self.ox, self.oy = ox, oy
-    local res = math.clamp(self.res, 0.5, 4)
-    self.cw = math.max(1, math.ceil(w * res))
-    self.ch = math.max(1, math.ceil(h * res))
+    self.cw, self.ch = canvasSize(self)
     self.gc = context:gpuCanvas({ width = self.cw, height = self.ch })
     -- a closed circle for the no-shader disk fallback
     local r = self.radius
@@ -121,6 +131,7 @@ local function signature(self: Sky): number
     local s = self.viewX * 1.3 + self.viewY * 2.7 + self.viewScale * 113.1 + self.viewRot * 271.9
     s += self.density * 31.7 + self.band * 57.3 + self.bandAngle * 91.1 + self.bandWidth * 0.71
     s += self.warm * 13.9 + self.vignette * 7.3 + self.exposure * 19.7 + self.seed * 3.1 + self.mode * 1000
+    s += self.width * 0.37 + self.height * 0.41
     return s
 end
 
@@ -157,6 +168,15 @@ function draw(self: Sky, renderer: Renderer)
         end
         return
     end
+    -- follow the laid-out size and density (live resize, rotation)
+    local cw, ch = canvasSize(self)
+    if cw ~= gc.width or ch ~= gc.height then
+        gc:resize(cw, ch)
+        self.cw, self.ch = cw, ch
+        self.rendered = false
+    end
+    local ox, oy = rect(self)
+    self.ox, self.oy = ox, oy
     local sig = signature(self)
     local due = moving(self) and self.sinceRender >= 1 / 30
     if not self.rendered or sig ~= self.sig or due then

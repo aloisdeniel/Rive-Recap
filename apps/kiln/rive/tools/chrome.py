@@ -126,7 +126,12 @@ def build_header(g):
                      paddingLeft=24.0, paddingLeftUnitsValue="points", paddingRight=24.0,
                      paddingRightUnitsValue="points", gapHorizontal=16.0, gapHorizontalUnitsValue="points",
                      layoutHeightScaleType="fixed", name="Header Style")
-    header = g.box("Header", hs, w=10, h=48)
+    # side padding follows the layout's safe margin (24 in portrait, wider in landscape)
+    hs.add(bind(g.p("_padX"), 512), bind(g.p("_padX"), 513))
+    # landscape on large canvases scales the chrome up (scale + insets keep it edge to edge)
+    hs.add(bind(g.p("_chromeR"), 517), bind(g.p("_hdrT"), 518))
+    header = g.box("Header", hs, w=10, h=48, clip=False)
+    header.add(bind(g.p("_chromeS"), 16), bind(g.p("_chromeS"), 17))
 
     wm_style = g.serif_style(25, ink0)
     ink(g, child(child(wm_style, "Fill"), "SolidColor"))
@@ -216,11 +221,14 @@ def build_footer(g):
     ink0 = SCENES[1]["ink"]
     bg0 = SCENES[1]["bg"]
     fs = g.abs_style(bottom=18, left=0, right=0, layoutHeightScaleType="fixed", name="Footer Style")
-    footer = g.box("Footer", fs, w=10, h=56)
+    fs.add(bind(g.p("_chromeR"), 517), bind(g.p("_ftrB"), 519))
+    footer = g.box("Footer", fs, w=10, h=56, clip=False)
+    footer.add(bind(g.p("_chromeS"), 16), bind(g.p("_chromeS"), 17))
 
     # --- story navigation controls
     ns = g.abs_style(top=0, bottom=0, left=20, right=20, flexDirectionValue="row",
                      layoutAlignmentType="spaceBetweenCenter", name="Nav Style")
+    ns.add(bind(g.p("_navX"), 516), bind(g.p("_navX"), 517))
     nav = g.box("Nav Controls", ns, w=10, h=56)
     cl_st = g.style(layoutWidthScaleType="hug", layoutHeightScaleType="hug", flexDirectionValue="row",
                     gapHorizontal=10.0, gapHorizontalUnitsValue="points", name="Left Cluster Style")
@@ -279,6 +287,8 @@ def build_footer(g):
     # --- summary actions (share / replay)
     ss = g.abs_style(top=0, bottom=0, left=20, right=20, flexDirectionValue="row", layoutAlignmentType="center",
                      gapHorizontal=12.0, gapHorizontalUnitsValue="points", name="Summary Actions Style")
+    # portrait: centred in the footer; landscape: left-aligned under the summary copy column
+    ss.add(bind(g.p("_actL"), 516), bind(g.p("_actR"), 517), bind(g.p("_actAlign"), 632))
     acts = g.box("Summary Actions", ss, w=10, h=56)
 
     def pill(name, label_prop, literal, filled, icon):
