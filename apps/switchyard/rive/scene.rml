@@ -3608,8 +3608,8 @@
                           </TextModifierGroup>
                         </Text>
                       </Node>
-                      <Node name="Sun rays (idle turn)" id="0:1626">
-                        <Node name="Sun rays" x="306" y="168">
+                      <Node name="Sun rays (idle turn)" x="306" y="168" id="0:1626">
+                        <Node name="Sun rays">
                           <Node name="Ray 0" rotation="0" id="0:1632">
                             <Shape x="-2.5" y="-78" name="Ray">
                               <Rectangle width="5" height="14" originX="0" originY="0" cornerRadiusTL="2.5" name="Path"/>

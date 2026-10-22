@@ -39,8 +39,12 @@
 -- No shader support: the leaf folds flat toward the spine instead.
 
 local Resp = require('scripts/responsive')
+local Etch = require('scripts/etch3d')
 
 type Turn = { page: number, p: number, target: number, slot: number, delay: number }
+
+-- one composite of a 3D object onto a leaf (scripts/etch3d.luau, shaders/leafcomp.wgsl)
+type Comp = { ubo: GPUBuffer, group: GPUBindGroup?, ov: GPUTextureView?, kv: GPUTextureView? }
 
 type Slot = {
     canvas: Canvas,
@@ -49,6 +53,12 @@ type Slot = {
     ubo: GPUBuffer?,
     group: GPUBindGroup?,
     used: boolean,
+    -- the page's 3D objects on the leaf: a half-resolution key render and
+    -- up to three composites (lamp + its light, or a book)
+    key: Canvas?,
+    keyView: GPUTextureView?,
+    pageView: GPUTextureView?,
+    comps: { Comp },
 }
 
 -- the named frames of one hosted page
@@ -101,6 +111,7 @@ type PageStage = {
     paused: Property<boolean>?,
     breakpoint: Property<number>?,
     chromeAlpha: Property<number>?,
+    devScale: Property<number>?,
     size: Vector,
     scale: number,
     -- the page is the whole canvas: pw x ph layout points
@@ -134,6 +145,8 @@ type PageStage = {
     gx: number,
     gy: number,
     gpuSampler: GPUSampler?,
+    pComp: GPUPipeline?,
+    compStaging: buffer,
     staging: buffer,
     sampler: ImageSampler,
     shade: Paint,
@@ -290,6 +303,16 @@ local function initGpu(self: PageStage, context: Context)
     })
     self.gpuSampler = GPUSampler.new({ min = 'linear', mag = 'linear', mipmap = 'nearest' })
     self.gpu = true
+    -- compositing a page's scripted 3D objects onto its leaf (see draw)
+    local cs = context:shader('shaders/leafcomp')
+    if cs ~= nil then
+        self.pComp = GPUPipeline.new({
+            vertex = { module = cs, entryPoint = 'vs_main' },
+            fragment = { module = cs, entryPoint = 'fs_main' },
+            vertexLayout = {},
+            colorTargets = { { format = fmt, blend = over } },
+        })
+    end
 end
 
 -- ------------------------------------------------------------ lifecycle
@@ -348,7 +371,8 @@ local function allocate(self: PageStage)
     self.slots = {}
     for i = 1, SLOTS do
         local cv = ctx:canvas({ width = w, height = h })
-        local slot: Slot = { canvas = cv, gc = nil, colorView = nil, ubo = nil, group = nil, used = false }
+        local slot: Slot = { canvas = cv, gc = nil, colorView = nil, ubo = nil, group = nil, used = false,
+            key = nil, keyView = nil, pageView = nil, comps = {} }
         local layout, smp = self.layout, self.gpuSampler
         if self.gpu and layout ~= nil and smp ~= nil then
             local gc = ctx:gpuCanvas({ width = gw, height = gh })
@@ -356,12 +380,23 @@ local function allocate(self: PageStage)
             slot.gc = gc
             slot.colorView = gc:colorView()
             slot.ubo = ubo
+            local pv = cv.image:view()
+            slot.pageView = pv
             slot.group = GPUBindGroup.new({
                 layout = layout,
                 ubos = { { slot = 0, buffer = ubo } },
-                textures = { { slot = 1, view = cv.image:view() } },
+                textures = { { slot = 1, view = pv } },
                 samplers = { { slot = 2, sampler = smp } },
             })
+            if self.pComp ~= nil then
+                local key = ctx:canvas({ width = math.max(1, math.ceil(w * 0.5)), height = math.max(1, math.ceil(h * 0.5)) })
+                slot.key = key
+                slot.keyView = key.image:view()
+                for c = 1, 3 do
+                    slot.comps[c] = { ubo = GPUBuffer.new({ size = 48, usage = 'uniform', label = 'leaf comp' }),
+                        group = nil, ov = nil, kv = nil }
+                end
+            end
         end
         self.slots[i] = slot
     end
@@ -610,6 +645,15 @@ local function navigate(self: PageStage, a: number, b: number, dir: number, redu
     end
 end
 
+-- the device density, for the GPU drawables inside the pages (they size their
+-- canvases to their box at device resolution)
+local function publishScale(self: PageStage)
+    local d = self.devScale
+    if d ~= nil and d.value ~= self.scale then
+        d.value = self.scale
+    end
+end
+
 function init(self: PageStage, context: Context): boolean
     local vm = context:viewModel()
     if vm == nil or vm == self.vm then
@@ -659,6 +703,22 @@ function init(self: PageStage, context: Context): boolean
     self.paused = vm:getBoolean('_motionPaused')
     self.breakpoint = vm:getNumber('layoutBreakpoint')
     self.chromeAlpha = vm:getNumber('_chromeAlpha')
+    self.devScale = vm:getNumber('_devScale')
+    publishScale(self)
+    -- the scripted 3D objects (books, theatre, lamp: scripts/etch3d.luau) draw
+    -- themselves when shaders exist; their flat vector versions stay as the
+    -- fallback and are folded away here when the 3D can draw
+    if context:shader('shaders/etch3d') ~= nil then
+        for _, a in self.pages do
+            for i = 1, 4 do
+                local n = a:node('Flat Fallback ' .. i)
+                if n ~= nil then
+                    n.scaleX = 0
+                    n.scaleY = 0
+                end
+            end
+        end
+    end
     local cur = self.cur
     self.lastScreen = if cur ~= nil then math.clamp(math.floor(cur.value), 1, 10) else 1
     self.base = self.lastScreen
@@ -679,6 +739,7 @@ function resize(self: PageStage, size: Vector, scale: number)
     end
     self.size = size
     self.scale = sc
+    publishScale(self)
     allocate(self)
     relayout(self)
 end
@@ -766,10 +827,11 @@ local function drawImagePx(self: PageStage, r: Renderer, img: Image, ox: number,
     r:restore()
 end
 
-local function renderInto(self: PageStage, cv: Canvas, sc: Artboard<Data.UserRecap>)
+local function renderInto(self: PageStage, cv: Canvas, sc: Artboard<Data.UserRecap>, scale: number?)
+    local k = scale or self.k
     local r = cv:beginFrame()
     r:save()
-    r:transform(Mat2D.withScale(self.k, self.k))
+    r:transform(Mat2D.withScale(k, k))
     sc:draw(r)
     r:restore()
     cv:endFrame()
@@ -828,6 +890,94 @@ local function renderLeaf(self: PageStage, slot: Slot, p: number, cover: boolean
     pass:finish()
 end
 
+-- A page with scripted 3D objects (scripts/etch3d.luau) cannot show them in
+-- its 2D leaf canvas (a canvas cannot draw an image the GPU made this frame).
+-- So: render the page with the objects drawing nothing, render a key at half
+-- resolution (objects = pure magenta where they lie on top), then draw each
+-- object's own texture into the leaf canvas through the key on the GPU
+-- (shaders/leafcomp.wgsl). Returns false when there is nothing to compose.
+local function composeLeaf(self: PageStage, slot: Slot, pg: Artboard<Data.UserRecap>, page: number): boolean
+    local pipe, key, kv, pv, gc, smp = self.pComp, slot.key, slot.keyView, slot.pageView, slot.gc, self.gpuSampler
+    if pg:node('GPU 1') == nil or pipe == nil or key == nil or kv == nil or pv == nil or gc == nil or smp == nil then
+        return false
+    end
+    -- the page itself; its objects register (and render) as they are drawn
+    Etch.leafMode = 1
+    renderInto(self, slot.canvas, pg)
+    Etch.leafMode = 0
+    local reg = Etch.reg[page]
+    local any = false
+    if reg ~= nil then
+        for _, en in reg do
+            if en.active then
+                any = true
+            end
+        end
+    end
+    if reg == nil or not any then
+        return true
+    end
+    Etch.leafMode = 2
+    renderInto(self, key, pg, self.k * 0.5)
+    Etch.leafMode = 0
+    local W, H = slot.canvas.width, slot.canvas.height
+    local pass: GPURenderPass? = nil
+    local c = 0
+    for id = 1, 2 do
+        local en = reg[id]
+        local node = pg:node('GPU ' .. id)
+        if en ~= nil and en.active and node ~= nil then
+            local wt = node.worldTransform
+            local b = en.e.box
+            local k = self.k
+            local function at(x: number, y: number): Vector
+                return (wt * Vector.xy(b.x + en.ox + x, b.y + en.oy + y)) * k
+            end
+            local p0, p1, p2, p3 = at(0, 0), at(b.w, 0), at(0, b.h), at(b.w, b.h)
+            local views = { en.e.colorView }
+            if en.beam then
+                table.insert(views, en.e.beamView)
+            end
+            for _, ov in views do
+                c += 1
+                local cp = slot.comps[c]
+                if cp ~= nil and ov ~= nil then
+                    if cp.ov ~= ov or cp.kv ~= kv or cp.group == nil then
+                        cp.ov = ov
+                        cp.kv = kv
+                        cp.group = GPUBindGroup.new({
+                            layout = pipe:getBindGroupLayout(0),
+                            ubos = { { slot = 0, buffer = cp.ubo } },
+                            textures = { { slot = 1, view = ov }, { slot = 2, view = kv } },
+                            samplers = { { slot = 3, sampler = smp } },
+                        })
+                    end
+                    local st = self.compStaging
+                    local vals = { p0.x, p0.y, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, W, H, 1, 0 }
+                    for i, v in vals do
+                        buffer.writef32(st, (i - 1) * 4, v)
+                    end
+                    cp.ubo:write(st)
+                    if pass == nil then
+                        pass = gc:beginRenderPass({
+                            color = { { view = pv, loadOp = 'load', storeOp = 'store' } },
+                            label = 'leaf 3D',
+                        })
+                    end
+                    local ps = pass :: GPURenderPass
+                    ps:setPipeline(pipe)
+                    ps:setBindGroup(0, cp.group :: GPUBindGroup)
+                    ps:draw(6)
+                end
+            end
+        end
+    end
+    if pass ~= nil then
+        pass:finish()
+    end
+    return true
+end
+
 -- 2D fallback (no shader support): the frozen page folds toward the spine.
 local function drawFold(self: PageStage, r: Renderer, img: Image, p: number)
     local e = easeInOut(p)
@@ -878,7 +1028,9 @@ function draw(self: PageStage, renderer: Renderer)
         local slot = self.slots[t.slot]
         local pg = if t.page == 0 then self.coverInst else self.pages[t.page]
         if slot ~= nil and pg ~= nil then
-            renderInto(self, slot.canvas, pg)
+            if not (t.page > 0 and composeLeaf(self, slot, pg, t.page)) then
+                renderInto(self, slot.canvas, pg)
+            end
             local gc = slot.gc
             if self.gpu and gc ~= nil then
                 renderLeaf(self, slot, t.p, t.page == 0)
@@ -923,6 +1075,7 @@ return function(context: Context): Layout<PageStage>
         paused = nil,
         breakpoint = nil,
         chromeAlpha = nil,
+        devScale = nil,
         size = Vector.xy(0, 0),
         scale = 1,
         pw = 390,
@@ -958,6 +1111,8 @@ return function(context: Context): Layout<PageStage>
         gx = 0,
         gy = 0,
         gpuSampler = nil,
+        pComp = nil,
+        compStaging = buffer.create(48),
         staging = buffer.create(96),
         sampler = ImageSampler('clamp', 'clamp', 'bilinear'),
         shade = Paint.with({ color = Color.rgba(0x25, 0x2E, 0x3D, 0), style = 'fill' }),

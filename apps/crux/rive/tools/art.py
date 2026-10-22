@@ -224,6 +224,11 @@ def wordmark_artboard():
     return ab
 
 
+# the wordmark's ink bounds in its own units (x0, y0, x1, y1), strokes included: the
+# round C (an ellipse rotated a quarter turn, plus half its 10.5 stroke) overhangs x = 0
+WORDMARK_INK = (-6.25, 0.75, 154.5, 55.25)
+
+
 def wordmark_asset():
     return E("ComponentAsset", artboardId=WORDMARK_AB, name="Wordmark")
 
@@ -234,6 +239,7 @@ CHALK_ASSET = "0:85"
 WALL_ASSET = "0:86"
 LAYOUT_ASSET = "0:87"
 RIGDATA_ASSET = "0:88"
+ROPE_ASSET = "0:89"
 KIND3D = {"jug": 0, "pyramid": 1, "sloper": 2, "pinch": 3, "crimp": 4, "stone": 5, "tri": 6, "volume": 6}
 SIZE3D = {"jug": 0.86, "pyramid": 0.92, "sloper": 0.86, "pinch": 0.86, "crimp": 0.84, "stone": 0.9, "tri": 1.0}
 LIVE = {}          # scene k -> [live input ids]; build_stage keys them per entrance
@@ -245,7 +251,8 @@ def script_assets():
             E("ScriptAsset", file="layout.luau", name="layout", isModule=True, id=LAYOUT_ASSET),
             E("ScriptAsset", file="hold3d.luau", name="hold3d", id=HOLD3D_ASSET),
             E("ScriptAsset", file="chalk.luau", name="chalk", id=CHALK_ASSET),
-            E("ScriptAsset", file="wall.luau", name="wall", id=WALL_ASSET)]
+            E("ScriptAsset", file="wall.luau", name="wall", id=WALL_ASSET),
+            E("ScriptAsset", file="rope.luau", name="rope", id=ROPE_ASSET)]
 
 
 def rig_input(name, rig_name, v=0.0):
@@ -325,6 +332,32 @@ def chalk_drawable():
     for nm, rn, v in (("rigX", "chX", 0.0), ("rigY", "chY", 0.0), ("rigS", "chS", 1.0), ("k", "k", 1.0),
                       ("vw", "vw", 390.0), ("vh", "vh", 844.0), ("dpr", "dpr", 1.0)):
         d.add(rig_input(nm, rn, v))
+    return d, ins
+
+
+ROPE_MODE = {"yank": 0, "floor": 1, "arc": 2, "tie": 3}
+
+
+def rope_drawable(name, mode, thick, scene=None, color=COBALT, strand="FF1C2C8C", tracer=ACID, **vals):
+    """A dynamic climbing rope (rope.luau), drawn as vector paths. Returns (drawable,
+    input ids by name); `vals` sets bow / unwind / reveal / arc / radius / anchorX / anchorY / dirX / dirY."""
+    d = E("ScriptedDrawable", scriptAssetId=ROPE_ASSET, name=name)
+    ins = {}
+
+    def add(el):
+        d.add(el)
+        ins[el.a["name"]] = el
+        return el
+    add(_num("mode", ROPE_MODE[mode]))
+    add(_num("thick", thick))
+    for nm, c in (("color", color), ("strand", strand), ("tracer", tracer), ("ink", COAL)):
+        add(E("ScriptInputColor", propertyValue=c, name=nm))
+    for nm, v in (("bow", 0.0), ("unwind", 0.0), ("reveal", 1.0), ("arc", 0.0), ("radius", 172.0),
+                  ("anchorX", 0.0), ("anchorY", 0.0), ("dirX", 1.0), ("dirY", 0.0)):
+        add(_num(nm, vals.get(nm, v)))
+    live = add(_num("live", 1.0 if scene is None else 0.0))
+    if scene is not None:
+        LIVE.setdefault(scene, []).append(live.id)
     return d, ins
 
 

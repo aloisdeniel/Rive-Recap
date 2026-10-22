@@ -124,6 +124,133 @@ def open_book(name, x, y, w, cover=OX, pages=PAPER, depth=6):
     return g, dict(left=left, right=right, lines=lines)
 
 
+# ======================================================================= scripted 3D
+# The GPU objects (scripts/etch3d.luau): each is a ScriptedDrawable next to its
+# flat vector version, which is wrapped in a "Flat Fallback N" node. The Page
+# Stage folds those wrappers away when the 3D can draw (shader support), so a
+# runtime without shaders still shows the vector art, animated as before.
+_FB: dict = {}
+
+
+def fallback(scene, *children):
+    _FB[scene] = _FB.get(scene, 0) + 1
+    assert _FB[scene] <= 4, "the Page Stage looks for Flat Fallback 1..4"
+    return node(f"Flat Fallback {_FB[scene]}", *children).ensure()
+
+
+_GPU: dict = {}
+
+
+def scripted(ctx, script, name, consts, binds, x=0.0, y=0.0):
+    """A ScriptedDrawable with constant number inputs and bound inputs. Each is
+    named "GPU <id>" (unique on its page) and told its id: the Page Stage finds
+    it by that name to composite it onto a turning leaf (scripts/etch3d.luau).
+    `name` is kept as a comment."""
+    V = ctx["V"]
+    sc = consts["scene"]
+    _GPU[sc] = _GPU.get(sc, 0) + 1
+    assert _GPU[sc] <= 2, "the Page Stage looks for GPU 1..2"
+    consts = dict(consts, id=_GPU[sc])
+    kids = []
+    for k, v in consts.items():
+        kids.append(N("ScriptInputNumber", propertyValue=v, name=k))
+    for k, (prop, kind) in binds.items():
+        if kind == "bool":
+            kids.append(N("ScriptInputBoolean", N("DataBindContext", sourcePathIds=V.path(prop), propertyKey=245),
+                          name=k))
+        else:
+            kids.append(N("ScriptInputNumber", N("DataBindContext", sourcePathIds=V.path(prop), propertyKey=243),
+                          propertyValue=0, name=k))
+    return N("ScriptedDrawable", *kids, x=x, y=y, scriptAssetId=ctx[script].id, name=f"GPU {_GPU[sc]}",
+             _comment=name).ensure()
+
+
+COMMON_BINDS = {
+    "screen": ("currentScreen", "number"), "navDir": ("_navDir", "number"), "still": ("reducedMotion", "bool"),
+    "paused": ("_motionPaused", "bool"), "vw": ("_vw", "number"), "vh": ("_vh", "number"),
+    "bp": ("layoutBreakpoint", "number"), "dev": ("_devScale", "number"),
+}
+
+
+def book3d(ctx, scene, name, x, y, w, cover=OX, delay=0, dur=500, want=-1):
+    """An open book drawn in 3D (scripts/book3d.luau) with the vector book as
+    its fallback. Same origin as open_book (front of the gutter)."""
+    g = node(name, x=x, y=y).ensure()
+    flat, parts = open_book("Vector Book", 0, 0, w, cover=cover)
+    binds = dict(COMMON_BINDS, row=("_personaRow", "number"))
+    d3 = scripted(ctx, "book_script", "Book 3D",
+                  dict(width=w, cover=int(cover, 16), scene=scene, want=want, delay=delay, dur=dur), binds)
+    g.add(d3, fallback(scene, flat))
+    return g, parts
+
+
+def ribbon_tail(name, pts, at_end, w, col, edge, hi):
+    """A swallowtail end for a stroked ribbon drawn along smooth(pts, closed=False):
+    placed on the path's end (or start), along its tangent there, so the cut
+    continues the band (same body, selvedge and sheen) and ends in a notch."""
+    n = len(pts)
+
+    def handle(i):
+        x0, y0 = pts[max(i - 1, 0)]
+        x2, y2 = pts[min(i + 1, n - 1)]
+        tx, ty = (x2 - x0) / 2, (y2 - y0) / 2
+        d = math.hypot(tx, ty) / 3
+        r = math.atan2(ty, tx)
+        return math.cos(r) * d, math.sin(r) * d
+    if at_end:
+        ex, ey = pts[-1]
+        hx, hy = handle(n - 2)
+        cx, cy = pts[-2][0] + hx, pts[-2][1] + hy
+        dx, dy = ex - cx, ey - cy
+    else:
+        ex, ey = pts[0]
+        hx, hy = handle(1)
+        cx, cy = pts[1][0] - hx, pts[1][1] - hy
+        dx, dy = ex - cx, ey - cy
+    ang = math.atan2(dy, dx)
+    L, notch, h = w * 1.05, w * 0.5, w / 2
+    g = node(name, x=ex, y=ey, rotation=ang).ensure()
+    body = [(-0.6, -h), (L, -h), (L - notch, 0), (L, h), (-0.6, h)]
+    g.add(shape("Sheen", poly([(-0.6, 0), (L - notch - 3, 0)], closed=False), stroke(hi, w * 0.22, 0.7, cap="round")))
+    g.add(shape("Selvedge", poly([(-0.6, -h), (L, -h), (L - notch, 0), (L, h), (-0.6, h)], closed=False),
+                stroke(edge, 3, join="round", cap="butt")))
+    g.add(shape("Body", poly(body), fill(col)))
+    return g
+
+
+def band_spine(pts, step=6.0):
+    """Sample the Catmull-Rom curve through pts every ~step units:
+    [(x, y, tx, ty, t)] with unit tangents and t = arc length 0..1."""
+    ext = [pts[0]] + list(pts) + [pts[-1]]
+    dense = []
+    for i in range(1, len(ext) - 2):
+        p0, p1, p2, p3 = ext[i - 1], ext[i], ext[i + 1], ext[i + 2]
+        seg = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+        n = max(2, int(seg / step))
+        for j in range(n):
+            u = j / n
+            u2, u3 = u * u, u * u * u
+            dense.append(tuple(0.5 * (2 * p1[k] + (-p0[k] + p2[k]) * u + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * u2
+                                      + (-p0[k] + 3 * p1[k] - 3 * p2[k] + p3[k]) * u3) for k in (0, 1)))
+    dense.append(tuple(pts[-1]))
+    L = [0.0]
+    for i in range(1, len(dense)):
+        L.append(L[-1] + math.hypot(dense[i][0] - dense[i - 1][0], dense[i][1] - dense[i - 1][1]))
+    out = []
+    for i, (x, y) in enumerate(dense):
+        a, b = dense[max(0, i - 1)], dense[min(len(dense) - 1, i + 1)]
+        tx, ty = b[0] - a[0], b[1] - a[1]
+        l = math.hypot(tx, ty) or 1
+        out.append((x, y, tx / l, ty / l, L[i] / L[-1]))
+    return out
+
+
+def band_offset(spine, off, taper, t0=0.0, t1=1.0):
+    """Points of the line `off` units from the spine, scaled by taper(t)."""
+    return [(round(x - ty * off * taper(t), 2), round(y + tx * off * taper(t), 2))
+            for x, y, tx, ty, t in spine if t0 <= t <= t1]
+
+
 # ======================================================================= copy
 def copy_text(ctx, name, x, y, style, prop, w=None, align="center", **kw):
     lit = ctx["DATA"].get(prop, "")
@@ -296,38 +423,62 @@ def scene3(sc, ctx):
     # except on a short spread, where they caption the illustration
     sc.foot_frame.add(node("Copy Foot", rule, sup))
 
-    # the band: twelve page edges (paper / shade / ink hairlines) with a gilt edge
+    # the band: a ribbon of page edges drawn as an engraver would - parallel
+    # lines (paper body, shade and ink hairlines, a dark fore-edge, a gilt edge)
+    # that taper together at both ends instead of being cut off. It leaves the
+    # book's gutter narrow, swells to full width, and runs up behind the
+    # numeral's last digit, where its lines converge and fray out at slightly
+    # different lengths (scratched ink ends). Every line is a trimmed stroke, so
+    # the band still streams out of the book.
     rib = node("Page-edge Ribbon").ensure()
     base = [(196, 606), (148, 588), (96, 552), (76, 504), (100, 466), (172, 448), (262, 442), (326, 414),
             (348, 362), (334, 306), (308, 252), (296, 214)]
-    def offset(pts, off):
-        out = []
-        for i, (x, y) in enumerate(pts):
-            x0, y0 = pts[max(0, i - 1)]
-            x1, y1 = pts[min(len(pts) - 1, i + 1)]
-            tx, ty = x1 - x0, y1 - y0
-            l = math.hypot(tx, ty) or 1
-            out.append((x - ty / l * off, y + tx / l * off))
-        return out
-    trims = []
-    # body of the band, then the page hairlines on it, a dark fore-edge and a gilt edge
-    layers = [(0, PAPER, 30, 1.0)] + [((i - 5.5) * 2.5, PDEEP if i % 3 == 0 else PSHADE, 0.9, 0.9) for i in range(12)] \
-        + [(-15.2, INK2, 1.6, 0.8), (15.2, GOLD, 2.6, 1.0)]
-    for i, (off, col, w, a) in enumerate(layers):
+    spine = band_spine(base, 16.0)
+
+    def taper(t):
+        grow = 0.22 + 0.78 * (t / 0.2 if t < 0.2 else 1.0) ** 0.8
+        tip = max(0.0, 1.0 - max(0.0, t - 0.66) / 0.34) ** 0.85
+        return grow * tip
+
+    def along(off, t0=0.0, t1=1.0):
+        return smooth(band_offset(spine, off, taper, t0, t1), closed=False)
+    trims = []    # (trim, stagger k, final end)
+    rnd = random.Random(31)
+    # body: overlapping paper strokes, so the band narrows with the taper
+    for i in range(11):
+        o = (i - 5) * 2.9
+        # the body stops short of both tips: the fine lines alone draw the points
+        tr = N("TrimPath", start=0.012, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
+        rib.add(shape(f"Body {i}", along(o), stroke(PAPER, 4.2, cap="round", effects=[tr])))
+        trims.append((tr, 0, 0.962 - abs(i - 5) * 0.004))
+    # hairlines: leaves of paper; they fray at the top end
+    for i in range(12):
+        o = (i - 5.5) * 2.5
+        e = 1.0 - rnd.uniform(0.0, 0.035)
+        col = PDEEP if i % 3 == 0 else PSHADE
         tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
-        rib.add(shape(f"Edge {i}", smooth(offset(base, off), closed=False),
-                      stroke(col, w, a, cap="butt" if i == 0 else "round", effects=[tr])))
-        trims.append(tr)
+        rib.add(shape(f"Leaf Edge {i}", along(o), stroke(col, 0.9, 0.95, cap="round", effects=[tr])))
+        trims.append((tr, abs(i - 6.5) * 0.5, e))
+    # the dark fore-edge and the gilt edge, the two outermost lines
+    edges = []
+    for nm, o, col, w, a_ in (("Fore-edge", -15.2, INK2, 1.5, 0.85), ("Gilt Edge", 15.2, GOLD, 2.4, 1.0)):
+        tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
+        sh = shape(nm, along(o), stroke(col, w, a_, cap="round", effects=[tr]))
+        rib.add(sh)
+        edges.append(sh)
+        trims.append((tr, 3.2, 0.985 if o < 0 else 0.995))
     rib.children.reverse()   # body at the back, gilt on top
-    cols = layers
     glint_tr = N("TrimPath", start=0, end=0.07, offset=0, name="Glint").ensure()
-    glint = shape("Gold Glint", smooth(offset(base, 15.2), closed=False),
-                  stroke(GOLDL, 3.0, cap="round", effects=[glint_tr]), opacity=0).ensure()
+    glint = shape("Gold Glint", along(15.2), stroke(GOLDL, 2.6, cap="round", effects=[glint_tr]), opacity=0).ensure()
     rib.children.insert(0, glint)
-    shadow_tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
-    trims.append(shadow_tr)
-    shadow = shape("Ribbon Shadow", smooth([(x + 6, y + 10) for x, y in base], closed=False),
-                   stroke(PDEEP, 34, 0.35, cap="round", effects=[shadow_tr]))
+    # a soft shadow on the page, tapering with the band
+    shadow = node("Ribbon Shadow").ensure()
+    for i, (w, a_) in enumerate(((30, 0.16), (20, 0.16), (10, 0.14))):
+        tr = N("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Draw").ensure()
+        pts = [(x + 6, y + 10) for x, y in band_offset(spine, 0.0, taper)]
+        shadow.add(shape(f"Shadow {i}", smooth(pts, closed=False),
+                         stroke(PDEEP, w, a_, cap="round", effects=[tr])))
+        trims.append((tr, 2, 0.93 + 0.03 * i))
     # loose leaves lifting off the band toward the numeral
     leaves = []
     for i, (lx, ly, lr) in enumerate([(300, 230, -0.3), (262, 200, 0.4), (330, 196, 0.15), (236, 236, -0.5),
@@ -336,15 +487,14 @@ def scene3(sc, ctx):
         lf.add(shape("Lines", rect(10, 1, y=-3), rect(8, 1, x=-1, y=1), rect(10, 1, y=5), fill(INK3, 0.5)))
         lf.add(shape("Leaf", rect(16, 21, r=1), fill(PAPER), stroke(PDEEP, 0.8)))
         leaves.append(lf)
-    book, bparts = open_book("Source Book", SW / 2, 650, 270, cover=INK)
+    book, bparts = book3d(ctx, 3, "Source Book", SW / 2, 650, 270, cover=INK, delay=0, dur=380)
     sc.content.add(copy, plx("leaves", "near", leaves), plx("ribbon", "mid", rib, shadow, book))
     # choreography: book opens (anticipation), edges stream out of it (staggered),
     # loose leaves lift toward the numeral, which resolves as they arrive
     sc.tw(bparts["left"], "scaleX", 0, 380, 0.05, 1.0, "inout")
     sc.tw(bparts["right"], "scaleX", 0, 380, 0.05, 1.0, "inout")
-    for i, tr in enumerate(trims):
-        k = 0 if i == 0 else (abs(i - 6.5) * 0.5 if i < len(cols) else 2)
-        sc.tw(tr, "end", 160 + k * 30, 1000 + k * 30, 0.0, 1.0, "inout")
+    for tr, k, e in trims:
+        sc.tw(tr, "end", 160 + k * 30, 1000 + k * 30, 0.0, e, "inout")
     for i, lf in enumerate(leaves):
         t0 = 620 + i * 90
         y0 = lf.attrs["y"]
@@ -391,7 +541,7 @@ def scene4(sc, ctx):
     sky.children.reverse()  # night gradient at the back, town in front
     sky.add(N("ClippingShape", sourceId=sky_mask.id, name="Window Clip"))
     frame = shape("Arch Frame", arch(326, 306, x=0, y=2), stroke(GOLD, 2.0))
-    book, bparts = open_book("Open Book", 0, 40, 330, cover=OX)
+    book, bparts = book3d(ctx, 4, "Open Book", 0, 40, 330, cover=OX, delay=200, dur=560)
     clouds_l = cloud("Cloud L", -150, -150, 0.95)
     clouds_r = cloud("Cloud R", 155, -60, 0.85)
     win.add(clouds_l, clouds_r, book, frame, sky, sky_mask)
@@ -456,7 +606,12 @@ def scene5(sc, ctx):
     tassels = shape("Pelmet Trim", rect(400, 2, x=0, y=-287), fill(GOLD))
     cone = shape("Spot Cone", poly([(-10, -290), (10, -290), (90, -40), (-90, -40)]),
                  fill(paint=lin(0, -290, 0, -40, [(0, GOLDL, 0.5), (1, GOLDL, 0)])), opacity=0).ensure()
-    theater.add(tassels, pelmet, curt_l, curt_r, cone, arch_nodes, floor, back)
+    # the theatre is drawn in 3D (scripts/theatre3d.luau); this vector set is its
+    # fallback. The moon's light cone stays vector, above either.
+    stage3d = scripted(ctx, "theatre_script", "Theatre 3D", dict(scene=5),
+                       dict(COMMON_BINDS, genres=("genresExplored", "number")))
+    flat = fallback(5, tassels, pelmet, curt_l, curt_r, arch_nodes, floor, back)
+    theater.add(cone, flat, stage3d)
     sc.content.add(copy, plx("theater", "mid", theater))
     # choreography: curtains part, arches unfold row by row (hinge at base)
     sc.tw(curt_l, "scaleX", 100, 800, 2.1, 1.0, "inout")
@@ -556,7 +711,8 @@ def scene7(sc, ctx):
         t.add(shape("Tab", rect(26, 15, x=13, y=0, rtl=0.1, rtr=6, rbl=0.1, rbr=6), fill(tab_cols[i])))
         tabs.append(t)
         tabs_n.add(t)
-    stack.add(books, tabs_n)
+    # the volumes are drawn in 3D (scripts/lamp3d.luau); these are the fallback
+    stack.add(fallback(7, books), tabs_n)
     # lamp
     lamp = node("Reading Lamp", x=0, y=0).ensure()
     cone = shape("Light Cone", poly([(272, 360), (304, 386), (300, 452), (52, 452)]),
@@ -573,7 +729,12 @@ def scene7(sc, ctx):
     arm.add(shape("Arm", smooth([(0, 0), (0, -150), (-8, -250), (-38, -308)], closed=False), stroke(GOLDD, 4, cap="round")))
     arm.add(shape("Base", ellipse(60, 12, x=0, y=0), fill(GOLDD)))
     lamp.add(bulb, arm)
-    sc.content.add(copy, plx("lamp", "far", lamp), plx("stack", "mid", cone, pool, stack))
+    # the 3D lamp, its light and the volumes (one drawable, above the day tabs,
+    # which slide out from under the volumes); the vector lamp and light are the
+    # fallback
+    d3 = scripted(ctx, "lamp_script", "Lamp 3D", dict(scene=7), COMMON_BINDS, x=176, y=630)
+    sc.content.add(copy, plx("lamp", "far", fallback(7, lamp)),
+                   plx("stack", "mid", d3, fallback(7, cone, pool), stack))
     for i, b in enumerate(blocks):
         sc.tw(b, "y", 150 + i * 80, 650 + i * 80, b.attrs["y"] - 60, b.attrs["y"], "back")
         sc.tw(b, "opacity", 150 + i * 80, 300 + i * 80, 0.0, 1.0, "linear")
@@ -598,8 +759,11 @@ def scene8(sc, ctx):
     italic = ctx["italic"]
     copy, P = ctx["metric_copy"](sc, "bookClubChats", head_w=300)
     hero = node("Weave", x=SW / 2, y=560).ensure()
-    book, bparts = open_book("Open Book", 0, 40, 300, cover=INK)
-    # two ribbons weave around the book: each passes behind it, then over it
+    book, bparts = book3d(ctx, 8, "Open Book", 0, 40, 300, cover=INK, delay=100, dur=550)
+    # two satin bookmarks weave round the book: each comes in from above, passes
+    # behind it, wraps round a side, crosses over the front and hangs down over
+    # the tail edge. Both ends are cut as swallowtails (no blunt cut ends) and
+    # every point stays inside the illustration box (x +-175, y >= -242).
     trs = []
 
     def band(name, pts, col, w, edge, hi):
@@ -610,19 +774,29 @@ def scene8(sc, ctx):
                      stroke(col, w, cap="butt", effects=[N("TrimPath", start=0, end=1, name="Draw Twin").ensure()]),
                      stroke(hi, w * 0.22, 0.7, cap="butt",
                             effects=[N("TrimPath", start=0, end=1, name="Draw Sheen").ensure()]))
-    a_back = [(-210, -230), (-150, -150), (-60, -95), (40, -80)]
-    a_front = [(40, -80), (120, -60), (150, -10), (90, 40), (-40, 46)]
-    b_back = [(210, -250), (140, -170), (60, -100), (-40, -78)]
-    b_front = [(-40, -78), (-120, -55), (-150, -5), (-90, 42), (40, 50)]
+    a_back = [(-160, -198), (-124, -146), (-58, -100), (40, -80)]
+    a_front = [(40, -80), (122, -62), (160, -16), (116, 34), (54, 50), (26, 62), (20, 82)]
+    b_back = [(162, -206), (128, -154), (56, -104), (-40, -78)]
+    b_front = [(-40, -78), (-124, -56), (-162, -10), (-114, 38), (-56, 52), (-30, 64), (-24, 86)]
+    tails = []
     back = node("Under").ensure()
     back.add(band("Gold Ribbon (behind)", b_back, GOLD, 17, GOLDD, GOLDL),
              band("Oxblood Ribbon (behind)", a_back, OX, 17, OXD, OXL))
     front = node("Over").ensure()
     front.add(band("Gold Ribbon (over)", b_front, GOLD, 17, GOLDD, GOLDL),
               band("Oxblood Ribbon (over)", a_front, OX, 17, OXD, OXL))
+    for nm, pts, col, edge, hi, at_end, grp in [
+            ("Gold Tail (top)", b_back, GOLD, GOLDD, GOLDL, False, back),
+            ("Oxblood Tail (top)", a_back, OX, OXD, OXL, False, back),
+            ("Gold Tail (hanging)", b_front, GOLD, GOLDD, GOLDL, True, front),
+            ("Oxblood Tail (hanging)", a_front, OX, OXD, OXL, True, front)]:
+        t = ribbon_tail(nm, pts, at_end, 17, col, edge, hi)
+        grp.children.insert(0, t)    # drawn above its own band
+        tails.append((t, at_end))
     quotes = []
-    # two voices: an opening quote on one side, a closing quote answering it
-    for i, (qx, qy, ch, s, col) in enumerate([(-128, -214, "\u201c", 84, OX), (128, -222, "\u201d", 84, GOLDD)]):
+    # two voices: an opening quote on one side, a closing quote answering it,
+    # inside the V the ribbons make
+    for i, (qx, qy, ch, s, col) in enumerate([(-84, -228, "\u201c", 84, OX), (84, -236, "\u201d", 84, GOLDD)]):
         q = text(f"Quote {i}", qx - 40, qy, [(italic(s, col, 500), ch, None)], w=80, align="center")
         quotes.append(q)
     hero.add(quotes, front, book, back)
@@ -639,6 +813,11 @@ def scene8(sc, ctx):
                 for tr in st.children:
                     if tr.tag == "TrimPath":
                         sc.tw(tr, "end", t0, t0 + 700, 0.0, 1.0, "inout" if i < 2 else "out")
+    # a top tail shows as its ribbon starts to draw, a hanging tail as it lands
+    for i, (t, at_end) in enumerate(tails):
+        t0 = 350 + (i % 2) * 120 + (650 + 620 if at_end else 0)
+        sc.tw(t, "opacity", t0, t0 + 90, 0.0, 1.0, "linear")
+        sc.tw(t, "scaleX", t0, t0 + 260, 0.4, 1.0, "out")
     for i, q in enumerate(quotes):
         fade_up(sc, q, 1100 + i * 150, 1500 + i * 150, 20)
     sc.idle_ms = 6000
@@ -648,7 +827,7 @@ def scene8(sc, ctx):
 
 
 # ======================================================================= scene 9 (persona)
-def emblem_wanderer():
+def emblem_wanderer(ctx):
     g = node("Emblem World Wanderer", x=0, y=0).ensure()
     parts = {}
     door_mask = shape("Door Mask", arch(150, 220, x=0, y=60)).ensure()
@@ -663,7 +842,7 @@ def emblem_wanderer():
     land.children.reverse()  # sky at the back
     land.add(N("ClippingShape", sourceId=door_mask.id, name="Door Clip"))
     frame = shape("Door Frame", arch(160, 228, x=0, y=62), stroke(GOLD, 2.5))
-    book, bp = open_book("Doorway Book", 0, 110, 250, cover=OX)
+    book, bp = book3d(ctx, 9, "Doorway Book", 0, 110, 250, cover=OX, delay=850, dur=500, want=0)
     stars = [sparkle(f"Star {i}", x, y, s, GOLDL) for i, (x, y, s) in enumerate([(-110, -140, 14), (100, -170, 18), (120, -40, 10), (-120, -30, 9)])]
     g.add(stars, frame, land, door_mask, book)
     parts.update(mask=door_mask, path=path_tr, book=bp, stars=stars, frame=frame)
@@ -696,7 +875,7 @@ def emblem_diver():
     return g, dict(rings=rings, tr=tr, core=core)
 
 
-def emblem_night():
+def emblem_night(ctx):
     g = node("Emblem Night Reader", x=0, y=0).ensure()
     swing = node("Crescent Swing", x=0, y=-150).ensure()
     cres = shape("Crescent", smooth([(0, 0), (60, 30), (90, 110), (60, 190), (0, 220), (40, 180), (58, 110), (40, 40)],
@@ -707,7 +886,7 @@ def emblem_night():
     swing.add(tassel, cres)
     stars = [sparkle(f"Star {i}", x, y, s, INK) for i, (x, y, s) in enumerate([(70, -110, 18), (110, -40, 10), (-110, -90, 12), (90, 40, 8), (-100, 30, 9)])]
     lamp = shape("Reading Glow", ellipse(200, 80, x=40, y=120), fill(paint=rad(40, 120, 100, [(0, PAPER, 0.8), (1, PAPER, 0)]))).ensure()
-    book, bp = open_book("Night Book", 40, 130, 150, cover=INK)
+    book, bp = book3d(ctx, 9, "Night Book", 40, 130, 150, cover=INK, delay=0, dur=0, want=2)
     g.add(stars, swing, book, lamp)
     return g, dict(swing=swing, tassel=tassel, stars=stars, lamp=lamp)
 
@@ -746,9 +925,9 @@ def scene9(sc, ctx):
     plate.add(shape("Plate Inner Rule", arch(296, 440, x=0, y=-12), stroke(GOLD, 1.2)))
     plate.add(shape("Plate", arch(320, 464, x=0, y=0), N("Fill", plate_fill, name="Fill"), stroke(GOLD, 2.4)))
     emblems = node("Emblems", x=0, y=-230).ensure()
-    e0, p0 = emblem_wanderer()
+    e0, p0 = emblem_wanderer(ctx)
     e1, p1 = emblem_diver()
-    e2, p2 = emblem_night()
+    e2, p2 = emblem_night(ctx)
     e3, p3 = emblem_collector()
     for e in (e0, e1, e2, e3):
         e.attrs["opacity"] = 0

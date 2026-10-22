@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Merge the per-app recap videos into one showcase.
 
-    scripts/merge-videos.py [--apps a,b,c,...] [--per-row 5] [--rows 1] [--scale 0.6] [--fps 15]
+    scripts/merge-videos.py [--apps a,b,c,...] [--per-row 5] [--rows 2] [--scale 0.6] [--fps 15]
     scripts/merge-videos.py --video video-landscape.webm --rows 2 --scale 0.35 \
         --output apps/showcase-landscape.webm     # all ten landscape renders at once
 
-Apps play side by side, `per-row` at a time (5 by default, so ten apps make two
-sequences), and the sequences play one after another. With `--rows N` each
-sequence stacks N such rows, so `--rows 2` shows all ten apps at once. The defaults keep the
+Apps play in a grid of `per-row` columns by `rows` rows (5 x 2 by default, so
+all ten apps play at once). More apps than fit in one grid make further
+sequences that play one after another; `--rows 1` gives single rows of five. The defaults keep the
 file small enough for a web preview; raise --scale and --fps for a
 full-quality cut. Reads the WebM videos written by render-video.py
 (apps/<app>/video.webm, or the file named by --video), so render the apps first.
@@ -30,7 +30,7 @@ def parse_args():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--apps", default=",".join(APPS), help="comma-separated app order")
     p.add_argument("--per-row", type=int, default=5, help="apps playing side by side per row (default 5)")
-    p.add_argument("--rows", type=int, default=1, help="rows stacked in each sequence (default 1)")
+    p.add_argument("--rows", type=int, default=2, help="rows stacked in each sequence (default 2)")
     p.add_argument("--video", default="video.webm", help="per-app video file name (default video.webm)")
     p.add_argument("--scale", type=float, default=0.6, help="scale each 390x844 app tile (default 0.6)")
     p.add_argument("--gap", type=int, default=16, help="pixels around each tile (default 16)")

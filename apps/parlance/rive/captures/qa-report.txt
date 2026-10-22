@@ -18,8 +18,8 @@ PASS  personaIndex=3 -> name/colour: personaName='Brave Improviser' personaColor
 PASS  personaIndex=9 -> name/colour: personaName='Conversation Starter' personaColor=FFC7B7F2
 PASS  personaIndex=-2 -> name/colour: personaName='Conversation Starter' personaColor=FFC7B7F2
 PASS  Mouth tap (scene 3) does not trigger navigation: screens [1, 2, 3]
-PASS  Mouth tap changes the picture (elastic squash): rest 70ac4493 vs tapped e8ce35bf
-PASS  Bound hero number follows UserRecap.conversations: 204 render fce85949 vs 98,765 render 4fab31b3
+PASS  Mouth tap changes the picture (elastic squash): rest d2898b04 vs tapped 1761ec89
+PASS  Bound hero number follows UserRecap.conversations: 204 render c7b11c8a vs 98,765 render fbf58649
 PASS  Orientation at 390x844: _vw=390 _land=0 (want 0) _split=0 (want 0)
 PASS  Orientation at 767x1024: _vw=767 _land=0 (want 0) _split=0 (want 0)
 PASS  Orientation at 768x1024: _vw=768 _land=1 (want 1) _split=1 (want 1)
@@ -35,7 +35,7 @@ PASS  Landscape hold-to-pause on the real tap zone: screens [1]
 PASS  Handoff cover reaches every edge at 2560x1080: edge pixels [(195, 178, 241), (199, 183, 242), (197, 181, 242), (199, 183, 242)]...
 PASS  Handoff cover reaches every edge at 740x360: edge pixels [(197, 180, 242), (199, 183, 242), (198, 183, 242), (200, 185, 242)]...
 PASS  Handoff cover reaches every edge at 820x1180: edge pixels [(199, 184, 242), (199, 183, 242), (199, 183, 242), (198, 183, 242)]...
-PASS  Signature 3->4 (lips -> bubble) covers every edge at 2560x1080: edge pixels [(242, 98, 62), (243, 106, 67), (243, 103, 65), (243, 106, 67)]...
+PASS  Signature 3->4 (lips -> bubble) covers every edge at 2560x1080: edge pixels [(242, 98, 62), (243, 106, 67), (243, 103, 65), (242, 105, 66)]...
 PASS  Signature 3->4 (lips -> bubble) covers every edge at 667x375: edge pixels [(243, 107, 68), (243, 104, 65), (243, 106, 67), (241, 104, 65)]...
 PASS  Resize across the threshold mid-scene keeps the scene and settles: scene 3->3->3, _land 0->1->0, layout settled by frame 561, screens [1, 2, 3, 4]
 PASS  Resize across the threshold mid-handoff settles on the next scene: screens [1, 2, 3, 4, 5], _land 1

@@ -11,7 +11,7 @@ from rml import (E, nid, node, shape, poly, ellipse, rect, fill, stroke, solid, 
                  CHALK, COAL, ACID, COBALT, CONCRETE, CONCRETE_D, CHALK_D, COAL_L, RNG)
 from art import (N, BASE, text, hero, headline, mono, Hold, Puff, speckles, bolt_grid, route_line,
                  arrow, alpha, WORDMARK_AB, FONT_MONO, FONT_MONO_M, FONT_XB, FONT_BLACK, hold_art,
-                 Hold3, hold3d_drawable, chalk_drawable, wall_drawable)
+                 Hold3, hold3d_drawable, chalk_drawable, wall_drawable, rope_drawable, WORDMARK_INK)
 import conv
 import model
 import rig
@@ -54,17 +54,43 @@ def align_wide(t, tall):
     return t
 
 
+# The intro wordmark: placed at WM_AT, scale WM_SCALE; it rises WM_RISE into place. Its
+# reveal clip (x, y, w, h) covers the ink plus a margin over the whole rise, and the title
+# block box (tools/rig.py) starts at the ink's left edge, so the layout keeps it on canvas.
+# The C's ink starts at the title box edge (x = 22), flush with the copy below; it used to
+# overhang to x = 14, and the clip, flush with the box, sliced it flat.
+WM_AT, WM_SCALE, WM_RISE = (32, 130), 1.6, 20
+_ink = [WM_AT[0] + WORDMARK_INK[0] * WM_SCALE, WM_AT[1] + WORDMARK_INK[1] * WM_SCALE,
+        WM_AT[0] + WORDMARK_INK[2] * WM_SCALE, WM_AT[1] + WORDMARK_INK[3] * WM_SCALE + WM_RISE]
+WM_CLIP = (math.floor(_ink[0]) - 8, math.floor(_ink[1]) - 20, math.ceil(_ink[2] - _ink[0]) + 32, math.ceil(_ink[3] - _ink[1]) + 28)
+assert WM_CLIP[0] < _ink[0] and WM_CLIP[1] < _ink[1] and WM_CLIP[0] + WM_CLIP[2] > _ink[2] and WM_CLIP[1] + WM_CLIP[3] > _ink[3]
+assert rig.S[1]["blocks"]["title"]["box"][0] <= _ink[0], "the title block box must contain the wordmark ink"
+
+
 # ------------------------------------------------------------------ globals in the stage
 HERO_DRIVER = E("CustomPropertyNumber", propertyValue=0, name="heroDriver",
                 kids=[bind(path("heroProgress"), 243, direction=True)])
 
 # Carrier: the persistent acid "Crux hold" that carries the story + the yank rope.
-rope_bow = E("CubicMirroredVertex", x=40, y=-520, rotation=-1.5708, distance=260, name="Bow")
-rope_path = E("PointsPath", isClosed=False, isClockwise=True, name="Rope Path", kids=[
-    E("StraightVertex", x=0, y=-30), rope_bow, E("StraightVertex", x=0, y=-2800)])
-rope_twist = E("Stroke", thickness=3, cap="butt", join="round", name="Twist", kids=[
-    solid(COBALT), E("DashPath", name="Twist", kids=[E("Dash", length=7, name="On"), E("Dash", length=7, name="Off")])])
-ROPE = N("Rope", [shape("Rope Line", [rope_path], [stroke(COAL, 7, cap="round"), rope_twist])], opacity=0.0)
+# The yank rope is a dynamic rope (rope.luau) tied in with a figure-eight to a locking
+# carabiner clipped through the carrier's bolt ring; its keyed `bow` input is the slack.
+ROPE_FX, ROPE_IN = rope_drawable("Yank Rope", "yank", 9.0)
+ROPE_BOW = ROPE_IN["bow"].id
+ROPE = N("Rope", [ROPE_FX], opacity=0.0)
+# Scene 6 ties the floor rope's free end in to the carrier. The tie-in rides in the
+# carrier, above the hold (the scene's layers are all behind the carrier), pointing back
+# along the slack; the floor rope (in the scene) ends at its knot.
+FLOOR_T = 10.0
+_cx, _cy, _cs, _cr = 96, 664, 0.85, -0.2          # CARRIER_POSE[6]
+_ring = (_cx + _cs * 4 * math.cos(_cr), _cy + _cs * 4 * math.sin(_cr))
+_dx, _dy = 130 - _ring[0], 712 - _ring[1]
+_dl = math.hypot(_dx, _dy)
+TIE_DIR = (_dx / _dl, _dy / _dl)                    # floor-block space
+TIE_FX, TIE_IN = rope_drawable("Carrier Tie-in", "tie", round(FLOOR_T / _cs, 3), scene=6, reveal=0.0,
+                               anchorX=4.0, anchorY=0.0,
+                               dirX=round(TIE_DIR[0] * math.cos(-_cr) - TIE_DIR[1] * math.sin(-_cr), 5),
+                               dirY=round(TIE_DIR[0] * math.sin(-_cr) + TIE_DIR[1] * math.cos(-_cr), 5))
+TIE_REVEAL = TIE_IN["reveal"].id
 # The carrier is a real 3D hold (hold3d.luau): it tumbles in yaw while it is yanked.
 CARRIER_3D, CARRIER_IN = hold3d_drawable("Carrier 3D", "jug", ACID, 96, bolt=0.0, speck=0.45, sway=0.07)
 CARRIER_YAW = CARRIER_IN["yaw"].id
@@ -72,7 +98,7 @@ ENTRY_YAW = [0.0]   # carrier yaw an entrance starts from (set per entrance by b
 CARRIER_PITCH = CARRIER_IN["pitch"].id
 CARRIER_ART = N("Carrier Idle", [shape("Route Dot", [ellipse(15)], [fill(CHALK), stroke(COAL, 3.5)], x=4, y=0),
                                  CARRIER_3D])
-CARRIER = N("Carrier", [ROPE, CARRIER_ART], x=CARRIER_POSE[1][0], y=CARRIER_POSE[1][1])
+CARRIER = N("Carrier", [TIE_FX, ROPE, CARRIER_ART], x=CARRIER_POSE[1][0], y=CARRIER_POSE[1][1])
 # The carrier's pose is keyed in its scene's block space (the rig node, bound to the
 # carrier space the director blends between scenes); the big off-screen flights of the
 # yank and the lower-off are keyed on `Carrier Fly`, in viewport units, so they always
@@ -191,11 +217,14 @@ def scene1():
     s.put("front", "art", s.grab_slot)
     s.grab_home = (115, 605)
     # text
-    s.wm_clip_rect = N("Wordmark Mask Grow", [shape("Mask Shape", [rect(272, 112, ox=0, oy=0)], [])], x=22, y=118,
+    # the reveal clip covers the whole wordmark with a margin: the round C overhangs the
+    # title box on the left (the old clip, flush with the box, sliced it flat)
+    s.wm_clip_rect = N("Wordmark Mask Grow", [shape("Mask Shape", [rect(WM_CLIP[2], WM_CLIP[3], ox=0, oy=0)], [])],
+                       x=WM_CLIP[0], y=WM_CLIP[1],
                        scaleX=0.0)
-    wm_leaf = E("NestedArtboard", artboardId=WORDMARK_AB, x=0, y=0, scaleX=1.6, scaleY=1.6, name="Wordmark")
+    wm_leaf = E("NestedArtboard", artboardId=WORDMARK_AB, x=0, y=0, scaleX=WM_SCALE, scaleY=WM_SCALE, name="Wordmark")
     s.wm = N("Wordmark Reveal", [wm_leaf, E("ClippingShape", sourceId=s.wm_clip_rect.kids[0].id, name="Reveal Clip")],
-             x=24, y=130)
+             x=WM_AT[0], y=WM_AT[1])
     greet = text("Greeting", 0, 0, 342, 40, FONT_MONO_M, 14, COAL,
                  [("Alex", "userName", None), ("  ·  ", None, None), ("", "periodLabel", None)],
                  overflow="ellipsis", lh=19)
@@ -223,7 +252,7 @@ def scene1():
         a.tw(s.grab_yaw, 243, 34, 58, 2.6, 0.0, "back")
         s.p[2].fire(a, 50)
         a.tw(s.wm_clip_rect.id, "scaleX", 40, 74, 0.0, 1.0, "inout")
-        a.tw(s.wm.id, "y", 40, 74, 150, 130, "out")
+        a.tw(s.wm.id, "y", 40, 74, WM_AT[1] + WM_RISE, WM_AT[1], "out")
         fade_in(a, s.greet.id, 58)
         fade_in(a, s.head.id, 64, 20, 34)
         fade_in(a, s.sup.id, 78)
@@ -480,29 +509,23 @@ def scene6():
                   rot=round(i / 12 * 6.283 + 1.5708, 3)) for i in range(12)]
     ticks = N("Ticks", [shape("Major", major, [fill(COAL)]), shape("Minor", minor, [fill(alpha(COAL, 0.5))])])
     rope_conv = conv.formula("Minutes Arc", conv.clamp01([("in",), ("op", "/"), ("v", 180)]) + [("op", "*"), ("b", "heroProgress")])
-    arc_trims = []
-    arcs = []
-    for nm, col, th, dash in [("Rope Twist", "FF2440B8", 16, True), ("Rope", COBALT, 18, False)]:
-        tr = E("TrimPath", start=0, end=0.5, offset=0, modeValue="sequential", name="Arc",
-               kids=[bind(path("longestSessionMinutes"), 115, rope_conv)])
-        eff = [tr]
-        if dash:
-            eff.append(E("DashPath", name="Twist", kids=[E("Dash", length=5, name="On"), E("Dash", length=9, name="Off")]))
-        arcs.append(shape(nm, [ellipse(344)], [E("Stroke", thickness=th, cap="round", name="Stroke", kids=[solid(col)] + eff)],
-                          rotation=-1.5708))
-    dial = N("Dial", [arcs[0], arcs[1], ticks, ring], x=cx, y=cy)
-    coil_rings = [shape(f"Coil {i}", [ellipse(124, 46)], [stroke(COBALT, 10)], x=0, y=-i * 13) for i in range(4)]
-    coil = N("Coil", coil_rings[::-1], x=304, y=690)
-    # floor: the rope bag sits on a concrete ledge, its slack running to the carrier hold;
+    # the rope laid round the dial: its length is the minutes (/180) times the count progress
+    arc_fx, arc_in = rope_drawable("Dial Rope", "arc", 15.0, scene=6, radius=172.0)
+    arc_in["arc"].add(bind(path("longestSessionMinutes"), 243, rope_conv))
+    dial = N("Dial", [arc_fx, ticks, ring], x=cx, y=cy)
+    # floor: the rope pile sits on a concrete ledge, its slack running to the carrier hold,
+    # tied in to a carabiner on the hold's bolt ring (the carrier pose in this block space);
     # the ledge runs flat past both design edges so it bleeds across any canvas
     s.put("back", "floor", shape("Floor", [poly([(-2600, 652), (0, 652), (390, 618), (2600, 618), (2600, 2400), (-2600, 2400)])],
                                  [fill(CONCRETE)]))
     s.put("back", "floor", bolt_grid("Floor Bolts", [(36 + (i % 8) * 46, 690 + (i // 8) * 40) for i in range(16)]))
-    slack_trim = E("TrimPath", start=0, end=1, offset=0, modeValue="sequential", name="Slack Reveal")
-    slack = shape("Slack", [poly([(262, 700), (214, 724), (160, 712), (112, 682)], closed=False)],
-                  [E("Stroke", thickness=12, cap="round", join="round", name="Rope", kids=[solid(COBALT), slack_trim])])
+    assert (_cx, _cy, _cs, _cr) == CARRIER_POSE[6]
+    floor_fx, floor_in = rope_drawable("Floor Rope", "floor", FLOOR_T, scene=6, reveal=0.0,
+                                       anchorX=round(_ring[0], 2), anchorY=round(_ring[1], 2),
+                                       dirX=round(TIE_DIR[0], 5), dirY=round(TIE_DIR[1], 5))
+    unwind, reveal = floor_in["unwind"].id, floor_in["reveal"].id
     s.put("mid", "dial", dial)
-    s.put("mid", "floor", coil, slack)
+    s.put("mid", "floor", floor_fx)
     num = N("Hero", [hero("Minutes", "longestSessionMinutesDisplay", 0, 0, 220, 150, 160, COAL, align="center")], x=85, y=208)
     unit = N("Unit", [mono("Unit", "screen6Unit", 0, 0, 220, 26, 16, COAL, align="center", medium=True)], x=85, y=362)
     hd = N("Headline", [headline("Headline", "screen6Headline", 0, 0, 342, 60, 54, COAL)], x=22, y=490)
@@ -510,7 +533,7 @@ def scene6():
     s.put("text", "dial", num, unit)
     s.put("text", "copy", hd, sp)
     s.hero_steps = [(12, 0.0, "inout"), (74, 1.0, "hold")]
-    s.idle = [(coil.id, "rotation", 0.0)]
+    s.idle = []
 
     def choreo(a, v):
         a.tw(ring_trim, "end", 4, 40, 0.0, 1.0, "inout")
@@ -518,10 +541,11 @@ def scene6():
         a.k(ticks.id, "opacity", 0, 0.0)
         a.tw(ticks.id, "opacity", 18, 30, 0.0, 1.0, "out")
         a.tw(dial.id, "rotation", 4, 50, -0.5, 0.0, "back")
-        a.tw(slack_trim, "end", 6, 40, 0.0, 1.0, "out")
-        a.tw(coil.id, "scaleX", 12, 74, 1.0, 0.55, "inout")
-        a.tw(coil.id, "scaleY", 12, 74, 1.0, 0.55, "inout")
-        a.tw(coil.id, "rotation", 12, 74, 0.0, 0.4, "inout")
+        # the slack runs out to the hold (tied in once it lands), then the pile feeds the dial
+        a.tw(reveal, 243, 6, 40, 0.0, 1.0, "out")
+        a.k(TIE_REVEAL, 243, 0, 0.0)
+        a.tw(TIE_REVEAL, 243, 26, 34, 0.0, 1.0, "out")
+        a.tw(unwind, 243, 12, 74, 0.0, 1.0, "inout")
         a.k(num.id, "opacity", 0, 0.0)
         a.k(num.id, "opacity", 12, 1.0)
         pop(a, num.id, 12, 16, "back", s0=0.7, s1=1.0)
@@ -529,6 +553,12 @@ def scene6():
         fade_in(a, hd.id, 74, 18, 28)
         fade_in(a, sp.id, 88, 16, 14)
     s.choreo = choreo
+
+    def exit_hook(a, mode):
+        # the yank / lower-off unclips the floor rope: its tie-in leaves with the scene
+        a.k(TIE_REVEAL, 243, 0, 1.0, "linear")
+        a.k(TIE_REVEAL, 243, 8, 0.0)
+    s.exit_hook = exit_hook
     return s
 
 

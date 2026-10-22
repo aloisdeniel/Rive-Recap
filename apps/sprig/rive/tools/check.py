@@ -176,6 +176,137 @@ def hold_pauses_and_release_does_not_navigate():
     return ok, f"hold -> _holdPaused={held}; release -> screen {v2.get('currentScreen')}, held={v2.get('_holdPaused')}"
 
 
+# ---------------------------------------------------------------- count-up numbers through transitions
+# Regression for "the number shows 0 during transitions". Text runs are not in the data dump, so the displayed
+# value of each hero number is recomputed from what the file binds it to, exactly as its converter chain does:
+# shown = ceil(max(0, metric * min(1, _countK) - 0.001)) (scene k's playhead, keyed by its own timelines). The summary's five
+# card stats share _count10. The incoming forward scene's number is fully transparent until COUNT_F0 frames into
+# its entrance (its appear key starts on the count's first frame), so it is only asserted after that.
+METRICS = {2: ["careMoments"], 3: ["plantsNurtured"], 4: ["newLeaves"], 5: ["cuttingsRooted"], 6: ["careStreak"],
+           7: ["plantsShared"], 8: ["activeMonths"],
+           10: ["careMoments", "plantsNurtured", "newLeaves", "cuttingsRooted", "careStreak"]}
+COUNT_F0 = {k: 20 for k in range(2, 9)}   # tools/build_sprig.py COUNT_F0 (hero appears with its count)
+COUNT_F0[10] = 24                          # summary card: count starts with the first stat cell (sprig_scenes2.py)
+LEAVE_FRAMES = 52      # the leaving scene is fully gone by then (root opacity 0 at LF 48, LB 42, LR 12)
+COUNT_KEYS = ["currentScreen"] + [f"_count{k}" for k in METRICS] + sorted({m for v in METRICS.values() for m in v})
+
+
+def stream(*args, every=1):
+    """[(frame, {path: value})] for every sampled frame, forward-filled."""
+    rows = [json.loads(l) for l in run(f"--data-dump-filter={','.join(COUNT_KEYS)}", *args, every=every).splitlines()
+            if l.startswith("{")]
+    cur, out = {}, []
+    for r in rows:
+        if "frame" not in r:
+            continue
+        for v in r.get("values", []):
+            cur[v["path"]] = v["value"]
+        out.append((r["frame"], dict(cur)))
+    return out
+
+
+def shown(state, k):
+    import math
+    p = state.get(f"_count{k}")
+    if p is None:
+        return None
+    return [math.ceil(max(0.0, max(0.0, float(state[m])) * min(1.0, p) - 0.001)) for m in METRICS[k]]
+
+
+def zero_number_frames(rows, reduced=False):
+    """Frames where a hero number that is on screen would display 0 for non-zero data.
+    On screen: the outgoing scene for LEAVE_FRAMES after the change; the incoming scene from the change on
+    (backwards, reduced motion: it arrives settled) or from COUNT_F0 + 2 frames into a forward entrance."""
+    bad, leaving, prev, t0, fwd = [], [], None, None, True
+    for f, st in rows:
+        cs = st.get("currentScreen")
+        if prev is not None and cs is not None and cs != prev:
+            leaving.append((prev, f))
+            t0, fwd = f, cs > prev
+        prev = cs
+        on = [(k, "outgoing") for k, tl in leaving if f - tl <= LEAVE_FRAMES and k != cs and k in METRICS]
+        if cs in METRICS and t0 is not None and (reduced or not fwd or f - t0 >= COUNT_F0[cs] + 2):
+            on.append((cs, "incoming"))
+        for k, role in on:
+            vals = shown(st, k)
+            if vals is None:
+                bad.append(f"f{f}: scene {k} has no _count{k}")
+                continue
+            for v, m in zip(vals, METRICS[k]):
+                if float(st[m]) > 0 and v == 0:
+                    bad.append(f"f{f}: {role} scene {k} shows 0 ({m}={st[m]:g})")
+    return bad
+
+
+def nav_script(keys, gap, first=150):
+    a = [NO_AUTO, "--advance=30"]
+    for i, k in enumerate(keys):
+        a += [f"--key={k}", f"--advance={first if i == 0 else gap}"]
+    return a
+
+
+def count_case(viewport, keys, gap, *extra, reduced=False):
+    a = [f"--viewport={viewport}"] + list(extra) + nav_script(keys, gap)
+    rows = stream(*a, every=2)
+    return rows, zero_number_frames(rows, reduced)
+
+
+@check
+def numbers_hold_through_transitions():
+    """Forward through every scene to the summary, Replay-free back steps, at both layouts, sampled every 2
+    frames: no on-screen hero number ever reads 0, and each entrance ends on the exact value."""
+    out, bad_all = [], []
+    for vp in ("390x844", "1280x720"):
+        keys = ["right"] * 9 + ["left"] * 4
+        rows, bad = count_case(vp, keys, 130)
+        bad_all += [f"{vp} {b}" for b in bad]
+        # every entrance ends on the exact value: the settled summary card, and scenes 2-8 at the end of the walk
+        on10 = [st for f, st in rows if st.get("currentScreen") == 10]
+        card = shown(on10[-1], 10) if on10 else None
+        want = [int(on10[-1][m]) for m in METRICS[10]] if on10 else None
+        if card != want:
+            bad_all.append(f"{vp}: settled summary shows {card}, data {want}")
+        end = rows[-1][1]
+        wrong = {k: shown(end, k) for k in METRICS if k != 10 and shown(end, k) != [int(end[m]) for m in METRICS[k]]}
+        if wrong:
+            bad_all.append(f"{vp}: settled values off: {wrong}")
+        out.append(f"{vp}: {len(rows)} samples, settled summary shows {card}")
+    return not bad_all, "; ".join(out) + (f"; ZERO {bad_all[:4]}" if bad_all else "; no 0 on screen")
+
+
+@check
+def numbers_hold_on_rapid_and_reduced_navigation():
+    bad_all, notes = [], []
+    # rapid: Right every 8 frames (entrances interrupted mid-transition), then Left every 8 frames
+    rows, bad = count_case("390x844", ["right"] * 5 + ["left"] * 3, 8)
+    bad_all += [f"rapid {b}" for b in bad]
+    notes.append(f"rapid -> scene {rows[-1][1].get('currentScreen')}")
+    # reduced motion: final values at once (playhead already 1 on the first sample of each scene)
+    rows, bad = count_case("390x844", ["right"] * 9 + ["left"] * 2, 30, "--data=reducedMotion=true", reduced=True)
+    bad_all += [f"reduced {b}" for b in bad]
+    notes.append(f"reduced -> scene {rows[-1][1].get('currentScreen')}")
+    # Replay from the summary: the leaving summary keeps its numbers
+    a = nav_script(["right"] * 9, 40) + ["--advance=120", f"--pointer=click@{REPLAY}", "--advance=80"]
+    rows = stream(*a, every=2)
+    bad = zero_number_frames(rows)
+    bad_all += [f"replay {b}" for b in bad]
+    notes.append(f"replay -> scene {rows[-1][1].get('currentScreen')}")
+    return not bad_all, "; ".join(notes) + (f"; ZERO {bad_all[:4]}" if bad_all else "; no 0 on screen")
+
+
+@check
+def genuine_zero_still_displays():
+    """A real 0 (scene shown, metric 0) must read 0, not be hidden: the playhead settles at 1 and the value is 0.
+    The zero-user fixture (all metric scenes hidden, empty summary card) still lands on the summary."""
+    v = final(NO_AUTO, "--data=careMoments=0", "--advance=30", "--key=right", "--advance=150")
+    z = final(NO_AUTO, *[f"--data={m}=0" for m in METRICS[10]], "--data=plantsShared=0", "--data=activeMonths=0",
+              *[f"--data=showScreen{i}=false" for i in range(2, 10)], "--advance=30", "--key=right", "--advance=150")
+    ok = (v.get("currentScreen") == 2 and v.get("_count2") == 1 and shown(v, 2) == [0]
+          and z.get("currentScreen") == 10)
+    return ok, (f"careMoments=0 -> scene {v.get('currentScreen')}, playhead {v.get('_count2')}, shows {shown(v, 2)}; "
+                f"zero user Right -> scene {z.get('currentScreen')}")
+
+
 # ---------------------------------------------------------------- responsive layout
 
 ORIENT_KEYS = ["_vw", "_vh", "_landscape", "_tall", "currentScreen"]

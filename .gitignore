@@ -2,8 +2,9 @@
 __pycache__/
 *.pyc
 
-# MP4 copies of the WebM videos (scripts/export-mp4.sh)
-apps/*/video.mp4
-apps/*/video-landscape.mp4
-apps/showcase.mp4
-apps/showcase-landscape.mp4
+# WebM renders are the local working format (render-video.py / merge-videos.py);
+# the committed videos are their MP4 exports (scripts/export-mp4.sh).
+apps/*/video.webm
+apps/*/video-landscape.webm
+apps/showcase.webm
+apps/showcase-landscape.webm

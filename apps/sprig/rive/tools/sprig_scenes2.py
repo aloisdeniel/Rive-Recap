@@ -295,6 +295,12 @@ def share_card():
         stat_cells.append(node(f"Stat {m}", num, unit, x=cx, y=cy, id=cell_id))
         anim.key(cell_id, "opacity", [(0, 0.0, "hold"), (24 + i * 7, 0.0, "outs"), (44 + i * 7, 1.0)])
         anim.key(cell_id, "y", [(0, cy + 22, "hold"), (24 + i * 7, cy + 22, "outs"), (48 + i * 7, cy)])
+    # summary count-up: one playhead for the five stats (cells fade in from frame 24, so the count starts with the
+    # first cell and its 0 is never visible). Assembly animates it; "Card static" holds 1, "Card hidden" 0, and the
+    # leave hold keeps 1 so the numbers keep their values while the summary leaves.
+    ph_id = ID()
+    playhead = count_playhead("Summary count playhead", 10, id=ph_id)
+    anim.key(ph_id, "x", [(0, 0.0, "hold"), (24, 0.0, COUNT_EASE), (24 + COUNT_F1 - COUNT_F0, 1.0)])
     motif_id = ID()
     m_leaves = []
     for j, (L, r, c1, c2) in enumerate([(54, -0.6, LEAF, LEAF_DARK), (62, 0.5, LEAF_PALE, LEAF), (70, 0.0, LEAF_DARK, LEAF_DEEP),
@@ -365,7 +371,8 @@ def share_card():
     hidden = Anim("Card hidden", 1)
     for (obj, p), keys in anim.tracks.items():
         hidden.key(obj, p, [(0, keys[0][1], "hold")])
-    empty_anim = Anim("Card hold", 44)
+    empty_anim = Anim("Card hold", 60)   # outlasts every summary leave (LB 44 frames) so the stats never drop to 0 on screen
+    empty_anim.key(ph_id, "x", [(0, 1.0, "hold")])
     # card state machine (runs inside the nested placement and when the host renders the card alone)
     cur = lambda v, op="equal": cond_num("currentScreen", v, op)
     rm = lambda v: cond_bool("reducedMotion", v)
@@ -383,7 +390,7 @@ def share_card():
                 x=560.0, y=0.0, animationId=empty_anim.id, id=sL),
               name="Assemble", id=layer_id)
     sm = E("StateMachine", layer, name="Card machine", id=sm_id)
-    art = E("Artboard", st, sm, *stack(bg, grid, empty, persona, header, period),
+    art = E("Artboard", st, sm, *stack(bg, grid, empty, persona, header, period, playhead),
             anim.el(), final.el(), hidden.el(), empty_anim.el(),
             isComponent=True, defaultStateMachineId=sm_id, viewModelId=VMID, width=float(CARD_W),
             height=float(CARD_H), styleId=st.id, x=float(W + 120), y=0.0, name="ShareCard", id=ab)

@@ -660,8 +660,10 @@ def scene6():
 
     sun = circle(306.0, 168.0, 104.0, YEL, name="Sun")
     rays = node("Sun rays", *[node(f"Ray {k}", rect(-2.5, -78, 5, 14, YEL, r=2.5, name="Ray"),
-                                  rotation=k * math.pi / 6) for k in range(12)], x=306.0, y=168.0)
-    rays_idle = node("Sun rays (idle turn)", rays)
+                                  rotation=k * math.pi / 6) for k in range(12)])
+    # the idle turn's pivot is the sun's centre: the offset lives on the rotating
+    # node, so the rays spin in place instead of orbiting the art panel's origin
+    rays_idle = node("Sun rays (idle turn)", rays, x=306.0, y=168.0)
     stone = "FFDDD8CB"
     # the far shore and the sea run on well past the 390 frame (the sea spans the
     # whole width in landscape); each wave band is one shape (crests + body)

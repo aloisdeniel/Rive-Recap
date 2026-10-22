@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import rml  # noqa: E402
 from rml import (E, nid, node, shape, rect, ellipse, smooth_path, fill, stroke, solid, text, tstyle, run,
                  bind, Anim, cond, trans, write, fire_trigger, toggle, copy_str, fire_event, astate,
-                 cubic_path, key_morph, lingrad)  # noqa
+                 cubic_path, key_morph, lingrad, cubic_attrs)  # noqa
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 W, H = 390, 844
@@ -470,28 +470,400 @@ def shade_fills(color, shade, light, s=1.0, grad=True):
     return [base, inner]
 
 
-def face(prefix, s=1.0, ink=DD, tongue=PD, ids=None, look=0):
-    """Expressive punctuation face: closed happy arcs and a huge laughing D-mouth with a paper teeth band."""
+# ================================================================ FACE RIG
+def _pack(ws):
+    """ws: [(tendon index 0-based, weight 0..1)] -> (indices, values) packed, values summing to 255."""
+    ws = [w for w in ws if w[1] > 0]
+    vals = [int(round(w * 255)) for _t, w in ws]
+    vals[vals.index(max(vals))] += 255 - sum(vals)
+    ind = sum((t + 1) << (8 * k) for k, (t, _w) in enumerate(ws))
+    val = sum(v << (8 * k) for k, v in enumerate(vals))
+    return ind, val
+
+
+def skinned_path(attrs, weights, bones, name="Path", closed=True):
+    """attrs: cubic vertex attribute dicts (in the bind frame); weights: per vertex [(tendon, w)];
+    bones: [(bone id, bind x, bind y)] -- bind poses are pure translations in the same frame."""
+    verts = []
+    for a, w in zip(attrs, weights):
+        w, wi, wo = w if isinstance(w, tuple) else (w, w, w)
+        ind, val = _pack(w)
+        ii, iv = _pack(wi)
+        oi, ov = _pack(wo)
+        verts.append(E("CubicDetachedVertex", {k: round(v, 4) for k, v in a.items()}, [
+            E("CubicWeight", {"values": val, "indices": ind, "inValues": iv, "inIndices": ii, "outValues": ov,
+                              "outIndices": oi})]))
+    skin = E("Skin", {"name": "Skin"}, [E("Tendon", {"boneId": b, "tx": round(x, 4), "ty": round(y, 4), "name": "Tendon"})
+                                        for b, x, y in bones])
+    return E("PointsPath", {"isClosed": closed, "isClockwise": True, "name": name}, verts + [skin])
+
+
+def ellipse_attrs(cx, cy, a, b, n=6, start=math.pi):
+    k = 4 / 3 * math.tan(math.pi / (2 * n))
+    out = []
+    for i in range(n):
+        t = start + i * 2 * math.pi / n
+        x, y = cx + a * math.cos(t), cy + b * math.sin(t)
+        tx, ty = -a * math.sin(t), b * math.cos(t)
+        d = k * math.hypot(tx, ty)
+        out.append({"x": x, "y": y, "inRotation": math.atan2(-ty, -tx), "inDistance": d,
+                    "outRotation": math.atan2(ty, tx), "outDistance": d})
+    return out
+
+
+def bone(name, x, y, kids=(), id=None):
+    return E("RootBone", {"x": round(x, 4), "y": round(y, 4), "length": 4, "name": name, "id": id}, list(kids))
+
+
+# mouth bind pose (laughing D, before the 1.16 mouth scale): corners, upper lip, lower lip
+MOUTH_PTS = [(-54, 0, "c", 9), (-27, -3), (0, -4), (27, -3), (54, 0, "c", 9), (42, 36), (0, 58), (-42, 36)]
+# tendons: 0 upper lip, 1 jaw, 2 corner L, 3 corner R
+MOUTH_W = [[(2, 0.8), (1, 0.2)], [(0, 0.7), (2, 0.3)], [(0, 1)], [(0, 0.7), (3, 0.3)], [(3, 0.8), (1, 0.2)],
+           [(1, 0.7), (3, 0.3)], [(1, 1)], [(1, 0.7), (2, 0.3)]]
+TONGUE_PTS = [(-40, 66), (-33, 47), (-17, 35), (0, 32), (17, 35), (33, 47), (40, 66), (0, 80)]
+# tendons: 0 tongue root, 1 tongue tip
+TONGUE_W = [[(0, 1)], [(0, 0.6), (1, 0.4)], [(1, 1)], [(1, 1)], [(1, 1)], [(0, 0.6), (1, 0.4)], [(0, 1)], [(0, 1)]]
+EYE_X, EYE_Y, EYE_A, EYE_B = 34, -40, 10, 12.5
+# eye tendons: 0 upper lids, 1 lower lids, 2 left corners, 3 right corners (shared by both eyes, translation only)
+# 4 = lid crease: carries the inward handles of the lower lid, so a squint's lower edge arches up instead of sagging
+EYE_W = [[(2, 1)], [(0, 1)], [(0, 1)], [(3, 1)], ([(1, 1)], [(1, 1)], [(4, 1)]), ([(1, 1)], [(4, 1)], [(1, 1)])]
+
+
+def face(prefix, s=1.0, ink=DD, tongue=PD, ids=None, look=0, cheek="70FF5C7A", rigged=True):
+    """Rigged laughing face. Mouth: a skinned D-shape (upper lip, jaw and two corner bones) with teeth and a
+    skinned two-bone tongue clipped inside it. Eyes: two skinned ovals on four shared lid/corner bones (open,
+    blink, happy squint), glints, brows, gaze. Cheeks and lips are follow-through nodes."""
     ids = ids if ids is not None else {}
+    # a static face (the share cards' emblems) is the same art at rest with no skin, bones or keys
+    skinned_path_ = skinned_path if rigged else (lambda attrs, *_a: E("PointsPath", {"isClosed": True, "name": "Path"}, [
+        E("CubicDetachedVertex", {k: round(v, 4) for k, v in a.items()}) for a in attrs]))
+    bone = globals()["bone"] if rigged else (lambda name, x, y, kids=(), id=None: node(name, list(kids), id=id, x=round(x, 4),
+                                                                                        y=round(y, 4)))
+    R = {k: nid() for k in ("JO", "U", "J", "CL", "CR", "TB", "TT", "teeth", "lips", "mshape", "EU", "ED", "ECL", "ECR",
+                            "EA", "gaze", "glints", "browL", "browR", "cheeks")}
+    R["s"], R["S"] = s, s * 1.16
+    ids["rig"] = R
     ids["mouth"] = nid()
     ids["eyes"] = nid()
-    lx = look * s
-    eye = lambda ex, s=s: shape(f"{prefix} eye", [smooth_path([(-15 * s, 7 * s), (0, -9 * s), (15 * s, 7 * s)], closed=False)],
-                           [stroke(ink, 8.5 * s)], x=ex * s + lx, y=-40 * s)
-    s0, s = s, s * 1.16
-    mouth = node(f"{prefix} mouth", [
-        shape(f"{prefix} teeth", [smooth_path([(-44 * s, 3 * s), (44 * s, 3 * s), (33 * s, 15 * s), (0, 19 * s),
-                                               (-33 * s, 15 * s)])], [fill(WP)]),
-        shape(f"{prefix} tongue", [ellipse(44 * s, 20 * s)], [fill(tongue)], y=44 * s),
-        shape(f"{prefix} mouth shape", [smooth_path([(-54 * s, 0, "c", 9 * s), (54 * s, 0, "c", 9 * s), (42 * s, 36 * s),
-                                                     (0, 58 * s), (-42 * s, 36 * s)])], [fill(ink)]),
-    ], id=ids["mouth"], x=lx, y=0)
-    return node(f"{prefix} face", [mouth, node(f"{prefix} eyes", [eye(-34), eye(34)], id=ids["eyes"])],
-                id=ids.get("face"))
+    S = R["S"]
+    sc = lambda pts: [(p[0] * S, p[1] * S) + tuple(p[2:]) for p in pts]
+    # ---- mouth (frame = lips node)
+    m_attrs = cubic_attrs(sc(MOUTH_PTS))
+    mshape = shape(f"{prefix} mouth shape", [skinned_path_(m_attrs, MOUTH_W, [(R["U"], 0, 0), (R["J"], 0, 0),
+                                                                              (R["CL"], -54 * S, 0), (R["CR"], 54 * S, 0)])],
+                   [fill(ink)], id=R["mshape"])
+    teeth = shape(f"{prefix} teeth", [smooth_path(sc([(-62, -10), (62, -10), (62, 10), (33, 16), (0, 19), (-33, 16),
+                                                      (-62, 10)]))], [fill(WP)], id=R["teeth"])
+    t_attrs = cubic_attrs(sc(TONGUE_PTS))
+    tshape = shape(f"{prefix} tongue", [skinned_path_(t_attrs, TONGUE_W, [(R["TB"], 0, 62 * S), (R["TT"], 0, 40 * S)])],
+                   [fill(tongue)])
+    crease = shape(f"{prefix} tongue crease", [smooth_path([(0, -1 * S), (0, 11 * S)], closed=False)],
+                   [stroke("44000000", 3.2 * S)])
+    tip = bone(f"{prefix} tongue tip", 0, -22 * S, [crease], id=R["TT"])
+    root = bone(f"{prefix} tongue root", 0, 62 * S, [tip], id=R["TB"])
+    inside = node(f"{prefix} mouth inside", [
+        E("ClippingShape", {"sourceId": R["mshape"], "name": "Mouth clip"}),
+        bone(f"{prefix} upper lip", 0, 0, [teeth], id=R["U"]),
+        # the jaw sits in a "jaw override" bone that only transitions key, so a carry can open the mouth wider
+        # whatever the idle conversation (a later state machine layer) is doing with the jaw itself
+        bone(f"{prefix} jaw override", 0, 0, [bone(f"{prefix} jaw", 0, 0, [root], id=R["J"])], id=R["JO"]),
+        tshape,
+        bone(f"{prefix} corner L", -54 * S, 0, id=R["CL"]),
+        bone(f"{prefix} corner R", 54 * S, 0, id=R["CR"]),
+    ])
+    lips = node(f"{prefix} lips", [inside, mshape], id=R["lips"])
+    mouth = node(f"{prefix} mouth", [lips], id=ids["mouth"], x=look * s)
+    # ---- eyes (frame = gaze node)
+    eyes = []
+    glints = []
+    for side in (-1, 1):
+        ea = ellipse_attrs(side * EYE_X * s, EYE_Y * s, EYE_A * s, EYE_B * s)
+        eyes.append(shape(f"{prefix} eye", [skinned_path_(ea, EYE_W, [(R["EU"], 0, 0), (R["ED"], 0, 0), (R["ECL"], 0, 0),
+                                                                     (R["ECR"], 0, 0), (R["EA"], 0, 0)])], [fill(ink)]))
+        glints.append(shape(f"{prefix} glint", [ellipse(5.5 * s, 5.5 * s)], [fill(WP)],
+                            x=(side * EYE_X + 3.5) * s, y=(EYE_Y - 5) * s))
+    brows = []
+    for side, bid in ((-1, R["browL"]), (1, R["browR"])):
+        brows.append(node(f"{prefix} brow", [shape(f"{prefix} brow line", [smooth_path(
+            [(-10 * s, 2.5 * s), (0, -2.5 * s), (10 * s, 2.5 * s)], closed=False)], [stroke(ink, 5.5 * s)])],
+            id=bid, x=side * (EYE_X + 2) * s, y=(EYE_Y - 26) * s))
+    gaze = node(f"{prefix} gaze", brows + [node(f"{prefix} glints", glints, id=R["glints"])] + eyes + [
+        bone(f"{prefix} upper lids", 0, 0, id=R["EU"]), bone(f"{prefix} lower lids", 0, 0, id=R["ED"]),
+        bone(f"{prefix} eye corners L", 0, 0, id=R["ECL"]), bone(f"{prefix} eye corners R", 0, 0, id=R["ECR"]),
+        bone(f"{prefix} lid crease", 0, 0, id=R["EA"])],
+        id=R["gaze"])
+    eyes_n = node(f"{prefix} eyes", [gaze], id=ids["eyes"], x=look * s)
+    cheeks = node(f"{prefix} cheeks", [shape(f"{prefix} cheek", [ellipse(30 * s, 15 * s)], [fill(cheek, feather=(5 * s,))],
+                                             x=side * 66 * s, y=-14 * s) for side in (-1, 1)], id=R["cheeks"])
+    return node(f"{prefix} face", [eyes_n, mouth, cheeks], id=ids.get("face"))
+
+
+# ---------------------------------------------------------------- face channels and choreography
+# channel -> [(rig key, property, unit)]; unit: 1 (unitless), "S" mouth scale, "s" face scale (negative = mirrored)
+FACE_CH = {
+    "open": [("J", "scaleY", 1)], "jo": [("JO", "y", "S")], "drop": [("J", "y", "S")], "narrow": [("J", "scaleX", 1)], "tilt": [("J", "rotation", 1)],
+    "smile": [("CL", "y", "S"), ("CR", "y", "S")], "wide": [("CL", "x", "-S"), ("CR", "x", "S")], "lift": [("U", "y", "S")],
+    "teeth": [("teeth", "y", "S")],
+    "tlift": [("TT", "y", "S")], "tcurl": [("TT", "scaleX", 1)], "twig": [("TT", "rotation", 1)], "tx": [("TB", "x", "S")],
+    "trot": [("TB", "rotation", 1)],
+    "eu": [("EU", "y", "s")], "ed": [("ED", "y", "s")], "ecx": [("ECL", "x", "-s"), ("ECR", "x", "s")],
+    "ecy": [("ECL", "y", "s"), ("ECR", "y", "s")], "ea": [("EA", "y", "s")], "tdrop": [("TB", "y", "S")], "glint": [("glints", "opacity", 1)],
+    "brow": [("browL", "y", "s"), ("browR", "y", "s")], "browt": [("browL", "rotation", -1), ("browR", "rotation", 1)],
+    "gx": [("gaze", "x", "s")], "gy": [("gaze", "y", "s")],
+    "cheek": [("cheeks", "y", "s")], "cheeksx": [("cheeks", "scaleX", 1)], "cheeksy": [("cheeks", "scaleY", 1)],
+    "lipsx": [("lips", "scaleX", 1)], "lipsy": [("lips", "scaleY", 1)], "head": [("lips", "x", "s")],
+}
+FACE_REST = {c: 0 for c in FACE_CH}
+FACE_REST.update(open=1, narrow=1, tcurl=1, glint=1, cheeksx=1, cheeksy=1, lipsx=1, lipsy=1)
+
+
+def _base(R, key, prop):
+    S, s = R["S"], R["s"]
+    return {("TB", "y"): 62 * S, ("CL", "x"): -54 * S, ("CR", "x"): 54 * S, ("TT", "y"): -22 * S, ("browL", "y"): (EYE_Y - 26) * s,
+            ("browR", "y"): (EYE_Y - 26) * s}.get((key, prop), 0)
+
+
+def _unit(R, u):
+    if u in (1, -1):
+        return u
+    return (-1 if u[0] == "-" else 1) * R[u[-1]]
+
+
+def face_value(R, c, v):
+    """[(object id, property, absolute value)] for channel c at channel value v."""
+    out = []
+    for key, prop, u in FACE_CH[c]:
+        mul = _unit(R, u)
+        if prop in ("scaleX", "scaleY", "opacity"):
+            out.append((R[key], prop, v))
+        else:
+            out.append((R[key], prop, _base(R, key, prop) + v * mul))
+    return out
+
+
+def face_rest(anim, R, frame=0):
+    """Hold every face channel at rest (the open laughing smile, eyes open), except tracks the timeline keys."""
+    for c, v in FACE_REST.items():
+        for obj, prop, val in face_value(R, c, v):
+            if prop not in anim.tracks.get(obj, {}):
+                anim.k(obj, prop, [(frame, round(val, 4), "hold")])
+
+
+def face_tracks(anim, tracks, offset=0):
+    for obj, prop, keys in tracks:
+        anim.k(obj, prop, [(f + offset, v, e) for f, v, e in keys])
+
+
+MOUTHS = {
+    "rest": dict(open=1, narrow=1, smile=0, wide=0, lift=0),
+    "a": dict(open=1.08, narrow=1.0, smile=-2, wide=3, lift=-1),
+    "o": dict(open=0.82, narrow=0.72, smile=2, wide=-13, lift=1),
+    "e": dict(open=0.5, narrow=1.06, smile=-5, wide=5, lift=-2),
+    "i": dict(open=0.32, narrow=1.04, smile=-6, wide=7, lift=-2),
+    "u": dict(open=0.42, narrow=0.64, smile=2, wide=-16, lift=1),
+    "l": dict(open=0.62, narrow=0.95, smile=-3, wide=2, lift=-1),
+    "m": dict(open=0.13, narrow=0.9, smile=-6, wide=-4, lift=0),
+    "smile": dict(open=0.13, narrow=0.92, smile=-16, wide=-3, lift=4),
+    "ha": dict(open=1.22, narrow=1.04, smile=-8, wide=6, lift=-3),
+    "hm": dict(open=0.7, narrow=1.0, smile=-7, wide=5, lift=-2),
+}
+EYES = {
+    "open": dict(eu=0, ed=0, ea=0, ecx=0, ecy=0, glint=1),
+    "blink": dict(eu=12, ed=-7.5, ea=-10, ecx=1, ecy=2, glint=0),
+    "squint": dict(eu=0.5, ed=-15, ea=-25, ecx=4, ecy=6, glint=0),
+    "soft": dict(eu=4, ed=-1.5, ea=-1.5, ecx=0, ecy=0.5, glint=1),
+    "wide": dict(eu=-2.5, ed=1, ea=1, ecx=0, ecy=0, glint=1),
+}
+OPEN_E = (0.25, 1.55, 0.5, 1)      # snappy open with an overshoot
+CLOSE_E = (0.45, 0, 0.55, 1)
+LAG = {"lips": 3, "cheek": 4, "head": 3}
+
+
+class Talk:
+    """Face choreography of one character over a loop of `dur` frames, authored as beats (syllables, laughs,
+    blinks, squints, glances); follow-through channels (lips, cheeks, head turn, teeth) are derived at build."""
+
+    def __init__(self, R, dur, seed=0.0):
+        self.R, self.dur, self.seed = R, dur, seed
+        self.k = {c: [] for c in FACE_CH}
+        self.mouth_now = "rest"
+
+    def key(self, c, f, v, e="sine"):
+        self.k[c].append((f, v, e))
+
+    def pose(self, f, e="sine", **vals):
+        for c, v in vals.items():
+            self.key(c, f, v, e)
+
+    def mouth(self, f, m, e="sine", scale=1.0):
+        vals = dict(MOUTHS[m])
+        vals["open"] = vals["open"] * scale if scale != 1.0 else vals["open"]
+        self.pose(f, e, **vals)
+        self.mouth_now = m
+
+    def say(self, t0, sylls, per, end="smile", tongue=True):
+        """Syllables: each opens with an overshoot and half-closes before the next; durations wobble."""
+        t = t0
+        for i, sy in enumerate(sylls.split()):
+            d = per * (1 + 0.2 * math.sin(i * 2.3 + self.seed))
+            mid = MOUTHS[sy]
+            # between syllables the jaw half-closes (fully on m)
+            self.pose(t, OPEN_E, open=0.13 if sy == "m" else 0.24 + 0.12 * math.sin(i * 1.7 + self.seed))
+            self.pose(t + d * 0.42, CLOSE_E, **mid)
+            self.pose(t, OPEN_E, **{c: v for c, v in mid.items() if c != "open"})
+            if tongue:
+                self.key("tlift", t + d * 0.5, -13 if sy == "l" else (-4 if sy in ("e", "i") else 2), "sine")
+                self.key("twig", t + d * 0.5, 0.1 * math.sin(i * 2.9 + self.seed), "sine")
+                self.key("tx", t + d * 0.5, 3 * math.sin(i * 1.3 + self.seed), "sine")
+            t += d
+        self.mouth(t, end, CLOSE_E)
+        if tongue:
+            for c in ("tlift", "twig", "tx"):
+                self.key(c, t + 2, 0, "sine")
+        return t
+
+    def laugh(self, t0, n, per, eyes=True):
+        """Ha-ha-ha: wide overshooting pulses, squinting eyes, raised brows, a tongue that wiggles."""
+        if eyes:
+            self.eye(t0 - 4, "open", "out")
+            self.eye(t0 + 2, "squint", "hold")
+            self.eye(t0 + n * per, "squint", "io")
+            self.eye(t0 + n * per + 8, "open", "hold")
+            self.key("brow", t0 - 4, 0, "out")
+            self.key("brow", t0 + 3, -6, "hold")
+            self.key("brow", t0 + n * per, -6, "io")
+            self.key("brow", t0 + n * per + 10, 0, "hold")
+        for i in range(n):
+            t = t0 + i * per
+            self.mouth(t, "hm" if i else self.mouth_now, OPEN_E)
+            self.mouth(t + per * 0.45, "ha", CLOSE_E, scale=1.0 - 0.06 * i)
+            self.key("tilt", t + per * 0.45, (0.06 if i % 2 else -0.05), "sine")
+            self.key("twig", t + per * 0.45, (0.2 if i % 2 else -0.2), "sine")
+            self.key("tlift", t + per * 0.45, -6, "sine")
+            self.key("tcurl", t + per * 0.45, 0.84, "sine")
+        t = t0 + n * per
+        self.mouth(t, "hm", "sine")
+        for c, v in (("tilt", 0), ("twig", 0), ("tlift", 0), ("tcurl", 1)):
+            self.key(c, t + 4, v, "sine")
+        return t
+
+    def eye(self, f, pose, e="sine"):
+        self.pose(f, e, **EYES[pose])
+
+    def blink(self, t, back="open"):
+        self.eye(t, back, (0.55, 0, 0.9, 0.5))
+        self.eye(t + 3, "blink", "hold")
+        self.eye(t + 5, "blink", "out")
+        self.eye(t + 12, back, "hold")
+
+    def look(self, f, x, y=0, e="io", dur=8):
+        self.key("gx", f, self.k["gx"][-1][1] if self.k["gx"] else 0, e)
+        self.key("gy", f, self.k["gy"][-1][1] if self.k["gy"] else 0, e)
+        self.key("gx", f + dur, x, "hold")
+        self.key("gy", f + dur, y, "hold")
+
+    def brows(self, f, y, t=0.0, e="back", dur=8):
+        self.key("brow", f, self.k["brow"][-1][1] if self.k["brow"] else 0, e)
+        self.key("browt", f, self.k["browt"][-1][1] if self.k["browt"] else 0, e)
+        self.key("brow", f + dur, y, "hold")
+        self.key("browt", f + dur, t, "hold")
+
+    def build(self, start_rest=True, end_rest=True):
+        """-> [(object id, property, keys)] for every channel. By default each starts and ends at rest, so an idle
+        loop is seamless; a transition can leave the face mid-expression (end_rest=False) or pick one up."""
+        dur, R = self.dur, self.R
+        k = {c: list(v) for c, v in self.k.items()}
+        # follow-through: lips squash/stretch trails the jaw, cheeks trail the smile, the head trails the gaze
+        hide = lambda v: 1 - min(1, max(0, (v - 0.12) / 0.43))      # 1 when the mouth is (nearly) shut
+        lin = lambda e: "hold" if e == "hold" else "lin"
+        k["teeth"] = [(f, -24 * hide(v), lin(e)) for f, v, e in k["open"]]
+        k["tdrop"] = [(f, 46 * hide(v), lin(e)) for f, v, e in k["open"]]
+        lg = LAG["lips"]
+        k["lipsy"] = [(f + lg, 1 + 0.08 * (v - 0.6), e) for f, v, e in k["open"]]
+        k["lipsx"] = [(f + lg, 1 - 0.05 * (v - 0.6), e) for f, v, e in k["open"]]
+        lg = LAG["cheek"]
+        cl = lambda v: max(-9, min(3, v))
+        k["cheek"] = [(f + lg, 0.8 * cl(v), e) for f, v, e in k["smile"]]
+        k["cheeksx"] = [(f + lg, 1 - 0.015 * cl(v), e) for f, v, e in k["smile"]]
+        k["cheeksy"] = [(f + lg, 1 + 0.035 * cl(v), e) for f, v, e in k["smile"]]
+        k["head"] = [(f + LAG["head"], 0.4 * v, e) for f, v, e in k["gx"]]
+        out = []
+        for c, keys in k.items():
+            rest = FACE_REST[c]
+            byf = {}
+            for f, v, e in keys:
+                f = int(round(f))
+                if 0 <= f <= dur:
+                    byf[f] = (v, e)
+            if start_rest:
+                byf[0] = (rest, byf.get(0, (rest, "sine"))[1])
+            if end_rest or not byf:
+                byf[dur] = (rest, "hold")
+            ks = [(f, v, e) for f, (v, e) in sorted(byf.items())]
+            if start_rest and all(abs(v - rest) < 1e-6 for _f, v, _e in ks):
+                continue   # never leaves rest here: other timelines' rest holds cover it
+            # per object/property
+            for i, (obj, prop, _v) in enumerate(face_value(R, c, rest)):
+                out.append((obj, prop, [(f, round(face_value(R, c, v)[i][2], 4), e) for f, v, e in ks]))
+        return out
+
+
+def converse(A, B, t0=0, da=1, db=-1):
+    """A 240-frame exchange from t0: A talks while B listens (soft eyes, closed smile, a raised brow), both laugh
+    with B a beat late, then B answers while A listens. da / db: which way each one looks to find the other.
+    Tempi, blinks and glances differ per character so the pair never moves in step."""
+    f = lambda x: t0 + x
+    A.look(f(2), 6 * da, -1)
+    A.brows(f(4), -3, 0.1)
+    t = A.say(f(8), "a e l o m i a", 9.5, end="smile")
+    A.brows(t - 4, 0, 0)
+    A.blink(f(60))
+    A.laugh(f(94), 4, 9)
+    A.mouth(f(140), "hm", "sine")
+    A.mouth(f(150), "smile", "hold")
+    A.eye(f(140), "open", "io")
+    A.eye(f(148), "soft", "hold")
+    A.look(f(140), 7 * da, 0)
+    A.blink(f(166), back="soft")
+    A.brows(f(178), -5, -0.12, dur=6)
+    A.brows(f(190), 0, 0, e="sine", dur=10)
+    A.look(f(198), 0, 2, dur=10)
+    A.eye(f(206), "soft", "io")
+    A.eye(f(214), "open", "hold")
+    A.mouth(f(214), "smile", OPEN_E)
+    A.mouth(f(224), "rest", "hold")
+    B.mouth(f(4), "rest", "sine")
+    B.mouth(f(14), "smile", "hold")
+    B.look(f(6), 6 * db, 1)
+    B.eye(f(10), "open", "io")
+    B.eye(f(18), "soft", "hold")
+    B.blink(f(40), back="soft")
+    B.brows(f(56), -6, 0.15, dur=7)
+    B.brows(f(68), 0, 0, e="sine", dur=12)
+    B.eye(f(84), "soft", "io")
+    B.eye(f(92), "open", "hold")
+    B.mouth(f(86), "smile", "hold")
+    B.laugh(f(100), 3, 11)
+    B.look(f(134), 7 * db, -2)
+    B.say(f(146), "o a i e l a", 12.5, end="rest")
+    B.blink(f(200))
+    B.look(f(214), 0, 0, dur=12)
+
+
+def monologue(V, d=-1):
+    """180 frames: another voice talks into the listener's ear, laughs, and goes on (persona 2)."""
+    V.look(2, 5 * d, 1)
+    t = V.say(6, "a o e l a i", 11, end="hm")
+    V.blink(30)
+    t = V.laugh(t + 4, 2, 9)
+    V.look(t + 2, 2 * d, -1)
+    t = V.say(t + 10, "e o m a", 12, end="rest")
+    V.blink(t + 4)
+    V.look(t + 6, 0, 0, dur=10)
 
 
 def motif_bubble(prefix, color, shade, mirror=False, s=1.0, with_face=True, ids=None, tongue=PD, light=None,
-                 look=None, morph=False):
+                 look=None, morph=False, rigged=True):
     ids = ids if ids is not None else {}
     ids.setdefault("root", nid())
     ids.setdefault("bob", nid())
@@ -501,7 +873,8 @@ def motif_bubble(prefix, color, shade, mirror=False, s=1.0, with_face=True, ids=
     look = (-14 if mirror else 14) if look is None else look
     kids = []
     if with_face:
-        kids.append(face(prefix, s, ids=ids, tongue=tongue, look=look))
+        kids.append(face(prefix, s, ids=ids, tongue=tongue, look=look,
+                         cheek={P: "70FF5C7A", L: "60F27AA6"}.get(color, "60FF5C7A"), rigged=rigged))
     kids.append(shape(f"{prefix} highlight", [ellipse(46 * s, 22 * s)],
                       [fill("88FFFFFF", feather=(7 * s,))], x=(52 if mirror else -52) * s, y=-62 * s,
                       rot=0.7 if mirror else -0.7))
@@ -1079,21 +1452,35 @@ s.mouth_hit = (195, 548, 330, 250)
 ids3 = top_copy(s, 3, unit_y=92, head_y=132, f0=40)
 ids3.update(caption(s, 3, ink=D))
 MOUTH = {"outer": nid(), "breath": nid(), "elastic": nid(), "open": nid(), "teeth": nid(), "tongue": nid(),
-         "lips": nid(), "inner": nid(), "lipverts": [nid() for _ in range(10)]}
+         "lips": nid(), "inner": nid(), "lipverts": [nid() for _ in range(10)], "openverts": [nid() for _ in range(8)],
+         "TB": nid(), "TT": nid()}
 # lips: 10 all-cubic vertices, ordered like the speech-form body so the mouth can morph into a speech bubble
 LIPS = [(0, -96), (36, -122), (106, -112), (178, 0, "c", 30), (106, 120), (0, 134), (-106, 120), (-178, 0, "c", 30),
         (-106, -112), (-36, -122)]
 LIPS_PUCKER = [(0, -100), (30, -128), (86, -120), (138, 0, "c", 20), (86, 128), (0, 142), (-86, 128), (-138, 0, "c", 20),
                (-86, -120), (-30, -128)]
 opening = [(-134, 0, "c", 34), (-64, -64), (0, -58), (64, -64), (134, 0, "c", 34), (64, 80), (0, 92), (-64, 80)]
+# the cavity talks in a slow "ah - oh - ee - mm" (true vertex morph; the numerals stay framed in every shape)
+OPEN_OH = [(round(p[0] * 0.8, 2), round(p[1] * (1.16 if p[1] > 0 else 1.07), 2)) + tuple(p[2:]) for p in opening]
+OPEN_EE = [(round(p[0] * 1.08, 2), round(p[1] * (0.72 if p[1] > 0 else 0.92), 2)) + tuple(p[2:]) for p in opening]
+OPEN_MM = [(round(p[0] * 0.97, 2), round(p[1] * (0.76 if p[1] > 0 else 0.88), 2)) + tuple(p[2:]) for p in opening]
+# a two-bone tongue (root + tip) skinned in the inner frame, clipped to the cavity
+TONGUE3 = [(-82, 104), (-68, 76), (-36, 56), (0, 50), (36, 56), (68, 76), (82, 104), (0, 122)]
 hid, hx, hc = hero_number("S3 hero", "practiceMinutes", -122, -52, 244, 104, WP, align="center", wdth=100, ls=-3)
 s.hero = hid
 mouth_xml = node("S3 mouth", [node("S3 mouth breath", [node("S3 mouth elastic", [
     node("S3 mouth inner", [
         hx,
-        shape("S3 teeth", [rect(124, 24, 9)], [fill(WP)], id=MOUTH["teeth"], y=-50),
-        shape("S3 tongue", [ellipse(150, 40)], [fill(PD)], id=MOUTH["tongue"], y=66),
-        shape("S3 opening", [smooth_path(opening)], [fill(DD)], id=MOUTH["open"]),
+        node("S3 cavity", [
+            E("ClippingShape", {"sourceId": MOUTH["open"], "name": "Cavity clip"}),
+            shape("S3 teeth", [rect(124, 24, 9)], [fill(WP)], id=MOUTH["teeth"], y=-50),
+            node("S3 tongue wag", [bone("S3 tongue root", 0, 96, [bone("S3 tongue tip", 0, -36, [
+                shape("S3 tongue crease", [smooth_path([(0, -2), (0, 22)], closed=False)], [stroke("44000000", 5)])],
+                id=MOUTH["TT"])], id=MOUTH["TB"])], id=MOUTH["tongue"]),
+            shape("S3 tongue", [skinned_path(cubic_attrs(TONGUE3), TONGUE_W, [(MOUTH["TB"], 0, 96), (MOUTH["TT"], 0, 60)])],
+                  [fill(PD)]),
+        ]),
+        shape("S3 opening", [cubic_path(opening, MOUTH["openverts"])], [fill(DD)], id=MOUTH["open"]),
         shape("S3 lip glint", [ellipse(90, 16)], [fill("66FFFFFF", feather=(4,))], x=-70, y=-96, rot=-0.15),
         shape("S3 lip glint 2", [ellipse(40, 10)], [fill("55FFFFFF", feather=(3,))], x=86, y=104, rot=-0.3),
     ], id=MOUTH["inner"]),
@@ -1122,8 +1509,28 @@ for i, (x, y, sz, col) in enumerate([(64, 640, 22, WP), (336, 560, 16, D)]):
     pop(s, sp, 70 + i * 8, 22, "back2", rot0=-1)
     s.itrack(sp, "rotation", [(0, 0, "sine"), (120, 0.5, "sine"), (240, 0, "hold")])
 s.parts.append(ground("S3 shadow", 260, 30, "55A894E6", 195, 718))
-s.itrack(MOUTH["breath"], "scaleY", [(0, 1, "sine"), (60, 1.035, "sine"), (120, 1, "sine"), (180, 1.035, "sine"), (240, 1, "hold")])
-s.itrack(MOUTH["breath"], "scaleX", [(0, 1, "sine"), (60, 0.985, "sine"), (120, 1, "sine"), (180, 0.985, "sine"), (240, 1, "hold")])
+S3_TALK = [(0, opening, "sine"), (26, OPEN_OH, CLOSE_E), (50, opening, OPEN_E), (84, OPEN_EE, "sine"), (104, OPEN_EE, CLOSE_E),
+           (124, OPEN_MM, OPEN_E), (146, opening, "sine"), (174, OPEN_OH, CLOSE_E), (198, opening, "sine"), (240, opening, "hold")]
+S3_IDLE = Anim("S3 mouth talk (idle tracks)", 240)
+key_morph(S3_IDLE, MOUTH["openverts"], S3_TALK, opening)
+# lips: squash and stretch trailing each cavity shape by 4 frames, with an overshoot
+LIPS_SS = {id(opening): (1, 1), id(OPEN_OH): (0.95, 1.05), id(OPEN_EE): (1.04, 0.96), id(OPEN_MM): (1.02, 0.97)}
+for i_, prop_ in enumerate(("scaleX", "scaleY")):
+    S3_IDLE.k(MOUTH["breath"], prop_, [(min(240, f + 4) if 0 < f < 240 else f, LIPS_SS[id(p)][i_], "back" if e != "hold" else e)
+                                        for f, p, e in S3_TALK])
+S3_IDLE.k(MOUTH["teeth"], "y", [(0, -50, "sine"), (26, -55, CLOSE_E), (50, -50, OPEN_E), (84, -45, "sine"), (104, -45, CLOSE_E),
+                                (124, -47, OPEN_E), (146, -50, "sine"), (174, -55, CLOSE_E), (198, -50, "sine"), (240, -50, "hold")])
+S3_IDLE.k(MOUTH["TT"], "y", [(0, -36, "sine"), (30, -36, "sine"), (44, -58, "back"), (60, -40, "sine"), (88, -60, "sine"),
+                             (104, -50, "sine"), (128, -30, "sine"), (150, -36, "sine"), (180, -56, "back"), (200, -36, "sine"),
+                             (240, -36, "hold")])
+S3_IDLE.k(MOUTH["TT"], "rotation", [(0, 0, "sine"), (36, 0.14, "sine"), (52, -0.1, "sine"), (68, 0.06, "sine"), (96, 0, "sine"),
+                                    (150, -0.12, "sine"), (166, 0.12, "sine"), (184, -0.05, "sine"), (210, 0, "sine"), (240, 0, "hold")])
+S3_IDLE.k(MOUTH["TT"], "scaleX", [(0, 1, "sine"), (26, 0.82, "sine"), (52, 1, "sine"), (86, 1.08, "sine"), (124, 0.9, "sine"),
+                                  (150, 1, "sine"), (176, 0.82, "sine"), (204, 1, "sine"), (240, 1, "hold")])
+S3_IDLE.k(MOUTH["TB"], "x", [(0, 0, "sine"), (60, 7, "sine"), (120, -5, "sine"), (190, 4, "sine"), (240, 0, "hold")])
+for obj_, props_ in S3_IDLE.tracks.items():
+    for prop_, (kind_, keys_) in props_.items():
+        s.itrack(obj_, prop_, keys_, kind_)
 
 # ---------- 4. Phrases saved -------------------------------------------------
 s = Scene(4, D)
@@ -1339,12 +1746,37 @@ for i, (col, pts, words, ink, opconv) in enumerate(rib_specs):
     drift = -0.12 if i != 1 else 0.12
     s.itrack(tmod, "offset", [(0, 0, "sine"), (300, drift, "sine"), (600, 0, "hold")])
     s.itrack(rid, "y", [(0, 0, "sine"), (150 + i * 20, -8 + i * 5, "sine"), (600, 0, "hold")])
-weave = shape("S6 weave over", [smooth_path(rib_specs[2][1], closed=False)],
+# The weave: one segment of the plum ribbon is drawn again over the lilac ribbon, so the plum band passes over
+# the lilac and *under* the persimmon one. It sits between those two in the draw order (top first: persimmon,
+# weave, lilac, plum), draws on with the plum band's reveal and drifts with it.
+W0, W1 = 0.62, 0.78
+weave_id, weave_trim = nid(), nid()
+weave = shape("S6 weave (plum over lilac, under persimmon)", [smooth_path(rib_specs[2][1], closed=False)],
               [E("Stroke", {"thickness": 36, "cap": "butt", "join": "round", "name": "Band"},
-                 [solid(D), E("TrimPath", {"start": 0.62, "end": 0.78, "modeValue": "sequential", "name": "Segment"})])],
-              id=nid(), binds=[bind(V("languagesPractised"), 18, C_RIB3)])
-s.parts.append(node("S6 ribbons", [E("ClippingShape", {"sourceId": S6_CLIP, "name": "Art column clip"}), weave]
-                    + rib_parts, id=nid()))
+                 [solid(D), E("TrimPath", {"start": W0, "end": W1, "modeValue": "sequential", "name": "Segment",
+                                           "id": weave_trim})])],
+              id=weave_id, binds=[bind(V("languagesPractised"), 18, C_RIB3)])
+
+
+def _io_time(y, c=(0.65, 0, 0.35, 1)):
+    """Time fraction at which the cubic ease c reaches progress y (bisection)."""
+    bz = lambda t, a, b: 3 * (1 - t) ** 2 * t * a + 3 * (1 - t) * t * t * b + t ** 3
+    lo, hi = 0.0, 1.0
+    for _ in range(40):
+        m = (lo + hi) / 2
+        if bz(m, c[1], c[3]) < y:
+            lo = m
+        else:
+            hi = m
+    # convert the bezier parameter to time
+    return bz(lo, c[0], c[2])
+
+
+_f0 = 20 + 2 * 12   # the plum band's reveal: trim end 0 -> 1 from _f0 to _f0 + 44 ("io")
+s.track(weave_trim, "end", [(0, W0, "hold"), (_f0 + 44 * _io_time(W0), W0, "lin"), (_f0 + 44 * _io_time(W1), W1, "hold")])
+s.itrack(weave_id, "y", [(0, 0, "sine"), (150 + 2 * 20, -8 + 2 * 5, "sine"), (600, 0, "hold")])
+s.parts.append(node("S6 ribbons", [E("ClippingShape", {"sourceId": S6_CLIP, "name": "Art column clip"}),
+                                   rib_parts[0], weave] + rib_parts[1:], id=nid()))
 s.parts.append(ground("S6 shadow", 300, 26, "44C7B7F2", 195, 712))
 s.idle_dur = 600
 
@@ -1494,6 +1926,7 @@ def build_emblems(scale=1.0, tag="E"):
     dict(root, xml, rev tracks, idle tracks, dur, ring colours)."""
     S_ = scale
     out = []
+    rigged = tag == "E"     # the share cards' emblems are static: same art, no face rig
 
     def tick(name, x, y, rot, col, w=7, h=30):
         i_ = nid()
@@ -1501,8 +1934,8 @@ def build_emblems(scale=1.0, tag="E"):
 
     # 0 Conversation Starter: two laughing speech forms hug a little world (concept screen 9)
     ia, ib = {}, {}
-    a = motif_bubble(f"{tag}0 bubble A", P, PD, False, 0.88 * S_, ids=ia, look=-22)
-    b = motif_bubble(f"{tag}0 bubble B", L, LD, True, 0.84 * S_, ids=ib, look=22)
+    a = motif_bubble(f"{tag}0 bubble A", P, PD, False, 0.88 * S_, ids=ia, look=-22, rigged=rigged)
+    b = motif_bubble(f"{tag}0 bubble B", L, LD, True, 0.84 * S_, ids=ib, look=22, rigged=rigged)
     root, globe, land, gclip = nid(), nid(), nid(), nid()
     R = 80
     lands = []
@@ -1529,19 +1962,32 @@ def build_emblems(scale=1.0, tag="E"):
            (ib["root"], "rotation", [(0, 0.8, "hold"), (16, 0.8, "back"), (50, 0, "hold")]),
            (globe, "scaleX", [(0, 0, "hold"), (2, 0, "el2"), (44, 1, "hold")]),
            (globe, "scaleY", [(0, 0, "hold"), (2, 0, "el2"), (44, 1, "hold")]),
-           (land, "x", [(0, -2 * R * S_, "hold"), (2, -2 * R * S_, "out"), (60, 0, "hold")]),
-           (ia["mouth"], "scaleY", [(0, 0.3, "hold"), (30, 0.3, "back2"), (48, 1, "hold")]),
-           (ib["mouth"], "scaleY", [(0, 0.3, "hold"), (38, 0.3, "back2"), (56, 1, "hold")])]
+           (land, "x", [(0, -2 * R * S_, "hold"), (2, -2 * R * S_, "out"), (60, 0, "hold")])]
+    # reveal: both burst out laughing as they land (the persona idle takes over with the conversation); every face
+    # channel ends at rest, which is what the settled persona and the share card hold
+    ta, tb = Talk(ia["rig"], 70, 0.4), Talk(ib["rig"], 70, 2.1)
+    ta.laugh(28, 3, 9)
+    tb.laugh(36, 3, 10)
+    rev += (ta.build() + tb.build()) if rigged else []
     for k, (ti, _x) in enumerate(ticks):
         rev += [(ti, "scaleY", [(0, 0, "hold"), (44 + k * 4, 0, "back2"), (60 + k * 4, 1, "hold")])]
     WRAPS.add((land, "x"))  # two copies of the land, 2R apart: 0 -> -2R is a seamless spin
     idle = [(land, "x", [(0, 0, "lin"), (480, -2 * R * S_, "hold")]),
             (ia["bob"], "rotation", [(0, 0, "sine"), (120, 0.06, "sine"), (240, 0, "sine"), (480, 0, "hold")]),
             (ib["bob"], "rotation", [(0, 0, "sine"), (120, -0.06, "sine"), (240, 0, "sine"), (480, 0, "hold")]),
-            (ia["mouth"], "scaleY", [(0, 1, "sine"), (30, 0.55, "sine"), (60, 1, "hold"), (240, 1, "sine"), (270, 0.6, "sine"),
-                                     (300, 1, "hold"), (480, 1, "hold")]),
-            (ib["mouth"], "scaleY", [(0, 1, "hold"), (120, 1, "sine"), (150, 0.55, "sine"), (180, 1, "hold"), (360, 1, "sine"),
-                                     (390, 0.6, "sine"), (420, 1, "hold"), (480, 1, "hold")])]
+            ]
+    # two conversations per loop: A starts the first, B the second; each looks across the globe to the other
+    ta, tb = Talk(ia["rig"], 480, 0.4), Talk(ib["rig"], 480, 2.1)
+    converse(ta, tb, 0, 1, -1)
+    # second half: quieter -- both look out at the viewer, share one laugh, then glance back at each other
+    for t_, d_, o_ in ((ta, 1, 0), (tb, -1, 7)):
+        t_.look(250 + o_, -2 * d_, 2)
+        t_.blink(276 + o_ * 3)
+        t_.laugh(320 + o_, 3, 9 + o_ / 3)
+        t_.look(372 + o_, 6 * d_, 0)
+        t_.blink(420 - o_ * 2)
+        t_.look(450, 0, 0, dur=12)
+    idle += (ta.build() + tb.build()) if rigged else []
     for k, (ti, _x) in enumerate(ticks):
         idle.append((ti, "opacity", [(0, 1, "sine"), (60 + k * 50, 0.35, "sine"), (480, 1, "hold")]))
     out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 480, "rings": (LL, Y, WP), "ground": "55A894E6"})
@@ -1582,7 +2028,7 @@ def build_emblems(scale=1.0, tag="E"):
         kids.append(shape(f"{tag}2 ripple {i}", [smooth_path([(0, -90 * S_), (40 * S_, 0), (0, 90 * S_)], closed=False)],
                           [stroke(D if i != 1 else P, 10 * S_)], id=ri, x=(40 + i * 40) * S_, y=-30 * S_))
     vb = {}
-    voice = node(f"{tag}2 voice", [motif_bubble(f"{tag}2 voice bubble", L, LD, True, 0.42 * S_, ids=vb, look=-10)],
+    voice = node(f"{tag}2 voice", [motif_bubble(f"{tag}2 voice bubble", L, LD, True, 0.42 * S_, ids=vb, look=-10, rigged=rigged)],
                  id=(VOICE_ID := nid()), x=150 * S_, y=-120 * S_)
     paren = [(34, -150), (-36, -82), (-56, 0), (-36, 82), (34, 150)]
     xml = node(f"{tag}2 careful listener", [voice] + kids + [
@@ -1604,8 +2050,13 @@ def build_emblems(scale=1.0, tag="E"):
         ph = i * 30
         idle += [(ri, "scaleY", [(0, 1, "sine"), (ph + 30, 1.18, "sine"), (ph + 90, 0.9, "sine"), (180, 1, "hold")]),
                  (ri, "opacity", [(0, 1, "sine"), (ph + 30, 0.45, "sine"), (ph + 90, 1, "hold"), (180, 1, "hold")])]
-    idle += [(inner, "rotation", [(0, 0, "sine"), (90, 0.12, "sine"), (180, 0, "hold")]),
-             (vb["mouth"], "scaleY", [(0, 1, "sine"), (45, 0.5, "sine"), (90, 1, "sine"), (135, 0.5, "sine"), (180, 1, "hold")])]
+    idle += [(inner, "rotation", [(0, 0, "sine"), (90, 0.12, "sine"), (180, 0, "hold")])]
+    tv = Talk(vb["rig"], 180, 3.3)
+    monologue(tv, -1)
+    idle += tv.build() if rigged else []
+    tv = Talk(vb["rig"], 60)
+    tv.say(4, "a o e", 10, end="rest")
+    rev += [(o_, p_, [(f + 50, v, e) for f, v, e in ks]) for o_, p_, ks in tv.build()] if rigged else []
     out.append({"root": root, "xml": xml, "rev": rev, "idle": idle, "dur": 180, "rings": (P, L, WP), "ground": "66E2D15A"})
 
     # 3 Brave Improviser: an elastic exclamation mark that jumps, squashes and bursts
@@ -2085,7 +2536,16 @@ def elongate(a, which, start=None, dur=32):
                [(0, BUB_REST, "hold"), (dur * 0.08, BUB_REST, "out"), (dur * 0.3, BUB_SQUASH, (0.5, 0, 0.2, 1)),
                 (dur, BUB_TALL, "hold")])
     a.k(M["face"], "opacity", [(0, 1, "hold"), (dur * 0.45, 1, "lin"), (dur * 0.7, 0, "hold")])
-    a.k(M["mouth"], "scaleY", [(0, 1, "out"), (dur * 0.3, 0.4, "out"), (dur * 0.6, 1.3, "hold")])
+    t = Talk(M["rig"], dur)
+    t.mouth(0, "rest", "sine")
+    t.mouth(dur * 0.3, "o", OPEN_E)              # gather: a little gulp while the body squashes
+    t.mouth(dur * 0.55, "ha", "hold")           # stretch: a wide whoop as it elongates
+    t.eye(0, "open", "sine")
+    t.eye(dur * 0.3, "wide", (0.5, 0, 0.6, 1))
+    t.eye(dur * 0.55, "squint", "hold")
+    t.brows(0, -7, 0.12, dur=dur * 0.3)
+    t.look(0, 0, -3, dur=dur * 0.3)
+    face_tracks(a, t.build(end_rest=False))
     plate(a, col)
 
 
@@ -2184,12 +2644,16 @@ for n in range(1, 11):
             a.k(obj, prop_, keys, kind)
     if a_pose != OFF_A and n != 9:
         a.k(MA["bob"], "y", [(0, 0, "sine"), (sc.idle_dur / 2, -8, "sine"), (sc.idle_dur, 0, "hold")])
-        a.k(MA["mouth"], "scaleY", [(0, 1, "sine"), (24, 0.6, "sine"), (48, 1, "hold"), (sc.idle_dur, 1, "hold")])
     if b_pose != OFF_B and n != 9:
         a.k(MB["bob"], "y", [(0, -6, "sine"), (sc.idle_dur / 2, 2, "sine"), (sc.idle_dur, -6, "hold")])
-        half = sc.idle_dur / 2
-        a.k(MB["mouth"], "scaleY", [(0, 1, "hold"), (half, 1, "sine"), (half + 24, 0.6, "sine"), (half + 48, 1, "hold"),
-                                    (sc.idle_dur, 1, "hold")])
+    if a_pose != OFF_A and b_pose != OFF_B and n != 9:
+        # the conversation: scene 2 opens with the persimmon form talking, scene 1 with the lilac one
+        ta, tb = Talk(MA["rig"], sc.idle_dur, 0.2 + n), Talk(MB["rig"], sc.idle_dur, 1.7 + n)
+        if n == 1:
+            converse(tb, ta, 0, -1, 1)
+        else:
+            converse(ta, tb, 0, 1, -1)
+        face_tracks(a, ta.build() + tb.build())
 
 # ---- persona anticipation: the motif pair circles, winds up and collapses into the emblem ----
 s9 = SCENES[9]
@@ -2203,8 +2667,16 @@ motif_pose(a, MB, [(0, OFF_B, "hold"), (14, (-60, cy, 0.6, 0.6, -0.4, 1), "out")
                    (42, (195, cy + 70, 0.56, 0.56, -0.3, 1), "sine"), (54, (112, cy, 0.6, 0.6, -0.5, 1), "antic"),
                    (68, (195, cy + 20, 0.02, 0.02, -1.4, 0), "hold"), (69, OFF_B, "hold")],
            [(0, BUB_REST, "hold"), (50, BUB_REST, "sine"), (58, BUB_SQUASH, "in"), (68, BUB_TALL, "hold")])
-a.k(MA["mouth"], "scaleY", [(0, 1, "sine"), (30, 0.5, "sine"), (44, 1.2, "sine"), (68, 1, "hold")])
-a.k(MB["mouth"], "scaleY", [(0, 1, "sine"), (36, 1.25, "sine"), (50, 0.5, "sine"), (68, 1, "hold")])
+ta, tb = Talk(MA["rig"], 68, 0.9), Talk(MB["rig"], 68, 2.6)
+ta.look(4, 5, -2)
+ta.laugh(12, 4, 8)
+ta.mouth(50, "o", OPEN_E)
+tb.look(6, -5, -2)
+tb.laugh(18, 3, 10)
+tb.mouth(54, "u", OPEN_E)
+for t_ in (ta, tb):
+    t_.brows(50, -7, 0.1, dur=6)
+face_tracks(a, ta.build() + tb.build())
 
 # ---- special continuity transitions ----------------------------------------
 # 1 -> 2: the two speech forms are carried down into the conversation scene, landing with a squash
@@ -2240,6 +2712,11 @@ motif_keys(a, MB, [(0, s2.motifB, "in"), (24, (560, 700, 1.0, 1.0, 0.6, 1), "hol
 a.k(MA["mouth"], "scaleY", [(0, 1, "io"), (34, 1.9, "hold")])
 a.k(MA["mouth"], "scaleX", [(0, 1, "io"), (34, 1.25, "hold")])
 a.k(MA["eyes"], "opacity", [(0, 1, "lin"), (26, 0, "hold")])
+t = Talk(MA["rig"], 34)
+t.key("jo", 0, 0, "sine")
+t.key("jo", 6, -3, OPEN_E)      # a gulp, then the jaw drops wide open as it flies in
+t.key("jo", 18, 34, "hold")
+face_tracks(a, t.build(end_rest=False))
 a.k(s2.root, "opacity", [(0, 1, "in"), (26, 0, "hold")])
 a = anim("03 Carry In (from 2)", 120, scene=3)
 s3.anim_carry = a
@@ -2252,6 +2729,9 @@ a.k(MA["root"], "opacity", [(0, 1, "lin"), (12, 0, "hold"), (19, 1, "hold")])
 a.k(MA["mouth"], "scaleY", [(0, 1.9, "hold"), (19, 1, "hold")])
 a.k(MA["mouth"], "scaleX", [(0, 1.25, "hold"), (19, 1, "hold")])
 a.k(MA["eyes"], "opacity", [(0, 0, "hold"), (19, 1, "hold")])
+t = Talk(MA["rig"], 19)
+t.key("jo", 0, 34, "hold")
+face_tracks(a, t.build(start_rest=False))
 motif_pose(a, MB, [(0, OFF_B, "hold")])
 apply_enter(a, s3)
 a.k(MOUTH["outer"], "scaleX", [(0, 0.7, "hold"), (8, 0.7, "el2"), (50, 1, "hold")])
@@ -2287,6 +2767,12 @@ apply_enter(a, s4, offset=6)
 # restore scene 3 parts that the signature changed
 for an in [s3.anim_in, s3.anim_backin, s3.anim_rm, s3.anim_carry]:
     key_morph(an, MOUTH["lipverts"], [(0, LIPS, "hold")], LIPS)
+    key_morph(an, MOUTH["openverts"], [(0, opening, "hold")], opening)
+    for obj_, prop_, v in ((MOUTH["teeth"], "y", -50), (MOUTH["TT"], "y", -36), (MOUTH["TT"], "rotation", 0),
+                           (MOUTH["TT"], "scaleX", 1), (MOUTH["TB"], "x", 0), (MOUTH["breath"], "scaleX", 1),
+                           (MOUTH["breath"], "scaleY", 1)):
+        if prop_ not in an.tracks.get(obj_, {}):
+            an.hold(obj_, prop_, v)
     for prop_, v in (("y", 548), ("rotation", 0)):
         an.hold(MOUTH["outer"], prop_, v)
     if an is not s3.anim_carry and an is not s3.anim_in and an is not s3.anim_backin:
@@ -2333,14 +2819,16 @@ for an in [x for x in ANIMS if x.name.endswith("In") or "Settled" in x.name or "
         an.hold(M["eyes"], "opacity", 1)
         if "opacity" not in an.tracks.get(M["face"], {}):
             an.hold(M["face"], "opacity", 1)
+        if an.name[:2] in ("01", "02", "09"):   # the scenes where the speech forms are on stage
+            face_rest(an, M["rig"])
 
 
 # mouth expressions (signature interaction, silent)
 SQ3 = anim("Mouth tap: scene 3 elastic", 60)
 SQ3.k(MOUTH["elastic"], "scaleX", [(0, 1, "out"), (6, 1.22, "el"), (60, 1, "hold")])
 SQ3.k(MOUTH["elastic"], "scaleY", [(0, 1, "out"), (6, 0.72, "el"), (60, 1, "hold")])
-SQ3.k(MOUTH["teeth"], "y", [(0, -50, "out"), (5, -40, "el"), (50, -50, "hold")])
 SQ3.k(MOUTH["tongue"], "scaleX", [(0, 1, "out"), (8, 1.25, "el"), (60, 1, "hold")])
+SQ3.k(MOUTH["tongue"], "rotation", [(0, 0, "out"), (6, 0.22, "el"), (60, 0, "hold")])
 SQ2 = anim("Mouth tap: scene 2 laugh", 50)
 SQ2.k(MA["elastic"], "scaleY", [(0, 1, "out"), (5, 0.78, "el"), (50, 1, "hold")])
 SQ2.k(MA["elastic"], "scaleX", [(0, 1, "out"), (5, 1.16, "el"), (50, 1, "hold")])

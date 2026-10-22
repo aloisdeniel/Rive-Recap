@@ -87,3 +87,47 @@ class V3D:
             else:
                 a.k(self.inputs[k], "propertyValue", (f, float(lk[k]), ease))
         return a
+
+
+# ---------------------------------------------------------------------------
+# scripts/fx3d.luau + .wgsl: ray-marched effects (drip, orbit rings, gift box)
+
+FX_NUM = ["mode", "side", "live", "x0", "y0", "w", "h", "res", "tilt", "opacity",
+          "lipX", "lipY", "hitX", "hitY", "size", "amount", "period", "surf",
+          "radius", "tube", "ring", "drops", "incline", "count", "dropSize", "spin", "precess", "roll", "spread", "gloss",
+          "fold", "tissue", "ribbon", "bow", "boxB", "boxH", "cupR", "cupH"]
+FX_COLORS = ["col0", "col1", "col2"]
+
+
+class FX:
+    """One fx3d ScriptedDrawable. `keyed` names the inputs a timeline animates (their
+    authored value is registered as the settled pose)."""
+
+    def __init__(self, g, name: str, keyed=(), **vals):
+        self.el = E("ScriptedDrawable", {"scriptAssetId": g.fx_script.id, "name": name})
+        self.inputs: dict[str, E] = {}
+        vals.setdefault("live", 1.0)
+        vals.setdefault("res", 2.0)
+        for k in FX_NUM:
+            if k not in vals:
+                continue
+            inp = E("ScriptInputNumber", {"propertyValue": float(vals[k]), "name": k})
+            if k in keyed or k == "live":
+                settle(inp, "propertyValue", float(vals[k]))
+            self.inputs[k] = inp
+            self.el.add(inp)
+        for k in FX_COLORS:
+            if k not in vals:
+                continue
+            c = argb(vals[k])
+            inp = E("ScriptInputColor", {"propertyValue": c, "name": k})
+            COLOR_OBJS.add(inp.id)
+            self.inputs[k] = inp
+            self.el.add(inp)
+        self.el.add(E("ScriptInputBoolean", {"propertyValue": False, "name": "still"}, bind(g.p("_frozen"), 245)))
+        self.el.add(E("ScriptInputNumber", {"propertyValue": 1.0, "name": "zoom"}, bind(g.p("_artScale"), 243)))
+        self.el.add(E("ScriptInputNumber", {"propertyValue": 1.0, "name": "dpr"}, bind(g.p("_dpr"), 243)))
+
+    def k(self, a, name, *kfs):
+        a.k(self.inputs[name], "propertyValue", *kfs)
+        return a

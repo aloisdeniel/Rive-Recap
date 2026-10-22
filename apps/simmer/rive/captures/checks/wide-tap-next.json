@@ -808,6 +808,13 @@
         "type": "number",
         "value": 1.35384619,
         "changed": true
+      },
+      {
+        "name": "layoutPixelRatio",
+        "path": "layoutPixelRatio",
+        "type": "number",
+        "value": 1,
+        "changed": false
       }
     ]
   },

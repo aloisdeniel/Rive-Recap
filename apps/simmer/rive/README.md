@@ -22,6 +22,7 @@ apps/simmer/rive/
   scripts/cloth.luau/.wgsl  simulated 3D tablecloth pull (GPU mesh)      } see "Improvement
   scripts/letters.luau/.wgsl steam condensing into the wordmark (scene 1) } pass" below
   scripts/riso.luau/.wgsl   risograph paper + ink-starvation stock       }
+  scripts/book.luau/.wgsl   scene 3's lit 3D cookbook (see "Cookbook fix" at the end)
   fixtures/*.json           fixture, new-user (zero), extreme / long-copy
   assets/fonts/             Bricolage Grotesque, Source Sans 3, Caveat (+ OFL texts)
   tools/build.py            generator that writes data/ and scenes/ (see "Editing")
@@ -124,6 +125,7 @@ writes, director may normalise.
 | `stageWidth`, `stageHeight`, `isLandscape` | number, number, bool | D | the artboard's real size and the orientation derived from it |
 | `layoutMargin`, `layoutTop`, `layoutBottom`, `layoutControlsY`, `layoutContinueWidth`, `layoutCopyScale`, `layoutCopyWidth`, `layoutCopyAvail`, `layoutCopyXa/b`, `layoutArtX0a/X1a/X0b/X1b`, `layoutStack`, `layoutSide` | number | D | orientation-resolved layout slots read by the scenes' formulas (layout output, not user data) |
 | `motifFrameX`, `motifFrameY`, `motifFrameScale` | number | D | the pot motif's frame: the current scene's art transform, eased over the 720 ms carry |
+| `layoutPixelRatio` | number | D | the presenting surface's device pixels per point (from the director's layout `resize`); Node scripts that allocate GPU surfaces (the cookbook) size them from it |
 | `navNextRequest`, `navPrevRequest`, `pauseToggleRequest`, `shareRequest`, `replayRequest`, `potTap` | trigger | controls → D / pot | requests; hosts may fire them too |
 | `handoffForward`, `handoffBack`, `recapFinishedSignal` | trigger | D | internal signals |
 
@@ -232,7 +234,7 @@ Hand edits to the `.rml` are overwritten on the next generation.
 | Persistent motif | The pot is one component (`Pot motif`) placed once at the root; a `Motif pose` layer carries it between scenes with a 720 ms eased move/scale/tilt (lid pops on 1 and 9, comes off for 2, closes elsewhere). |
 | Continuity transitions (≥2 carrying an object) | pot → shrinks into the bottom of the cookbook (2→3), → tilts and pours orzo into the bowl (5→6), → becomes the centre of the table (6→7), → rattles and dissolves into the persona emblem (8→9), → flies into the share card's emblem slot (9→10). |
 | Signature handoff | Every navigation fires `handoffForward` / `handoffBack`. The pot squats and puffs (anticipation); a steam ribbon with a tomato ink thread leaves the pot, curls once through the layout and billows into a risograph-printed veil that hides the cut (GPU shader), then evaporates through a halftone dot screen while its swirl keeps turning. As it clears, a simulated gingham tablecloth is pulled across the bottom of the stage (tug back, pull, billow, yank) and throws the tomato, garlic, basil and lemon riding on it. Back navigation mirrors both. See "Improvement pass". |
-| Hero sequences | 1 lid pop → vegetables thrown out in arcs, the pot's steam condenses into the wordmark and evaporates into ink; 2 three timed waves of cutouts dropping into the pot + splash + the whole stew bursting back out and hanging in the steam; 3 four cookbook pages flipping over the spine; 4 four arrangements spiralling in around a plate while sauce draws a spiral; 5 jars hopping onto uneven shelves with squash and stretch; 6 bowl spins and throws out a scalloped medallion + ribbon banner; 7 place settings expand outward round a gingham table; 8 a steam stitch loops through a loose calendar, days popping as it passes; 9 per-persona reveal with eight ingredients thrown into orbit; 10 share card slides in and assembles stamp by stamp. |
+| Hero sequences | 1 lid pop → vegetables thrown out in arcs, the pot's steam condenses into the wordmark and evaporates into ink; 2 three timed waves of cutouts dropping into the pot + splash + the whole stew bursting back out and hanging in the steam; 3 a 3D cookbook drops shut onto the table, its cover swings open and four recipe leaves curl over the spine; 4 four arrangements spiralling in around a plate while sauce draws a spiral; 5 jars hopping onto uneven shelves with squash and stretch; 6 bowl spins and throws out a scalloped medallion + ribbon banner; 7 place settings expand outward round a gingham table; 8 a steam stitch loops through a loose calendar, days popping as it passes; 9 per-persona reveal with eight ingredients thrown into orbit; 10 share card slides in and assembles stamp by stamp. |
 | Count-up | 200–1200 ms window: the director's eased `countProgress` drives a formula per scene, so digits count from 0 to the bound value in sync with the hero motion and never show the placeholder. |
 | Signature interaction | Tap the pot (opaque hit region, also a semantics button "Stir the pot"): lid wobble, squash, six ingredients flourish out and fall. |
 | Reduced motion | `reducedMotion=true`: scenes cut to their settled composition with a 220 ms opacity fade, motif poses jump, the lid cuts, no handoff (no steam, no cloth), the wordmark is already set, count shows the final value at once, persona emblem static. |
@@ -736,3 +738,83 @@ covers 136 layout formulas, the wide share card and two small modules.
 
 * `apps/simmer/video.webm`: the portrait walkthrough at 390 × 844.
 * `apps/simmer/video-landscape.webm`: the same at 1280 × 720.
+
+## Cookbook fix (scene 3)
+
+**The problem.** The cookbook looked flat, and one page always sat on top of the
+others. Cause: the four pages were 2D cards squashed with `scaleX` 1 → −1, in
+one static sibling order (earlier siblings draw on top), so page 0 was drawn
+above every other page for the whole scene. After it turned it lay on the left
+pile, and pages 1–3 turned *under* it, so the last page to land was never the
+one on top (`captures/fixes/before-*.png`).
+
+**The new book** (`scripts/book.luau` + `scripts/book.wgsl`, a
+`ScriptedDrawable` over scene 3's art box). It is a lit 3D book with these
+parts:
+
+* **Boards and spine.** Two tomato-cloth boards, 4 pt thick. The back board
+  shows as a rim round the pages.
+* **Page block.** 10 pt thick, with stacked page-edge lines on its sides.
+* **Spine cloth.** An arc that follows the front board as it opens.
+* **Ribbon bookmark.** It drapes over the block and the board, then slides out
+  along the table.
+* **Five leaves.** Four turn and the last one stays. Each leaf is a mesh in
+  which every row is an arc. The lower corner lifts first, the leaf curls over
+  the spine, and its free edge lands last.
+* **Correct depth.** A leaf lands 0.8 pt above the pile it lands on, and the
+  depth buffer decides what covers what in each frame. So every turning leaf
+  passes over the leaves beneath it and ends on top of the leaves that turned
+  before it. No two faces are coplanar: each leaf is one surface shaded on
+  both sides.
+* **The timeline.** The book drops in shut and centred (with the "Simmer"
+  cover). It slides over as the cover swings open onto the left, then the
+  leaves turn at 740 + 230·i ms.
+* **Printed surfaces.** The recipes are one vector artboard, `Cookbook pages`:
+  an atlas of the ten page faces, the gingham endpaper bookplate and the cover.
+  It is rendered once into a texture, so the recipe titles, ingredients,
+  method and handwritten notes print on the pages as real text.
+* **Shadows and material.** Light comes from the upper left. A 1536² light
+  depth map is sampled with 5-tap PCF and casts shadows onto the pages, the
+  boards and the table, where only the shadow prints. The material is
+  risograph: the flat print keeps its exact colours, light is posterised to a
+  soft step, and shade prints as an aubergine 45° halftone in stage points.
+  4× MSAA; no `discard`.
+* **Idle.** A short breeze in the idle loop lifts the open leaves' corners and
+  sways the ribbon.
+* **Reduced motion, pause, fallback.**
+  * Reduced motion shows the open book, static (no breeze).
+  * On pause both inputs freeze with the scene's timelines.
+  * Without shader support, the same timeline is drawn flat from the atlas, and
+    the leaves fold in the order they land.
+* **Resolution.** The canvases are sized to the art box's real size: scene 3's
+  art scale × the device pixel ratio (new director-owned `layoutPixelRatio`),
+  capped at 4 px/pt. GPU passes run only when the pose changes, so a settled
+  book is one image draw.
+
+**Verified.**
+* Frame strips at 390 × 844 (`captures/fixes/flip-strip-390x844.png`).
+* The settled book and a mid-flip frame at 320 × 568, 390 × 844, 430 × 932,
+  1280 × 720, 1024 × 768 and 820 × 1180 (`captures/fixes/sizes-*.png`).
+* The 2D fallback, forced for one test run.
+* A pause freeze: identical frames 2 s apart.
+* Reduced motion.
+* The 2 → 3 and 3 → 4 handoffs.
+* `captures/settled/scene-03.png`, the scene 3 transition captures and the
+  responsive sheets were re-rendered.
+* `rive . --verify` gives 0 errors and 0 warnings; `rive inspect . --summary`
+  reports 0 problems.
+
+**Checks.** `python3 tools/capture.py checks`: 40/40, with the same values
+and events as before; no check was changed.
+
+**Size.** `build/simmer-recap.riv` went from 2,046,255 to 2,287,682 bytes (+241 KB:
+the script, the shader baked for each backend, and the 744-object page
+atlas).
+
+**Compromises.**
+* Page text is about 7.5 pt in the master. The atlas renders at 1.25 × the
+  canvas density, so it is legible on a phone at 2× but soft in @1x headless
+  captures.
+* The leaf curl is an analytic bend, not a simulated sheet.
+* The shadow map is fixed at 1536², about 0.35 pt per texel. Shadows of the
+  lifted leaves are slightly soft by design.

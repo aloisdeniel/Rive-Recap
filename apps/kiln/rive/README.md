@@ -30,6 +30,7 @@ Any size works: the previewer's default `--fit=layout` resizes the artboard to t
 | `tools/gen_kiln.py`, `chrome.py`, `scenes.py`, `motif.py`, `motif_build.py`, `v3d.py`, `sharecard.py`, `model.py`, `rml.py` | generator: view model, chrome, the ten scenes, the vessel/plinth motif, the 3D vessel inputs, the share card |
 | `tools/resize_harness.py`, `check_responsive.sh`, `contact_sheet.py` | check-only resize harness (KilnRecap nested in a resizing artboard, never shipped), responsive checks, capture contact sheets |
 | `scripts/vessel3d.luau` + `vessel3d.wgsl` | the 3D thrown pot: a GPU-lathed, lit, glazed vessel (ScriptedDrawable), used by the motif, the four persona emblems and the share card |
+| `scripts/fx3d.luau` + `fx3d.wgsl` | ray-marched effects: the scene-4 glaze drip and splash, the scene-8 gift box, the scene-9 orbit and anticipation rings (see "Fix pass") |
 | `scripts/kiln.luau` + `kiln.wgsl` | the scene-5 kiln chamber: firebrick courses that heat, flicker and cool into the palette (fragment shader) |
 | `scripts/grain.luau` + `grain.wgsl` | a static matte-mineral grain laid over the background colour (rendered once, drawn in soft-light) |
 | `scripts/sequencer.luau` | clock + navigation brain + responsive placement (ScriptedLayout behind the recap) |
@@ -85,11 +86,12 @@ Signature pieces:
 | Staggered reveals | text modifiers (glyph opacity + rise) per run, timed to the brief's 0–200 / 200–1200 / 1200–1800 ms score |
 
 Persona choreographies (scene 9, after the vessel becomes a glossy cobalt orb inside
-anticipation rings and sparks). Every emblem is a real 3D piece (`vessel3d`) on the plinth:
+3D anticipation rings and sparks). Every emblem is a real 3D piece (`vessel3d`) on the plinth:
 0 **Form Finder** — the asymmetric vessel is sketched as one stroke, then turns into matte
 porcelain that keeps turning, with a leaning clay echo;
 1 **Glaze Alchemist** — a porcelain shell tips in and its cobalt lining flows in, the travelling
-orb dips into it and swells back out as a levitating glossy cobalt orb, droplets orbit;
+the orb pulled up from the slab is handed over to it in place and levitates, two tilted 3D orbit rings
+carry cobalt droplets round it, in front of and behind the orb;
 2 **Wheel Regular** — the porcelain wheel opens, a charcoal cup is pulled into a bowl that spins
 fast on the wheel (throwing rings), its white glaze dips in, ripples and a spin streak;
 3 **Handbuilt Storyteller** — a clay coil pot rises coil by coil in five weighted steps, then
@@ -145,7 +147,7 @@ thumbprints are pressed into its wall (shader dents with whorl ridges), crumbs l
    up and spun on the wheel), Handbuilt Storyteller (coil pot rising coil by coil, thumbprints).
 5. **Glaze tiles** got thickness, a contact shadow and a gloss reflection clipped to the glaze;
    the scene-3 bowl became a white-glazed porcelain bowl spinning on the wheel (reads on the
-   ultramarine), the scene-8 cup a dipped cup in its wrap, the card's mini motif the same 3D pot.
+   ultramarine), the scene-8 cup a dipped cup (now in a 3D gift box, see "Fix pass"), the card's mini motif the same 3D pot.
 6. **Motion**: copy exits rewind glyph by glyph (staggered, top line first); reverse entrances wait
    for the old copy to clear; shards now tumble in, hang at the mound's edge and merge into it.
 7. **Fixes**: hint engraved on the plinth face; card placement keeps clear of the summary copy on
@@ -165,7 +167,7 @@ thumbprints are pressed into its wall (shader dents with whorl ridges), crumbs l
   buffer, procedural material/glaze/heat; a fragment-only fullscreen-triangle shader for the kiln
   and the grain. Everything renders headlessly (`--screenshot`, video) through the CLI.
 * Not used: imported meshes/blobs (a lathe needs no mesh data), textures (all procedural), and 3D
-  for the plinths, tiles, paper wrap and twig — those read well as vector and keep the art
+  for the plinths, tiles and twig — those read well as vector and keep the art
   direction's graphic edge; the share card keeps vector everything except the pot.
 
 ### New compromises
@@ -181,6 +183,50 @@ thumbprints are pressed into its wall (shader dents with whorl ridges), crumbs l
 * The glaze is procedural (no fluid sim); the drag hit regions are still rectangles.
 * Focus rings use deprecated state-machine inputs on purpose (presentation-only state that must
   not enter the host contract).
+
+
+## Fix pass (user feedback: scenes 4, 8 and 9)
+
+The feedback numbered screens from the first stat scene, so "screen 3 / 7 / 8" are scenes 4 / 8 / 9
+here (the jug, the water drop, the packaging, the ball). Dense frame-by-frame renders through each
+transition (`captures/fixes/`) located every jump.
+
+* **Scene 4, jug jump (3 → 4).** The tip into the pour (Motif 4 Forward, frames 66 → 104) was keyed
+  with an ease-*in* curve, which ends at full speed: the jug swung faster and faster and stopped dead
+  on the last key (frame-to-frame change 4.2 → 0.03). Now an ease-in-out "soft" curve over 66 → 110,
+  and the lean before it eases in too. Also fixed: the last two tiles' glaze ran past the end of the
+  entrance and snapped full at the switch to Idle (entrance lengthened to 230 frames), and during
+  every handoff the lidded slab flashed the *next* glaze colour as radial wedges (the old glaze colour
+  is now held while it draws back).
+* **Scene 4, the drop.** The three flat ovals under the tiles are gone. `fx3d` mode 1 ray-marches the
+  drip from the low point of the jug's rim: a bead swells, necks and falls as a stretched teardrop with
+  a satellite droplet, then slumps into a glossy puddle in the top-right tile with a rebound jet, a
+  crown of droplets and ripple rings, and soaks in (2.6 s cycle). Liquid-glaze shading: deep body,
+  light gathered on the far side (refraction), sharp highlight, softbox reflections, reflective rim.
+* **Scene 8, packaging.** The flat paper petals are replaced by a 3D kraft gift box (`fx3d` mode 3) in
+  the cup's own camera: the box arrives as a flat net, its four walls fold up round the cup with a
+  cardboard bounce, tissue paper blooms out, a satin ribbon wraps round from the front and a bow pops;
+  soft shadows and ambient occlusion. On exit the walls fall open as the cup is pressed into the slab.
+* **Scene 9, the ball (8 → 9).** The motif orb rose, pulsed up (0.85 → 0.95), shrank (→ 0.7 → 0)
+  while a second orb — the emblem's, at a different height and size — swelled up (0 → 1.12 → 0.94 →
+  1) out of the shell: two orbs and four size changes. Now the orb is pulled up out of the slab in
+  one eased motion to exactly the emblem orb's pose, and the motif and emblem orbs share every input
+  (body, gloss, seed, rings, `turnGain` 0 so both sit at yaw 0), so the hand-over on frame 70 is a swap
+  between identical renders. The shell tips in only after it (before, the motif orb drew behind it).
+  Other personas get their own Motif 9 states (`_personaVariant`), where the orb rises and dissolves
+  into the reveal; reverse navigation (10 → 9) springs the orb back up and hands over the same way.
+* **Scene 9, the orbit.** The droplet ellipse rotated in the screen plane. Now `fx3d` mode 2 draws two
+  tilted glossy orbit tori with droplets travelling on them. The anticipation rings are 3D too (three
+  thin porcelain rings opening like a gyroscope). Each is hosted twice, split at the orb's depth: the
+  far half is drawn behind the orb, the near half in front of it, so the rings really pass behind and
+  before it without a shared depth buffer.
+
+`fx3d` (fragment-only, like the kiln) renders each effect into a canvas sized to its box × stage scale
+× device ratio (re-rendered only when an input or its clock changes); the drip and orbit clocks stop
+while `_frozen` (pause, hold, reduced motion), so pause freezes them in place and reduced motion
+shows a still bead, a still orbit and the settled box. Without GPU scripting each mode draws a flat
+vector version (teardrop and ripple ellipse; ring polylines split by depth; flat box walls, ribbon,
+bow). `check_interactions.sh` and `check_responsive.sh` print exactly what they printed before.
 
 ## Responsive layout
 
@@ -465,7 +511,8 @@ the runtime asset loader; there is no system fallback in Rive.
 
 ## Measurements (MacBook, headless, CLI 1.6.0)
 
-* `build/kiln-recap.riv`: **777,550 bytes** (`--once`, unsigned scripts; 764,643 before the
+* `build/kiln-recap.riv`: **997,009 bytes** (`--once`, unsigned scripts; 777,550 before the fix pass, whose
+  ray-marching shader accounts for most of the increase; 764,643 before the
   responsive pass, 592,051 before the improvement pass), of which ~241 KB are the two embedded fonts; scripts + shaders add ~25 KB and
   the 3D input keys replaced the per-vertex vessel keys. `scene.rml` ~2.6 MB source.
 * `rive . --bench=600` (headless CLI on the authoring MacBook, release-baked scripts, 390×844),
@@ -479,7 +526,7 @@ the runtime asset loader; there is no system fallback in Rive.
 * GPU memory (estimate, 390 × 844 @1x): ≈30 MB of canvases and render targets — see compromises in
   "Improvement pass". Canvases now follow the stage scale and the device ratio (see "Responsive
   layout"), so this grows with large or dense screens.
-* Bounded complexity: 9 tiles, 7 shards, 8 sparks, 5 droplets — no object per raw count;
+* Bounded complexity: 9 tiles, 7 shards, 8 sparks, 5 orbit droplets, one drip in flight — no object per raw count;
   clips: one wordmark disc, one kiln chamber, per-tile glaze/gloss clips.
 
 ## Remaining limitations
@@ -519,4 +566,5 @@ two mid-transition sheets, the mid-transition resize, `responsive-checks.txt`) �
 (story, summary, hidden again after a pointer press) · `firing/` the scene-5 kiln heating and
 cooling · `motion-preview-autoplay.mp4`
 (full auto-advance run, 3 s dwell, sampled at 8 fps from deterministic headless renders) ·
-`interaction-checks.txt` (output of `tools/check_interactions.sh`).
+`interaction-checks.txt` (output of `tools/check_interactions.sh`) · `fixes/` before/after crops and
+dense frame strips of the fix pass (jug tip, drip cycle, gift box, orb hand-over, 3D orbit).

@@ -6,6 +6,7 @@ import math
 import motif as MF
 from rml import (E, Anim, argb, bind, child, ellipse, fill, mix, node, poly, rect, shape, smooth_path,
                  smooth_vertices, solid, stroke)
+from motif_build import ORB_HANDOFF
 from gen_kiln import (ART_H, ART_W, CHAR, CLAY, ENTER, EXIT, H, PORC, SCENES, ULTRA, W, Layer, settle)
 from chrome import c_bool, c_num, scene_states, state, trans
 
@@ -118,7 +119,7 @@ def finalize_scene(g, sc: Scene):
     for inp in sc.live_inputs:
         hidden.k(inp, "propertyValue", (0, 0.0, "hold"))
 
-    enterF = L.anim(f"S{n} Enter", ENTER + 72 if n in (4, 5, 7) else ENTER)
+    enterF = L.anim(f"S{n} Enter", ENTER + {4: 122, 5: 72, 7: 72, 8: 72}.get(n, 0))
     if sc.copy is not None:
         enterF.k(sc.copy, "opacity", (0, 1.0, "hold"))
     for r in (sc.front, sc.back, *sc.extra_roots):
@@ -426,6 +427,8 @@ def scene3(g, sc):
 
 TILE = 76
 GAP = 12
+LIP4 = (262.0, 186.0)   # the low point of the tipped jug's rim (art units)
+HIT4 = (262.0, 250.0)   # where its drips land, in the glaze of the top-right tile
 
 
 def tile(i, cx, cy):
@@ -495,20 +498,27 @@ def scene4(g, sc):
         t, gl = tile(k, x0 + c * (TILE + GAP), y0 + r * (TILE + GAP))
         tiles.append((t, gl, order[k]))
     grid = node("Tile Grid", 0, 0, *[t for t, _, _ in tiles])
-    # pour stream from the jug lip into the top-centre tile
+    # pour stream from the jug's lip (the low point of its rim) into the tiles
     tr = E("TrimPath", {"start": 0.0, "end": 1.0, "name": "Trim"})
     settle(tr, "start", 1.0, set_attr=True)
     settle(tr, "end", 1.0)
     sp = E("PointsPath", {"isClosed": False, "name": "Stream"})
-    for (x, y, r_, d) in smooth_vertices([(238, 150), (216, 178), (206, 210)], closed=False, tension=0.25):
+    for (x, y, r_, d) in smooth_vertices([(LIP4[0], LIP4[1] - 4), (LIP4[0] - 3, LIP4[1] + 30),
+                                          (HIT4[0] - 2, HIT4[1] - 6)], closed=False, tension=0.25):
         sp.add(E("CubicMirroredVertex", {"x": float(x), "y": float(y), "rotation": float(r_), "distance": float(d)}))
     stream_stroke = stroke(ULTRA, 9.0)
     stream_stroke.add(tr)
+    stream_stroke.attrs["cap"] = "round"
     stream = shape("Glaze Stream", 0, 0, sp, stream_stroke)
-    drops = [S(shape(f"Drop {i}", x, 0, ellipse(8, 11), fill(ULTRA)), y=float(y), opacity=0.0)
-             for i, (x, y) in enumerate([(124, 492), (200, 500), (276, 488)])]
-    sc.front.add(stream)
-    sc.back.add(*drops, grid)
+    # once the pour stops, the lip keeps dripping: a ray-marched liquid bead swells, falls
+    # and splashes into the glaze of the tile below (scripts/fx3d, mode 1)
+    from v3d import FX
+    drip = FX(g, "Glaze Drip 3D", keyed=("amount",), mode=1, x0=LIP4[0] - 60, y0=LIP4[1] - 14, w=120,
+              h=HIT4[1] - LIP4[1] + 54, lipX=LIP4[0], lipY=LIP4[1], hitX=HIT4[0], hitY=HIT4[1], size=7.0,
+              amount=1.0, period=2.6, surf=1.05, col0="2E3F9A")
+    sc.live_inputs.append(drip.inputs["live"])
+    sc.front.add(drip.el, stream)
+    sc.back.add(grid)
 
     def enter(a):
         for k, (t, gl, o) in enumerate(tiles):
@@ -519,15 +529,8 @@ def scene4(g, sc):
             a.k(gl, "scaleY", (0, 0.0, "hold"), (g0, 0.0, "heavy"), (g0 + 34, 1.0, "hold"))
         a.k(tr, "end", (0, 0.0, "hold"), (92, 0.0, "out"), (108, 1.0, "hold"))
         a.k(tr, "start", (0, 0.0, "hold"), (150, 0.0, "in"), (172, 1.0, "hold"))
+        drip.k(a, "amount", (0, 0.0, "hold"), (170, 0.0, "out"), (184, 1.0, "hold"))
     sc.on("enterF", enter)
-
-    def idle(a):
-        for i, d in enumerate(drops):
-            f0 = i * 50
-            y0_ = d.attrs["y"]
-            a.k(d, "y", (0, y0_, "hold"), (f0, y0_, "in"), (f0 + 40, y0_ + 34, "hold"))
-            a.k(d, "opacity", (0, 0.0, "hold"), (f0, 0.0, "lin"), (f0 + 6, 0.9, "lin"), (f0 + 40, 0.0, "hold"))
-    sc.on("idle", idle)
 
     def exitF(a):
         for k, (t, gl, o) in enumerate(tiles):
@@ -702,36 +705,30 @@ def scene8(g, sc):
     sup = support(sc, "screen8Support", "Your work found a place in everyday life.")
     sc.copy_box(head, num, un, sc.spacer(4), sup, gap=4)
 
-    def petal(name, pts, fold, rot, col="FBF8F3"):
-        body = shape(f"{name} Paper", 0, 0, poly(pts, radius=4), fill(col), stroke("D6C8B5", 1.0))
-        crease = shape(f"{name} Fold", 0, 0, poly(fold, radius=2), fill("ECE2D4"))
-        return S(node(name, 195, 446, crease, body), rotation=rot)
-
-    back_l = petal("Wrap Left", [(-6, 0), (-118, -150), (-52, -184), (14, -24)], [(-6, 0), (-52, -184), (14, -24)], -0.12)
-    back_r = petal("Wrap Right", [(6, 0), (118, -150), (52, -184), (-14, -24)], [(6, 0), (52, -184), (-14, -24)], 0.12)
-    front = S(node("Wrap Front", 195, 446,
-                   shape("Front Paper", 0, 0, poly([(-78, 0), (-70, -84), (0, -96), (72, -86), (80, 0)], radius=5),
-                         fill("F8F3EC"), stroke("D6C8B5", 1.0)),
-                   shape("Front Fold", 0, 0, poly([(-70, -84), (0, -96), (-6, -40)], radius=3), fill("EDE4D7"))),
-              scaleY=1.0, rotation=0.0)
-    tr = E("TrimPath", {"start": 0.0, "end": 1.0, "name": "Trim"})
-    settle(tr, "end", 1.0)
-    tw = stroke(CLAY, 2.4)
-    tw.add(tr)
-    tp = E("PointsPath", {"isClosed": False, "name": "Twine"})
-    for (x, y, r_, d) in smooth_vertices([(-74, -52), (-20, -60), (0, -58), (-18, -82), (4, -66), (22, -84), (2, -56), (40, -62), (76, -56)],
-                                         closed=False, tension=0.22):
-        tp.add(E("CubicMirroredVertex", {"x": float(x), "y": float(y), "rotation": float(r_), "distance": float(d)}))
-    twine = shape("Twine", 195, 446, tp, tw)
+    # a kraft gift box around the cup (scripts/fx3d, mode 3): ray-marched in the cup's own
+    # camera, split around it -- the back half behind the motif, the front half before it
+    from v3d import FX
+    sx, sy = 195.0, 428.0           # the cup's seat on the scene-8 plinth (motif_build.seat(8))
+    box_kw = dict(mode=3, tilt=0.24, x0=-162, y0=-150, w=324, h=204, boxB=84, boxH=64, cupR=63.0, cupH=143.0,
+                  fold=1.0, tissue=1.0, ribbon=1.0, bow=1.0, col0="CDA67F", col1="C46F52", col2="FBF5EE")
+    keyed = ("fold", "tissue", "ribbon", "bow")
+    box_f = FX(g, "Gift Box Front 3D", keyed=keyed, side=1, **box_kw)
+    box_b = FX(g, "Gift Box Back 3D", keyed=keyed, side=-1, **box_kw)
+    sc.live_inputs += [box_f.inputs["live"], box_b.inputs["live"]]
+    front = node("Gift Box Front", sx, sy, box_f.el)
+    back = node("Gift Box Back", sx, sy, box_b.el)
     glow = S(shape("Gift Glow", 195, 360, ellipse(320, 300), fill(CLAY, alpha=0.22, feather=50)), opacity=1.0)
-    sc.front.add(twine, front)
-    sc.back.add(back_l, back_r, glow)
+    sc.front.add(front)
+    sc.back.add(back, glow)
 
     def enter(a):
-        a.k(back_l, "rotation", (0, -1.45, "hold"), (40, -1.45, "back"), (86, -0.12, "hold"))
-        a.k(back_r, "rotation", (0, 1.45, "hold"), (46, 1.45, "back"), (92, 0.12, "hold"))
-        a.k(front, "scaleY", (0, 0.0, "hold"), (60, 0.0, "back"), (100, 1.0, "hold"))
-        a.k(tr, "end", (0, 0.0, "hold"), (96, 0.0, "out"), (132, 1.0, "hold"))
+        # flat net on the plinth -> the walls fold up round the cup (back, sides, front, with
+        # a cardboard bounce, staggered in the shader) -> tissue blooms -> ribbon -> bow
+        for fx in (box_f, box_b):
+            fx.k(a, "fold", (0, 0.0, "hold"), (30, 0.0, "lin"), (104, 1.0, "hold"))
+            fx.k(a, "tissue", (0, 0.0, "hold"), (76, 0.0, "lin"), (134, 1.0, "hold"))
+            fx.k(a, "ribbon", (0, 0.0, "hold"), (104, 0.0, "inout"), (150, 1.0, "hold"))
+            fx.k(a, "bow", (0, 0.0, "hold"), (140, 0.0, "lin"), (166, 1.0, "hold"))
         a.k(glow, "opacity", (0, 0.0, "hold"), (60, 0.0, "out"), (120, 1.0, "hold"))
     sc.on("enterF", enter)
 
@@ -740,8 +737,9 @@ def scene8(g, sc):
     sc.on("idle", idle)
 
     def exitF(a):
-        a.k(back_l, "rotation", (0, -0.12, "in"), (30, -1.2, "hold"))
-        a.k(back_r, "rotation", (0, 0.12, "in"), (30, 1.2, "hold"))
+        # the walls fall open as the cup is pressed back into the slab
+        for fx in (box_f, box_b):
+            fx.k(a, "fold", (0, 1.0, "in"), (30, 0.0, "hold"))
     sc.on("exitF", exitF)
 
 
@@ -766,28 +764,37 @@ def scene9(g, sc):
                             prop="personaDescription", align="center"), 100, 24)
     sc.copy_box(lab, title, bar, sc.spacer(2), desc, top=92, align="topCenter", gap=8)
 
-    rings = [S(shape(f"Anticipation {i}", 195, 300, ellipse(140, 140), stroke(PORC, 1.4, alpha=0.4)),
-               scaleX=1.0, scaleY=1.0, opacity=0.0) for i in range(3)]
+    # anticipation: three thin porcelain rings open around the rising orb like a gyroscope,
+    # in 3D (scripts/fx3d, mode 2): their far halves pass behind the orb, the near ones before it
+    from v3d import FX
+    OC = (195.0, 193.0)              # the orb's centre once it levitates (Glaze Alchemist pose)
+    ant_kw = dict(mode=2, x0=-205, y0=-205, w=410, h=410, radius=180.0, tube=1.1, ring=0.0, drops=0.0,
+                  incline=1.18, count=3, dropSize=0.0, spin=0.0, precess=1.3, roll=0.22, spread=0.46, gloss=0.5,
+                  col0=argb(PORC, 0.75), col1=PORC)
+    keyed = ("radius", "ring", "precess")
+    ant_f = FX(g, "Anticipation Front 3D", keyed=keyed, side=1, **ant_kw)
+    ant_b = FX(g, "Anticipation Back 3D", keyed=keyed, side=-1, **ant_kw)
+    sc.live_inputs += [ant_f.inputs["live"], ant_b.inputs["live"]]
     sparks = []
     for i in range(8):
         ang = i * math.pi / 4 + 0.3
-        s = S(shape(f"Spark {i}", 195, 300, ellipse(5, 5), fill(PORC, alpha=0.9)), x=195.0, y=300.0, opacity=0.0)
+        s = S(shape(f"Spark {i}", OC[0], OC[1], ellipse(5, 5), fill(PORC, alpha=0.9)), x=OC[0], y=OC[1], opacity=0.0)
         s.ang = ang
         sparks.append(s)
-    sc.back.add(*sparks, *rings)
+    sc.front.add(node("Anticipation Front", OC[0], OC[1], ant_f.el))
+    sc.back.add(*sparks, node("Anticipation Back", OC[0], OC[1], ant_b.el))
 
     def enter(a):
         a.k(bar, "scaleX", (0, 0.0, "hold"), (90, 0.0, "back"), (116, 1.0, "hold"))
-        for i, r in enumerate(rings):
-            f0 = 30 + i * 10
-            a.k(r, "scaleX", (0, 0.2, "hold"), (f0, 0.2, "out"), (f0 + 50, 2.2, "hold"))
-            a.k(r, "scaleY", (0, 0.2, "hold"), (f0, 0.2, "out"), (f0 + 50, 2.2, "hold"))
-            a.k(r, "opacity", (0, 0.0, "hold"), (f0, 0.0, "lin"), (f0 + 6, 1.0, "out"), (f0 + 50, 0.0, "hold"))
+        for fx in (ant_f, ant_b):
+            fx.k(a, "radius", (0, 70.0, "hold"), (24, 70.0, "out"), (104, 180.0, "hold"))
+            fx.k(a, "ring", (0, 0.0, "hold"), (24, 0.0, "soft"), (44, 1.0, "inout"), (104, 0.0, "hold"))
+            fx.k(a, "precess", (0, 0.2, "hold"), (24, 0.2, "out"), (104, 1.3, "hold"))
         for s in sparks:
             dx, dy = math.cos(s.ang) * 150, math.sin(s.ang) * 150
-            a.k(s, "x", (0, 195.0, "hold"), (74, 195.0, "out"), (110, 195 + dx, "hold"))
-            a.k(s, "y", (0, 300.0, "hold"), (74, 300.0, "out"), (110, 300 + dy, "hold"))
-            a.k(s, "opacity", (0, 0.0, "hold"), (74, 0.0, "lin"), (78, 1.0, "soft"), (110, 0.0, "hold"))
+            a.k(s, "x", (0, OC[0], "hold"), (68, OC[0], "out"), (104, OC[0] + dx, "hold"))
+            a.k(s, "y", (0, OC[1], "hold"), (68, OC[1], "out"), (104, OC[1] + dy, "hold"))
+            a.k(s, "opacity", (0, 0.0, "hold"), (68, 0.0, "lin"), (72, 1.0, "soft"), (104, 0.0, "hold"))
     sc.on("enterF", enter)
 
     build_persona_layer(g)
@@ -826,20 +833,27 @@ def build_persona_layer(g):
                                                  roll=-0.32, seed=12.0, turnGain=0.6), rotation=-0.32)
     S(n1b, scaleX=1.0, scaleY=1.0, rotation=-0.32)
     v1o, n1o = piece("Alchemist Orb 3D", look("orb", body="2B3C95", cap=1.0, sphere=1.0, dip=1.0, drip=0.0, gloss=1.35,
-                                               seed=13.0, rings=0.0), y=-118.0)
+                                               seed=13.0, rings=0.0, turnGain=0.0), y=-118.0)
     S(n1o, y=-118.0, scaleX=1.0, scaleY=1.0)
     glow1 = S(shape("Orb Glow", 0, -170, ellipse(220, 220), fill("4C63D2", alpha=0.35, feather=48)), opacity=1.0)
-    drops = []
-    for i in range(5):
-        a_ = i * 2 * math.pi / 5 + 0.4
-        r_ = 6 + (i % 3) * 3
-        d = shape(f"Droplet {i}", math.cos(a_) * 118, math.sin(a_) * 34, ellipse(r_ + 3, (r_ + 3) * 1.15),
-                  fill("3F55C4"), stroke("A9B6F5", 1.0, alpha=0.7))
-        d.add(shape(f"Droplet {i} Shine", -1.5, -2.0, ellipse(r_ * 0.45, r_ * 0.35), fill("FFFFFF", alpha=0.75)))
-        drops.append(d)
-    orbit = S(node("Droplet Orbit", 0, -176, *drops), rotation=0.0, scaleX=1.0, scaleY=1.0)
-    e1 = S(node("Emblem Glaze Alchemist", 195, BASE_Y, orbit, n1o, n1b, glow1), opacity=1.0, y=BASE_Y)
-    e1.shell, e1.orb, e1.orbit, e1.glow, e1.v = n1b, n1o, orbit, glow1, [v1b, v1o]
+    # droplets travelling on two tilted cobalt orbit rings, in 3D (scripts/fx3d, mode 2): the
+    # far half is drawn between the orb and the shell, the near half in front of the orb
+    from v3d import FX
+    orb_kw = dict(mode=2, x0=-150, y0=-125, w=300, h=250, radius=112.0, tube=1.5, ring=1.0, drops=1.0,
+                  incline=0.36, count=2, dropSize=6.5, spin=0.09, precess=0.0, roll=-0.2, spread=0.26, gloss=1.0,
+                  col0=argb("7C8FE6", 0.9), col1="3A4FBF")
+    orbits = []
+    for nm, sd in (("Front", 1), ("Back", -1)):
+        fx = FX(g, f"Alchemist Orbit {nm} 3D", keyed=("ring", "drops"), side=sd, **orb_kw)
+        settle(fx.inputs["live"], "propertyValue", 0.0)
+        fx.inputs["live"].attrs["propertyValue"] = 0.0
+        nd = S(node(f"Alchemist Orbit {nm}", 0, -180, fx.el), y=-180.0)
+        orbits.append((fx, nd))
+    (orb_f, orbit_f), (orb_b, orbit_b) = orbits
+    e1 = S(node("Emblem Glaze Alchemist", 195, BASE_Y, orbit_f, n1o, orbit_b, n1b, glow1), opacity=1.0, y=BASE_Y)
+    e1.shell, e1.orb, e1.glow, e1.v = n1b, n1o, glow1, [v1b, v1o, orb_f, orb_b]
+    e1.orbits = [orbit_f, orbit_b]
+    e1.fx = [orb_f, orb_b]
 
     # 2 Wheel Regular -- a charcoal bowl spinning on the porcelain wheel, rings of rhythm
     disc = S(shape("Wheel Disc", 0, -96, ellipse(250, 250), fill(PORC)), scaleX=1.0, scaleY=1.0)
@@ -899,24 +913,26 @@ def build_persona_layer(g):
             e.v[0].key(a, 86, dict(yaw=-2.4), "out")
             e.v[0].key(a, 170, dict(yaw=0.0), "hold")
         elif k == 1:
-            a.k(e.shell, "scaleX", (0, 0.0, "hold"), (56, 0.0, "back"), (96, 1.0, "hold"))
-            a.k(e.shell, "scaleY", (0, 0.0, "hold"), (56, 0.0, "back"), (96, 1.0, "hold"))
-            a.k(e.shell, "rotation", (0, 0.6, "hold"), (56, 0.6, "back"), (104, -0.32, "hold"))
+            # the shell tips in under the orb once the orb has been handed over (before that the
+            # motif orb is drawn behind the emblems, so the two must not overlap)
+            a.k(e.shell, "scaleX", (0, 0.0, "hold"), (ORB_HANDOFF + 2, 0.0, "back"), (ORB_HANDOFF + 42, 1.0, "hold"))
+            a.k(e.shell, "scaleY", (0, 0.0, "hold"), (ORB_HANDOFF + 2, 0.0, "back"), (ORB_HANDOFF + 42, 1.0, "hold"))
+            a.k(e.shell, "rotation", (0, 0.6, "hold"), (ORB_HANDOFF + 2, 0.6, "back"), (ORB_HANDOFF + 50, -0.32, "hold"))
             e.v[0].key(a, 0, dict(roll=0.6, dip=0.0, inner=0.0), "hold")
-            e.v[0].key(a, 56, dict(roll=0.6, dip=0.0, inner=0.0), "back")
-            e.v[0].key(a, 104, dict(roll=-0.32), "hold")
-            e.v[0].key(a, 96, dict(dip=0.0, inner=0.0), "heavy")
-            e.v[0].key(a, 150, dict(dip=0.22, inner=1.0), "hold")
-            # the travelling orb dips into the shell and this one swells out of the same spot:
-            # one glossy cobalt orb, handed over from the motif to the emblem, then it levitates
-            a.k(e.orb, "y", (0, -96.0, "hold"), (76, -96.0, "out"), (128, -118.0, "hold"))
-            a.k(e.orb, "scaleY", (0, 0.0, "hold"), (74, 0.0, "back"), (96, 1.12, "inout"), (112, 0.94, "soft"),
-                (126, 1.0, "hold"))
-            a.k(e.orb, "scaleX", (0, 0.0, "hold"), (74, 0.0, "back"), (96, 1.06, "inout"), (112, 1.03, "soft"),
-                (126, 1.0, "hold"))
-            a.k(e.orbit, "scaleX", (0, 0.0, "hold"), (108, 0.0, "back"), (150, 1.0, "hold"))
-            a.k(e.orbit, "scaleY", (0, 0.0, "hold"), (108, 0.0, "back"), (150, 1.0, "hold"))
-            a.k(e.orbit, "rotation", (0, -1.5, "hold"), (108, -1.5, "out"), (180, 0.0, "hold"))
+            e.v[0].key(a, ORB_HANDOFF + 2, dict(roll=0.6, dip=0.0, inner=0.0), "back")
+            e.v[0].key(a, ORB_HANDOFF + 50, dict(roll=-0.32), "hold")
+            e.v[0].key(a, 112, dict(dip=0.0, inner=0.0), "heavy")
+            e.v[0].key(a, 160, dict(dip=0.22, inner=1.0), "hold")
+            # the travelling motif orb comes to rest exactly here (motif_build.ORB_AT) and this
+            # identical orb takes over on ORB_HANDOFF: one continuous motion, no second orb
+            a.k(e.orb, "y", (0, -118.0, "hold"))
+            a.k(e.orb, "scaleY", (0, 0.0, "hold"), (ORB_HANDOFF, 1.0, "hold"))
+            a.k(e.orb, "scaleX", (0, 0.0, "hold"), (ORB_HANDOFF, 1.0, "hold"))
+            for fx in e.fx:
+                fx.k(a, "ring", (0, 0.0, "hold"), (84, 0.0, "out"), (140, 1.0, "hold"))
+                fx.k(a, "drops", (0, 0.0, "hold"), (104, 0.0, "back"), (150, 1.0, "hold"))
+            for nd in e.orbits:
+                a.k(nd, "y", (0, -180.0, "hold"))
             a.k(e.glow, "opacity", (0, 0.0, "hold"), (96, 0.0, "out"), (140, 1.0, "hold"))
         elif k == 2:
             a.k(e.disc, "scaleX", (0, 0.0, "hold"), (52, 0.0, "back"), (90, 1.0, "hold"))
@@ -954,8 +970,10 @@ def build_persona_layer(g):
         i_ = L.anim(f"Persona {k} Idle", 240, loop="loop")
         show_only(i_, k)
         if k == 1:
-            i_.k(e.orbit, "rotation", (0, 0.0, "lin"), (240, 6.283185, "hold"))
+            # the orbit travels on its own clock (scripts/fx3d); it bobs with the orb
             i_.k(e.orb, "y", (0, -118.0, "inout"), (120, -128.0, "inout"), (240, -118.0, "hold"))
+            for nd in e.orbits:
+                i_.k(nd, "y", (0, -180.0, "inout"), (120, -190.0, "inout"), (240, -180.0, "hold"))
             i_.k(e.glow, "opacity", (0, 1.0, "inout"), (120, 0.7, "inout"), (240, 1.0, "hold"))
         elif k == 2:
             i_.k(e.streak, "offset", (0, 0.0, "lin"), (240, 1.0, "hold"))

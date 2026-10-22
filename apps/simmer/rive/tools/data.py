@@ -67,6 +67,9 @@ ADDITIONS = [
     ('layoutArtX0b', 'number', 0), ('layoutArtX1b', 'number', 390),
     ('layoutStack', 'number', 1), ('layoutSide', 'number', 0),
     ('motifFrameX', 'number', 0), ('motifFrameY', 'number', 0), ('motifFrameScale', 'number', 1),
+    # the presenting surface's device pixels per point (director-owned, from its layout resize):
+    # Node scripts that allocate GPU surfaces (the scene-3 cookbook) size them from it
+    ('layoutPixelRatio', 'number', 1),
 ]
 
 PROPS = {}
@@ -157,6 +160,7 @@ SCRIPT_CLOTH = '0:516'
 SCRIPT_LETTERS = '0:517'
 SCRIPT_STAGE_BOXES = '0:518'
 SCRIPT_STAGE = '0:519'
+SCRIPT_BOOK = '0:520'
 CONV_FORMAT = '0:521'
 CONV_INT = '0:522'
 
@@ -176,6 +180,7 @@ def assets():
         E('ScriptAsset', file='scripts/steam.luau', name='steam', id=SCRIPT_STEAM),
         E('ScriptAsset', file='scripts/cloth.luau', name='cloth', id=SCRIPT_CLOTH),
         E('ScriptAsset', file='scripts/letters.luau', name='letters', id=SCRIPT_LETTERS),
+        E('ScriptAsset', file='scripts/book.luau', name='book', id=SCRIPT_BOOK),
         E('ScriptedDataConverter', scriptAssetId=SCRIPT_FORMAT, name='Format count (locale)', id=CONV_FORMAT),
         E('DataConverterToString', decimals=0, round=True, name='Integer', id=CONV_INT),
     ]

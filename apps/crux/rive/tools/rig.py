@@ -57,7 +57,8 @@ def text_art():
     return [[col(["hero", "copy"], "text"), col(["art"], "art")],
             [col(["hero"], "hero"), col(["copy"], "text"), col(["art"], "art")]]
 
-# 1 Invitation
+# 1 Invitation. The title box holds all of the wordmark's ink (stage.py asserts it), so
+# the layout never places the round C off canvas.
 scene(1, {"title": B((22, 118, 344, 160)), "copy": B((24, 280, 300, 186)),
           "art": B((0, 430, 390, 440), ax=1, v="bottom")},
       [[[col(["title", "copy"], "text"), col(["art"], "art", v="bottom", h=0.5)],

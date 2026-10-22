@@ -18,9 +18,15 @@ apps/marginalia/rive/
   scripts/pagestage.luau    hosts the pages, places their frames for the real size, draws every page turn as a 3D paper curl
   scripts/paper.luau        laid-paper grain multiplied over the whole recap
   scripts/moon.luau         the engraved moon (a lit sphere, ScriptedDrawable)
+  scripts/etch3d.luau       module: shared GPU plumbing for the 3D objects (patches, camera, canvases, leaf compositing)
+  scripts/book3d.luau       the 3D open book (scenes 3, 4, 8, 9)
+  scripts/theatre3d.luau    the 3D paper theatre (scene 5)
+  scripts/lamp3d.luau       the 3D reading lamp, its light and the five volumes (scene 7)
   shaders/pageturn.wgsl     leaf curl, lighting, show-through, marbled endpaper, shadows
   shaders/paper.wgsl        procedural paper (fibres, laid/chain lines, specks, edge wear)
   shaders/moon.wgsl         sphere shaded as a copperplate engraving
+  shaders/etch3d.wgsl       parametric-patch 3D (books, arches, curtains, lamp) printed with engraved hatching; the lamp's light pass
+  shaders/leafcomp.wgsl     composites a page's 3D objects onto its turning leaf
   tools/build_rml.py        generator for rml/recap.rml (+ art.py, rmlkit.py)
   tools/capture.py          headless capture helper (taps, fixtures, viewports)
   tools/capture_all.sh      regenerates captures/
@@ -117,6 +123,75 @@ render-record mean 0.104 -> **~0.095 ms** (p95 0.15 ms). `--bench=1200` with
 p95 0.15 ms, max 0.74 ms; no wasm memory growth. GPU cost per turn frame: one
 page render into a canvas + one MSAA pass of ~6.2k vertices; idle frames draw
 one page + the cached paper image.
+
+## Fix pass (user feedback, October 22 2026)
+
+Feedback: the scene 3 "path" looked crude; scene 5 should be 3D; the scene 7
+lamp was too simple; the scene 8 ribbons clipped and ended in sharp cuts; the
+books in scenes 8 and 9 looked flat.
+
+| Scene | Before | After |
+|---|---|---|
+| 3 | the page-edge band was a stack of 30-unit strokes cut square at both ends | every line of the band (paper body, 12 leaf hairlines, ink fore-edge, gilt edge, shadow) is offset from a resampled spine by a **taper**, so the band leaves the book's gutter narrow, swells, and converges to a point behind the numeral. The body stops short of the tips so the fine lines alone draw them (etched ends); the hairlines end at slightly different lengths. Still trimmed strokes, so it still streams out of the book |
+| 5 | flat theatre | a **3D stage** (`theatre3d.luau`): boards and two risers in perspective, night backdrop with engraved stars, velvet curtains with real folds that part and tie back, pelmet with a gilt rail, nine arches standing in three rows that **unfold up from the boards** (hinged, back row first). The carried moon is a real **spot light**: it pools on the stage and lights the arches. Arch k is lit only when `genresExplored >= k`; unexplored arches stay engraved ghosts |
+| 7 | 2D brass arm, gradient cone | a **3D architect's lamp** (weighted foot, two arms, ball joints, brass cone shade lit warm inside, glowing bulb). The bulb is a spot light on **five 3D volumes** (cloth covers, boards, page blocks, rounded spines with gilt bands) that drop in as before. A second GPU pass draws the light: a golden cone with soft falloff, a pool on the top volume, **dust motes** drifting in the beam, and a slight dimming of the page around the lamp that fades out before the canvas edge. The day tabs stay vector |
+| 8 | ribbons ran off the canvas (portrait, tall landscape) and ended in butt cuts | every ribbon point is inside the illustration box (x within +-175, y >= -242) at every size; both ends of each ribbon are **swallowtails** (body, selvedge and sheen continue into the notch). The ribbons now hang over the book's tail like bookmarks; the quotes sit inside the V |
+| 8, 9 (and 3, 4) | flat open book | a **3D open book** (`book3d.luau`): cloth boards with thickness and overhang, page blocks whose tops rise out of the gutter and roll to the fore-edge, greeked type, leaves as fine lines on the tail and fore-edge, a soft contact shadow, engraved hatching in the shade. It opens (both halves stand up and fall open) on each scene's old timing. Used for every open book outside the intro so they match |
+
+**How (3D).** One shader, `etch3d.wgsl`: every object is a list of up to 96
+parametric *patches* (quad, frustum, sphere, page block, arch ring/walls/door,
+curtain, face) held in one uniform array. The vertex shader evaluates the
+surface from (vertex index -> grid cell, instance attribute -> patch), takes
+normals by central differences, and projects through a pinhole camera; one
+instanced draw, depth buffer, 4x MSAA. Fragment: key + spot + specular, then
+the moon's engraving technique (object-space hatching that swells with
+darkness, cross-hatching in deep shade). Materials: page type, page edges,
+cloth, brass, velvet, boards, night sky, soft shadow catchers. No `discard`.
+No coplanar faces: shadow catchers sit 0.35-0.6 units above what they lie
+on, recessed page faces 2 units behind the boards, overlapping rings 0.5-1
+unit apart.
+
+**Rules kept.** Each drawable re-renders only while its pose or size changes
+(the lamp's light pass runs per frame only while the motes drift). Canvases
+are sized to the object's box at device resolution: the Page Stage publishes
+the device scale (`_devScale`, a new private VM number) and each object
+multiplies it by its page's art-frame scale from `responsive.luau`, capped
+at 4.2 MP. Reduced motion: settled at once, motes still. Pause
+(`_motionPaused`): frozen. Back navigation: settled. No shader support: the
+objects draw nothing and the Page Stage leaves the old vector versions
+(wrapped as `Flat Fallback N`) visible, still animated.
+
+**Turning leaves.** A page that turns is drawn into a 2D canvas, and a 2D
+canvas cannot show an image the GPU produced in the same frame (checked: the
+objects vanished from every leaf in headless captures, which is how the
+video is made). So the Page Stage renders such a page with its objects drawing
+nothing, renders a half-resolution key where they paint pure magenta, and
+composites each object's texture into the leaf through that key
+(`leafcomp.wgsl`). The page's layering survives (ribbons over the book, the
+door over the book, the light cone over the stage), and the objects curl with
+the paper.
+
+**Checks.** `rive . --test` 11/11 (no check changed), `--verify` and
+`inspect --summary` clean, the README probes give the same results (95 s
+auto-advance -> 10, `screenChanged` x9, `recapFinished` x1; 5 taps -> 6;
+hidden 2/3 -> 8 segments; backgrounded freezes; zero fixture). Verified at
+320x568, 390x844, 430x932, 820x1180, 1024x768 and 1280x720, settled and
+mid-turn, forward and back, reduced motion, pause mid-entrance, the extreme
+fixture, personas 0 and 2 (`captures/fixes/`: before/after crops and
+six-size sheets).
+
+**Cost.** `.riv` 2,524,261 -> 2,778,421 bytes (+254 KB: four scripts, two
+shaders, the vector fallbacks kept, the denser scene 3 band). `--bench=600`
+on scene 7 (light pass every frame): render mean 0.24 ms, p95 0.25 ms, no
+wasm memory growth; intro 0.16 ms in the same run (CLI, CPU-side, measured
+while video renders were running, so not comparable to the figures below).
+
+**Compromises.** The key mask is half resolution, so on a leaf an object's
+edge against something drawn over it is a little soft. During a turn the
+Page Stage renders a page with 3D objects twice. The lamp's dimming is a 2D
+overlay, so it also tones the parchment and the day tabs near the lamp.
+The day tabs stand a few units off the right ends of the upper volumes, as
+they did in the vector stack.
 
 ## Responsive layout
 
@@ -406,7 +481,8 @@ instance).
 Underscore-prefixed properties (`_navDir`, `_parallaxX/Y`, `_personaRow`,
 `_motionPaused`, `_hasStats`, `_focus`, `_cmd*`, `_evt*`, `_dbg*Events`, and
 the layout state `_landscape`, `_vw`, `_vh`, `_headerH`, `_headerPadT`,
-`_controlsH`, `_controlsPadB`, `_marginX`, `_controlsAlign`, `_chromeAlpha`)
+`_controlsH`, `_controlsPadB`, `_marginX`, `_controlsAlign`, `_chromeAlpha`, and `_devScale`,
+the device pixels per point written by the Page Stage for the 3D objects)
 are private runtime state, not user data; hosts should not write them
 (`_landscape` may be read: it is the current orientation).
 

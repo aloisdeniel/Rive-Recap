@@ -73,8 +73,11 @@ def _poses():
     x, y = seat(8)
     P[8] = dict(x=x, y=y, s=1.12, r=0.0, op=1.0,
                 lk=look("cup", body=STONE, dip=0.2, drip=0.8, inner=1.0, tilt=0.24, seed=8.0))
-    P[9] = dict(x=195, y=270, s=0.0, r=0.0, op=0.0, sh=0.0,
-                lk=look("orb", body=GLAZE, cap=1.0, sphere=1.0, dip=1.0, drip=0.0, gloss=1.2, live=0.0, seed=9.0))
+    # the orb shares every input with the Glaze Alchemist's emblem orb (scenes.ORB_LOOK), so
+    # handing it over is a swap between two identical renders; turnGain 0 keeps both at yaw 0
+    P[9] = dict(x=195, y=255, s=0.0, r=0.0, op=0.0, sh=0.0,
+                lk=look("orb", body="2B3C95", cap=1.0, sphere=1.0, dip=1.0, drip=0.0, gloss=1.35, seed=13.0,
+                        rings=0.0, turnGain=0.0, live=0.0))
     P[10] = dict(x=195, y=300, s=0.4, r=0.0, op=0.0, sh=0.0,
                  lk=look("slab", body=STONE, cap=1.0, live=0.0, seed=10.0))
     return P
@@ -233,16 +236,11 @@ def build_layer(g, m):
             key_plinth(a, m, 6, (P[0], P[1], P[2], 4, 0, 4, P[6], P[7], 1.0), "back")
             key_plinth(a, m, 44, P)
         elif n == 9:
-            orb = with_(V, s=0.85, op=1.0, lk=dict(live=1.0))
-            key_vessel(a, m, 0, slab, "hold")
-            key_vessel(a, m, 14, slab, "back")
-            key_vessel(a, m, 44, with_(orb, lk=dict(dip=0.0)), "settle")
-            key_glaze(a, m, 44, dict(dip=0.0, flow=0.0, drip=0.0), "heavy")
-            key_glaze(a, m, 60, orb["lk"], "out")
-            key_vessel(a, m, 60, with_(orb, s=0.95), "inout", only=None)
-            key_vessel(a, m, 72, with_(orb, s=0.7), "in")
-            key_vessel(a, m, 86, with_(orb, s=0.0, op=0.0), "hold")
-            key_vessel(a, m, 87, V, "hold")
+            # one motion: the orb is pulled up out of the slab and comes to rest exactly where
+            # the Glaze Alchemist's orb levitates, then hands over to it (see ORB_HANDOFF)
+            orb_rise(a, m, slab, V)
+            a.k(m.vessel, "opacity", (ORB_HANDOFF + 4, 0.0, "hold"))
+            a.k(m.v3d.inputs["live"], "propertyValue", (ORB_HANDOFF + 4, 0.0, "hold"))
             key_plinth(a, m, 0, SLAB_P, "hold")
             key_plinth(a, m, 14, SLAB_P, "back")
             key_plinth(a, m, 54, P)
@@ -259,9 +257,11 @@ def build_layer(g, m):
             key_vessel(a, m, 12, slab, "back")
             if n == 4:
                 upright = with_(bare, r=0.0, x=300, y=180)
-                key_vessel(a, m, 52, upright, "settle")
-                key_vessel(a, m, 66, with_(upright, r=0.18), "in")
-                key_vessel(a, m, 104, bare, "back")
+                key_vessel(a, m, 52, upright, "inout")
+                # the tip: weighted start, then it decelerates into the pour (an "in" curve
+                # here used to end at full speed and stop dead on the last frame)
+                key_vessel(a, m, 66, with_(upright, r=0.18), "soft")
+                key_vessel(a, m, 110, bare, "hold")
                 key_glaze(a, m, 0, bare["lk"], "hold")
                 key_glaze(a, m, 40, bare["lk"], "heavy")
                 key_glaze(a, m, 92, lk)
@@ -300,12 +300,26 @@ def build_layer(g, m):
             key_plinth(a, m, 0, SLAB_P, "hold")
             key_plinth(a, m, 12, SLAB_P, "back")
             key_plinth(a, m, 52, P)
+        if n >= 2:
+            # while the old glaze draws back up, keep its colour: the lidded slab otherwise
+            # flashed the new glaze as radial drip wedges during the state blend
+            prev = argb(POSES[n - 1]["lk"]["glaze"])
+            a.k(m.v3d.inputs["glaze"], "propertyValue", (0, prev, "hold"), (12, prev, "lin"))
         fw = state(a, 200 + (n - 1) * 150, -120)
 
         # ---------------- reverse handoff: the piece sinks back into the wheel and springs up
-        b = L.anim(f"Motif {n} Back", 70)
+        b = L.anim(f"Motif {n} Back", 90 if n == 9 else 70)
         key_chrome(g, b, n)
-        if n in (9, 10):
+        if n == 9:
+            # the orb springs back up into its levitating pose and hands over again
+            orb = with_(V, s=1.0, op=1.0, lk=dict(live=1.0))
+            sunk = with_(orb, y=V["y"] + 50, s=0.55)
+            key_vessel(b, m, 0, sunk, "hold")
+            key_vessel(b, m, 8, sunk, "back")
+            key_vessel(b, m, 46, orb, "hold")
+            b.k(m.vessel, "opacity", (ORB_HANDOFF + 4, 0.0, "hold"))
+            b.k(m.v3d.inputs["live"], "propertyValue", (ORB_HANDOFF + 4, 0.0, "hold"))
+        elif n == 10:
             key_vessel(b, m, 0, with_(V, s=0.0, op=0.0), "hold")
         else:
             sunk = with_(V, y=V["y"] + 50, s=V["s"] * 0.55, r=V["r"] - 0.35, lk=dict(yaw=lk["yaw"] + 1.6))
@@ -329,15 +343,58 @@ def build_layer(g, m):
         key_plinth(r, m, 0, P, "hold")
         rm = state(r, 200 + (n - 1) * 150, 160)
 
+        # scene 9: the orb is handed to the Glaze Alchemist emblem; any other persona has
+        # its own piece, so there the orb rises and dissolves into the reveal instead
+        var = [c_num(g, "_personaVariant", 1)] if n == 9 else []
         any_.add(trans(rm, 0, [c_num(g, "currentScreen", n), c_bool(g, "reducedMotion", True)]))
         any_.add(trans(fw, 260, [c_num(g, "currentScreen", n), c_bool(g, "reducedMotion", False),
-                                 c_num(g, "_navDir", 0, "greaterThanOrEqual")], ease="inout"))
+                                 c_num(g, "_navDir", 0, "greaterThanOrEqual")] + var, ease="inout"))
         any_.add(trans(bk, 320, [c_num(g, "currentScreen", n), c_bool(g, "reducedMotion", False),
-                                 c_num(g, "_navDir", 0, "lessThan")], ease="inout"))
+                                 c_num(g, "_navDir", 0, "lessThan")] + var, ease="inout"))
         L.el.add(fw, bk, rm)
+        if n == 9:
+            other = [c_num(g, "_personaVariant", 1, "notEqual")]
+            a2 = L.anim("Motif 9 Forward Other", 160)
+            key_chrome(g, a2, n)
+            orb_rise(a2, m, slab, V)
+            gone = with_(V, s=0.0, op=0.0, lk=dict(live=1.0))
+            key_vessel(a2, m, ORB_AT + 6, with_(V, s=1.0, op=1.0, lk=dict(live=1.0)), "inout")
+            key_vessel(a2, m, ORB_AT + 40, gone, "hold")
+            a2.k(m.v3d.inputs["live"], "propertyValue", (ORB_AT + 41, 0.0, "hold"))
+            key_plinth(a2, m, 0, SLAB_P, "hold")
+            key_plinth(a2, m, 14, SLAB_P, "back")
+            key_plinth(a2, m, 54, P)
+            fw2 = state(a2, 200 + (n - 1) * 150, -240)
+            b2 = L.anim("Motif 9 Back Other", 70)
+            key_chrome(g, b2, n)
+            key_vessel(b2, m, 0, with_(V, s=0.0, op=0.0), "hold")
+            key_plinth(b2, m, 0, (x, y, w * 0.8, h * 0.4, tilt, depth, fc, tc, op), "hold")
+            key_plinth(b2, m, 4, (x, y, w * 0.8, h * 0.4, tilt, depth, fc, tc, op), "back")
+            key_plinth(b2, m, 40, P)
+            bk2 = state(b2, 200 + (n - 1) * 150, 300)
+            any_.add(trans(fw2, 260, [c_num(g, "currentScreen", n), c_bool(g, "reducedMotion", False),
+                                      c_num(g, "_navDir", 0, "greaterThanOrEqual")] + other, ease="inout"))
+            any_.add(trans(bk2, 320, [c_num(g, "currentScreen", n), c_bool(g, "reducedMotion", False),
+                                      c_num(g, "_navDir", 0, "lessThan")] + other, ease="inout"))
+            L.el.add(fw2, bk2)
 
 
 PROFILE_ONLY = ["h"] + [f"r{i}" for i in range(6)] + [f"c{i}" for i in range(6)]
+
+ORB_AT = 64        # the orb arrives at the emblem orb's pose (Motif 9 Forward frame)
+ORB_HANDOFF = 70   # the emblem orb appears on this frame of Persona 1 Reveal (scenes.py)
+
+
+def orb_rise(a, m, slab, V):
+    """slab -> levitating orb in one eased motion (no pulses, no dip), glaze flowing over it"""
+    orb = with_(V, s=1.0, op=1.0, lk=dict(live=1.0))
+    key_vessel(a, m, 0, slab, "hold")
+    key_vessel(a, m, 12, with_(slab, lk=dict(turnGain=0.0)), "soft")
+    key_vessel(a, m, ORB_AT, orb, "hold")
+    a.k(m.v3d.inputs["sphere"], "propertyValue", (12, 0.0, "inout"), (52, 1.0, "hold"))
+    key_glaze(a, m, 0, dict(dip=0.0, flow=0.0, drip=0.0), "hold")
+    key_glaze(a, m, 18, dict(dip=0.0, flow=0.0, drip=0.0), "soft")
+    key_glaze(a, m, 56, orb["lk"], "hold")
 
 
 def MF_profile(prof):

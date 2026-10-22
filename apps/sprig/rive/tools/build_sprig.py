@@ -86,7 +86,10 @@ SPEC = [
     ("_vw", "number", 390), ("_vh", "number", 844), ("_dpr", "number", 1), ("_landscape", "bool", False),
     ("_tall", "bool", True), ("_rpt", "number", 1), ("_rpw", "number", 0), ("_rlw", "number", 0),
     ("_rlt", "number", 0),
-] + [(f"_ch{k}", "number", h) for k, h in CH_DESIGN.items()]   # measured copy-column heights (design units)
+] + [(f"_ch{k}", "number", h) for k, h in CH_DESIGN.items()] + [   # measured copy-column heights (design units)
+    # count-up playheads (0-1): a hidden node's x, keyed by the scene's own timelines and bound target-to-source.
+    # 1 = the final value. Only the scene's entrance (EF) and the card assembly animate them; leaving holds 1.
+    (f"_count{k}", "number", 1) for k in (2, 3, 4, 5, 6, 7, 8, 10)]
 for n, t, d in SPEC:
     prop(n, t, d)
 
@@ -182,28 +185,27 @@ def c_show_display():
     return CV.group("showdisp", [c_not(), c_b2n()], "Visible to display")
 
 
-def c_rm_duration():
-    # reducedMotion (bool -> 0/1) -> count duration in seconds: 1.15 normally, 0.02 (instant) when reduced
-    f = CV.add("rmdurf", formula("Count duration (reduced motion = instant)", [tV(1.15), tOp("-"), tIn(), tOp("*"),
-                                                                              tV(1.13)]))
-    return CV.group("rmdur", [c_b2n(), f], "Reduced motion to duration")
+# Count-up timing (frames at 60 fps, counted from the start of the scene's entrance timeline). The count starts as
+# the iris is half open and the hero number begins to rise, so it plays where it can be seen; until then the number
+# is fully transparent (its appear key starts on the same frame) and a 0 is never on screen mid-transition.
+COUNT_F0, COUNT_F1 = 20, 80
+COUNT_EASE = (0.25, 0.1, 0.25, 1.0)
 
 
-def c_interp(key="count", dur=1.15, ease=(0.22, 0.0, 0.18, 1.0)):
-    def b(cid):
-        el = E("DataConverterInterpolator", interpolationType="cubic", duration=float(dur), name=f"Ease {key}", id=cid)
-        el.add(E("CubicEaseInterpolator", x1=ease[0], y1=ease[1], x2=ease[2], y2=ease[3]))
-        el.add(bind(P("reducedMotion"), 756, c_rm_duration()))
-        return el
-    return CV.add(("interp", key), b)
+def count_playhead(name, k, id=None):
+    """Hidden node whose x is the count-up playhead of scene k, written back into `_count{k}`."""
+    return node(name, bind(P(f"_count{k}"), 13, direction=True), x=1.0, id=id)
 
 
-def c_gate(k):
-    """input * (currentScreen == k ? 1 : 0)  -- count-up starts when scene k becomes current."""
-    cur = lambda: tV(bind_el=bind(P("currentScreen"), 777))
-    return CV.add(("gate", k), formula(f"Gate scene {k}", [
-        tIn(), tOp("*"), tO(), tV(1), tOp("-"), tF("min"), tV(1), tSep(),
-        tO(), cur(), tOp("-"), tV(k), tC(), tOp("*"), tO(), cur(), tOp("-"), tV(k), tC(), tC(), tC()]))
+def f_play(k, whole):
+    """value * playhead.  `whole` rounds UP, so any started count shows at least 1 (never a stray 0 for
+    non-zero data) and ends exactly on the value; a genuine 0 stays 0."""
+    # min(1, p): keyed floats land on 1.00000012, which would ceil 248 to 249; the 0.001 slack likewise keeps a
+    # playhead of 5e-8 at 0 and an exact value exact.
+    toks = [tIn(), tOp("*"), tF("min"), tV(1), tSep(), tV(bind_el=bind(P(f"_count{k}"), 777)), tC()]
+    if whole:
+        toks = [tF("ceil"), tF("max"), tV(0), tSep()] + toks + [tOp("-"), tV(0.001), tC(), tC()]
+    return CV.add(("play", k, whole), formula(f"Count s{k}{' (whole)' if whole else ''}", toks))
 
 
 def c_clamp_nonneg():
@@ -233,21 +235,11 @@ def c_pad3():
                                         name="Pad to 3", id=cid))
 
 
-def f_snap(k, metric):
-    """After the count interpolator: out = x + rm * (target - x). Reduced motion shows the final value at once.
-    (The interpolator's bound duration is not honoured at runtime, so the snap is done here instead.)"""
-    cur = lambda: tV(bind_el=bind(P("currentScreen"), 777))
-    tgt = lambda: [tF("max"), tV(0), tSep(), tV(bind_el=bind(P(metric), 777)), tC(), tOp("*"), tO(), tV(1), tOp("-"),
-                   tF("min"), tV(1), tSep(), tO(), cur(), tOp("-"), tV(k), tC(), tOp("*"), tO(), cur(), tOp("-"),
-                   tV(k), tC(), tC(), tC()]
-    rm = lambda: tV(bind_el=bind(P("reducedMotion"), 777, c_b2n()))
-    return CV.add(("snap", k, metric), formula(f"Snap s{k} {metric} (reduced motion)",
-                                               [tIn(), tOp("+"), rm(), tOp("*"), tO()] + tgt() + [tOp("-"), tIn(), tC()]))
-
-
-def count_chain(k, tail, key, metric=None):
+def count_chain(k, tail, key, metric=None, whole=False):
+    """Clamp, then scale by the scene's playhead. No currentScreen gate and no interpolator: those reset the
+    leaving scene's number to 0 the moment currentScreen changed (the outgoing scene showed 0 while it left)."""
     metric = metric or METRIC[k]
-    return CV.group((k, key, metric), [c_clamp_nonneg(), c_gate(k), c_interp(), f_snap(k, metric)] + tail,
+    return CV.group((k, key, metric, whole), [c_clamp_nonneg(), f_play(k, whole)] + tail,
                     f"Count s{k} {metric} {key}")
 
 
@@ -365,18 +357,18 @@ def hero_number(k, metric, x, y, w, size=112, color=CREAM, align="center", wght=
     kw = dict(font="fr", size=size, color=color, wght=wght, soft=40, wonk=0, lh=size * 1.0, wrap=False)
 
     def disp(conv_tail, key):
-        return bind(src, 596, count_chain(k, conv_tail, key, metric))
+        return bind(src, 596, count_chain(k, conv_tail, key, metric, whole=True))
 
     def mk_box(name, txt, dkey, dtail):
         bst = lstyle(layoutWidthScaleType="hug", layoutHeightScaleType="hug")
         bst.add(disp(dtail, dkey))
         return E("LayoutComponent", bst, txt, width=10.0, height=10.0, styleId=bst.id, name=name, id=ID())
 
-    t_th = text("Thousands", [("0", src, count_chain(k, [f_thousands(), c_tostr()], "thou", metric)),
+    t_th = text("Thousands", [("0", src, count_chain(k, [f_thousands(), c_tostr()], "thou", metric, whole=True)),
                               (",", P("groupSeparator"), None)], lp=lp("hug", "hug"), **kw)
-    t_rest = text("Rest", [("000", src, count_chain(k, [f_rest(), c_tostr(), c_pad3()], "rest", metric))], lp=lp("hug", "hug"),
+    t_rest = text("Rest", [("000", src, count_chain(k, [f_rest(), c_tostr(), c_pad3()], "rest", metric, whole=True))], lp=lp("hug", "hug"),
                   **kw)
-    t_raw = text("Value", [("0", src, count_chain(k, [c_tostr()], "raw", metric))], lp=lp("hug", "hug"), **kw)
+    t_raw = text("Value", [("0", src, count_chain(k, [c_tostr()], "raw", metric, whole=True))], lp=lp("hug", "hug"), **kw)
     row = E("LayoutComponent", st,
             mk_box("Big A", t_th, "dbig", [f_disp_big()]),
             mk_box("Big B", t_rest, "dbig", [f_disp_big()]),
@@ -516,6 +508,7 @@ class Scene:
         self.fade_leave = []  # ids faded quickly on leave (numbers)
         self.hits = []        # (id, x) hit regions active only while scene is current
         self.extra_hidden = []
+        self.hold_final = []  # count playheads: held at 1 (final value) by every leave timeline
 
     def key(self, obj, prop, keys):
         self.ef.key(obj, prop, keys)
@@ -919,6 +912,9 @@ def scene_derive(sc):
             a.key(hid, "x", [(0, hx, "hold")])
     for obj, p, v in sc.extra_hidden:
         hd.key(obj, p, [(0, v, "hold")])
+    for ph in sc.hold_final:
+        for an in (lf, lb, lr):
+            an.key(ph, "x", [(0, 1.0, "hold")])
     sc.anims = {"EF": sc.ef, "EB": eb, "ER": er, "LF": lf, "LB": lb, "LR": lr, "H": hd, "I": sc.idle}
     return sc.anims
 
@@ -932,6 +928,8 @@ def metric_text(sc, num_kw, head_xy, head_w, head_align, unit_kw=None, dark_text
     nk = dict(num_kw)
     nk.setdefault("color", c)
     hero = hero_number(k, METRIC[k], row_id=hero_id, **nk)
+    ph_id = ID()
+    hero.add(count_playhead(f"S{k} count playhead", k, id=ph_id))
     sc.fade_leave.append(hero_id)
     uk = dict(unit_kw or {})
     unit_id = ID()
@@ -948,7 +946,12 @@ def metric_text(sc, num_kw, head_xy, head_w, head_align, unit_kw=None, dark_text
     al = {"left": "topLeft", "center": "topCenter", "right": "topRight"}[head_align]
     colm = column("Copy", hx, hy, head_w, [head, sup], gap=12, align=al, id=col_id)
     # motion score
-    sc.appear(hero_id, 10, 34, dy=30, base_y=num_kw["y"])
+    # the hero rises as its count starts (same frame), so the not-yet-started 0 is never visible; the count runs
+    # COUNT_F0..COUNT_F1 of the entrance only. EB/ER inherit the final key (1): back arrivals and reduced motion
+    # show the final value at once. Leaving holds 1 (scene_derive), so the outgoing number keeps its value.
+    sc.appear(hero_id, COUNT_F0, COUNT_F0 + 24, dy=30, base_y=num_kw["y"])
+    sc.key(ph_id, "x", [(0, 0.0, "hold"), (COUNT_F0, 0.0, COUNT_EASE), (COUNT_F1, 1.0)])
+    sc.hold_final.append(ph_id)
     sc.appear(unit_id, 40, 64, dy=10, base_y=uk.get("y", 0))
     reveal_keys(sc.ef, rid, 64, 98)
     sc.key(sup_id, "opacity", [(0, 0.0, "hold"), (82, 0.0, "outs"), (106, 0.82)])

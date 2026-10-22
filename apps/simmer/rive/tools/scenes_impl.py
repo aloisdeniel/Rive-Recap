@@ -3,7 +3,7 @@ import math
 import random
 from rml import (E, node, shape, fill, stroke, ellipse, rect, star, poly, smooth, straight, Anim, layer, astate, trans,
                  cond_num, cond_bool, bind, ms2f, col)
-from data import P, count_converter, CONV_FORMAT, CONV_INT, SCRIPT_LETTERS
+from data import P, count_converter, CONV_FORMAT, CONV_INT, SCRIPT_LETTERS, SCRIPT_BOOK
 from text import style, text, reveal_modifier, key_reveal
 from scene_base import Scene, hero_number, copy_styles, W, H, IDLE_MS
 import art
@@ -206,73 +206,159 @@ def scene2(x_stage):
 
 
 # ============================================================================ 3. Recipes tried
-def recipe_card(name, accent, motif_fn, back=False):
-    w, h = 140, 188
-    kids = []
-    if not back:
-        kids += [shape('title', rect(84, 7, 3, 0, 0.5), fill('aub'), x=14, y=24),
-                 shape('title2', rect(54, 7, 3, 0, 0.5), fill('aub'), x=14, y=36, op=0.5)]
-        kids += [shape(f'line{i}', rect(112 - (i % 2) * 30, 3, 1.5, 0, 0.5), fill('aub'), x=14, y=128 + i * 11, op=0.35) for i in range(5)]
-        art_el = motif_fn()
-        art_el.attrs['x'] = 70.0
-        art_el.attrs['y'] = 84.0
-        kids.append(art_el)
-        kids.append(shape('photo', rect(112, 64, 8, 0, 0), fill(accent), x=14, y=50, op=0.35))
-    else:
-        kids += [shape(f'line{i}', rect(108 - (i % 3) * 22, 3, 1.5, 0, 0.5), fill('aub'), x=16, y=28 + i * 13, op=0.3) for i in range(11)]
-        kids.append(shape('stain', ellipse(38, 30), fill('butterDk'), x=96, y=150, op=0.8))
-    kids.append(shape('band', rect(w, 10, 0, 0, 0), fill(accent), x=0, y=0))
-    kids.append(shape('paper', rect(w, h, 6, 0, 0), [fill('cream'), stroke('aub', 2)]))
-    return node(name, kids, x=0, y=-h / 2)
+# The cookbook is a lit 3D book drawn on the GPU (scripts/book.luau + book.wgsl). Its printed
+# surfaces (ten page faces, the endpaper and the cover) are one vector artboard, "Cookbook pages",
+# laid out as an atlas the script renders once into a texture. Cell geometry must match book.luau.
+ATLAS_COLS, ATLAS_ROWS = 5, 3
+CELL_W, CELL_H = 150, 198          # atlas pitch (points)
+FACE_W, FACE_H = 146, 194          # one page face, inset 2 pt in its cell
+RECIPES = [
+    # (title, meta, accent, motif, ingredients, method, hand note)
+    ('Tomato soup', 'serves 4 · 35 min', 'tomato', lambda: art.tomato('art', 0.62),
+     '6 ripe tomatoes\n1 onion, 2 garlic cloves\nolive oil, salt\na fistful of basil',
+     '1. Soften the onion and garlic in oil.\n2. Add the tomatoes; simmer 20 min.\n3. Blend with the basil.\n4. Season, then a swirl of oil.',
+     'roast them first!'),
+    ('Lemon orzo', 'serves 2 · 20 min', 'lemon', lambda: art.lemon_slice('art', 0.72),
+     '200 g orzo\n1 lemon, zest + juice\nbutter, parmesan\npeas, black pepper',
+     '1. Toast the orzo in butter.\n2. Add stock a ladle at a time.\n3. Stir in peas, zest, juice.\n4. Finish with parmesan.',
+     'double the zest'),
+    ('Mushroom risotto', 'serves 4 · 45 min', 'onion', lambda: art.mushroom('art', 0.72),
+     '300 g arborio rice\n400 g mushrooms\n1 shallot, thyme\nwhite wine, stock',
+     '1. Brown the mushrooms hard.\n2. Sweat the shallot; add rice.\n3. Wine, then stock, stirring.\n4. Fold the mushrooms back in.',
+     'Sunday favourite'),
+    ('Chili beans', 'serves 6 · 1 hr', 'carrot', lambda: art.chili('art', 0.72, rot=0.6),
+     '2 tins kidney beans\n1 tin tomatoes\n2 chilies, cumin\nonion, peppers',
+     '1. Fry the onion and peppers.\n2. Toast the cumin and chili.\n3. Add beans and tomatoes.\n4. Simmer low for 40 min.',
+     'better next day'),
+    ('Basil pesto', 'makes 1 jar · 10 min', 'basil', lambda: art.leaf('art', 0.9, rot=0.8),
+     '2 big bunches basil\n50 g pine nuts\nparmesan, 1 garlic clove\ngood olive oil',
+     '', ''),
+]
+
+
+def _cell_origin(idx):
+    return (idx % ATLAS_COLS) * CELL_W + (CELL_W - FACE_W) / 2, (idx // ATLAS_COLS) * CELL_H + (CELL_H - FACE_H) / 2
+
+
+def _page_front(idx, r, page_no):
+    title, meta, accent, motif, ingr, _m, _n = r
+    ox, oy = _cell_origin(idx)
+    ttl = style('display', 15, 800, 'aub', lh=16, ls=-0.3, opsz=24, name='Page title')
+    met = style('body', 7.5, 600, 'aubLt', name='Page meta')
+    hd = style('hand', 12, 700, 'tomato', name='Page hand')
+    body = style('body', 7.5, 400, 'aub', lh=10, name='Page body')
+    pg = style('hand', 10, 600, 'aubLt', name='Page number')
+    art_el = motif()
+    art_el.attrs['x'] = 73.0
+    art_el.attrs['y'] = 78.0
+    kids = [
+        text('title', [(ttl, title, None, None)], x=12, y=16, width=122, sizing='autoHeight'),
+        text('meta', [(met, meta, None, None)], x=12, y=35, width=122, sizing='autoHeight'),
+        art_el,
+        shape('photo', rect(122, 56, 8, 0, 0), fill(accent), x=12, y=50, op=0.32),
+        text('ingredients head', [(hd, 'you will need', None, None)], x=12, y=110, rot=-0.03),
+        text('ingredients', [(body, ingr, None, None)], x=12, y=127, width=122, sizing='autoHeight'),
+        text('page', [(pg, str(page_no), None, None)], x=73, y=180, ox=0.5),
+        shape('band', rect(FACE_W, 8, 0, 0, 0), fill(accent), x=0, y=0),
+        shape('paper', rect(FACE_W, FACE_H, 0, 0, 0), fill('cream')),
+    ]
+    return node(f'Face {idx}', kids, x=ox, y=oy)
+
+
+def _page_back(idx, r, page_no):
+    title, _meta, accent, _motif, _i, method, note = r
+    ox, oy = _cell_origin(idx)
+    hd = style('display', 12, 800, 'aub', lh=13, opsz=18, name='Back head')
+    body = style('body', 7.5, 400, 'aub', lh=11, name='Back body')
+    hand = style('hand', 13, 700, 'tomato', name='Back note')
+    pg = style('hand', 10, 600, 'aubLt', name='Page number')
+    kids = [
+        text('note', [(hand, note, None, None)], x=16, y=150, rot=-0.07),
+        shape('note line', smooth([(0, 0), (30, 2), (62, -1)], False), stroke('tomato', 1.4), x=16, y=170, rot=-0.07),
+        text('method head', [(hd, 'Method', None, None)], x=12, y=16),
+        text('method', [(body, method, None, None)], x=12, y=36, width=122, sizing='autoHeight'),
+        text('page', [(pg, str(page_no), None, None)], x=73, y=180, ox=0.5),
+        shape('stain', ellipse(40, 32), fill('butterDk'), x=104, y=146, op=0.55),
+        shape('stain ring', ellipse(40, 32), stroke('butterDk', 2), x=106, y=148, op=0.7),
+        shape('band', rect(FACE_W, 8, 0, 0, 0), fill(accent), x=0, y=0, op=0.55),
+        shape('paper', rect(FACE_W, FACE_H, 0, 0, 0), fill('cream')),
+    ]
+    return node(f'Face {idx}', kids, x=ox, y=oy)
+
+
+def _endpaper(idx):
+    ox, oy = _cell_origin(idx)
+    plate_t = style('hand', 17, 700, 'aub', name='Bookplate')
+    plate_s = style('body', 7, 600, 'aubLt', ls=1.2, name='Bookplate small')
+    kids = [
+        text('plate name', [(plate_t, 'kitchen notes', None, None)], x=73, y=88, ox=0.5, rot=-0.03),
+        text('plate small', [(plate_s, 'FROM THE KITCHEN OF', None, None)], x=73, y=76, ox=0.5),
+        art.scallop_ticket('plate', 104, 40, c='butter', edge='tomato', x=73, y=97),
+        art.gingham('gingham', FACE_W, FACE_H, cell=12, c='tomato', bg='cream', x=FACE_W / 2, y=FACE_H / 2),
+    ]
+    return node(f'Face {idx}', kids, x=ox, y=oy)
+
+
+def _cover(idx):
+    ox, oy = _cell_origin(idx)
+    lab = style('display', 20, 800, 'tomato', ls=-0.6, opsz=36, name='Cover title')
+    sub = style('hand', 13, 700, 'aub', name='Cover sub')
+    kids = [
+        text('cover title', [(lab, 'Simmer', None, None)], x=73, y=70, ox=0.5),
+        text('cover sub', [(sub, 'recipes & notes', None, None)], x=73, y=96, ox=0.5),
+        shape('label', rect(104, 62, 6), fill('cream'), x=73, y=92),
+        shape('label ink', rect(104, 62, 6), fill('ink25'), x=76, y=95),
+        shape('rule', rect(FACE_W - 20, FACE_H - 20, 10), stroke('tomatoLt', 2), x=73, y=97),
+        shape('cloth', rect(FACE_W, FACE_H, 0, 0, 0), fill('tomato')),
+    ]
+    return node(f'Face {idx}', kids, x=ox, y=oy)
+
+
+def cookbook_atlas():
+    """The printed surfaces of the 3D cookbook, as one atlas artboard (see book.luau for the cells)."""
+    ab = E('Artboard', isComponent=True, width=float(ATLAS_COLS * CELL_W), height=float(ATLAS_ROWS * CELL_H),
+           name='Cookbook pages', x=500.0, y=2560.0, clip=True)
+    st = E('LayoutComponentStyle', name='Artboard Style')
+    ab.attrs['styleId'] = st.id
+    faces = []
+    for i in range(4):
+        faces.append(_page_front(i, RECIPES[i], 2 * i + 1))
+        faces.append(_page_back(5 + i, RECIPES[i], 2 * i + 2))
+    faces.append(_page_front(4, RECIPES[4], 9))
+    faces.append(_endpaper(9))
+    faces.append(_cover(10))
+    ab.add(st, *faces)
+    EXTRA.append((ab, None))
+    return ab
 
 
 def scene3(x_stage):
     sc = Scene(3, NAMES[3], x_stage)
     hero, tb = metric_copy(sc, 3, 'right')
-    spine_x, spine_y = 195, 548
-    cover = shape('Cover', rect(318, 214, 14), [fill('tomato')], x=spine_x, y=spine_y + 6)
-    cover_ink = shape('Cover ink', rect(318, 214, 14), fill('ink25'), x=spine_x + 6, y=spine_y + 12)
-    left_page = shape('Left page', rect(146, 196, 6, 1, 0.5), [fill('cream'), stroke('aub', 2)], x=spine_x - 2, y=spine_y)
-    right_page = node('Right page', [recipe_card('final card', 'basil', lambda: art.leaf('card basil', 0.9, rot=0.8))], x=spine_x + 2, y=spine_y)
-    motifs = [lambda: art.tomato('card tomato', 0.7), lambda: art.lemon_slice('card lemon', 0.8), lambda: art.mushroom('card mushroom', 0.8),
-              lambda: art.chili('card chili', 0.8, rot=0.6)]
-    accents = ['tomato', 'lemon', 'onion', 'carrot']
-    pages = []
-    for i in range(4):
-        front = recipe_card(f'front {i}', accents[i], motifs[i])
-        backf = recipe_card(f'back {i}', accents[i], motifs[i], back=True)
-        # the back face is drawn un-mirrored: once the page flips past the spine it lands on the left
-        pg = node(f'Page {i}', [front, backf], x=spine_x + 2, y=spine_y, rot=0.0)
-        backf.attrs['opacity'] = 0.0
-        t = 380 + i * 260
-        dur = 460
-        settle_rot = -0.012 * (3 - i)
-        sc.key(pg, 'scaleX', [(0, 1.0, 'hold'), (t, 1.0, 'inout'), (t + dur, -1.0)])
-        sc.key(pg, 'rotation', [(0, 0.0, 'hold'), (t, 0.0, 'inout'), (t + dur, settle_rot)])
-        sc.key(pg, 'y', [(0, float(spine_y), 'hold'), (t, float(spine_y), 'out'), (t + dur * 0.5, float(spine_y) - 26, 'in'), (t + dur, float(spine_y) + i * 1.5)])
-        sc.key(front, 'opacity', [(0, 1.0, 'hold'), (t + dur * 0.5, 0.0, 'hold')])
-        sc.key(backf, 'opacity', [(0, 0.0, 'hold'), (t + dur * 0.5, 1.0, 'hold')])
-        pages.append(pg)
-    # ribbon bookmark + handwritten note + recipe ticket peeking out
-    ribbon = shape('Bookmark', straight([(-8, 0), (8, 0), (8, 92), (0, 80), (-8, 92)], True), fill('basil'), x=spine_x + 40, y=spine_y + 96)
-    sc.key(ribbon, 'scaleY', [(0, 0.0, 'hold'), (1500, 0.0, 'back'), (1900, 1.0)])
+    # The book: a ScriptedDrawable over the art box (0, 380)-(390, 770). It drops onto the table
+    # closed, the cover swings open, and four leaves curl over the spine one after another, each
+    # landing on the pile it passed over (depth-tested, so a turned leaf never stays on top).
+    # `progress` is the entrance playhead (0-2000 ms); `idle` drives a small breeze in the idle loop.
+    atlas = cookbook_atlas()
+    book_p = E('ScriptInputNumber', propertyValue=0.0, name='progress')
+    book_i = E('ScriptInputNumber', propertyValue=0.0, name='idle')
+    book = E('ScriptedDrawable', [book_p, book_i, E('ScriptInputArtboard', artboardId=atlas.id, name='atlas')],
+             scriptAssetId=SCRIPT_BOOK, name='Cookbook 3D', x=0.0, y=380.0)
+    sc.key(book_p, 'propertyValue', [(0, 0.0, 'lin'), (2000, 1.0)])
+    sc.idle.ms(book_i, 'propertyValue', [(0, 0.0, 'lin'), (IDLE_MS, 1.0)])
+    # handwritten note + sparkles stay vector collage around the book
     note_st = hand('n', 26, 'tomato', 700)
-    note = text('Note', [(note_st, 'make again!', None, None)], x=40, y=690, rot=-0.08)
-    arrow_g, arrow_trim, arrow_head = art.handwritten_arrow('Note arrow', [(0, 0), (10, -24), (34, -44)], c='tomato', x=150, y=690)
-    sc.key(note, 'opacity', [(0, 0.0, 'hold'), (1550, 0.0, 'soft'), (1800, 1.0)])
-    sc.enter.ms(arrow_trim, 'end', [(0, 0.0, 'hold'), (1650, 0.0, 'soft'), (2000, 1.0)])
+    note = text('Note', [(note_st, 'make again!', None, None)], x=40, y=694, rot=-0.08)
+    arrow_g, arrow_trim, arrow_head = art.handwritten_arrow('Note arrow', [(0, 0), (10, -24), (34, -44)], c='tomato', x=150, y=694)
+    sc.key(note, 'opacity', [(0, 0.0, 'hold'), (1700, 0.0, 'soft'), (1950, 1.0)])
+    sc.enter.ms(arrow_trim, 'end', [(0, 0.0, 'hold'), (1800, 0.0, 'soft'), (2100, 1.0)])
     sc.settle(arrow_trim, 'end', 1.0)
-    sc.key(arrow_head, 'opacity', [(0, 0.0, 'hold'), (1950, 0.0, 'lin'), (2000, 1.0)])
-    stars = [art.sparkle(f'spark {i}', 0.8, 'lemon', x=x, y=y) for i, (x, y) in enumerate([(52, 420), (346, 640), (70, 668)])]
+    sc.key(arrow_head, 'opacity', [(0, 0.0, 'hold'), (2050, 0.0, 'lin'), (2100, 1.0)])
+    stars = [art.sparkle(f'spark {i}', 0.8, 'lemon', x=x, y=y) for i, (x, y) in enumerate([(40, 420), (352, 650), (70, 668)])]
     for i, s_ in enumerate(stars):
-        pop_in(sc, s_, 1400 + i * 120, dur=360, rot_from=-1.2)
+        pop_in(sc, s_, 1500 + i * 120, dur=360, rot_from=-1.2)
         sc.wiggle(s_, 'rotation', 0.0, 0.5, IDLE_MS / (i + 1))
-    book = node('Cookbook', pages + [right_page, left_page, cover, cover_ink])
-    sc.key(book, 'y', [(0, 90.0, 'hold'), (0, 90.0, 'back'), (420, 0.0)])
-    sc.key(book, 'opacity', [(0, 0.0, 'hold'), (60, 0.0, 'soft'), (300, 1.0)])
-    sc.key(book, 'rotation', [(0, 0.06, 'hold'), (60, 0.06, 'back'), (520, 0.0)])
-    sc.wiggle(ribbon, 'rotation', 0.0, 0.08, IDLE_MS / 2)
-    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, arrow_g, *stars, ribbon, book]))
+    sc.inner.add(sc.copy_group([hero, tb]), sc.art_group([note, arrow_g, *stars, book]))
     return sc
 
 

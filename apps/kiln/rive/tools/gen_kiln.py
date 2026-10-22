@@ -109,6 +109,7 @@ class Gen:
         self.v3d_script = E("ScriptAsset", {"file": "scripts/vessel3d.luau", "name": "vessel3d"})
         self.kiln_script = E("ScriptAsset", {"file": "scripts/kiln.luau", "name": "kiln"})
         self.grain_script = E("ScriptAsset", {"file": "scripts/grain.luau", "name": "grain"})
+        self.fx_script = E("ScriptAsset", {"file": "scripts/fx3d.luau", "name": "fx3d"})
         self.converters: list[E] = []
         self.events: dict[str, E] = {}
         # chrome paints keyed per scene by the Motif layer
@@ -299,6 +300,7 @@ class Gen:
         out.append(self.v3d_script.render(1))
         out.append(self.kiln_script.render(1))
         out.append(self.grain_script.render(1))
+        out.append(self.fx_script.render(1))
         out.append("</Rive>\n")
         return "\n".join(out)
 

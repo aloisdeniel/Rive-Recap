@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Re-render every app's portrait and landscape videos (apps/<app>/video.webm at
 # 390x844, apps/<app>/video-landscape.webm at 1280x720), then the merged
-# showcases (apps/showcase.webm, apps/showcase-landscape.webm), plus git-ignored
-# MP4 copies of each.
+# showcases (apps/showcase.webm, apps/showcase-landscape.webm), and exports each
+# to the committed MP4 (the WebMs are the git-ignored working format).
 #
 #   scripts/render-all.sh [app ...]       # default: every app with a rive/ project
 #
@@ -36,7 +36,7 @@ done
 "$here/merge-videos.py" --video video-landscape.webm --rows 2 --scale 0.35 \
   --output "$root/apps/showcase-landscape.webm"
 
-# MP4 copies for platforms without WebM support (git-ignored).
+# Export the committed MP4s.
 "$here/export-mp4.sh"
 
 if [ "${#failed[@]}" -gt 0 ]; then

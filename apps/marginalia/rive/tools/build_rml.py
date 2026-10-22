@@ -135,6 +135,9 @@ for name, kind, dv in [
     ("_headerH", "number", HEADER_H), ("_headerPadT", "number", 22), ("_controlsH", "number", CONTROLS_H),
     ("_controlsPadB", "number", 22), ("_marginX", "number", 24), ("_controlsAlign", "number", 4),
     ("_chromeAlpha", "number", 1),
+    # device pixels per point, written by the Page Stage: the scripted 3D
+    # objects size their GPU canvases to their box at device resolution
+    ("_devScale", "number", 1),
 ]:
     V.prop(name, kind, dv)
 
@@ -374,7 +377,7 @@ def build_scenes():
     builders = [art.scene1, art.scene2, art.scene3, art.scene4, art.scene5, art.scene6,
                 art.scene7, art.scene8, art.scene9, art.scene10]
     ctx = dict(V=V, serif=serif, italic=italic, sans=sans, metric_copy=metric_copy, DATA=DATA,
-               SW=SW, SH=SH, conv=conv)
+               SW=SW, SH=SH, conv=conv, book_script=GPU_SCRIPTS[1], theatre_script=GPU_SCRIPTS[2], lamp_script=GPU_SCRIPTS[3])
     extra_layers = []
     for sc, b in zip(SCENES, builders):
         sc.extra = b(sc, ctx) or []
@@ -458,7 +461,7 @@ def main():
              N("ComponentAsset", artboardId=cover_ab.id, name="Cover"),
              N("ComponentAsset", artboardId=card_ab.id, name="ShareCard"),
              N("ComponentAsset", artboardId=recap.id, name="Recap"),
-             *FONTS, *recap_extra, ctx_global()["moon_script"], *CONVERTERS, V.finish()]
+             *FONTS, *recap_extra, ctx_global()["moon_script"], *GPU_SCRIPTS, *CONVERTERS, V.finish()]
     out = K.doc(*roots)
     os.makedirs(os.path.join(ROOT, "rml"), exist_ok=True)
     with open(os.path.join(ROOT, "rml", "recap.rml"), "w") as f:
@@ -469,11 +472,22 @@ def main():
 _CTX = {}
 
 
+# the scripted 3D objects: a shared module (it requires scripts/responsive,
+# declared with the root's scripts, which come first) and one drawable each
+GPU_SCRIPTS = [
+    N("ScriptAsset", file="scripts/etch3d.luau", isModule=True, folderPath="scripts", name="etch3d").ensure(),
+    N("ScriptAsset", file="scripts/book3d.luau", name="book3d").ensure(),
+    N("ScriptAsset", file="scripts/theatre3d.luau", name="theatre3d").ensure(),
+    N("ScriptAsset", file="scripts/lamp3d.luau", name="lamp3d").ensure(),
+]
+
+
 def ctx_global():
     if not _CTX:
         _CTX.update(V=V, serif=serif, italic=italic, sans=sans, DATA=DATA, SW=SW, SH=SH,
                     conv=conv, SCENES=SCENES, EXIT_MS=EXIT_MS,
-                    moon_script=N("ScriptAsset", file="scripts/moon.luau", name="moon").ensure())
+                    moon_script=N("ScriptAsset", file="scripts/moon.luau", name="moon").ensure(),
+                    book_script=GPU_SCRIPTS[1], theatre_script=GPU_SCRIPTS[2], lamp_script=GPU_SCRIPTS[3])
     return _CTX
 
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Convert the WebM recap videos to H.264 MP4, for places that do not take WebM
-# (e.g. X/Twitter uploads). Writes each MP4 next to its WebM:
+# Convert the WebM recap renders to H.264 MP4, the format committed in the repo
+# (and accepted everywhere, e.g. X/Twitter uploads). Writes each MP4 next to its WebM:
 #   apps/<app>/video.mp4, apps/<app>/video-landscape.mp4, apps/showcase.mp4 and
 #   apps/showcase-landscape.mp4
-# The MP4s are git-ignored; re-run this after rendering.
+# The WebMs are the git-ignored working format; re-run this after rendering.
 #
 #   scripts/export-mp4.sh [file.webm ...]    # default: every app video + both showcases
 set -euo pipefail

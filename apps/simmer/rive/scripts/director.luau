@@ -45,6 +45,7 @@ type Dir = {
     qReplay: number,
     -- layout
     width: number,
+    pixelRatio: number,
     height: number,
     layoutDirty: boolean,
     lastBreakpoint: number,
@@ -285,6 +286,7 @@ local function applyLayout(self: Dir)
     setNum(self, 'layoutArtX1b', s.artX1b)
     setNum(self, 'layoutStack', s.stack)
     setNum(self, 'layoutSide', s.side)
+    setNum(self, 'layoutPixelRatio', self.pixelRatio)
     -- a resize (even across the breakpoint mid-scene) keeps the scene and snaps the motif to it
     aimMotif(self, false)
 end
@@ -404,6 +406,12 @@ end
 function resize(self: Dir, size: Vector, scale: number)
     if size.x > 0 and size.y > 0 and (size.x ~= self.width or size.y ~= self.height) then
         self.width, self.height = size.x, size.y
+        self.layoutDirty = true
+    end
+    -- the presenting density, for the scripts that allocate GPU surfaces from a Node (the cookbook)
+    local pr = if scale > 0 then scale else 1
+    if pr ~= self.pixelRatio then
+        self.pixelRatio = pr
         self.layoutDirty = true
     end
 end
@@ -631,7 +639,7 @@ return function(context: Context): Layout<Dir>
         down = false, downX = 0, downY = 0, held = 0, holding = false, pausedBeforeHold = false,
         sharing = false, pausedBeforeShare = false,
         qNext = 0, qPrev = 0, qPause = 0, qShare = 0, qReplay = 0,
-        width = 390, height = 844, layoutDirty = true, lastBreakpoint = 768, slots = nil, motifScreen = -1,
+        width = 390, height = 844, pixelRatio = 1, layoutDirty = true, lastBreakpoint = 768, slots = nil, motifScreen = -1,
         mx0 = 0, my0 = 0, ms0 = 1, mx1 = 0, my1 = 0, ms1 = 1, mt = MOTIF_CARRY,
         init = init, resize = resize, advance = advance, draw = draw,
         pointerDown = pointerDown, pointerUp = pointerUp, pointerExit = pointerExit,

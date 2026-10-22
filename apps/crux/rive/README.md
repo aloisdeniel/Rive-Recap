@@ -4,9 +4,9 @@ A ten-scene, data-bound climbing recap for the fictional app Crux, built with Ri
 
 | What | Where |
 |---|---|
-| Editable source (RML + Luau + WGSL) | `scene/*.rml`, `director.luau`, `layout.luau` (responsive layout engine), `rigdata.luau` (generated block spec), `wall.luau` (wall texture), `hold3d.luau` + `hold3d.wgsl` (3D holds), `chalk.luau` + `chalk.wgsl` (chalk shader) |
+| Editable source (RML + Luau + WGSL) | `scene/*.rml`, `director.luau`, `layout.luau` (responsive layout engine), `rigdata.luau` (generated block spec), `wall.luau` (wall texture), `hold3d.luau` + `hold3d.wgsl` (3D holds), `chalk.luau` + `chalk.wgsl` (chalk shader), `rope.luau` (climbing rope) |
 | Generator for the RML (scenes, ~60 entrance/exit timelines, ~450 transitions) | `tools/gen.py` (+ `rml.py`, `art.py`, `stage.py`, `build_stage.py`, `main_ab.py`, `model.py`, `conv.py`, `rig.py`) |
-| Runtime file | `build/crux-recap.riv` (900 KB, unsigned local build) |
+| Runtime file | `build/crux-recap.riv` (919 KB, unsigned local build) |
 | Editor file `.rev` | **Not produced.** `rive . --once --rev=build/crux-recap.rev` fails with "Not logged in". Run `rive login` and then that command. |
 | Fixtures | `fixtures/fixture.json` (sample data), `new-user.json`, `extreme.json`. The same three are also authored as `UserRecap` instances named `Fixture` (the default), `NewUser` and `Extreme`. |
 | Captures | `captures/*.png` (50 design-size stills), `captures/responsive/*.png` (the portrait/landscape size matrix), `captures/motion/*.mp4`, `captures/data/verify-report.json` |
@@ -399,3 +399,24 @@ That is widths 320–2560, heights 360–1180, and aspect ratios from 0.47 to 2.
 - **Device resolution is unverified headless.** Captures run at @1x, so the device-resolution canvases (`px` > 2, the chalk at device pixels) were not seen on a Retina screen.
 - **File size.** The responsive rig (bound rig nodes, `CruxRig`, `layout.luau`, `rigdata.luau`, `wall.luau`) grows the `.riv` from 882 KB to 900 KB (881,732 → 900,331 bytes).
 - **Unchanged design-size art.** At 390×844 the composition is the original design. The new procedural speckles replace the old fixed ones, so their positions differ.
+
+## Fixes from review
+
+Two issues were reported: the title was cropped on the first screen, and the rope looked weak on "screen 5". Before/after crops are in `captures/fixes/`.
+
+- **Intro title cropped.** The wordmark's round C overhung the title box by 8 points, and the reveal clip sat flush with that box, so the C was sliced flat at every size.
+  - The wordmark now sits 8 points further right, so its ink starts at the title box edge, flush with the copy.
+  - The clip is derived from the wordmark's ink bounds (`WORDMARK_INK` in `tools/art.py`), with a margin that covers the entrance rise.
+  - `tools/stage.py` asserts that both the clip and the title block box contain the ink, so the layout can never place the C off canvas.
+  - Checked at all 16 sizes and with the extreme fixture. Mid-reveal frames still wipe in from the left, as designed.
+- **The rope.** Scene 5 has no rope while it is settled. The rope the user saw is the yank rope on the 5→6 exit: a thin coal line whose cobalt twist disappeared on scene 5's cobalt wall. Scene 6's rope also looked weak: a flat polyline, a stack of ellipses and a plain arc. All of these are now drawn by `rope.luau`, a vector `ScriptedDrawable`:
+  - **The rope itself.** A dynamic kernmantle rope in the holds' print style: a coal cut-out outline, a cobalt sheath, a posterised shade band and glint lit from the top left, dark twill strands, an acid tracer leaning the other way, and coal tape on cut ends.
+  - **The tie-in.** The rope is tied with a figure-eight on a bight to a steel locking carabiner (with a screw-gate sleeve), clipped through the hold's bolt ring.
+  - **Yank rope.** The keyed bezier vertex is replaced by a keyed `bow` input, with the same slack curve and the same snap and lower-off timing.
+  - **Scene 6.** A coiled rope pile (a helix drawn by half turns, so each turn passes over the one below) feeds a slack that runs along the ledge to the carrier hold. The tie-in is a second drawable inside the carrier, so it draws on top of the hold, and it fades out as the yank unclips it. The dial arc is the same rope, bound to the minutes as before, and leaves a small gap when the dial is full. The `unwind` and `reveal` inputs replace the old coil scale and trim keys.
+  - **No GPU path.** The rope is plain vector paths, so it renders headlessly and on every runtime, with no shader to fall back from.
+  - **Reduced motion and cost.** Reduced motion holds the final values; the yank rope stays hidden as before. The geometry is rebuilt only when an input changes. Scene 6's ropes are gated by `live`, like the 3D holds.
+- **Checks.** `tools/verify.py` passes 50/50, with no check changed. `rive . --verify` and `inspect --summary` report 0 problems. The `.riv` grew from 900 KB to 919 KB.
+- **Still weak.**
+  - At 320×568 the scene 6 ledge (hold, knot and pile) still sits behind the transparent control bar, the existing short-phone compromise.
+  - On landscape canvases scene 5's art column is small, so the knot is only a few pixels tall during the yank.

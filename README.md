@@ -1,6 +1,6 @@
 # Rive-Recap
 
-[Watch the portrait showcase](apps/showcase.webm) (ten fictional Rive recaps, five at a time) · [Watch the landscape showcase](apps/showcase-landscape.webm) (all ten at once)
+[Watch the portrait showcase](apps/showcase.mp4) (ten fictional Rive recaps in a 5×2 grid) · [Watch the landscape showcase](apps/showcase-landscape.mp4) (all ten at once)
 
 **An example showcase of ten fictional apps, each with its own Wrapped-style year-in-review built in [Rive](https://rive.app).** It shows how quickly a personalised, animated recap can be generated for your own app: every experience here started from a written brief and was built end to end with the [Rive CLI](https://rive.app/docs) — vector art, ten scenes, motion, personas, a share card and a data-bound runtime model — into a `.riv` that ships straight into an app.
 
@@ -8,16 +8,16 @@ Every app is a different visual world, and every one runs on the same contract: 
 
 | App | Domain | Style | Recap |
 |---|---|---|---|
-| [Sprig](apps/sprig/PROMPT.md) | Houseplant care | Folded-paper botanical dioramas | [portrait](apps/sprig/video.webm) · [landscape](apps/sprig/video-landscape.webm) · [project](apps/sprig/rive/) |
-| [Crux](apps/crux/PROMPT.md) | Indoor climbing | Brutalist climbing-wall graphics | [portrait](apps/crux/video.webm) · [landscape](apps/crux/video-landscape.webm) · [project](apps/crux/rive/) |
-| [Simmer](apps/simmer/PROMPT.md) | Home cooking | Risograph cookbook collage | [portrait](apps/simmer/video.webm) · [landscape](apps/simmer/video-landscape.webm) · [project](apps/simmer/rive/) |
-| [Marginalia](apps/marginalia/PROMPT.md) | Reading journal | Literary book-jacket design | [portrait](apps/marginalia/video.webm) · [landscape](apps/marginalia/video-landscape.webm) · [project](apps/marginalia/rive/) |
-| [Nocturne](apps/nocturne/PROMPT.md) | Stargazing journal | Observatory instrument graphics | [portrait](apps/nocturne/video.webm) · [landscape](apps/nocturne/video-landscape.webm) · [project](apps/nocturne/rive/) |
-| [Kiln](apps/kiln/PROMPT.md) | Ceramics studio | Sculptural ceramic silhouettes | [portrait](apps/kiln/video.webm) · [landscape](apps/kiln/video-landscape.webm) · [project](apps/kiln/rive/) |
-| [Switchyard](apps/switchyard/PROMPT.md) | Public transit | Swiss transit posters | [portrait](apps/switchyard/video.webm) · [landscape](apps/switchyard/video-landscape.webm) · [project](apps/switchyard/rive/) |
-| [Stash](apps/stash/PROMPT.md) | Personal savings | Retro toy-bank arcade | [portrait](apps/stash/video.webm) · [landscape](apps/stash/video-landscape.webm) · [project](apps/stash/rive/) |
-| [Parlance](apps/parlance/PROMPT.md) | Language practice | Kinetic typography posters | [portrait](apps/parlance/video.webm) · [landscape](apps/parlance/video-landscape.webm) · [project](apps/parlance/rive/) |
-| [Patchwork](apps/patchwork/PROMPT.md) | Local volunteering | Quilted textile collage | [portrait](apps/patchwork/video.webm) · [landscape](apps/patchwork/video-landscape.webm) · [project](apps/patchwork/rive/) |
+| [Sprig](apps/sprig/PROMPT.md) | Houseplant care | Folded-paper botanical dioramas | [portrait](apps/sprig/video.mp4) · [landscape](apps/sprig/video-landscape.mp4) · [project](apps/sprig/rive/) |
+| [Crux](apps/crux/PROMPT.md) | Indoor climbing | Brutalist climbing-wall graphics | [portrait](apps/crux/video.mp4) · [landscape](apps/crux/video-landscape.mp4) · [project](apps/crux/rive/) |
+| [Simmer](apps/simmer/PROMPT.md) | Home cooking | Risograph cookbook collage | [portrait](apps/simmer/video.mp4) · [landscape](apps/simmer/video-landscape.mp4) · [project](apps/simmer/rive/) |
+| [Marginalia](apps/marginalia/PROMPT.md) | Reading journal | Literary book-jacket design | [portrait](apps/marginalia/video.mp4) · [landscape](apps/marginalia/video-landscape.mp4) · [project](apps/marginalia/rive/) |
+| [Nocturne](apps/nocturne/PROMPT.md) | Stargazing journal | Observatory instrument graphics | [portrait](apps/nocturne/video.mp4) · [landscape](apps/nocturne/video-landscape.mp4) · [project](apps/nocturne/rive/) |
+| [Kiln](apps/kiln/PROMPT.md) | Ceramics studio | Sculptural ceramic silhouettes | [portrait](apps/kiln/video.mp4) · [landscape](apps/kiln/video-landscape.mp4) · [project](apps/kiln/rive/) |
+| [Switchyard](apps/switchyard/PROMPT.md) | Public transit | Swiss transit posters | [portrait](apps/switchyard/video.mp4) · [landscape](apps/switchyard/video-landscape.mp4) · [project](apps/switchyard/rive/) |
+| [Stash](apps/stash/PROMPT.md) | Personal savings | Retro toy-bank arcade | [portrait](apps/stash/video.mp4) · [landscape](apps/stash/video-landscape.mp4) · [project](apps/stash/rive/) |
+| [Parlance](apps/parlance/PROMPT.md) | Language practice | Kinetic typography posters | [portrait](apps/parlance/video.mp4) · [landscape](apps/parlance/video-landscape.mp4) · [project](apps/parlance/rive/) |
+| [Patchwork](apps/patchwork/PROMPT.md) | Local volunteering | Quilted textile collage | [portrait](apps/patchwork/video.mp4) · [landscape](apps/patchwork/video-landscape.mp4) · [project](apps/patchwork/rive/) |
 
 All apps, names and statistics are fictional sample data for the year 2026.
 
@@ -107,12 +107,12 @@ rive apps/simmer/rive                 # live preview window, rebuilds on edit
 rive apps/simmer/rive --screenshot=out.png --viewport=1280x720   # one frame at any canvas size
 scripts/render-video.py simmer        # apps/simmer/video.webm (portrait, 390x844)
 scripts/render-video.py simmer --viewport 1280x720 --output apps/simmer/video-landscape.webm
-scripts/merge-videos.py               # apps/showcase.webm: five apps side by side, two sequences
+scripts/merge-videos.py               # apps/showcase.webm: all ten apps in a 5x2 grid
 scripts/merge-videos.py --video video-landscape.webm --rows 2 --scale 0.35 --output apps/showcase-landscape.webm
-scripts/export-mp4.sh                 # git-ignored MP4 copies of every video, e.g. for X uploads
+scripts/export-mp4.sh                 # the committed MP4s (apps/<app>/video*.mp4, apps/showcase*.mp4)
 scripts/render-all.sh                 # re-render everything above
 ```
 
-The video scripts drive each recap headlessly with `rive --screenshot` (one run per frame, in parallel, pressing Right every 3.5 s) and encode directly to VP9 WebM with `ffmpeg` (`brew install ffmpeg`, with the `libvpx-vp9` encoder). The merger reads `apps/<app>/video.webm` (or the file named by `--video`) and writes `apps/showcase.webm`; `--rows` stacks rows so the landscape showcase plays all ten apps at once. The `--quality` option remains 0–100 (higher is better), mapped to VP9 CRF 63–0. Looping is controlled by the video player. Run `scripts/render-video.py --help` for frame rate, timing and fixture options.
+The video scripts drive each recap headlessly with `rive --screenshot` (one run per frame, in parallel, pressing Right every 3.5 s) and encode directly to VP9 WebM with `ffmpeg` (`brew install ffmpeg`, with the `libvpx-vp9` encoder). The merger reads `apps/<app>/video.webm` (or the file named by `--video`) and writes `apps/showcase.webm`; `--rows` (default 2) stacks rows, so both showcases play all ten apps at once in a 5×2 grid. The `--quality` option remains 0–100 (higher is better), mapped to VP9 CRF 63–0. WebM is the local working format and is git-ignored; `scripts/export-mp4.sh` converts every render to the H.264 MP4s committed in the repo. Run `scripts/render-video.py --help` for frame rate, timing and fixture options.
 
-All linked recap videos and the showcase are WebM files. Open the video links to play or download them; looping is controlled by your player.
+All linked recap videos and the showcases are H.264 MP4 files. Open the video links to play or download them; looping is controlled by your player.

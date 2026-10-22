@@ -1626,6 +1626,13 @@
         "changed": true
       },
       {
+        "name": "_cardNameW",
+        "path": "_cardNameW",
+        "type": "number",
+        "value": 302,
+        "changed": false
+      },
+      {
         "name": "_cc0X",
         "path": "_cc0X",
         "type": "number",

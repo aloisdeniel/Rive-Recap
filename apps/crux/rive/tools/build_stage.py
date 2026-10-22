@@ -3,7 +3,7 @@ from rml import (E, nid, Anim, cond_num, cond_bool, cond_trigger, write_num, wri
                  CHALK, COAL)
 from art import BASE
 import stage
-from stage import (CARRIER, CARRIER_FLY, ROPE, CLOUD, HERO_DRIVER, CARRIER_POSE, CONTINUITY, IN_DUR, rope_bow,
+from stage import (CARRIER, CARRIER_FLY, ROPE, CLOUD, HERO_DRIVER, CARRIER_POSE, CONTINUITY, IN_DUR, ROPE_BOW,
                    STAGE_AB, STAGE_SM, W, H, CHALK_IN, CARRIER_YAW, CARRIER_PITCH, ENTRY_YAW)
 from art import LIVE
 import model
@@ -121,7 +121,7 @@ def build_in(sc, v, mode):
     # chalk occluder thins out, rope releases
     chalk_clear(a)
     a.tw(ROPE.id, "opacity", 0, 12, 1.0, 0.0, "linear")
-    a.tw(rope_bow.id, "x", 0, 14, 0.0, 60.0, "out")
+    a.tw(ROPE_BOW, 243, 0, 14, 0.0, 60.0, "out")
     # hero count driver (bound to UserRecap.heroProgress)
     for f, val, ease in sc.hero_steps:
         a.k(HERO_DRIVER.id, 243, f, val, ease)
@@ -174,8 +174,8 @@ def build_exit(sc, mode):
             a.k(lid, "rotation", 34, TILT[attr])
         a.k(ROPE.id, "opacity", 0, 0.0, "linear")
         a.k(ROPE.id, "opacity", 5, 1.0)
-        a.k(rope_bow.id, "x", 0, 60.0, "snap")
-        a.k(rope_bow.id, "x", 9, 0.0)
+        a.k(ROPE_BOW, 243, 0, 60.0, "snap")
+        a.k(ROPE_BOW, 243, 9, 0.0)
         # the hold twists against the load, then spins as it is ripped upward
         a.k(CARRIER_PITCH, 243, 0, 0.0, "out")
         a.k(CARRIER_PITCH, 243, 8, 0.5, "in")
@@ -220,8 +220,8 @@ def build_exit(sc, mode):
         chalk_burst(a, k, px, py, -1, 40)
         a.k(ROPE.id, "opacity", 0, 0.0, "linear")
         a.k(ROPE.id, "opacity", 5, 1.0)
-        a.k(rope_bow.id, "x", 0, 0.0, "out")
-        a.k(rope_bow.id, "x", 22, 140.0)
+        a.k(ROPE_BOW, 243, 0, 0.0, "out")
+        a.k(ROPE_BOW, 243, 22, 140.0)
         carrier_set(a, 0, px, py, ps, pr)
         a.k(CARRIER.id, "y", 0, py, "out")
         a.k(CARRIER.id, "y", 7, py - 16)
@@ -235,6 +235,8 @@ def build_exit(sc, mode):
         a.k(sc.root.id, "opacity", 40, 0.0)
         dur = 40
     a.hold(HERO_DRIVER.id, 243, 1.0)
+    if getattr(sc, "exit_hook", None):
+        sc.exit_hook(a, mode)
     return a
 
 
